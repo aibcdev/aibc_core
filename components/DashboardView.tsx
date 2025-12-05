@@ -62,6 +62,8 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
   const [competitorIntelligence, setCompetitorIntelligence] = useState<any[]>([]);
   const [marketShare, setMarketShare] = useState<any>(null);
   const [scanUsername, setScanUsername] = useState<string | null>(null);
+  const [profileName, setProfileName] = useState<string>('');
+  const [profileBio, setProfileBio] = useState<string>('');
   
   // Credit & Tier State
   const [userTier, setUserTier] = useState<UserTier>('free');
@@ -107,7 +109,10 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
 
   // Fetch real data on mount
   useEffect(() => {
+    let isMounted = true;
+    
     const loadData = async () => {
+      if (!isMounted) return;
       setLoading(true);
       try {
         // Load scan results first to get competitors and brand DNA
@@ -124,6 +129,15 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
               if (cached.marketShare) setMarketShare(cached.marketShare);
               const username = localStorage.getItem('lastScannedUsername');
               if (username) setScanUsername(username);
+              // Extract profile name from cached data
+              if (cached.extractedContent?.profile) {
+                const profile = cached.extractedContent.profile;
+                const name = profile.name || profile.bio?.split(' ')[0] || username || '';
+                setProfileName(name);
+                setProfileBio(profile.bio || '');
+              } else if (username) {
+                setProfileName(username);
+              }
               return cached;
             } catch (e) {
               console.error('Error parsing cached results:', e);
@@ -142,6 +156,15 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                 setCompetitorIntelligence(scanResults.data.competitorIntelligence || []);
                 setMarketShare(scanResults.data.marketShare || null);
                 setScanUsername(storedUsername);
+                // Extract profile name from scan results
+                if (scanResults.data.extractedContent?.profile) {
+                  const profile = scanResults.data.extractedContent.profile;
+                  const name = profile.name || profile.bio?.split(' ')[0] || storedUsername || '';
+                  setProfileName(name);
+                  setProfileBio(profile.bio || '');
+                } else {
+                  setProfileName(storedUsername);
+                }
                 // Update cache
                 localStorage.setItem('lastScanResults', JSON.stringify(scanResults.data));
                 return scanResults.data;
@@ -213,11 +236,17 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
           console.error('Error loading fallback data:', fallbackError);
         }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadData();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const toggleTask = (id: number) => {
@@ -296,11 +325,15 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
          <div className="p-4 border-t border-white/10">
              <div className="flex items-center gap-3 px-2">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 to-purple-600 flex items-center justify-center text-xs font-bold border border-white/20">
-                    JD
+                    {profileName ? profileName.charAt(0).toUpperCase() : scanUsername ? scanUsername.charAt(0).toUpperCase() : 'U'}
                 </div>
-                <div>
-                    <div className="text-xs font-bold text-white">John Doe</div>
-                    <div className="text-[10px] text-white/40">Pro Plan</div>
+                <div className="min-w-0 flex-1">
+                    <div className="text-xs font-bold text-white truncate">
+                      {profileName || scanUsername || 'User'}
+                    </div>
+                    <div className="text-[10px] text-white/40 capitalize">
+                      {userTier} Plan
+                    </div>
                 </div>
              </div>
          </div>
@@ -311,11 +344,24 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
         
         {/* Header */}
         <header className="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-[#050505]/50 backdrop-blur-sm z-10 flex-shrink-0">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
+            {/* Company/Person Name - Prominent */}
+            {profileName && (
+              <div className="flex items-center gap-3">
+                <h1 className="text-lg font-black text-white tracking-tight">
+                  {profileName}
+                </h1>
+                {profileBio && (
+                  <span className="text-xs text-white/50 hidden md:block max-w-md truncate">
+                    {profileBio}
+                  </span>
+                )}
+              </div>
+            )}
             <div className="flex items-center gap-2 text-xs text-white/40">
               <Calendar className="w-3 h-3" />
               <span>{new Date().toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
-              {scanUsername && (
+              {scanUsername && !profileName && (
                 <span className="bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded text-[10px] font-bold">Scan: {scanUsername}</span>
               )}
             </div>
@@ -1035,21 +1081,21 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
             )}
 
             {/* Production Room */}
-            {currentPage === 'production' && (
+            {!loading && currentPage === 'production' && (
               <div className="w-full min-h-full">
                 <ProductionRoomView />
               </div>
             )}
 
             {/* Calendar */}
-            {currentPage === 'calendar' && (
+            {!loading && currentPage === 'calendar' && (
               <div className="w-full min-h-full">
                 <CalendarView />
               </div>
             )}
 
             {/* Analytics */}
-            {currentPage === 'analytics' && (
+            {!loading && currentPage === 'analytics' && (
               <FeatureLock 
                 feature="analytics.custom" 
                 userTier={userTier}
@@ -1075,35 +1121,35 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
             )}
 
             {/* Inbox */}
-            {currentPage === 'inbox' && (
+            {!loading && currentPage === 'inbox' && (
               <div className="w-full min-h-full">
                 <InboxView />
               </div>
             )}
 
             {/* Admin */}
-            {currentPage === 'admin' && (
+            {!loading && currentPage === 'admin' && (
               <div className="w-full min-h-full">
                 <AdminView />
               </div>
             )}
 
             {/* Brand Assets */}
-            {currentPage === 'assets' && (
+            {!loading && currentPage === 'assets' && (
               <div className="w-full min-h-full">
                 <BrandAssetsView />
               </div>
             )}
 
             {/* Integrations */}
-            {currentPage === 'integrations' && (
+            {!loading && currentPage === 'integrations' && (
               <div className="w-full min-h-full">
                 <IntegrationsView />
               </div>
             )}
 
             {/* Settings */}
-            {currentPage === 'settings' && <SettingsView onLogout={() => onNavigate(ViewState.LANDING)} />}
+            {!loading && currentPage === 'settings' && <SettingsView onLogout={() => onNavigate(ViewState.LANDING)} />}
 
         </main>
 

@@ -996,26 +996,54 @@ async function generateCompetitorIntelligence(validatedContent: any, brandDNA: a
     const allPosts = (validatedContent.posts || []).map((p: any) => p.content).join('\n\n');
     const combinedText = allPosts.substring(0, 40000);
 
+    // Extract actual topics and market from their content
+    const actualTopics = (validatedContent.content_themes || []).slice(0, 10).join(', ');
+    const samplePosts = (validatedContent.posts || []).slice(0, 20).map((p: any) => p.content).join('\n\n---\n\n');
+    const marketIndicators = [
+      ...(validatedContent.content_themes || []),
+      ...(brandDNA.themes || []),
+      ...(brandDNA.corePillars || [])
+    ].filter(Boolean).join(', ');
+
     const prompt = `You are a competitive intelligence analyst. Your task is to find the 3 CLOSEST competitors to "${username || 'this creator'}".
 
-CRITICAL MATCHING CRITERIA - Find competitors that match on ALL THREE dimensions:
-1. WHAT they offer: Same or very similar product/service/content type
-2. HOW they offer it: Similar style, tone, approach, format
-3. TRACTION: Similar audience size, engagement levels, market position
+CRITICAL: Analyze their ACTUAL social activity, topics, and market - NOT just industry category.
 
-DO NOT just find random companies in the same industry. They must be:
-- Similar in offering AND style AND traction
-- Direct competitors competing for the same audience
-- Comparable in scale and reach
+MATCHING CRITERIA - Find competitors that match based on:
+1. ACTUAL TOPICS they discuss (from their posts, not generic industry)
+2. MARKET they operate in (based on content themes and audience)
+3. CONTENT STYLE and approach (how they communicate)
+4. AUDIENCE overlap (similar followers/engagement levels)
 
-Their Profile:
+DO NOT find random companies in the same industry. Focus on:
+- What topics they ACTUALLY post about
+- What market/niche they ACTUALLY serve (from content analysis)
+- Similar content style and communication approach
+- Similar audience size and engagement patterns
+
+Their ACTUAL Profile:
 - Username/Name: ${username}
 - Bio: ${validatedContent.profile?.bio || 'N/A'}
-- Content Sample: ${combinedText.substring(0, 10000)}
-- Brand DNA: ${JSON.stringify(brandDNA, null, 2)}
-- Topics: ${(validatedContent.content_themes || []).join(', ')}
+- ACTUAL Topics They Discuss: ${actualTopics || 'N/A'}
+- Market/Niche (from content): ${marketIndicators || 'N/A'}
+- Content Sample (what they actually post about):
+${samplePosts.substring(0, 15000)}
+
+Brand DNA:
+- Voice: ${brandDNA.voice?.style || 'N/A'}
+- Tone: ${brandDNA.voice?.tone || 'N/A'}
+- Core Themes: ${(brandDNA.themes || []).join(', ') || 'N/A'}
 - Posting Frequency: ${brandDNA.engagement_patterns?.frequency || 'Unknown'}
 - Content Types: ${(brandDNA.engagement_patterns?.best_content_types || []).join(', ') || 'Unknown'}
+
+ANALYSIS INSTRUCTIONS:
+1. Read their ACTUAL posts above - what topics do they consistently discuss?
+2. What market/niche do they serve based on their content (not generic industry)?
+3. Find competitors who:
+   - Discuss SIMILAR topics
+   - Serve the SAME market/niche
+   - Have SIMILAR content style
+   - Target SIMILAR audience
 
 For EACH of the 3 closest competitors, I need you to research them and provide:
 
