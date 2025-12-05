@@ -307,10 +307,10 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         
         {/* Header */}
-        <header className="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-[#050505]/50 backdrop-blur-sm z-10">
+        <header className="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-[#050505]/50 backdrop-blur-sm z-10 flex-shrink-0">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-xs text-white/40">
               <Calendar className="w-3 h-3" />
@@ -419,7 +419,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
         </header>
 
         {/* Dynamic Page Content */}
-        <main className="flex-1 overflow-y-auto p-6 bg-[#050505] custom-scrollbar relative">
+        <main className="flex-1 overflow-y-auto p-6 bg-[#050505] custom-scrollbar relative min-h-0">
             
             {/* 1. DASHBOARD VIEW (Default) */}
             {currentPage === 'dashboard' && (
@@ -1035,10 +1035,18 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
             )}
 
             {/* Production Room */}
-            {currentPage === 'production' && <ProductionRoomView />}
+            {currentPage === 'production' && (
+              <div className="w-full min-h-full">
+                <ProductionRoomView />
+              </div>
+            )}
 
             {/* Calendar */}
-            {currentPage === 'calendar' && <CalendarView />}
+            {currentPage === 'calendar' && (
+              <div className="w-full min-h-full">
+                <CalendarView />
+              </div>
+            )}
 
             {/* Analytics */}
             {currentPage === 'analytics' && (
@@ -1067,16 +1075,32 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
             )}
 
             {/* Inbox */}
-            {currentPage === 'inbox' && <InboxView />}
+            {currentPage === 'inbox' && (
+              <div className="w-full min-h-full">
+                <InboxView />
+              </div>
+            )}
 
             {/* Admin */}
-            {currentPage === 'admin' && <AdminView />}
+            {currentPage === 'admin' && (
+              <div className="w-full min-h-full">
+                <AdminView />
+              </div>
+            )}
 
             {/* Brand Assets */}
-            {currentPage === 'assets' && <BrandAssetsView />}
+            {currentPage === 'assets' && (
+              <div className="w-full min-h-full">
+                <BrandAssetsView />
+              </div>
+            )}
 
             {/* Integrations */}
-            {currentPage === 'integrations' && <IntegrationsView />}
+            {currentPage === 'integrations' && (
+              <div className="w-full min-h-full">
+                <IntegrationsView />
+              </div>
+            )}
 
             {/* Settings */}
             {currentPage === 'settings' && <SettingsView onLogout={() => onNavigate(ViewState.LANDING)} />}
