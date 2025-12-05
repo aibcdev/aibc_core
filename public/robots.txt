@@ -1,0 +1,14 @@
+# robots.txt for AIBC
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /settings/
+Disallow: /inbox/
+
+# Sitemap
+Sitemap: https://aibcmedia.com/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 1
