@@ -71,7 +71,12 @@ export async function startScan(
     return await response.json();
   } catch (error: any) {
     console.error('Start scan error:', error);
-    throw error;
+    // Return error response instead of throwing to prevent app crash
+    return {
+      success: false,
+      error: error.message || 'Failed to connect to backend. Please check your connection.',
+      message: 'Backend service unavailable'
+    };
   }
 }
 
@@ -90,7 +95,11 @@ export async function getScanStatus(scanId: string): Promise<ScanStatus> {
     return await response.json();
   } catch (error: any) {
     console.error('Get scan status error:', error);
-    throw error;
+    return {
+      success: false,
+      error: error.message || 'Failed to connect to backend',
+      scan: undefined
+    };
   }
 }
 
@@ -109,7 +118,11 @@ export async function getScanResults(scanId: string): Promise<ScanResults> {
     return await response.json();
   } catch (error: any) {
     console.error('Get scan results error:', error);
-    throw error;
+    return {
+      success: false,
+      error: error.message || 'Failed to connect to backend',
+      data: undefined
+    };
   }
 }
 
@@ -164,7 +177,11 @@ export async function getLatestScanResults(username: string): Promise<ScanResult
     return await response.json();
   } catch (error: any) {
     console.error('Get latest scan results error:', error);
-    throw error;
+    return {
+      success: false,
+      error: error.message || 'Failed to connect to backend',
+      data: undefined
+    };
   }
 }
 
