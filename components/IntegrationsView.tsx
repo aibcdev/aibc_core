@@ -129,16 +129,31 @@ const IntegrationsView: React.FC = () => {
           });
         }
       } else {
-        // Final fallback - simulate verification based on handle format
+        // Final fallback - show error instead of fake data
+        const responseText = await response.text();
+        console.error('Verification API failed:', response.status, responseText);
         simulateVerification(cleanHandle, platform);
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Verification error:', error);
+      // Show error instead of fake data
       simulateVerification(handle.replace('@', '').trim(), platform);
     }
   };
 
-  // Simulated verification for demo purposes
+  // Final fallback - show error instead of fake data
   const simulateVerification = (handle: string, platform: string) => {
+    // Check if it's an email address (not a valid social media handle)
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(handle);
+    
+    if (isEmail) {
+      setVerificationResult({
+        verified: false,
+        error: 'Please enter a username or handle, not an email address. For Instagram, use @username format.'
+      });
+      return;
+    }
+
     // Basic format validation
     const isValidFormat = /^[a-zA-Z0-9._-]{2,30}$/.test(handle);
     
@@ -159,7 +174,7 @@ const IntegrationsView: React.FC = () => {
       return;
     }
 
-    // Simulate finding the account
+    // Don't generate fake data - show error that account couldn't be verified
     const platformNames: Record<string, string> = {
       'instagram': 'Instagram',
       'linkedin': 'LinkedIn',
@@ -170,13 +185,9 @@ const IntegrationsView: React.FC = () => {
       'ga': 'Google Analytics'
     };
 
-    const displayName = handle.charAt(0).toUpperCase() + handle.slice(1);
-    
     setVerificationResult({
-      verified: true,
-      name: displayName,
-      followers: Math.floor(Math.random() * 50000 + 1000).toLocaleString(),
-      bio: `${platformNames[platform] || 'Social'} creator`
+      verified: false,
+      error: `Could not verify this ${platformNames[platform] || platform} account. Please check the username and ensure the account exists and is public.`
     });
   };
 

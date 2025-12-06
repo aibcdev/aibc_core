@@ -231,8 +231,19 @@ function getPlatformInfo(platform: string) {
   return platforms[platform.toLowerCase()] || { name: platform, getUrl: (u) => '' };
 }
 
-// Simulated verification for when LLM is unavailable
+// Simulated verification for when LLM is unavailable - returns error instead of fake data
 function simulateVerification(username: string, platform: string): VerifyResult {
+  // Check if it's an email address (not a valid social media handle)
+  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username);
+  
+  if (isEmail) {
+    return {
+      success: false,
+      verified: false,
+      error: 'Please enter a username or handle, not an email address. For Instagram, use @username format.'
+    };
+  }
+
   // Basic format validation
   const isValidFormat = /^[a-zA-Z0-9._-]{2,30}$/.test(username);
   
@@ -240,23 +251,17 @@ function simulateVerification(username: string, platform: string): VerifyResult 
     return {
       success: false,
       verified: false,
-      error: 'Invalid username format'
+      error: 'Invalid username format. Use only letters, numbers, dots, underscores, or hyphens.'
     };
   }
 
   const platformInfo = getPlatformInfo(platform);
   
-  // Simulate a successful verification for demo purposes
-  // In production, this would hit the actual platform APIs
+  // Don't generate fake data - return error that account couldn't be verified
   return {
     success: true,
-    verified: true,
-    profile: {
-      name: username.charAt(0).toUpperCase() + username.slice(1),
-      followers: (Math.floor(Math.random() * 50000) + 1000).toLocaleString(),
-      bio: `${platformInfo.name} user`,
-      url: platformInfo.getUrl(username)
-    }
+    verified: false,
+    error: `Could not verify this ${platformInfo.name} account. Please check the username and ensure the account exists and is public. Backend verification service is unavailable.`
   };
 }
 
