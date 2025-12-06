@@ -668,20 +668,25 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
           </div>
         )}
 
-        {/* Failsafe Mode Indicator */}
+        {/* Backend Status Indicator */}
         {failsafeMode && !error && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-2xl px-6 animate-in fade-in slide-in-from-bottom-4 z-50">
-            <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl px-6 py-3">
-              <div className="flex items-center gap-3">
-                <Shield className="w-5 h-5 text-orange-400" />
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl px-6 py-4">
+              <div className="flex items-start gap-3">
+                <Shield className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <div className="text-orange-300 text-sm font-medium">Failsafe Mode Active</div>
-                  <div className="text-orange-300/70 text-xs">Running offline simulation - results are simulated</div>
+                  <div className="text-blue-300 text-sm font-medium mb-1">Client-Side Scan Mode</div>
+                  <div className="text-blue-300/70 text-xs mb-3">Backend server unavailable - using simulated data</div>
+                  <div className="text-blue-300/50 text-[10px] font-mono space-y-1">
+                    <div>• Backend URL: {import.meta.env.VITE_API_URL || 'http://localhost:3001'}</div>
+                    <div>• Status: Not accessible</div>
+                    <div>• Solution: Start backend server or deploy to production</div>
+                  </div>
                 </div>
                 <button
                   onClick={handleRetry}
                   disabled={isRetrying}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/30 rounded-lg text-xs font-medium text-orange-300 transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-lg text-xs font-medium text-blue-300 transition-all disabled:opacity-50 flex-shrink-0"
                 >
                   {isRetrying ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
