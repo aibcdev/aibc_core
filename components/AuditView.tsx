@@ -565,18 +565,13 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
   };
 
   useEffect(() => {
-    // Start scan on mount if not already started
-    if (!scanStarted && username) {
-      const scanUsername = username || localStorage.getItem('lastScannedUsername') || '';
+    // Start scan on mount - check both username prop and localStorage
+    const scanUsername = username || localStorage.getItem('lastScannedUsername') || '';
+    
+    // Only start if we haven't started yet and we have a username
+    if (!scanStarted && scanUsername) {
+      console.log('[AuditView] Starting scan for:', scanUsername);
       
-      if (!scanUsername) {
-        // No username - navigate to ingestion
-        setTimeout(() => {
-          onNavigate(ViewState.INGESTION);
-        }, 1000);
-        return;
-      }
-
       // Safety timeout - ensure scan completes within 10 minutes max
       const safetyTimeout = setTimeout(() => {
         if (!showButton) {
@@ -599,13 +594,13 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
         }
       }, 10 * 60 * 1000); // 10 minutes
       
-      // Ensure scan always starts
+      // Ensure scan always starts - immediately trigger failsafe if needed
       performScan(false).catch((err) => {
-        console.error('Scan failed to start:', err);
+        console.error('Scan failed to start, using failsafe:', err);
         // Force completion even if scan fails to start - use failsafe
-        const fallbackUsername = scanUsername || 'unknown';
-        performFailsafeScan(fallbackUsername, ['twitter', 'youtube', 'linkedin', 'instagram']).catch(() => {
+        performFailsafeScan(scanUsername, ['twitter', 'youtube', 'linkedin', 'instagram']).catch(() => {
           // Last resort - just complete
+          console.error('Failsafe also failed, forcing completion');
           setProgress(100);
           setShowButton(true);
           setScanStarted(true);
@@ -614,8 +609,15 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
       });
       
       return () => clearTimeout(safetyTimeout);
+    } else if (!scanUsername) {
+      // No username - navigate to ingestion after a brief delay
+      console.log('[AuditView] No username found, navigating to ingestion');
+      const timeout = setTimeout(() => {
+        onNavigate(ViewState.INGESTION);
+      }, 1000);
+      return () => clearTimeout(timeout);
     }
-  }, [username]); // Only depend on username to start once
+  }, []); // Empty deps - only run once on mount
 
   return (
     <div className="fixed inset-0 z-[80] bg-[#030303] overflow-hidden">
