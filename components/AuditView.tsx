@@ -213,8 +213,10 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
         competitorIntelligence: []
       };
       localStorage.setItem('lastScanResults', JSON.stringify(minimalResults));
+      localStorage.setItem('lastScannedUsername', scanUsername);
       
       setShowButton(true);
+      setScanStarted(true); // Mark scan as started
     }
   };
 
