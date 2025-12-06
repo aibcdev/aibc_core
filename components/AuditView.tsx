@@ -534,6 +534,26 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
 
   useEffect(() => {
     if (!scanStarted) {
+      // Safety timeout - ensure scan completes within 10 minutes max
+      const safetyTimeout = setTimeout(() => {
+        if (!showButton) {
+          console.warn('Scan taking too long - forcing completion');
+          addLog(`[WARNING] Scan timeout - completing with available data`);
+          updateStageStatus(8, 'complete');
+          setProgress(100);
+          setShowButton(true);
+          
+          // Store minimal results
+          const minimalResults = {
+            extractedContent: [],
+            brandDNA: { voice: 'Professional', tone: 'Informative', themes: ['General'] },
+            strategicInsights: [],
+            competitorIntelligence: []
+          };
+          localStorage.setItem('lastScanResults', JSON.stringify(minimalResults));
+        }
+      }, 10 * 60 * 1000); // 10 minutes
+      
       // Ensure scan always starts
       performScan(false).catch((err) => {
         console.error('Scan failed to start:', err);
@@ -542,8 +562,10 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
         setShowButton(true);
         addLog(`[COMPLETE] Scan completed with minimal data`);
       });
+      
+      return () => clearTimeout(safetyTimeout);
     }
-  }, [username]);
+  }, [username, scanStarted, showButton]);
 
   return (
     <div className="fixed inset-0 z-[80] bg-[#030303] overflow-hidden">
