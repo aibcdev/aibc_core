@@ -84,12 +84,15 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
       addLog(`[INFO] Using simulated data - results will be approximate`);
       addLog(`[INFO] For real-time data, ensure backend is running and accessible`);
       
-      // Continue with all stages but mark as failsafe
-      updateStageStatus(0, 'complete');
-      setProgress(5);
+      // Stage 1: Initializing (if not already done)
+      if (currentStageIndex === 0) {
+        updateStageStatus(0, 'complete');
+        setProgress(5);
+        await delay(1000);
+      }
 
-    // Stage 2: Twitter/X
-    updateStageStatus(1, 'active');
+      // Stage 2: Twitter/X
+      updateStageStatus(1, 'active');
     addLog(`[SCANNER] Simulating X (Twitter) scan...`);
     await delay(3000);
     addLog(`[SCANNER] Using cached data for @${scanUsername}...`);
@@ -558,7 +561,18 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
   };
 
   useEffect(() => {
-    if (!scanStarted) {
+    // Start scan on mount if not already started
+    if (!scanStarted && username) {
+      const scanUsername = username || localStorage.getItem('lastScannedUsername') || '';
+      
+      if (!scanUsername) {
+        // No username - navigate to ingestion
+        setTimeout(() => {
+          onNavigate(ViewState.INGESTION);
+        }, 1000);
+        return;
+      }
+
       // Safety timeout - ensure scan completes within 10 minutes max
       const safetyTimeout = setTimeout(() => {
         if (!showButton) {
@@ -567,6 +581,7 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
           updateStageStatus(8, 'complete');
           setProgress(100);
           setShowButton(true);
+          setScanStarted(true);
           
           // Store minimal results
           const minimalResults = {
@@ -576,21 +591,27 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
             competitorIntelligence: []
           };
           localStorage.setItem('lastScanResults', JSON.stringify(minimalResults));
+          localStorage.setItem('lastScannedUsername', scanUsername);
         }
       }, 10 * 60 * 1000); // 10 minutes
       
       // Ensure scan always starts
       performScan(false).catch((err) => {
         console.error('Scan failed to start:', err);
-        // Force completion even if scan fails to start
-        setProgress(100);
-        setShowButton(true);
-        addLog(`[COMPLETE] Scan completed with minimal data`);
+        // Force completion even if scan fails to start - use failsafe
+        const fallbackUsername = scanUsername || 'unknown';
+        performFailsafeScan(fallbackUsername, ['twitter', 'youtube', 'linkedin', 'instagram']).catch(() => {
+          // Last resort - just complete
+          setProgress(100);
+          setShowButton(true);
+          setScanStarted(true);
+          addLog(`[COMPLETE] Scan completed with minimal data`);
+        });
       });
       
       return () => clearTimeout(safetyTimeout);
     }
-  }, [username, scanStarted, showButton]);
+  }, [username]); // Only depend on username to start once
 
   return (
     <div className="fixed inset-0 z-[80] bg-[#030303] overflow-hidden">
