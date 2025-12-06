@@ -48,16 +48,13 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
               
               {/* AIBC Stream Dropdown */}
               <div className="group relative">
-                <a 
-                  href="https://aibroadcasting.xyz"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button 
                   className="flex items-center gap-1 text-sm font-bold text-white hover:text-orange-500 transition-colors uppercase tracking-wide focus:outline-none"
-                  onMouseEnter={(e) => e.preventDefault()}
+                  onClick={() => window.open('https://aibroadcasting.xyz', '_blank', 'noopener,noreferrer')}
                 >
                   AIBC Stream
                   <ChevronDown className="w-4 h-4 text-white/60 group-hover:text-orange-500 transition-colors" />
-                </a>
+                </button>
                 
                 {/* Dropdown Menu */}
                 <div className="absolute left-1/2 -translate-x-1/2 top-full mt-4 w-[900px] origin-top opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out transform group-hover:translate-y-0 translate-y-2 z-50">

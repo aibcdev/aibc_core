@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
 import { signUp, signInWithGoogle, storeAuthToken, storeUser } from '../services/authClient';
-import { signUp as supabaseSignUp, signInWithGoogle as supabaseSignInWithGoogle } from '../services/supabaseAuth';
 
 const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
   const [email, setEmail] = useState('');
@@ -17,22 +16,6 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
     setError('');
 
     try {
-      // Use Supabase if configured, otherwise fallback to mock
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      
-      if (supabaseUrl) {
-        // Use Supabase Google OAuth
-        const result = await supabaseSignInWithGoogle();
-        if (!result.success) {
-          setError(result.error || 'Failed to sign in with Google');
-          setLoading(false);
-          return;
-        }
-        // Supabase will redirect automatically, so we don't navigate here
-        // The AuthCallback component will handle the redirect
-        return;
-      }
-
       // Fallback: Use email if provided, otherwise show message
       if (!email) {
         setError('Please enter your email or configure Supabase for Google sign-in');
@@ -78,34 +61,14 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
     }
 
     try {
-      // Use Supabase if configured, otherwise fallback to mock
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      
-      if (supabaseUrl) {
-        // Use Supabase sign up
-        const result = await supabaseSignUp(email, password, { firstName, lastName });
-        if (result.success) {
-          // Supabase may require email confirmation
-          if (result.user && result.session) {
-            storeAuthToken(result.session.access_token);
-            storeUser(result.user);
-            onNavigate(ViewState.INGESTION);
-          } else {
-            setError('Please check your email to confirm your account');
-          }
-        } else {
-          setError(result.error || 'Failed to create account');
-        }
+      // Use mock auth (Supabase will be added later)
+      const result = await signUp(email, password, firstName, lastName);
+      if (result.success && result.user && result.token) {
+        storeAuthToken(result.token);
+        storeUser(result.user);
+        onNavigate(ViewState.INGESTION);
       } else {
-        // Fallback to mock auth
-        const result = await signUp(email, password, firstName, lastName);
-        if (result.success && result.user && result.token) {
-          storeAuthToken(result.token);
-          storeUser(result.user);
-          onNavigate(ViewState.INGESTION);
-        } else {
-          setError(result.error || 'Failed to create account');
-        }
+        setError(result.error || 'Failed to create account');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to create account');
