@@ -5,6 +5,7 @@ import {
   TrendingUp, Activity, BarChart2, Calendar, Zap,
   ArrowUp, ArrowDown, MoreHorizontal, Play, Pause
 } from 'lucide-react';
+import { getUser } from '../services/authClient';
 
 interface User {
   id: string;
@@ -66,45 +67,68 @@ const AdminView: React.FC = () => {
   }, []);
 
   const loadUsers = () => {
-    // In production, fetch from API
-    const storedUsers = localStorage.getItem('admin_users');
-    if (storedUsers) {
-      try {
-        setUsers(JSON.parse(storedUsers));
-      } catch (e) {
-        console.error('Error loading users:', e);
-      }
-    } else {
-      // Mock data for demo
-      setUsers([
-        {
-          id: '1',
-          email: 'user1@example.com',
-          name: 'John Doe',
-          tier: 'premium',
-          joinedAt: '2024-01-15T10:00:00Z',
-          lastActive: new Date().toISOString(),
-          totalTimeOnSite: 245,
-          totalClicks: 1234,
-          requestsCount: 5,
-          creditsUsed: 150,
-          status: 'active'
-        },
-        {
-          id: '2',
-          email: 'user2@example.com',
-          name: 'Jane Smith',
-          tier: 'business',
-          joinedAt: '2024-02-20T14:30:00Z',
-          lastActive: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          totalTimeOnSite: 180,
-          totalClicks: 890,
-          requestsCount: 3,
-          creditsUsed: 75,
-          status: 'active'
-        }
-      ]);
+    // Load real users from localStorage (from auth system)
+    const allUsers: User[] = [];
+    
+    // Get current logged-in user from auth system
+    const currentUser = getUser();
+    if (currentUser && currentUser.email) {
+      // Use name if provided, otherwise use email prefix
+      const displayName = currentUser.name || 
+                         (currentUser.firstName && currentUser.lastName ? `${currentUser.firstName} ${currentUser.lastName}` : null) ||
+                         currentUser.email.split('@')[0]; // Fallback to email prefix
+      
+      allUsers.push({
+        id: currentUser.id || `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        email: currentUser.email,
+        name: displayName,
+        tier: currentUser.tier || 'free',
+        joinedAt: currentUser.createdAt || new Date().toISOString(),
+        lastActive: currentUser.lastLoginAt || new Date().toISOString(),
+        totalTimeOnSite: 0,
+        totalClicks: 0,
+        requestsCount: 0,
+        creditsUsed: 0,
+        status: 'active'
+      });
     }
+    
+    // Also check admin_users if it exists (for multiple users)
+    const storedAdminUsers = localStorage.getItem('admin_users');
+    if (storedAdminUsers) {
+      try {
+        const parsed = JSON.parse(storedAdminUsers);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((u: any) => {
+            if (u.email && !allUsers.find(existing => existing.email === u.email)) {
+              // Use name if provided, otherwise use email prefix
+              const displayName = u.name || 
+                                 (u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : null) ||
+                                 u.email.split('@')[0];
+              
+              allUsers.push({
+                id: u.id || `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                email: u.email,
+                name: displayName,
+                tier: u.tier || 'free',
+                joinedAt: u.createdAt || u.joinedAt || new Date().toISOString(),
+                lastActive: u.lastLoginAt || u.lastActive || new Date().toISOString(),
+                totalTimeOnSite: u.totalTimeOnSite || 0,
+                totalClicks: u.totalClicks || 0,
+                requestsCount: u.requestsCount || 0,
+                creditsUsed: u.creditsUsed || 0,
+                status: u.status || 'active'
+              });
+            }
+          });
+        }
+      } catch (e) {
+        console.error('Error loading admin users:', e);
+      }
+    }
+    
+    // If no users found, show empty state (don't show mock data)
+    setUsers(allUsers);
   };
 
   const loadRequests = () => {
