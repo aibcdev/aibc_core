@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Network, ArrowRight, CheckCircle, Loader2, AlertCircle, Search, Brain, Database, Target, Sparkles, RefreshCw, Shield } from 'lucide-react';
+import { Network, ArrowRight, CheckCircle, Loader2, AlertCircle, Search, Brain, Database, Target, Sparkles, RefreshCw, Shield, X } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
 import { startScan, pollScanStatus } from '../services/apiClient';
 
