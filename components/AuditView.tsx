@@ -189,9 +189,11 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
         competitorIntelligence: []
       };
       localStorage.setItem('lastScanResults', JSON.stringify(mockResults));
+      localStorage.setItem('lastScannedUsername', scanUsername);
       
       // ALWAYS complete - never fail
       setShowButton(true);
+      setScanStarted(true); // Mark scan as started
     } catch (err: any) {
       // Ensure scan ALWAYS completes, even if failsafe scan fails
       console.error('Failsafe scan error:', err);
