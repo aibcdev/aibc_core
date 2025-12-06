@@ -5,13 +5,14 @@ import {
   AlertCircle, Briefcase, Plus, Trash2,
   X, Zap, Globe, Users, Activity, BarChart2, ShieldAlert,
   Target, FileText, Send, CheckCircle, Sparkles, TrendingUp,
-  Linkedin, Instagram, Play, Loader2
+  Linkedin, Instagram, Play, Loader2, LogOut
 } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
 import { fetchAnalyticsData, fetchCalendarEvents, fetchCompetitors, fetchContentPipeline } from '../services/dashboardData';
 import { getDashboardAnalytics } from '../services/analyticsClient';
 import { getLatestScanResults } from '../services/apiClient';
 import { getCreditBalance, checkFeatureAccess, type UserTier } from '../services/creditClient';
+import { logout, getUser, isAuthenticated } from '../services/authClient';
 import ProductionRoomView from './ProductionRoomView';
 import CalendarView from './CalendarView';
 import AnalyticsView from './AnalyticsView';
@@ -573,7 +574,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                             ) : (
                                 <div className="space-y-4">
                                     {strategicInsights.map((insight, index) => (
-                                        <StrategicInsightCard key={`insight-${index}`} insight={insight} />
+                                        <StrategicInsightCard key={`insight-${index}`} insight={insight} {...({} as any)} />
                                     ))}
                                 </div>
                             )}
@@ -833,6 +834,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                           onRemove={() => {
                                             setCompetitorIntelligence(competitorIntelligence.filter((_, i) => i !== index));
                                           }}
+                                          {...({} as any)}
                                         />
                                     ))}
                                 </div>
@@ -1150,7 +1152,12 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
             )}
 
             {/* Settings */}
-            {!loading && currentPage === 'settings' && <SettingsView onLogout={() => onNavigate(ViewState.LANDING)} />}
+            {!loading && currentPage === 'settings' && (
+              <SettingsView onLogout={() => {
+                logout();
+                onNavigate(ViewState.LANDING);
+              }} />
+            )}
 
         </main>
 

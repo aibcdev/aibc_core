@@ -16,14 +16,28 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
     setError('');
 
     try {
-      // In production, use Google OAuth library
-      // For MVP, we'll simulate Google sign-in
-      // You'll need to integrate with Google OAuth 2.0
-      const mockGoogleId = `google_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const mockEmail = email || `user_${Date.now()}@example.com`;
-      const mockName = firstName && lastName ? `${firstName} ${lastName}` : 'User';
+      // Try to use Google Identity Services (gsi) if available
+      const googleAccounts = (window as any).google?.accounts;
+      if (googleAccounts) {
+        // Google OAuth is available - trigger sign in
+        googleAccounts.id.prompt();
+        setError('Please use the Google sign-in popup that appears');
+        setLoading(false);
+        return;
+      }
 
-      const result = await signInWithGoogle(mockGoogleId, mockEmail, mockName);
+      // Fallback: Use email if provided, otherwise show message
+      if (!email) {
+        setError('Please enter your email or use the Google sign-in button');
+        setLoading(false);
+        return;
+      }
+
+      // Create user with email (fallback for when Google OAuth isn't configured)
+      const mockGoogleId = `google_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const mockName = firstName && lastName ? `${firstName} ${lastName}` : email.split('@')[0];
+
+      const result = await signInWithGoogle(mockGoogleId, email, mockName);
 
       if (result.success && result.user && result.token) {
         storeAuthToken(result.token);
@@ -33,7 +47,7 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
         setError(result.error || 'Failed to sign up with Google');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to sign up with Google');
+      setError(err.message || 'Failed to sign up with Google. Please try email sign-up instead.');
     } finally {
       setLoading(false);
     }

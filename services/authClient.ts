@@ -379,3 +379,25 @@ export function clearUser(): void {
   localStorage.removeItem('user');
 }
 
+/**
+ * Check if user is authenticated
+ */
+export function isAuthenticated(): boolean {
+  const token = getAuthToken();
+  const user = getUser();
+  return !!(token && user);
+}
+
+/**
+ * Logout - clear all auth data
+ */
+export function logout(): void {
+  clearAuthToken();
+  clearUser();
+  // Clear any other user-related data
+  localStorage.removeItem('userTier');
+  localStorage.removeItem('userId');
+  localStorage.removeItem('userName');
+  localStorage.removeItem('userEmail');
+}
+

@@ -10,6 +10,7 @@ import DashboardView from './components/DashboardView';
 import PricingView from './components/PricingView';
 import HelpCenterView from './components/HelpCenterView';
 import { ViewState } from './types';
+import { isAuthenticated } from './services/authClient';
 
 export default function App() {
   const [view, setView] = useState<ViewState>(ViewState.LANDING);
@@ -22,6 +23,15 @@ export default function App() {
       setUsername(savedUsername);
     }
   }, []);
+
+  // Check authentication state on mount
+  useEffect(() => {
+    // If user is authenticated and on landing page, redirect to dashboard
+    if (isAuthenticated() && view === ViewState.LANDING) {
+      // Don't auto-redirect - let user choose
+      // But if they try to access protected routes, check auth
+    }
+  }, [view]);
 
   // Handle hash routing for pricing page
   useEffect(() => {
@@ -38,6 +48,21 @@ export default function App() {
   }, []);
 
   const navigate = (newView: ViewState) => {
+    // Protect routes that require authentication
+    const protectedRoutes = [
+      ViewState.DASHBOARD,
+      ViewState.INGESTION,
+      ViewState.AUDIT,
+      ViewState.VECTORS,
+      ViewState.PRODUCTION
+    ];
+
+    if (protectedRoutes.includes(newView) && !isAuthenticated()) {
+      // Redirect to login if trying to access protected route without auth
+      setView(ViewState.LOGIN);
+      return;
+    }
+
     setView(newView);
     // Update URL hash for pricing
     if (newView === ViewState.PRICING) {
