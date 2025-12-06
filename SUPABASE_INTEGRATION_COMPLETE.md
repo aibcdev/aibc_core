@@ -35,7 +35,6 @@
 ### Step 3: Add Environment Variables
 Add to `.env`:
 ```env
-VITE_SUPABASE_URL=https://xxxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 

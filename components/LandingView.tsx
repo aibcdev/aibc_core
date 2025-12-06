@@ -1298,7 +1298,15 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
 
       {/* Sample Output Modal */}
       {showSampleModal && (
-        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
+        <div 
+          className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowSampleModal(false);
+            }
+          }}
+          style={{ animation: 'fadeIn 0.3s ease-in' }}
+        >
           <div className="relative bg-[#0A0A0A] rounded-2xl border border-white/10 shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-300">
             {/* Close Button */}
             <button

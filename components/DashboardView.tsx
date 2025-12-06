@@ -407,6 +407,25 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
           </div>
           
           <div className="flex items-center gap-2">
+            {(scanUsername || profileName) && (
+              <button
+                onClick={() => {
+                  // Rescan existing user/company
+                  const existingUsername = scanUsername || localStorage.getItem('lastScannedUsername') || '';
+                  if (existingUsername) {
+                    localStorage.setItem('lastScannedUsername', existingUsername);
+                    onNavigate(ViewState.AUDIT);
+                  } else {
+                    onNavigate(ViewState.INGESTION);
+                  }
+                }}
+                className="px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs font-bold text-white hover:bg-white/20 transition-colors flex items-center gap-2"
+                title="Rescan current brand/account"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Rescan
+              </button>
+            )}
             <button
               onClick={() => {
                 // Navigate to ingestion page to start a new scan
