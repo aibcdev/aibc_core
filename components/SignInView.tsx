@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Loader2, Mail } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
 import { signIn, signInWithGoogle, forgotPassword, storeAuthToken, storeUser } from '../services/authClient';
+import { signIn as supabaseSignIn, signInWithGoogle as supabaseSignInWithGoogle, resetPassword as supabaseResetPassword } from '../services/supabaseAuth';
 
 const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
   const [email, setEmail] = useState('');
@@ -19,24 +20,30 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
     setError('');
 
     try {
-      // Try to use Google Identity Services (gsi) if available
-      const googleAccounts = (window as any).google?.accounts;
-      if (googleAccounts) {
-        // Google OAuth is available - trigger sign in
-        googleAccounts.id.prompt();
-        setError('Please use the Google sign-in popup that appears');
-        setLoading(false);
+      // Use Supabase if configured, otherwise fallback to mock
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      
+      if (supabaseUrl) {
+        // Use Supabase Google OAuth
+        const result = await supabaseSignInWithGoogle();
+        if (!result.success) {
+          setError(result.error || 'Failed to sign in with Google');
+          setLoading(false);
+          return;
+        }
+        // Supabase will redirect automatically, so we don't navigate here
+        // The AuthCallback component will handle the redirect
         return;
       }
 
       // Fallback: Use email if provided, otherwise show message
       if (!email) {
-        setError('Please enter your email or use the Google sign-in button');
+        setError('Please enter your email or configure Supabase for Google sign-in');
         setLoading(false);
         return;
       }
 
-      // Create user with email (fallback for when Google OAuth isn't configured)
+      // Create user with email (fallback for when Supabase isn't configured)
       const mockGoogleId = `google_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const mockName = email.split('@')[0];
 
@@ -68,14 +75,29 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
     }
 
     try {
-      const result = await signIn(email, password);
-
-      if (result.success && result.user && result.token) {
-        storeAuthToken(result.token);
-        storeUser(result.user);
-        onNavigate(ViewState.DASHBOARD);
+      // Use Supabase if configured, otherwise fallback to mock
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      
+      if (supabaseUrl) {
+        // Use Supabase sign in
+        const result = await supabaseSignIn(email, password);
+        if (result.success && result.user && result.session) {
+          storeAuthToken(result.session.access_token);
+          storeUser(result.user);
+          onNavigate(ViewState.DASHBOARD);
+        } else {
+          setError(result.error || 'Invalid email or password');
+        }
       } else {
-        setError(result.error || 'Invalid email or password');
+        // Fallback to mock auth
+        const result = await signIn(email, password);
+        if (result.success && result.user && result.token) {
+          storeAuthToken(result.token);
+          storeUser(result.user);
+          onNavigate(ViewState.DASHBOARD);
+        } else {
+          setError(result.error || 'Invalid email or password');
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');
@@ -96,16 +118,29 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
     }
 
     try {
-      const result = await forgotPassword(forgotPasswordEmail);
-
-      if (result.success) {
-        setForgotPasswordSent(true);
-        // In development, show the token
-        if (result.resetToken) {
-          setResetToken(result.resetToken);
+      // Use Supabase if configured, otherwise fallback to mock
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      
+      if (supabaseUrl) {
+        // Use Supabase password reset
+        const result = await supabaseResetPassword(forgotPasswordEmail);
+        if (result.success) {
+          setForgotPasswordSent(true);
+        } else {
+          setError(result.error || 'Failed to send reset email');
         }
       } else {
-        setError(result.error || 'Failed to send reset email');
+        // Fallback to mock
+        const result = await forgotPassword(forgotPasswordEmail);
+        if (result.success) {
+          setForgotPasswordSent(true);
+          // In development, show the token
+          if (result.resetToken) {
+            setResetToken(result.resetToken);
+          }
+        } else {
+          setError(result.error || 'Failed to send reset email');
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Failed to send reset email');

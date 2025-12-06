@@ -5,7 +5,8 @@ import {
   ShieldCheck, Lock, Server, Mic, Sparkles, Bot, Twitter, 
   Github, Linkedin, Image as ImageIcon, Footprints, Cpu, Sliders, 
   BrainCircuit, FileText, FileCheck, Archive, Video, Mic2, BarChart3,
-  Zap, MessageSquareText, Sparkles as SparklesIcon, MessageCircle
+  Zap, MessageSquareText, Sparkles as SparklesIcon, MessageCircle,
+  ChevronDown, Triangle
 } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
 
@@ -44,14 +45,184 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
               >
                 Pricing
               </button>
-              <a 
-                href="https://aibroadcasting.xyz"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm font-bold text-white hover:text-orange-500 transition-colors uppercase tracking-wide"
-              >
-                AIBC Stream
-              </a>
+              
+              {/* AIBC Stream Dropdown */}
+              <div className="group relative">
+                <a 
+                  href="https://aibroadcasting.xyz"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-sm font-bold text-white hover:text-orange-500 transition-colors uppercase tracking-wide focus:outline-none"
+                  onMouseEnter={(e) => e.preventDefault()}
+                >
+                  AIBC Stream
+                  <ChevronDown className="w-4 h-4 text-white/60 group-hover:text-orange-500 transition-colors" />
+                </a>
+                
+                {/* Dropdown Menu */}
+                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-4 w-[900px] origin-top opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out transform group-hover:translate-y-0 translate-y-2 z-50">
+                  <div className="bg-[#0A0A0A] border border-white/10 rounded-xl shadow-2xl shadow-black overflow-hidden ring-1 ring-white/5">
+                    
+                    {/* Dropdown Header */}
+                    <div className="border-b border-white/10 p-5 flex items-end justify-between bg-[#111]/50">
+                      <div>
+                        <h2 className="text-2xl font-semibold tracking-tight text-white mb-1 uppercase">AI Streaming Channels</h2>
+                        <div className="flex items-center gap-2 text-emerald-500 font-mono text-xs tracking-wide">
+                          <span>///</span>
+                          <span>REAL-TIME VIDEO SYNTHESIS ENGINE</span>
+                        </div>
+                      </div>
+                      <div className="hidden md:flex gap-6 text-[10px] font-mono text-white/40 uppercase tracking-wider">
+                        <span>Assets: <span className="text-white/60">8,240</span></span>
+                        <span>Sources: <span className="text-white/60">1.2M</span></span>
+                        <span>Uptime: <span className="text-white/60">99.99%</span></span>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-12 min-h-[420px]">
+                      
+                      {/* Left Sidebar: Latest Generations */}
+                      <div className="col-span-4 border-r border-white/10 bg-[#050505]/50 flex flex-col">
+                        <div className="p-3 border-b border-white/10 flex items-center justify-between">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-white/40 pl-1">Latest Generations</span>
+                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)] animate-pulse mr-2"></div>
+                        </div>
+                        <div className="flex-1 overflow-y-auto">
+                          
+                          {/* List Item 1 */}
+                          <div className="group/item p-4 hover:bg-white/5 cursor-pointer border-b border-white/10 transition-colors">
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="text-[10px] font-mono text-blue-400 font-medium uppercase">Crypto Macro</span>
+                              <span className="text-[10px] font-mono text-white/30">12:42 UTC</span>
+                            </div>
+                            <h3 className="text-sm font-medium text-white/70 group-hover/item:text-white leading-snug mb-3">Bitcoin Breaches $100k: Market Analysis Video</h3>
+                            <div className="flex gap-2">
+                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[10px] font-mono text-white/40 bg-white/5">VIDEO</span>
+                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[10px] font-mono text-white/40 bg-white/5">1:20</span>
+                            </div>
+                          </div>
+                          
+                          {/* List Item 2 */}
+                          <div className="group/item p-4 hover:bg-white/5 cursor-pointer border-b border-white/10 transition-colors bg-white/5">
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="text-[10px] font-mono text-fuchsia-400 font-medium uppercase">Tech Earnings</span>
+                              <span className="text-[10px] font-mono text-white/30">12:38 UTC</span>
+                            </div>
+                            <h3 className="text-sm font-medium text-white leading-snug mb-3">NVIDIA Q4 Earnings Call: AI Summary & Highlights</h3>
+                            <div className="flex gap-2">
+                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[10px] font-mono text-white/40 bg-white/5">AUDIO</span>
+                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[10px] font-mono text-white/40 bg-white/5">3:45</span>
+                            </div>
+                          </div>
+                          
+                          {/* List Item 3 */}
+                          <div className="group/item p-4 hover:bg-white/5 cursor-pointer border-b border-white/10 transition-colors">
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="text-[10px] font-mono text-emerald-400 font-medium uppercase">Regulation</span>
+                              <span className="text-[10px] font-mono text-white/30">12:15 UTC</span>
+                            </div>
+                            <h3 className="text-sm font-medium text-white/70 group-hover/item:text-white leading-snug mb-3">SEC Approval Odds Increase: Legal Breakdown</h3>
+                            <div className="flex gap-2">
+                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[10px] font-mono text-white/40 bg-white/5">VIDEO</span>
+                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[10px] font-mono text-white/40 bg-white/5">2:10</span>
+                            </div>
+                          </div>
+                          
+                          {/* List Item 4 */}
+                          <div className="group/item p-4 hover:bg-white/5 cursor-pointer transition-colors">
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="text-[10px] font-mono text-violet-400 font-medium uppercase">Defi</span>
+                              <span className="text-[10px] font-mono text-white/30">11:50 UTC</span>
+                            </div>
+                            <h3 className="text-sm font-medium text-white/70 group-hover/item:text-white leading-snug mb-3">Uniswap V4 Launch Date Confirmed</h3>
+                            <div className="flex gap-2">
+                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[10px] font-mono text-white/40 bg-white/5">SHORT</span>
+                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[10px] font-mono text-white/40 bg-white/5">0:45</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Right Content: Video & Stats */}
+                      <div className="col-span-8 p-4 flex flex-col gap-4 bg-[#050505]">
+                        
+                        {/* Video Player Area */}
+                        <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-white/10 group/video cursor-pointer">
+                          {/* Background Gradient */}
+                          <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/40 via-purple-900/20 to-black"></div>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80"></div>
+                          
+                          {/* Play Button */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="relative w-24 h-24">
+                              <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500 to-purple-500 rounded-xl blur-xl opacity-40 animate-pulse"></div>
+                              <div className="relative z-10 w-full h-full rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 flex items-center justify-center group-hover/video:scale-105 transition-transform duration-300">
+                                <Play className="w-10 h-10 text-white fill-white ml-1" />
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Live Ticker Bar */}
+                          <div className="absolute bottom-0 left-0 right-0 h-10 bg-black/80 backdrop-blur border-t border-white/10 flex items-center">
+                            <div className="h-full px-3 bg-red-600 flex items-center justify-center">
+                              <div className="flex flex-col items-center leading-none">
+                                <span className="text-[9px] font-bold text-white uppercase tracking-tighter">Live</span>
+                                <span className="text-[9px] font-bold text-white uppercase tracking-tighter">News</span>
+                              </div>
+                            </div>
+                            <div className="flex-1 overflow-hidden relative mx-2">
+                              <div className="text-[10px] font-mono text-white/70 whitespace-nowrap uppercase tracking-wide">
+                                MARKET CLOSE: AI SECTOR LEADS RALLY AMID NEW REGULATION TALKS
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 pr-3 border-l border-white/10 pl-3 h-full">
+                              <div className="flex flex-col leading-none">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[9px] font-mono text-emerald-500">BTC</span>
+                                  <span className="text-[9px] font-mono text-emerald-500">$98,230</span>
+                                  <Triangle className="w-1.5 h-1.5 fill-emerald-500 text-emerald-500 rotate-0" />
+                                </div>
+                                <span className="text-[9px] font-mono text-white/40 text-right">2.4%</span>
+                              </div>
+                              <div className="flex flex-col leading-none">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[9px] font-mono text-emerald-500">ETH</span>
+                                  <span className="text-[9px] font-mono text-emerald-500">$4,102</span>
+                                  <Triangle className="w-1.5 h-1.5 fill-emerald-500 text-emerald-500 rotate-0" />
+                                </div>
+                                <span className="text-[9px] font-mono text-white/40 text-right">1.8%</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Bottom Stats Grid */}
+                        <div className="grid grid-cols-4 gap-4 mt-auto">
+                          <div className="p-3 rounded border border-white/10 bg-white/5">
+                            <div className="text-[9px] font-mono text-white/40 uppercase tracking-wide mb-1">Video Generations</div>
+                            <div className="text-xl font-semibold text-white tracking-tight">100+</div>
+                          </div>
+                          <div className="p-3 rounded border border-white/10 bg-white/5">
+                            <div className="text-[9px] font-mono text-white/40 uppercase tracking-wide mb-1">Active Users</div>
+                            <div className="text-xl font-semibold text-white tracking-tight">22,000+</div>
+                          </div>
+                          <div className="p-3 rounded border border-white/10 bg-white/5">
+                            <div className="text-[9px] font-mono text-white/40 uppercase tracking-wide mb-1">Content Strands</div>
+                            <div className="text-xl font-semibold text-white tracking-tight">4</div>
+                          </div>
+                          <div className="p-3 rounded border border-white/10 bg-white/5 relative">
+                            <div className="text-[9px] font-mono text-white/40 uppercase tracking-wide mb-1">Languages</div>
+                            <div className="text-xl font-semibold text-white tracking-tight">64</div>
+                            <div className="absolute bottom-2 right-2">
+                              <Globe className="w-3 h-3 text-white/30" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -520,10 +691,11 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
             {/* Header */}
             <div className="mb-20 flex flex-col items-center text-center">
               <h1 className="text-4xl font-semibold tracking-tighter text-white sm:text-5xl md:text-6xl lg:text-7xl">
-                <span className="text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/50">Content, evolved.</span>
+                Content, evolved.
               </h1>
-              <p className="mt-6 max-w-2xl text-lg text-zinc-500">
-                Content as a service. Your brand voice, automated. <br className="hidden sm:block" />We handle strategy, creation, and publishing—you focus on growth.
+              <p className="mt-6 max-w-2xl text-lg text-white/70">
+                Transform raw ideas into multi-channel campaigns.<br className="hidden sm:block" />
+                A unified operating system for modern creators.
               </p>
             </div>
 
@@ -811,99 +983,127 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
         <section id="streams" className="py-6 bg-[#050505]">
            <div className="mx-auto max-w-7xl px-6">
                <div className="mb-10">
-                   <h2 className="text-3xl font-medium tracking-tight text-white mb-4">Exactly What You’ll Get Each Month</h2>
+                   <h2 className="text-3xl font-medium tracking-tight text-white mb-4">Exactly What You'll Get Each Month</h2>
                    <div className="h-1 w-20 bg-orange-500 rounded-full"></div>
                </div>
                
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                    
                    {/* Card 1: Text Posts */}
-                   <div className="rounded-3xl p-8 bg-gradient-to-br from-cyan-900/20 to-blue-900/10 border border-cyan-500/20 hover:border-cyan-500/40 transition-all hover:-translate-y-1 group relative overflow-hidden h-[320px] flex flex-col">
-                       <div className="absolute inset-0 bg-noise opacity-10"></div>
-                       <img src="https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=600&q=80" className="absolute right-[-20px] top-[-20px] w-40 h-40 object-cover rounded-2xl rotate-12 opacity-40 group-hover:opacity-60 transition-opacity" alt="Social media content creation - AIBC text posts feature" loading="lazy" />
+                   <div className="rounded-2xl p-8 bg-gradient-to-br from-cyan-900/30 to-teal-900/20 border border-cyan-500/30 hover:border-cyan-500/50 transition-all hover:-translate-y-1 group relative overflow-hidden h-[300px] flex flex-col">
+                       <div className="absolute inset-0 opacity-20">
+                           <div className="absolute right-[-40px] top-[-40px] w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
+                       </div>
+                       <div className="absolute right-[-20px] top-[-20px] w-32 h-32 opacity-30">
+                           <div className="w-full h-full bg-gradient-to-br from-cyan-500/20 to-transparent rounded-2xl rotate-12"></div>
+                       </div>
                        
                        <div className="mt-auto relative z-10">
-                           <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400 mb-4">
-                               <FileText className="w-6 h-6" />
+                           <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4">
+                               <FileText className="w-6 h-6 text-white" />
                            </div>
                            <h3 className="text-2xl font-bold text-white mb-2">Text Posts</h3>
-                           <div className="inline-block px-2 py-0.5 rounded bg-white/10 text-[10px] text-white/60 mb-3 border border-white/5">All Tiers</div>
-                           <p className="text-sm text-white/60 leading-relaxed">Threads, captions, newsletters, and short-form posts optimized for engagement.</p>
+                           <div className="inline-block px-3 py-1 rounded-full bg-white/10 text-[11px] text-white/70 mb-3 border border-white/10">All Tiers</div>
+                           <p className="text-sm text-white/70 leading-relaxed">Threads, captions, newsletters, and short-form posts optimized for engagement.</p>
                        </div>
                    </div>
 
                    {/* Card 2: Articles */}
-                   <div className="rounded-3xl p-8 bg-gradient-to-br from-emerald-900/20 to-green-900/10 border border-emerald-500/20 hover:border-emerald-500/40 transition-all hover:-translate-y-1 group relative overflow-hidden h-[320px] flex flex-col">
-                       <div className="absolute inset-0 bg-noise opacity-10"></div>
-                       <img src="https://images.unsplash.com/photo-1499750310159-5418f31b1936?auto=format&fit=crop&w=600&q=80" className="absolute right-[-20px] top-[-20px] w-40 h-40 object-cover rounded-2xl rotate-12 opacity-40 group-hover:opacity-60 transition-opacity" alt="Long-form article content generation - AIBC articles feature" loading="lazy" />
+                   <div className="rounded-2xl p-8 bg-gradient-to-br from-emerald-900/30 to-green-900/20 border border-emerald-500/30 hover:border-emerald-500/50 transition-all hover:-translate-y-1 group relative overflow-hidden h-[300px] flex flex-col">
+                       <div className="absolute inset-0 opacity-20">
+                           <div className="absolute right-[-40px] top-[-40px] w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
+                       </div>
+                       <div className="absolute right-[-20px] top-[-20px] w-32 h-32 opacity-30">
+                           <div className="w-full h-full bg-gradient-to-br from-emerald-500/20 to-transparent rounded-2xl rotate-12"></div>
+                       </div>
                        
                        <div className="mt-auto relative z-10">
-                           <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4">
-                               <FileCheck className="w-6 h-6" />
+                           <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4">
+                               <FileCheck className="w-6 h-6 text-white" />
                            </div>
                            <h3 className="text-2xl font-bold text-white mb-2">Articles</h3>
-                           <div className="inline-block px-2 py-0.5 rounded bg-white/10 text-[10px] text-white/60 mb-3 border border-white/5">Pro & Premium</div>
-                           <p className="text-sm text-white/60 leading-relaxed">Blogs, op-eds, and PR-ready long-form content SEO-tuned for your niche.</p>
+                           <div className="inline-block px-3 py-1 rounded-full bg-white/10 text-[11px] text-white/70 mb-3 border border-white/10">Pro & Premium</div>
+                           <p className="text-sm text-white/70 leading-relaxed">Blogs, op-eds, and PR-ready long-form content SEO-tuned for your niche.</p>
                        </div>
                    </div>
 
                    {/* Card 3: Short Videos */}
-                   <div className="rounded-3xl p-8 bg-gradient-to-br from-purple-900/20 to-fuchsia-900/10 border border-purple-500/20 hover:border-purple-500/40 transition-all hover:-translate-y-1 group relative overflow-hidden h-[320px] flex flex-col">
-                       <div className="absolute inset-0 bg-noise opacity-10"></div>
-                       <img src="https://images.unsplash.com/photo-1611162616475-46b635cb6868?auto=format&fit=crop&w=600&q=80" className="absolute right-[-20px] top-[-20px] w-40 h-40 object-cover rounded-2xl rotate-12 opacity-40 group-hover:opacity-60 transition-opacity" alt="Short video content creation - AIBC auto-shorts feature" loading="lazy" />
+                   <div className="rounded-2xl p-8 bg-gradient-to-br from-purple-900/30 to-fuchsia-900/20 border border-purple-500/30 hover:border-purple-500/50 transition-all hover:-translate-y-1 group relative overflow-hidden h-[300px] flex flex-col">
+                       <div className="absolute inset-0 opacity-20">
+                           <div className="absolute right-[-40px] top-[-40px] w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
+                       </div>
+                       <div className="absolute right-[-20px] top-[-20px] w-32 h-32 opacity-30">
+                           <div className="w-full h-full bg-gradient-to-br from-purple-500/20 to-transparent rounded-2xl rotate-12 flex items-center justify-center">
+                               <Play className="w-8 h-8 text-white/20" />
+                           </div>
+                       </div>
                        
                        <div className="mt-auto relative z-10">
-                           <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 mb-4">
-                               <Video className="w-6 h-6" />
+                           <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4">
+                               <Video className="w-6 h-6 text-white" />
                            </div>
                            <h3 className="text-2xl font-bold text-white mb-2">Short Videos</h3>
-                           <div className="inline-block px-2 py-0.5 rounded bg-white/10 text-[10px] text-white/60 mb-3 border border-white/5">Premium</div>
-                           <p className="text-sm text-white/60 leading-relaxed">15s–30s reels, promos, and social shorts generated from your text content.</p>
+                           <div className="inline-block px-3 py-1 rounded-full bg-white/10 text-[11px] text-white/70 mb-3 border border-white/10">Premium</div>
+                           <p className="text-sm text-white/70 leading-relaxed">15s-30s reels, promos, and social shorts generated from your text content.</p>
                        </div>
                    </div>
 
                    {/* Card 4: Explainer Videos */}
-                   <div className="rounded-3xl p-8 bg-gradient-to-br from-orange-900/20 to-red-900/10 border border-orange-500/20 hover:border-orange-500/40 transition-all hover:-translate-y-1 group relative overflow-hidden h-[320px] flex flex-col">
-                       <div className="absolute inset-0 bg-noise opacity-10"></div>
-                       <img src="https://images.unsplash.com/photo-1536240478700-b869070f9279?auto=format&fit=crop&w=600&q=80" className="absolute right-[-20px] top-[-20px] w-40 h-40 object-cover rounded-2xl rotate-12 opacity-40 group-hover:opacity-60 transition-opacity" alt="Explainer video content - AIBC video generation feature" loading="lazy" />
+                   <div className="rounded-2xl p-8 bg-gradient-to-br from-orange-900/30 to-amber-900/20 border border-orange-500/30 hover:border-orange-500/50 transition-all hover:-translate-y-1 group relative overflow-hidden h-[300px] flex flex-col">
+                       <div className="absolute inset-0 opacity-20">
+                           <div className="absolute right-[-40px] top-[-40px] w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
+                       </div>
+                       <div className="absolute right-[-20px] top-[-20px] w-32 h-32 opacity-30">
+                           <div className="w-full h-full bg-gradient-to-br from-orange-500/20 to-transparent rounded-2xl rotate-12"></div>
+                       </div>
                        
                        <div className="mt-auto relative z-10">
-                           <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400 mb-4">
-                               <Play className="w-6 h-6" />
+                           <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4">
+                               <Play className="w-6 h-6 text-white" />
                            </div>
                            <h3 className="text-2xl font-bold text-white mb-2">Explainer Videos</h3>
-                           <div className="inline-block px-2 py-0.5 rounded bg-white/10 text-[10px] text-white/60 mb-3 border border-white/5">Premium</div>
-                           <p className="text-sm text-white/60 leading-relaxed">30s–3m deep-dive brand explainers and tutorials.</p>
+                           <div className="inline-block px-3 py-1 rounded-full bg-white/10 text-[11px] text-white/70 mb-3 border border-white/10">Premium</div>
+                           <p className="text-sm text-white/70 leading-relaxed">30s-3m deep-dive brand explainers and tutorials.</p>
                        </div>
                    </div>
 
                    {/* Card 5: Podcasts */}
-                   <div className="rounded-3xl p-8 bg-gradient-to-br from-pink-900/20 to-rose-900/10 border border-pink-500/20 hover:border-pink-500/40 transition-all hover:-translate-y-1 group relative overflow-hidden h-[320px] flex flex-col">
-                       <div className="absolute inset-0 bg-noise opacity-10"></div>
-                       <img src="https://images.unsplash.com/photo-1478737270239-2f02b77ac6d5?auto=format&fit=crop&w=600&q=80" className="absolute right-[-20px] top-[-20px] w-40 h-40 object-cover rounded-2xl rotate-12 opacity-40 group-hover:opacity-60 transition-opacity" alt="Podcast and audio content generation - AIBC podcast feature" loading="lazy" />
+                   <div className="rounded-2xl p-8 bg-gradient-to-br from-pink-900/30 to-rose-900/20 border border-pink-500/30 hover:border-pink-500/50 transition-all hover:-translate-y-1 group relative overflow-hidden h-[300px] flex flex-col">
+                       <div className="absolute inset-0 opacity-20">
+                           <div className="absolute right-[-40px] top-[-40px] w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
+                       </div>
+                       <div className="absolute right-[-20px] top-[-20px] w-32 h-32 opacity-30">
+                           <div className="w-full h-full bg-gradient-to-br from-pink-500/20 to-transparent rounded-2xl rotate-12"></div>
+                       </div>
                        
                        <div className="mt-auto relative z-10">
-                           <div className="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center text-pink-400 mb-4">
-                               <Mic2 className="w-6 h-6" />
+                           <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4">
+                               <Mic2 className="w-6 h-6 text-white" />
                            </div>
                            <h3 className="text-2xl font-bold text-white mb-2">Podcasts</h3>
-                           <div className="inline-block px-2 py-0.5 rounded bg-white/10 text-[10px] text-white/60 mb-3 border border-white/5">Premium</div>
-                           <p className="text-sm text-white/60 leading-relaxed">2–5 min narrative audio clips and mini-podcasts featuring AI voice clones.</p>
+                           <div className="inline-block px-3 py-1 rounded-full bg-white/10 text-[11px] text-white/70 mb-3 border border-white/10">Premium</div>
+                           <p className="text-sm text-white/70 leading-relaxed">2-5 min narrative audio clips and mini-podcasts featuring AI voice clones.</p>
                        </div>
                    </div>
 
                    {/* Card 6: Analytics */}
-                   <div className="rounded-3xl p-8 bg-gradient-to-br from-indigo-900/20 to-slate-900/10 border border-indigo-500/20 hover:border-indigo-500/40 transition-all hover:-translate-y-1 group relative overflow-hidden h-[320px] flex flex-col">
-                       <div className="absolute inset-0 bg-noise opacity-10"></div>
-                       <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80" className="absolute right-[-20px] top-[-20px] w-40 h-40 object-cover rounded-2xl rotate-12 opacity-40 group-hover:opacity-60 transition-opacity" alt="Content analytics and performance tracking - AIBC analytics dashboard" loading="lazy" />
+                   <div className="rounded-2xl p-8 bg-gradient-to-br from-indigo-900/30 to-blue-900/20 border border-indigo-500/30 hover:border-indigo-500/50 transition-all hover:-translate-y-1 group relative overflow-hidden h-[300px] flex flex-col">
+                       <div className="absolute inset-0 opacity-20">
+                           <div className="absolute right-[-40px] top-[-40px] w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
+                       </div>
+                       <div className="absolute right-[-20px] top-[-20px] w-32 h-32 opacity-30">
+                           <div className="w-full h-full bg-gradient-to-br from-indigo-500/20 to-transparent rounded-2xl rotate-12 flex items-center justify-center">
+                               <BarChart3 className="w-8 h-8 text-white/20" />
+                           </div>
+                       </div>
                        
                        <div className="mt-auto relative z-10">
-                           <div className="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 mb-4">
-                               <BarChart3 className="w-6 h-6" />
+                           <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4">
+                               <BarChart3 className="w-6 h-6 text-white" />
                            </div>
                            <h3 className="text-2xl font-bold text-white mb-2">Analytics</h3>
-                           <div className="inline-block px-2 py-0.5 rounded bg-white/10 text-[10px] text-white/60 mb-3 border border-white/5">Business+</div>
-                           <p className="text-sm text-white/60 leading-relaxed">Deep tone reports, content tracking, and schedule performance views.</p>
+                           <div className="inline-block px-3 py-1 rounded-full bg-white/10 text-[11px] text-white/70 mb-3 border border-white/10">Business+</div>
+                           <p className="text-sm text-white/70 leading-relaxed">Deep tone reports, content tracking, and schedule performance views.</p>
                        </div>
                    </div>
 
