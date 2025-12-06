@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   ArrowRight, Play, Star, Code2, 
   Database, User, Globe, Braces, 
@@ -6,11 +6,13 @@ import {
   Github, Linkedin, Image as ImageIcon, Footprints, Cpu, Sliders, 
   BrainCircuit, FileText, FileCheck, Archive, Video, Mic2, BarChart3,
   Zap, MessageSquareText, Sparkles as SparklesIcon, MessageCircle,
-  ChevronDown, Triangle
+  ChevronDown, Triangle, X
 } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
 
 const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
+  const [showSampleModal, setShowSampleModal] = useState(false);
+
   return (
     <div id="landing-view" className="animate-in fade-in duration-500">
       {/* Navigation */}
@@ -289,7 +291,7 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
                 </button>
                 
                 <button 
-                  onClick={() => onNavigate(ViewState.DASHBOARD)}
+                  onClick={() => setShowSampleModal(true)}
                   className="px-8 py-4 rounded-full border border-white/10 hover:bg-white/5 transition-all text-sm font-medium text-white/80 hover:text-white flex items-center gap-2"
                 >
                   See Sample Output <Play className="w-3 h-3 fill-current ml-1" />
