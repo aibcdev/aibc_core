@@ -98,12 +98,14 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
         </button>
 
         {/* Logo */}
-        <div className="mb-8 flex items-center gap-2">
+        <div className="mb-8 flex items-center gap-3">
           <div className="h-8 w-8 flex items-center justify-center text-white">
-             <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="50" cy="50" r="48" stroke="currentColor" strokeWidth="12" />
-                <circle cx="50" cy="50" r="20" fill="currentColor" />
-             </svg>
+            <svg viewBox="0 0 100 100" className="w-full h-full text-white" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="50" cy="50" r="48" stroke="currentColor" strokeWidth="4" />
+              <circle cx="50" cy="50" r="34" stroke="currentColor" strokeWidth="4" />
+              <circle cx="50" cy="50" r="20" stroke="currentColor" strokeWidth="4" />
+              <circle cx="50" cy="50" r="6" fill="currentColor" />
+            </svg>
           </div>
           <span className="text-xl font-bold tracking-tight text-white">AIBC</span>
         </div>
