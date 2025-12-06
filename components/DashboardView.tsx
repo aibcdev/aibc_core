@@ -323,7 +323,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
              </div>
          </div>
 
-         <div className="p-4 border-t border-white/10">
+         <div className="p-4 border-t border-white/10 space-y-3">
              <div className="flex items-center gap-3 px-2">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 to-purple-600 flex items-center justify-center text-xs font-bold border border-white/20">
                     {profileName ? profileName.charAt(0).toUpperCase() : scanUsername ? scanUsername.charAt(0).toUpperCase() : 'U'}
@@ -337,6 +337,16 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                     </div>
                 </div>
              </div>
+             <button
+               onClick={() => {
+                 logout();
+                 onNavigate(ViewState.LANDING);
+               }}
+               className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+             >
+               <LogOut className="w-3 h-3" />
+               Log Out
+             </button>
          </div>
       </aside>
 
