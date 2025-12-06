@@ -222,32 +222,63 @@ export async function signInWithGoogle(
   picture?: string
 ): Promise<AuthResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/google`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ googleId, email, name, picture }),
-    });
+    // Add timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/api/auth/google`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ googleId, email, name, picture }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      // Network error, CORS error, timeout, or any fetch failure - use fallback
+      console.log('Google sign in fetch error, using fallback:', fetchError.message);
+      return signInWithGoogleFallback(googleId, email, name, picture);
+    }
+
+    // If response is not ok, check if it's a backend error or user error
     if (!response.ok) {
-      // If backend is unavailable, use client-side fallback
-      if (response.status === 0 || response.status >= 500) {
+      // For any server error or not found, use fallback
+      if (response.status === 0 || response.status >= 500 || response.status === 404) {
+        return signInWithGoogleFallback(googleId, email, name, picture);
+      }
+      // For client errors (400, 401, 403), try to parse error message
+      try {
+        const errorData = await response.json();
+        // If it's a validation error, return it; otherwise fallback
+        if (response.status >= 400 && response.status < 500 && errorData.error) {
+          return {
+            success: false,
+            error: errorData.error || 'Failed to sign in with Google',
+          };
+        }
+        return signInWithGoogleFallback(googleId, email, name, picture);
+      } catch {
+        // Can't parse error, use fallback
         return signInWithGoogleFallback(googleId, email, name, picture);
       }
     }
 
-    const data = await response.json();
-    return data;
-  } catch (error: any) {
-    // Backend unavailable - use client-side fallback
-    if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
+    // Success - parse response
+    try {
+      const data = await response.json();
+      return data;
+    } catch {
+      // Can't parse success response, use fallback
       return signInWithGoogleFallback(googleId, email, name, picture);
     }
-    return {
-      success: false,
-      error: error.message || 'Failed to sign in with Google',
-    };
+  } catch (error: any) {
+    // Any other error - use client-side fallback
+    console.log('Google sign in error, using fallback:', error?.message || error);
+    return signInWithGoogleFallback(googleId, email, name, picture);
   }
 }
 
