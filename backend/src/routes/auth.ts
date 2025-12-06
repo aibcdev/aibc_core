@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { OAuth2Client } from 'google-auth-library';
 import {
   createUser,
   signInWithEmail,
@@ -10,6 +11,12 @@ import {
 } from '../services/authService';
 
 const router = Router();
+
+// Initialize Google OAuth client
+let googleClient: OAuth2Client | null = null;
+if (process.env.GOOGLE_CLIENT_ID) {
+  googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+}
 
 // Sign up with email/password
 router.post('/signup', async (req: Request, res: Response) => {
@@ -81,18 +88,67 @@ router.post('/signin', async (req: Request, res: Response) => {
 // Sign in with Google OAuth
 router.post('/google', async (req: Request, res: Response) => {
   try {
-    const { googleId, email, name, picture } = req.body;
+    const { credential, googleId, email, name, picture } = req.body;
 
-    if (!googleId || !email) {
+    let verifiedEmail: string;
+    let verifiedName: string | undefined;
+    let verifiedPicture: string | undefined;
+    let verifiedGoogleId: string;
+
+    // If credential (JWT token) is provided, verify it
+    if (credential && googleClient) {
+      try {
+        const ticket = await googleClient.verifyIdToken({
+          idToken: credential,
+          audience: process.env.GOOGLE_CLIENT_ID,
+        });
+
+        const payload = ticket.getPayload();
+        if (!payload) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid Google token'
+          });
+        }
+
+        verifiedGoogleId = payload.sub;
+        verifiedEmail = payload.email || '';
+        verifiedName = payload.name;
+        verifiedPicture = payload.picture;
+
+        if (!verifiedEmail) {
+          return res.status(400).json({
+            success: false,
+            error: 'Email not provided by Google'
+          });
+        }
+      } catch (verifyError: any) {
+        console.error('Google token verification failed:', verifyError.message);
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid Google token'
+        });
+      }
+    } else if (googleId && email) {
+      // Legacy mode: trust client-provided data (fallback)
+      verifiedGoogleId = googleId;
+      verifiedEmail = email;
+      verifiedName = name;
+      verifiedPicture = picture;
+    } else {
       return res.status(400).json({
         success: false,
-        error: 'Google ID and email are required'
+        error: 'Either credential (JWT) or googleId and email are required'
       });
     }
 
-    // In production, verify the Google token server-side
-    // For now, we trust the client-provided data
-    const { user, token, isNewUser } = signInWithGoogle(googleId, email, name, picture);
+    // Create or get user with verified Google data
+    const { user, token, isNewUser } = signInWithGoogle(
+      verifiedGoogleId,
+      verifiedEmail,
+      verifiedName,
+      verifiedPicture
+    );
 
     // Remove sensitive data
     const { passwordHash, resetPasswordToken, resetPasswordExpires, ...userResponse } = user;
@@ -104,6 +160,7 @@ router.post('/google', async (req: Request, res: Response) => {
       isNewUser
     });
   } catch (error: any) {
+    console.error('Google sign-in error:', error);
     res.status(400).json({
       success: false,
       error: error.message || 'Failed to sign in with Google'

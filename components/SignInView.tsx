@@ -13,37 +13,70 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
   const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
   const [resetToken, setResetToken] = useState('');
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+
+  // Initialize Google Sign-In
+  useEffect(() => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    
+    if (!clientId) {
+      console.warn('VITE_GOOGLE_CLIENT_ID not set - Google sign-in disabled');
+      return;
+    }
+
+    // Wait for Google script to load
+    const checkGoogleLoaded = () => {
+      if (isGoogleLoaded()) {
+        initializeGoogleSignIn(
+          clientId,
+          async (credential: string) => {
+            setLoading(true);
+            setError('');
+            try {
+              // Send JWT token to backend for verification
+              const result = await signInWithGoogle(credential);
+              if (result.success && result.user && result.token) {
+                storeAuthToken(result.token);
+                storeUser(result.user);
+                onNavigate(ViewState.DASHBOARD);
+              } else {
+                setError(result.error || 'Failed to sign in with Google');
+              }
+            } catch (err: any) {
+              setError(err.message || 'Failed to sign in with Google. Please try email sign-in instead.');
+            } finally {
+              setLoading(false);
+            }
+          },
+          (err: any) => {
+            console.error('Google Sign-In error:', err);
+            setError('Failed to initialize Google sign-in');
+          }
+        );
+
+        // Render button after initialization
+        setTimeout(() => {
+          if (googleButtonRef.current) {
+            renderGoogleButton(googleButtonRef.current.id, {
+              theme: 'outline',
+              size: 'large',
+              text: 'signin_with',
+              width: '100%',
+            });
+          }
+        }, 100);
+      } else {
+        // Retry after a short delay
+        setTimeout(checkGoogleLoaded, 100);
+      }
+    };
+
+    checkGoogleLoaded();
+  }, []);
 
   const handleGoogleSignIn = async () => {
-    setLoading(true);
-    setError('');
-
-    try {
-      // Fallback: Use email if provided, otherwise show message
-      if (!email) {
-        setError('Please enter your email or configure Supabase for Google sign-in');
-        setLoading(false);
-        return;
-      }
-
-      // Create user with email (fallback for when Supabase isn't configured)
-      const mockGoogleId = `google_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const mockName = email.split('@')[0];
-
-      const result = await signInWithGoogle(mockGoogleId, email, mockName);
-
-      if (result.success && result.user && result.token) {
-        storeAuthToken(result.token);
-        storeUser(result.user);
-        onNavigate(ViewState.DASHBOARD);
-      } else {
-        setError(result.error || 'Failed to sign in with Google');
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign in with Google. Please try email sign-in instead.');
-    } finally {
-      setLoading(false);
-    }
+    // This is now handled by the Google button callback
+    setError('Please use the "Continue with Google" button above');
   };
 
   const handleEmailSignIn = async (e: React.FormEvent) => {

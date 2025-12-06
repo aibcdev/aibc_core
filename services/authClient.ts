@@ -240,10 +240,14 @@ function signInFallback(email: string, password: string): AuthResponse {
 
 /**
  * Sign in with Google OAuth
+ * @param credential - Google JWT token (if using Google Identity Services) OR googleId (legacy)
+ * @param email - Optional email (for fallback or legacy mode)
+ * @param name - Optional name (for fallback or legacy mode)
+ * @param picture - Optional picture (for fallback or legacy mode)
  */
 export async function signInWithGoogle(
-  googleId: string,
-  email: string,
+  credential: string,
+  email?: string,
   name?: string,
   picture?: string
 ): Promise<AuthResponse> {
@@ -254,12 +258,20 @@ export async function signInWithGoogle(
 
     let response: Response;
     try {
+      // If credential looks like a JWT token (starts with eyJ), send it as credential
+      // Otherwise, treat it as legacy googleId
+      const isJWT = credential.startsWith('eyJ');
+      
       response = await fetch(`${API_BASE_URL}/api/auth/google`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ googleId, email, name, picture }),
+        body: JSON.stringify(
+          isJWT
+            ? { credential } // New Google Identity Services format
+            : { googleId: credential, email, name, picture } // Legacy format
+        ),
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
@@ -267,7 +279,8 @@ export async function signInWithGoogle(
       clearTimeout(timeoutId);
       // Network error, CORS error, timeout, or any fetch failure - use fallback
       console.log('Google sign in fetch error, using fallback:', fetchError.message);
-      return signInWithGoogleFallback(googleId, email, name, picture);
+      const googleId = credential.startsWith('eyJ') ? `google_${Date.now()}` : credential;
+      return signInWithGoogleFallback(googleId, email || 'user@example.com', name, picture);
     }
 
     // If response is not ok, check if it's a backend error or user error
