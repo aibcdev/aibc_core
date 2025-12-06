@@ -353,6 +353,34 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         
+        {/* Email Verification Banner */}
+        {(() => {
+          const user = getUser();
+          if (user && !user.emailVerified) {
+            return (
+              <div className="bg-gradient-to-r from-orange-500/20 to-red-500/20 border-b border-orange-500/30 px-6 py-3 flex items-center justify-between flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(255,94,30,0.8)] animate-pulse"></div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-white/90 uppercase tracking-wider">Live Feed:</span>
+                    <span className="text-sm text-white font-medium">Please verify your email to upgrade your account</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => {
+                    // In production, this would trigger email verification
+                    alert('Verification email sent! Check your inbox.');
+                  }}
+                  className="text-xs font-bold text-orange-400 hover:text-orange-300 transition-colors uppercase tracking-wide"
+                >
+                  Resend Email
+                </button>
+              </div>
+            );
+          }
+          return null;
+        })()}
+        
         {/* Header */}
         <header className="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-[#050505]/50 backdrop-blur-sm z-10 flex-shrink-0">
           <div className="flex items-center gap-6">
