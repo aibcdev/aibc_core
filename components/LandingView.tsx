@@ -1295,6 +1295,137 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
           </div>
         </div>
       </footer>
+
+      {/* Sample Output Modal */}
+      {showSampleModal && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="relative bg-[#0A0A0A] rounded-2xl border border-white/10 shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-300">
+            {/* Close Button */}
+            <button
+              onClick={() => setShowSampleModal(false)}
+              className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Modal Content */}
+            <div className="p-8">
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-medium tracking-tight text-white mb-2">Sample Output</h2>
+                <p className="text-white/50 text-base">Digital footprint scan results from <span className="text-orange-400 font-semibold">Nike.com</span></p>
+              </div>
+
+              <div className="rounded-xl border border-white/10 bg-[#050505] overflow-hidden shadow-xl">
+                <div className="flex border-b border-white/10 bg-white/5 backdrop-blur">
+                  <div className="flex-1 px-5 py-3 text-[10px] font-bold text-white/40 border-r border-white/10 flex items-center justify-between">
+                    <span>INPUT: nike.com</span>
+                    <Globe className="h-3 w-3" strokeWidth={1.5} />
+                  </div>
+                  <div className="flex-1 px-5 py-3 text-[10px] font-bold text-orange-400 bg-orange-500/5 flex items-center justify-between">
+                    <span>OUTPUT: BRAND DNA & CONTENT</span>
+                    <span className="text-[9px] text-orange-300 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1"><Sparkles className="h-2.5 w-2.5" /> Analyzed</span>
+                  </div>
+                </div>
+                <div className="flex flex-col md:flex-row min-h-[400px]">
+                  {/* Brand DNA Output */}
+                  <div className="flex-1 p-6 border-r border-white/10 bg-[#050505]">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/20">
+                          <Bot className="h-4 w-4 text-white" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-white">Nike Brand DNA</div>
+                          <div className="text-[10px] text-white/40">Extracted from digital footprint</div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
+                          <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Brand Archetype</div>
+                          <p className="text-sm font-semibold text-white">The Hero</p>
+                        </div>
+                        
+                        <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
+                          <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Voice & Tone</div>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            <span className="px-2 py-1 rounded bg-orange-500/10 text-orange-300 text-[10px] font-medium border border-orange-500/20">Empowering</span>
+                            <span className="px-2 py-1 rounded bg-orange-500/10 text-orange-300 text-[10px] font-medium border border-orange-500/20">Motivational</span>
+                            <span className="px-2 py-1 rounded bg-orange-500/10 text-orange-300 text-[10px] font-medium border border-orange-500/20">Bold</span>
+                          </div>
+                        </div>
+                        
+                        <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
+                          <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Core Pillars</div>
+                          <ul className="text-xs text-white/80 space-y-1 mt-2">
+                            <li>• Just Do It - Action-oriented messaging</li>
+                            <li>• Innovation & Performance</li>
+                            <li>• Athlete Empowerment</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Generated Content Output */}
+                  <div className="flex-1 p-6 bg-[#080808] relative overflow-hidden">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/10">
+                          <span className="text-[9px] text-white/40 font-bold">AIBC</span>
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-white">Generated Content</div>
+                          <div className="text-[10px] text-white/40">Brand-voice matched</div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
+                          <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">LinkedIn Post</div>
+                          <p className="text-[13px] text-white/90 leading-relaxed font-serif mb-2">
+                            Your limits are just suggestions. 🏃‍♂️
+                          </p>
+                          <p className="text-[13px] text-white/80 leading-relaxed font-serif">
+                            Every breakthrough starts with a single step. At Nike, we don't just make products—we build the tools that help athletes push beyond what they thought possible.
+                          </p>
+                          <div className="mt-3 flex items-center gap-2">
+                            <span className="text-[9px] text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">Brand Match: 94%</span>
+                          </div>
+                        </div>
+                        
+                        <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
+                          <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Instagram Caption</div>
+                          <p className="text-[13px] text-white/90 leading-relaxed font-serif">
+                            Just Do It. ✨
+                            <br /><br />
+                            Because greatness isn't found in comfort zones. It's built in the moments when you choose to push harder, run faster, jump higher.
+                            <br /><br />
+                            #JustDoIt #Nike
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* CTA Button */}
+              <div className="mt-8 flex justify-center">
+                <button
+                  onClick={() => {
+                    setShowSampleModal(false);
+                    onNavigate(ViewState.LOGIN);
+                  }}
+                  className="px-8 py-3 rounded-full bg-white text-black font-bold text-sm hover:bg-gray-200 transition-colors flex items-center gap-2"
+                >
+                  Get Started <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
