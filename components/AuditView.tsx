@@ -355,11 +355,11 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
       await delay(4000);
       addLog(`[SCANNER] Analyzing tweet engagement patterns...`);
       await delay(5000);
-      addLog(`[SCANNER] Processing ${Math.floor(Math.random() * 50) + 20} tweets...`);
+      addLog(`[SCANNER] Processing tweets...`);
       await delay(4000);
       addLog(`[SCANNER] Extracting hashtag usage and mention patterns...`);
       await delay(4000);
-      addLog(`[SUCCESS] X scan complete - ${Math.floor(Math.random() * 30) + 10} high-engagement posts found`);
+      addLog(`[SUCCESS] X scan complete - analyzing engagement patterns`);
       updateStageStatus(1, 'complete');
       setProgress(20);
 
@@ -373,7 +373,7 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
       await delay(6000);
       addLog(`[SCANNER] Analyzing video performance metrics...`);
       await delay(5000);
-      addLog(`[SCANNER] Extracting content themes from ${Math.floor(Math.random() * 20) + 5} videos...`);
+      addLog(`[SCANNER] Extracting content themes from videos...`);
       await delay(6000);
       addLog(`[SCANNER] Processing video transcripts for voice analysis...`);
       await delay(8000);

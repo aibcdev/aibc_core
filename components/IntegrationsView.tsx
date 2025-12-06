@@ -187,7 +187,7 @@ const IntegrationsView: React.FC = () => {
 
     setVerificationResult({
       verified: false,
-      error: `Could not verify this ${platformNames[platform] || platform} account. Please check the username and ensure the account exists and is public.`
+      error: `❌ Account not found. Could not verify this ${platformNames[platform] || platform} account. Please check the username and ensure the account exists and is public. No data available.`
     });
   };
 

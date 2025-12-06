@@ -628,59 +628,103 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
           </div>
         </section>
 
-        {/* OUTPUT COMPARISON */}
+        {/* OUTPUT COMPARISON - NIKE.COM SAMPLE */}
         <section className="py-6 border-t border-white/5 bg-[#050505] relative">
           <div className="mx-auto max-w-6xl px-6">
             <div className="text-center mb-10">
               <h2 className="text-3xl font-medium tracking-tight text-white">High Fidelity Output</h2>
-              <p className="mt-3 text-white/50 text-base">See the difference between generic AI and <span className="text-orange-400">Brand-Tuned AI</span>.</p>
+              <p className="mt-3 text-white/50 text-base">Sample output from <span className="text-orange-400 font-semibold">Nike.com</span> digital footprint scan.</p>
             </div>
 
             <div className="rounded-xl border border-white/10 bg-[#0A0A0A] overflow-hidden shadow-2xl">
               <div className="flex border-b border-white/10 bg-white/5 backdrop-blur">
                 <div className="flex-1 px-5 py-3 text-[10px] font-bold text-white/40 border-r border-white/10 flex items-center justify-between">
-                  <span>INPUT: RAW THOUGHTS</span>
-                  <Mic className="h-3 w-3" strokeWidth={1.5} />
+                  <span>INPUT: nike.com</span>
+                  <Globe className="h-3 w-3" strokeWidth={1.5} />
                 </div>
                 <div className="flex-1 px-5 py-3 text-[10px] font-bold text-orange-400 bg-orange-500/5 flex items-center justify-between">
-                  <span>OUTPUT: LINKEDIN POST</span>
-                  <span className="text-[9px] text-orange-300 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1"><Sparkles className="h-2.5 w-2.5" /> Optimized</span>
+                  <span>OUTPUT: BRAND DNA & CONTENT</span>
+                  <span className="text-[9px] text-orange-300 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1"><Sparkles className="h-2.5 w-2.5" /> Analyzed</span>
                 </div>
               </div>
-              <div className="flex flex-col md:flex-row min-h-[300px]">
-                {/* Before */}
+              <div className="flex flex-col md:flex-row min-h-[400px]">
+                {/* Brand DNA Output */}
                 <div className="flex-1 p-6 border-r border-white/10 bg-[#050505]">
-                  <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/10">
-                      <span className="text-[9px] text-white/40 font-bold">YOU</span>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/20">
+                        <Bot className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-white">Nike Brand DNA</div>
+                        <div className="text-[10px] text-white/40">Extracted from digital footprint</div>
+                      </div>
                     </div>
-                    <div className="space-y-3 w-full">
+                    
+                    <div className="space-y-3">
                       <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
-                        <p className="font-mono text-[11px] leading-relaxed text-white/50 italic">
-                          "Basically we are seeing that companies spend way too much time on meetings. Like, asynchronous work is better..."
-                        </p>
+                        <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Brand Archetype</div>
+                        <p className="text-sm font-semibold text-white">The Hero</p>
+                      </div>
+                      
+                      <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
+                        <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Voice & Tone</div>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          <span className="px-2 py-1 rounded bg-orange-500/10 text-orange-300 text-[10px] font-medium border border-orange-500/20">Empowering</span>
+                          <span className="px-2 py-1 rounded bg-orange-500/10 text-orange-300 text-[10px] font-medium border border-orange-500/20">Motivational</span>
+                          <span className="px-2 py-1 rounded bg-orange-500/10 text-orange-300 text-[10px] font-medium border border-orange-500/20">Bold</span>
+                        </div>
+                      </div>
+                      
+                      <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
+                        <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Core Pillars</div>
+                        <ul className="text-xs text-white/80 space-y-1 mt-2">
+                          <li>• Just Do It - Action-oriented messaging</li>
+                          <li>• Innovation & Performance</li>
+                          <li>• Athlete Empowerment</li>
+                        </ul>
                       </div>
                     </div>
                   </div>
                 </div>
-                {/* After */}
+                
+                {/* Generated Content Output */}
                 <div className="flex-1 p-6 bg-[#080808] relative overflow-hidden">
-                  <div className="flex items-start gap-3 relative z-10">
-                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/20">
-                      <Bot className="h-4 w-4 text-white" />
-                    </div>
-                    <div className="space-y-3 w-full">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-bold text-white">Felix Chen</span>
-                        <span className="text-[10px] text-white/40">• CMO at TechFlow</span>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/10">
+                        <span className="text-[9px] text-white/40 font-bold">AIBC</span>
                       </div>
-                      <p className="text-[13px] text-white/90 leading-relaxed font-serif">
-                        Your calendar is killing your company. 💀
-                      </p>
-                      <p className="text-[13px] text-white/80 leading-relaxed font-serif">
-                        We analyzed 500+ startups.
-                        The #1 cause of stalled growth? <span className="bg-orange-500/10 text-orange-200 px-1 rounded font-medium">Meeting density.</span>
-                      </p>
+                      <div>
+                        <div className="text-xs font-bold text-white">Generated Content</div>
+                        <div className="text-[10px] text-white/40">Brand-voice matched</div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
+                        <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">LinkedIn Post</div>
+                        <p className="text-[13px] text-white/90 leading-relaxed font-serif mb-2">
+                          Your limits are just suggestions. 🏃‍♂️
+                        </p>
+                        <p className="text-[13px] text-white/80 leading-relaxed font-serif">
+                          Every breakthrough starts with a single step. At Nike, we don't just make products—we build the tools that help athletes push beyond what they thought possible.
+                        </p>
+                        <div className="mt-3 flex items-center gap-2">
+                          <span className="text-[9px] text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">Brand Match: 94%</span>
+                        </div>
+                      </div>
+                      
+                      <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
+                        <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Instagram Caption</div>
+                        <p className="text-[13px] text-white/90 leading-relaxed font-serif">
+                          Just Do It. ✨
+                          <br /><br />
+                          Because greatness isn't found in comfort zones. It's built in the moments when you choose to push harder, run faster, jump higher.
+                          <br /><br />
+                          #JustDoIt #Nike
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
