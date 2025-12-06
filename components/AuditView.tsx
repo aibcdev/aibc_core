@@ -228,6 +228,7 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
       // Attempt backend connection with clear error handling
       let scanResponse: any;
       let backendAvailable = false;
+      const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       
       try {
         scanResponse = await startScan(scanUsername, platforms, 'standard');
@@ -238,22 +239,52 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
           // Backend returned error response
           const errorReason = scanResponse.error || 'Unknown error';
           addLog(`[WARNING] Backend unavailable: ${errorReason}`);
-          addLog(`[INFO] Reason: Backend server not responding or not deployed`);
-          addLog(`[INFO] Solution: Backend needs to be running at ${import.meta.env.VITE_API_URL || 'http://localhost:3001'}`);
+          addLog(`[INFO] ═══════════════════════════════════════`);
+          addLog(`[INFO] BACKEND CONNECTION FAILED`);
+          addLog(`[INFO] ═══════════════════════════════════════`);
+          addLog(`[INFO] Attempted URL: ${backendUrl}`);
+          addLog(`[INFO] Status: Server not responding`);
+          addLog(`[INFO] `);
+          addLog(`[INFO] TO FIX THIS:`);
+          if (backendUrl.includes('localhost')) {
+            addLog(`[INFO] 1. Open terminal and run: cd backend && npm run dev`);
+            addLog(`[INFO] 2. Wait for: "🚀 Server running on port 3001"`);
+            addLog(`[INFO] 3. Click "Retry" button below`);
+          } else {
+            addLog(`[INFO] 1. Backend needs to be deployed to: ${backendUrl}`);
+            addLog(`[INFO] 2. Deploy backend to Google Cloud Run or VPS`);
+            addLog(`[INFO] 3. Ensure DNS points ${backendUrl} to your server`);
+            addLog(`[INFO] 4. Click "Retry" button below once deployed`);
+          }
+          addLog(`[INFO] `);
           addLog(`[INFO] Continuing with client-side scan (simulated data)`);
+          addLog(`[INFO] Scan will complete successfully - results will be approximate`);
           backendAvailable = false;
         }
       } catch (err: any) {
         // Network/fetch error
         const errorMsg = err.message || 'Network error';
         addLog(`[WARNING] Backend connection failed: ${errorMsg}`);
-        addLog(`[INFO] Reason: Cannot reach backend server`);
-        addLog(`[INFO] Possible causes:`);
-        addLog(`[INFO]   1. Backend server not running (start with: cd backend && npm run dev)`);
-        addLog(`[INFO]   2. Backend not deployed (deploy to GCP/VPS)`);
-        addLog(`[INFO]   3. Wrong URL configured (check VITE_API_URL environment variable)`);
-        addLog(`[INFO]   4. Network/firewall blocking connection`);
+        addLog(`[INFO] ═══════════════════════════════════════`);
+        addLog(`[INFO] BACKEND CONNECTION FAILED`);
+        addLog(`[INFO] ═══════════════════════════════════════`);
+        addLog(`[INFO] Attempted URL: ${backendUrl}`);
+        addLog(`[INFO] Error: ${errorMsg}`);
+        addLog(`[INFO] `);
+        addLog(`[INFO] TO FIX THIS:`);
+        if (backendUrl.includes('localhost')) {
+          addLog(`[INFO] 1. Open terminal and run: cd backend && npm run dev`);
+          addLog(`[INFO] 2. Wait for: "🚀 Server running on port 3001"`);
+          addLog(`[INFO] 3. Click "Retry" button below`);
+        } else {
+          addLog(`[INFO] 1. Backend needs to be deployed to: ${backendUrl}`);
+          addLog(`[INFO] 2. Deploy backend to Google Cloud Run or VPS`);
+          addLog(`[INFO] 3. Ensure DNS points ${backendUrl} to your server`);
+          addLog(`[INFO] 4. Click "Retry" button below once deployed`);
+        }
+        addLog(`[INFO] `);
         addLog(`[INFO] Continuing with client-side scan (simulated data)`);
+        addLog(`[INFO] Scan will complete successfully - results will be approximate`);
         backendAvailable = false;
       }
       
@@ -675,25 +706,49 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
               <div className="flex items-start gap-3">
                 <Shield className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <div className="text-blue-300 text-sm font-medium mb-1">Client-Side Scan Mode</div>
-                  <div className="text-blue-300/70 text-xs mb-3">Backend server unavailable - using simulated data</div>
-                  <div className="text-blue-300/50 text-[10px] font-mono space-y-1">
-                    <div>• Backend URL: {import.meta.env.VITE_API_URL || 'http://localhost:3001'}</div>
-                    <div>• Status: Not accessible</div>
-                    <div>• Solution: Start backend server or deploy to production</div>
+                  <div className="text-blue-300 text-sm font-medium mb-2">Backend Server Unavailable</div>
+                  <div className="text-blue-300/70 text-xs mb-3">Using client-side scan mode - results will be simulated</div>
+                  <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3 mb-3">
+                    <div className="text-blue-300/80 text-[10px] font-mono space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-blue-400">URL:</span>
+                        <span className="text-blue-200">{import.meta.env.VITE_API_URL || 'http://localhost:3001'}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-blue-400">Status:</span>
+                        <span className="text-red-400">Not accessible</span>
+                      </div>
+                      {import.meta.env.VITE_API_URL?.includes('localhost') ? (
+                        <div className="flex items-start gap-2 mt-2 pt-2 border-t border-blue-500/20">
+                          <span className="text-blue-400">Fix:</span>
+                          <span className="text-blue-200">Run: <code className="bg-blue-500/20 px-1 rounded">cd backend && npm run dev</code></span>
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-2 mt-2 pt-2 border-t border-blue-500/20">
+                          <span className="text-blue-400">Fix:</span>
+                          <span className="text-blue-200">Deploy backend to production server</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-blue-300/60 text-[10px]">
+                    Scan will complete successfully with simulated data. For real-time results, connect backend server.
                   </div>
                 </div>
                 <button
                   onClick={handleRetry}
                   disabled={isRetrying}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-lg text-xs font-medium text-blue-300 transition-all disabled:opacity-50 flex-shrink-0"
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-lg text-xs font-medium text-blue-300 transition-all disabled:opacity-50 flex-shrink-0"
                 >
                   {isRetrying ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Retrying...
+                    </>
                   ) : (
                     <>
                       <RefreshCw className="w-3 h-3" />
-                      Retry
+                      Retry Connection
                     </>
                   )}
                 </button>
