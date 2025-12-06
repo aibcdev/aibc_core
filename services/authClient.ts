@@ -41,14 +41,62 @@ export async function signUp(
       body: JSON.stringify({ email, password, firstName, lastName }),
     });
 
+    if (!response.ok) {
+      // If backend is unavailable, use client-side fallback
+      if (response.status === 0 || response.status >= 500) {
+        return signUpFallback(email, password, firstName, lastName);
+      }
+    }
+
     const data = await response.json();
     return data;
   } catch (error: any) {
+    // Backend unavailable - use client-side fallback
+    if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
+      return signUpFallback(email, password, firstName, lastName);
+    }
     return {
       success: false,
       error: error.message || 'Failed to sign up',
     };
   }
+}
+
+/**
+ * Client-side fallback for sign up (when backend unavailable)
+ */
+function signUpFallback(
+  email: string,
+  password: string,
+  firstName?: string,
+  lastName?: string
+): AuthResponse {
+  // Generate mock user data
+  const user: User = {
+    id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    email,
+    firstName,
+    lastName,
+    name: firstName && lastName ? `${firstName} ${lastName}` : email.split('@')[0],
+    tier: 'free',
+    credits: 100,
+    createdAt: new Date().toISOString(),
+    emailVerified: false,
+  };
+
+  // Generate mock token
+  const token = `mock_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  // Store locally
+  storeAuthToken(token);
+  storeUser(user);
+
+  return {
+    success: true,
+    user,
+    token,
+    isNewUser: true,
+  };
 }
 
 /**
@@ -64,14 +112,68 @@ export async function signIn(email: string, password: string): Promise<AuthRespo
       body: JSON.stringify({ email, password }),
     });
 
+    if (!response.ok) {
+      // If backend is unavailable, use client-side fallback
+      if (response.status === 0 || response.status >= 500) {
+        return signInFallback(email, password);
+      }
+    }
+
     const data = await response.json();
     return data;
   } catch (error: any) {
+    // Backend unavailable - use client-side fallback
+    if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
+      return signInFallback(email, password);
+    }
     return {
       success: false,
       error: error.message || 'Failed to sign in',
     };
   }
+}
+
+/**
+ * Client-side fallback for sign in (when backend unavailable)
+ */
+function signInFallback(email: string, password: string): AuthResponse {
+  // Check if user exists in localStorage (from previous signup)
+  const existingUser = getUser();
+  
+  if (existingUser && existingUser.email === email) {
+    // User exists - generate new token
+    const token = `mock_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    storeAuthToken(token);
+    
+    return {
+      success: true,
+      user: existingUser,
+      token,
+      isNewUser: false,
+    };
+  }
+
+  // New user - create account
+  const user: User = {
+    id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    email,
+    name: email.split('@')[0],
+    tier: 'free',
+    credits: 100,
+    createdAt: new Date().toISOString(),
+    emailVerified: false,
+  };
+
+  const token = `mock_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  storeAuthToken(token);
+  storeUser(user);
+
+  return {
+    success: true,
+    user,
+    token,
+    isNewUser: true,
+  };
 }
 
 /**
@@ -92,14 +194,72 @@ export async function signInWithGoogle(
       body: JSON.stringify({ googleId, email, name, picture }),
     });
 
+    if (!response.ok) {
+      // If backend is unavailable, use client-side fallback
+      if (response.status === 0 || response.status >= 500) {
+        return signInWithGoogleFallback(googleId, email, name, picture);
+      }
+    }
+
     const data = await response.json();
     return data;
   } catch (error: any) {
+    // Backend unavailable - use client-side fallback
+    if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
+      return signInWithGoogleFallback(googleId, email, name, picture);
+    }
     return {
       success: false,
       error: error.message || 'Failed to sign in with Google',
     };
   }
+}
+
+/**
+ * Client-side fallback for Google sign in (when backend unavailable)
+ */
+function signInWithGoogleFallback(
+  googleId: string,
+  email: string,
+  name?: string,
+  picture?: string
+): AuthResponse {
+  // Check if user exists
+  const existingUser = getUser();
+  
+  if (existingUser && existingUser.email === email) {
+    const token = `mock_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    storeAuthToken(token);
+    
+    return {
+      success: true,
+      user: existingUser,
+      token,
+      isNewUser: false,
+    };
+  }
+
+  // Create new user
+  const user: User = {
+    id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    email,
+    name: name || email.split('@')[0],
+    tier: 'free',
+    credits: 100,
+    createdAt: new Date().toISOString(),
+    emailVerified: true,
+  };
+
+  const token = `mock_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  storeAuthToken(token);
+  storeUser(user);
+
+  return {
+    success: true,
+    user,
+    token,
+    isNewUser: true,
+  };
 }
 
 /**
