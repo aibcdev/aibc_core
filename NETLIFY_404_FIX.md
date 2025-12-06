@@ -1,125 +1,75 @@
-# Fixing "Page Not Found" on Netlify
+# Netlify 404 Fix - Builds Passing But Site Shows 404
 
-## Issue
-Netlify is showing "Page not found" for routes other than the homepage.
+## Problem
+Builds are passing ✅, but site shows 404 ❌
 
-## Root Cause
-Netlify needs to be configured to redirect all routes to `index.html` for React SPA routing.
+## Root Cause Analysis
 
-## Solutions
+According to [Netlify Support Guide](https://answers.netlify.com/t/support-guide-i-ve-deployed-my-site-but-i-still-see-page-not-found/125), when builds pass but you get 404, check:
 
-### Solution 1: Use netlify.toml (Already Configured)
+### 1. ✅ Publish Directory
+- **Netlify Settings:** Site settings → Build & deploy → Publish directory
+- **Should be:** `dist` (not `dist/` or anything else)
+- **Check:** Is this correct in your Netlify dashboard?
 
-The `netlify.toml` file already has redirects configured:
-```toml
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-```
+### 2. ✅ SPA Redirect Rule
+- **File:** `public/_redirects` → copied to `dist/_redirects`
+- **Format:** `/*    /index.html   200` (no comments, exact spacing)
+- **Status:** Fixed - removed comments, simplified format
 
-**If this isn't working, check:**
-1. File is in repository root (✅ it is)
-2. File is committed to Git (✅ it is)
-3. Netlify is reading it (might need to redeploy)
+### 3. ✅ netlify.toml Redirects
+- **File:** `netlify.toml` has `[[redirects]]` section
+- **Status:** Configured correctly
 
-### Solution 2: Use _redirects File (Backup)
+### 4. ⚠️ **MOST LIKELY ISSUE: Publish Directory in Netlify Settings**
 
-The `public/_redirects` file should be copied to `dist/` during build:
-```
-/*    /index.html   200
-```
+If builds pass but you get 404, **Netlify might be looking in the wrong directory**.
 
-**To ensure it's included:**
-1. File is in `public/` folder (✅ it is)
-2. Vite copies it during build (should be automatic)
-3. File appears in `dist/` after build
+## Action Items
 
-### Solution 3: Manual Fix in Netlify Dashboard
+### Step 1: Check Netlify Build Settings
+1. Go to **Netlify Dashboard** → Your Site
+2. **Site settings** → **Build & deploy**
+3. **Build settings** section:
+   - **Build command:** `npm run build` ✅
+   - **Publish directory:** `dist` (NOT `dist/` or anything else)
+4. **Save**
 
-1. **Go to Netlify Dashboard:**
-   - Site settings → **Build & deploy** → **Post processing**
+### Step 2: Check Published Files
+1. **Deploys** → Latest deploy
+2. Click **"Browse published files"** or **"Download deploy"**
+3. You should see:
+   - `index.html` (at root)
+   - `_redirects` (at root)
+   - `assets/` folder
+   - `robots.txt`
+   - `sitemap.xml`
 
-2. **Add redirect rule:**
-   - Click **"Add redirect rule"**
-   - **From:** `/*`
-   - **To:** `/index.html`
-   - **Status:** `200`
-   - **Force:** No
+### Step 3: Check Deploy Logs
+1. **Deploys** → Latest deploy → **Deploy log**
+2. Look for:
+   - `"Reading netlify.toml"`
+   - `"Processing redirects"`
+   - `"Publishing directory dist"`
+   - Any errors or warnings
 
-3. **Save and redeploy**
+### Step 4: Force Redeploy
+1. **Deploys** → **Trigger deploy**
+2. Select **"Clear cache and deploy site"**
+3. Wait for build
+4. Test again
 
-### Solution 4: Check Build Output
+## What I Fixed
 
-Verify the redirects are working:
+1. ✅ Simplified `_redirects` file format (removed comments)
+2. ✅ Ensured `_redirects` is copied to `dist/` during build
+3. ✅ Verified `netlify.toml` has correct redirects
 
-1. **Check build logs in Netlify:**
-   - Look for any errors about redirects
-   - Check if `netlify.toml` is being read
+## Next Steps
 
-2. **Check deployed files:**
-   - In Netlify, go to **Deploys** → Click on latest deploy
-   - Check **"Deploy log"** → Look for redirects being processed
+**Most likely:** The publish directory in Netlify settings is wrong or missing.
 
-3. **Test the redirect:**
-   - Visit: `https://your-site.netlify.app/dashboard`
-   - Should redirect to `index.html` and show dashboard
+**Check this first:**
+- Netlify Dashboard → Site settings → Build & deploy → Publish directory = `dist`
 
----
-
-## Quick Fix Steps
-
-### Step 1: Verify netlify.toml is correct
-```toml
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-```
-
-### Step 2: Ensure _redirects is in public/
-```
-public/_redirects should contain:
-/*    /index.html   200
-```
-
-### Step 3: Rebuild and redeploy
-1. Commit any changes
-2. Push to GitHub
-3. Netlify will auto-deploy
-4. Or manually trigger deploy in Netlify
-
-### Step 4: Test
-- Visit: `https://your-site.netlify.app`
-- Visit: `https://your-site.netlify.app/dashboard`
-- Both should work
-
----
-
-## Troubleshooting
-
-### "netlify.toml not found"
-- Ensure file is in repository root
-- Check it's committed to Git
-- Verify it's in the branch Netlify is deploying
-
-### "Redirects not working"
-- Check Netlify build logs
-- Verify redirect syntax is correct
-- Try manual redirect in Netlify dashboard
-
-### "Still getting 404"
-- Clear Netlify cache
-- Check browser cache (hard refresh: Cmd+Shift+R)
-- Verify the route exists in your React app
-
----
-
-## Current Status
-
-✅ `netlify.toml` configured with redirects
-✅ `public/_redirects` file created
-⏭️ Need to verify it's being deployed correctly
-
-**Next step:** Check Netlify build logs to see if redirects are being processed.
-
+Then force redeploy and test again.
