@@ -10,8 +10,7 @@
   # Node version
   NODE_VERSION = "18"
 
-# Redirect rules for SPA routing
-# This ensures all routes redirect to index.html for React Router
+# Redirect rules for SPA routing - MUST come before headers
 [[redirects]]
   from = "/*"
   to = "/index.html"

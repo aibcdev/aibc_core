@@ -58,7 +58,8 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername }) =>
     const fetchSuggestions = async () => {
       try {
         // Call backend to get suggestions
-        const response = await fetch(`http://localhost:3001/api/verify-handle`, {
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        const response = await fetch(`${API_URL}/api/verify-handle`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 

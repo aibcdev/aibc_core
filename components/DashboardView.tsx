@@ -642,7 +642,8 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                           const timeout = setTimeout(async () => {
                                             setCompetitorVerification({ isVerifying: true, verified: false });
                                             try {
-                                              const response = await fetch('http://localhost:3001/api/verify-competitor', {
+                                              const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+                                              const response = await fetch(`${API_URL}/api/verify-competitor`, {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json' },
                                                 body: JSON.stringify({ name, industry: brandDNA?.industry })
