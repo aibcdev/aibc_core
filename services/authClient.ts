@@ -42,8 +42,18 @@ export async function signUp(
     });
 
     if (!response.ok) {
-      // If backend is unavailable, use client-side fallback
-      if (response.status === 0 || response.status >= 500) {
+      // If backend is unavailable or returns error, use client-side fallback
+      if (response.status === 0 || response.status >= 500 || response.status === 404) {
+        return signUpFallback(email, password, firstName, lastName);
+      }
+      // Try to parse error, but fallback if it fails
+      try {
+        const errorData = await response.json();
+        return {
+          success: false,
+          error: errorData.error || 'Failed to sign up',
+        };
+      } catch {
         return signUpFallback(email, password, firstName, lastName);
       }
     }
@@ -52,13 +62,8 @@ export async function signUp(
     return data;
   } catch (error: any) {
     // Backend unavailable - use client-side fallback
-    if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
-      return signUpFallback(email, password, firstName, lastName);
-    }
-    return {
-      success: false,
-      error: error.message || 'Failed to sign up',
-    };
+    console.log('Sign up error, using fallback:', error);
+    return signUpFallback(email, password, firstName, lastName);
   }
 }
 
@@ -113,8 +118,18 @@ export async function signIn(email: string, password: string): Promise<AuthRespo
     });
 
     if (!response.ok) {
-      // If backend is unavailable, use client-side fallback
-      if (response.status === 0 || response.status >= 500) {
+      // If backend is unavailable or returns error, use client-side fallback
+      if (response.status === 0 || response.status >= 500 || response.status === 404) {
+        return signInFallback(email, password);
+      }
+      // Try to parse error, but fallback if it fails
+      try {
+        const errorData = await response.json();
+        return {
+          success: false,
+          error: errorData.error || 'Invalid email or password',
+        };
+      } catch {
         return signInFallback(email, password);
       }
     }
@@ -123,13 +138,8 @@ export async function signIn(email: string, password: string): Promise<AuthRespo
     return data;
   } catch (error: any) {
     // Backend unavailable - use client-side fallback
-    if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
-      return signInFallback(email, password);
-    }
-    return {
-      success: false,
-      error: error.message || 'Failed to sign in',
-    };
+    console.log('Sign in error, using fallback:', error);
+    return signInFallback(email, password);
   }
 }
 
