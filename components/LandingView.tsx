@@ -57,162 +57,100 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
                 </button>
                 
                 {/* Dropdown Menu */}
-                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-4 w-[900px] origin-top opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out transform group-hover:translate-y-0 translate-y-2 z-50">
+                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-4 w-[450px] origin-top opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out transform group-hover:translate-y-0 translate-y-2 z-50">
                   <div className="bg-[#0A0A0A] border border-white/10 rounded-xl shadow-2xl shadow-black overflow-hidden ring-1 ring-white/5">
                     
+                    {/* Live Feed Header */}
+                    <div className="border-b border-white/10 p-4 bg-gradient-to-r from-red-600/20 to-transparent">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse"></div>
+                          <span className="text-xs font-mono text-white/80 uppercase tracking-wider">Live Feed</span>
+                        </div>
+                        <div className="text-xs font-mono text-white/60">
+                          <span className="text-white/40">Minutes Watched: </span>
+                          <span className="text-emerald-400 font-semibold">30,000+</span>
+                        </div>
+                      </div>
+                    </div>
+                    
                     {/* Dropdown Header */}
-                    <div className="border-b border-white/10 p-5 flex items-end justify-between bg-[#111]/50">
+                    <div className="border-b border-white/10 p-4 flex items-end justify-between bg-[#111]/50">
                       <div>
-                        <h2 className="text-2xl font-semibold tracking-tight text-white mb-1 uppercase">AI Streaming Channels</h2>
-                        <div className="flex items-center gap-2 text-emerald-500 font-mono text-xs tracking-wide">
+                        <h2 className="text-xl font-semibold tracking-tight text-white mb-1 uppercase">AI Streaming Channels</h2>
+                        <div className="flex items-center gap-2 text-emerald-500 font-mono text-[10px] tracking-wide">
                           <span>///</span>
                           <span>REAL-TIME VIDEO SYNTHESIS ENGINE</span>
                         </div>
                       </div>
-                      <div className="hidden md:flex gap-6 text-[10px] font-mono text-white/40 uppercase tracking-wider">
-                        <span>Assets: <span className="text-white/60">8,240</span></span>
-                        <span>Sources: <span className="text-white/60">1.2M</span></span>
-                        <span>Uptime: <span className="text-white/60">99.99%</span></span>
-                      </div>
+                      <a 
+                        href="https://aibroadcasting.xyz"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] font-mono text-emerald-400 hover:text-emerald-300 transition-colors underline"
+                      >
+                        aibroadcasting.xyz
+                      </a>
                     </div>
                     
-                    <div className="grid grid-cols-12 min-h-[420px]">
+                    <div className="flex flex-col min-h-[300px]">
                       
-                      {/* Left Sidebar: Latest Generations */}
-                      <div className="col-span-4 border-r border-white/10 bg-[#050505]/50 flex flex-col">
-                        <div className="p-3 border-b border-white/10 flex items-center justify-between">
+                      {/* Latest Generations List */}
+                      <div className="flex-1 overflow-y-auto">
+                        <div className="p-3 border-b border-white/10 flex items-center justify-between bg-[#050505]/50">
                           <span className="text-[10px] font-mono uppercase tracking-wider text-white/40 pl-1">Latest Generations</span>
                           <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)] animate-pulse mr-2"></div>
                         </div>
-                        <div className="flex-1 overflow-y-auto">
-                          
-                          {/* List Item 1 */}
-                          <div className="group/item p-4 hover:bg-white/5 cursor-pointer border-b border-white/10 transition-colors">
-                            <div className="flex justify-between items-start mb-1">
-                              <span className="text-[10px] font-mono text-blue-400 font-medium uppercase">Crypto Macro</span>
-                              <span className="text-[10px] font-mono text-white/30">12:42 UTC</span>
-                            </div>
-                            <h3 className="text-sm font-medium text-white/70 group-hover/item:text-white leading-snug mb-3">Bitcoin Breaches $100k: Market Analysis Video</h3>
-                            <div className="flex gap-2">
-                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[10px] font-mono text-white/40 bg-white/5">VIDEO</span>
-                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[10px] font-mono text-white/40 bg-white/5">1:20</span>
-                            </div>
-                          </div>
-                          
-                          {/* List Item 2 */}
-                          <div className="group/item p-4 hover:bg-white/5 cursor-pointer border-b border-white/10 transition-colors bg-white/5">
-                            <div className="flex justify-between items-start mb-1">
-                              <span className="text-[10px] font-mono text-fuchsia-400 font-medium uppercase">Tech Earnings</span>
-                              <span className="text-[10px] font-mono text-white/30">12:38 UTC</span>
-                            </div>
-                            <h3 className="text-sm font-medium text-white leading-snug mb-3">NVIDIA Q4 Earnings Call: AI Summary & Highlights</h3>
-                            <div className="flex gap-2">
-                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[10px] font-mono text-white/40 bg-white/5">AUDIO</span>
-                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[10px] font-mono text-white/40 bg-white/5">3:45</span>
-                            </div>
-                          </div>
-                          
-                          {/* List Item 3 */}
-                          <div className="group/item p-4 hover:bg-white/5 cursor-pointer border-b border-white/10 transition-colors">
-                            <div className="flex justify-between items-start mb-1">
-                              <span className="text-[10px] font-mono text-emerald-400 font-medium uppercase">Regulation</span>
-                              <span className="text-[10px] font-mono text-white/30">12:15 UTC</span>
-                            </div>
-                            <h3 className="text-sm font-medium text-white/70 group-hover/item:text-white leading-snug mb-3">SEC Approval Odds Increase: Legal Breakdown</h3>
-                            <div className="flex gap-2">
-                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[10px] font-mono text-white/40 bg-white/5">VIDEO</span>
-                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[10px] font-mono text-white/40 bg-white/5">2:10</span>
-                            </div>
-                          </div>
-                          
-                          {/* List Item 4 */}
-                          <div className="group/item p-4 hover:bg-white/5 cursor-pointer transition-colors">
-                            <div className="flex justify-between items-start mb-1">
-                              <span className="text-[10px] font-mono text-violet-400 font-medium uppercase">Defi</span>
-                              <span className="text-[10px] font-mono text-white/30">11:50 UTC</span>
-                            </div>
-                            <h3 className="text-sm font-medium text-white/70 group-hover/item:text-white leading-snug mb-3">Uniswap V4 Launch Date Confirmed</h3>
-                            <div className="flex gap-2">
-                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[10px] font-mono text-white/40 bg-white/5">SHORT</span>
-                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[10px] font-mono text-white/40 bg-white/5">0:45</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Right Content: Video & Stats */}
-                      <div className="col-span-8 p-4 flex flex-col gap-4 bg-[#050505]">
                         
-                        {/* Video Player Area */}
-                        <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-white/10 group/video cursor-pointer">
-                          {/* Background Gradient */}
-                          <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/40 via-purple-900/20 to-black"></div>
-                          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80"></div>
-                          
-                          {/* Play Button */}
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="relative w-24 h-24">
-                              <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500 to-purple-500 rounded-xl blur-xl opacity-40 animate-pulse"></div>
-                              <div className="relative z-10 w-full h-full rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 flex items-center justify-center group-hover/video:scale-105 transition-transform duration-300">
-                                <Play className="w-10 h-10 text-white fill-white ml-1" />
-                              </div>
-                            </div>
+                        {/* List Item 1 */}
+                        <div className="group/item p-3 hover:bg-white/5 cursor-pointer border-b border-white/10 transition-colors">
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="text-[10px] font-mono text-blue-400 font-medium uppercase">Crypto Macro</span>
+                            <span className="text-[10px] font-mono text-white/30">12:42 UTC</span>
                           </div>
-                          
-                          {/* Live Ticker Bar */}
-                          <div className="absolute bottom-0 left-0 right-0 h-10 bg-black/80 backdrop-blur border-t border-white/10 flex items-center">
-                            <div className="h-full px-3 bg-red-600 flex items-center justify-center">
-                              <div className="flex flex-col items-center leading-none">
-                                <span className="text-[9px] font-bold text-white uppercase tracking-tighter">Live</span>
-                                <span className="text-[9px] font-bold text-white uppercase tracking-tighter">News</span>
-                              </div>
-                            </div>
-                            <div className="flex-1 overflow-hidden relative mx-2">
-                              <div className="text-[10px] font-mono text-white/70 whitespace-nowrap uppercase tracking-wide">
-                                MARKET CLOSE: AI SECTOR LEADS RALLY AMID NEW REGULATION TALKS
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3 pr-3 border-l border-white/10 pl-3 h-full">
-                              <div className="flex flex-col leading-none">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-[9px] font-mono text-emerald-500">BTC</span>
-                                  <span className="text-[9px] font-mono text-emerald-500">$98,230</span>
-                                  <Triangle className="w-1.5 h-1.5 fill-emerald-500 text-emerald-500 rotate-0" />
-                                </div>
-                                <span className="text-[9px] font-mono text-white/40 text-right">2.4%</span>
-                              </div>
-                              <div className="flex flex-col leading-none">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-[9px] font-mono text-emerald-500">ETH</span>
-                                  <span className="text-[9px] font-mono text-emerald-500">$4,102</span>
-                                  <Triangle className="w-1.5 h-1.5 fill-emerald-500 text-emerald-500 rotate-0" />
-                                </div>
-                                <span className="text-[9px] font-mono text-white/40 text-right">1.8%</span>
-                              </div>
-                            </div>
+                          <h3 className="text-xs font-medium text-white/70 group-hover/item:text-white leading-snug mb-2">Bitcoin Breaches $100k: Market Analysis</h3>
+                          <div className="flex gap-2">
+                            <span className="px-1.5 py-0.5 rounded border border-white/10 text-[9px] font-mono text-white/40 bg-white/5">VIDEO</span>
+                            <span className="px-1.5 py-0.5 rounded border border-white/10 text-[9px] font-mono text-white/40 bg-white/5">1:20</span>
                           </div>
                         </div>
                         
-                        {/* Bottom Stats Grid */}
-                        <div className="grid grid-cols-4 gap-4 mt-auto">
-                          <div className="p-3 rounded border border-white/10 bg-white/5">
-                            <div className="text-[9px] font-mono text-white/40 uppercase tracking-wide mb-1">Video Generations</div>
-                            <div className="text-xl font-semibold text-white tracking-tight">100+</div>
+                        {/* List Item 2 */}
+                        <div className="group/item p-3 hover:bg-white/5 cursor-pointer border-b border-white/10 transition-colors bg-white/5">
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="text-[10px] font-mono text-fuchsia-400 font-medium uppercase">Tech Earnings</span>
+                            <span className="text-[10px] font-mono text-white/30">12:38 UTC</span>
                           </div>
-                          <div className="p-3 rounded border border-white/10 bg-white/5">
-                            <div className="text-[9px] font-mono text-white/40 uppercase tracking-wide mb-1">Active Users</div>
-                            <div className="text-xl font-semibold text-white tracking-tight">22,000+</div>
+                          <h3 className="text-xs font-medium text-white leading-snug mb-2">NVIDIA Q4 Earnings: AI Summary</h3>
+                          <div className="flex gap-2">
+                            <span className="px-1.5 py-0.5 rounded border border-white/10 text-[9px] font-mono text-white/40 bg-white/5">AUDIO</span>
+                            <span className="px-1.5 py-0.5 rounded border border-white/10 text-[9px] font-mono text-white/40 bg-white/5">3:45</span>
                           </div>
-                          <div className="p-3 rounded border border-white/10 bg-white/5">
-                            <div className="text-[9px] font-mono text-white/40 uppercase tracking-wide mb-1">Content Strands</div>
-                            <div className="text-xl font-semibold text-white tracking-tight">4</div>
+                        </div>
+                        
+                        {/* List Item 3 */}
+                        <div className="group/item p-3 hover:bg-white/5 cursor-pointer border-b border-white/10 transition-colors">
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="text-[10px] font-mono text-emerald-400 font-medium uppercase">Regulation</span>
+                            <span className="text-[10px] font-mono text-white/30">12:15 UTC</span>
                           </div>
-                          <div className="p-3 rounded border border-white/10 bg-white/5 relative">
-                            <div className="text-[9px] font-mono text-white/40 uppercase tracking-wide mb-1">Languages</div>
-                            <div className="text-xl font-semibold text-white tracking-tight">64</div>
-                            <div className="absolute bottom-2 right-2">
-                              <Globe className="w-3 h-3 text-white/30" />
-                            </div>
+                          <h3 className="text-xs font-medium text-white/70 group-hover/item:text-white leading-snug mb-2">SEC Approval Odds Increase</h3>
+                          <div className="flex gap-2">
+                            <span className="px-1.5 py-0.5 rounded border border-white/10 text-[9px] font-mono text-white/40 bg-white/5">VIDEO</span>
+                            <span className="px-1.5 py-0.5 rounded border border-white/10 text-[9px] font-mono text-white/40 bg-white/5">2:10</span>
+                          </div>
+                        </div>
+                        
+                        {/* List Item 4 */}
+                        <div className="group/item p-3 hover:bg-white/5 cursor-pointer transition-colors">
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="text-[10px] font-mono text-violet-400 font-medium uppercase">Defi</span>
+                            <span className="text-[10px] font-mono text-white/30">11:50 UTC</span>
+                          </div>
+                          <h3 className="text-xs font-medium text-white/70 group-hover/item:text-white leading-snug mb-2">Uniswap V4 Launch Confirmed</h3>
+                          <div className="flex gap-2">
+                            <span className="px-1.5 py-0.5 rounded border border-white/10 text-[9px] font-mono text-white/40 bg-white/5">SHORT</span>
+                            <span className="px-1.5 py-0.5 rounded border border-white/10 text-[9px] font-mono text-white/40 bg-white/5">0:45</span>
                           </div>
                         </div>
                       </div>
@@ -226,15 +164,15 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
           <div className="flex items-center gap-4">
             <button 
               onClick={() => onNavigate(ViewState.LOGIN)} 
-              className="hidden md:block text-xs font-medium text-white/60 hover:text-white transition-colors"
+              className="hidden md:block text-sm font-bold text-white/60 hover:text-white transition-colors uppercase tracking-wide"
             >
-              Log In
+              LOG IN
             </button>
             <button 
               onClick={() => onNavigate(ViewState.LOGIN)} 
-              className="rounded-full border border-white/10 bg-white/5 px-5 py-2 text-xs font-semibold text-white transition-all hover:bg-white/10"
+              className="rounded-full border border-white/10 bg-white/5 px-5 py-2 text-xs font-bold text-white transition-all hover:bg-white/10 uppercase tracking-wide"
             >
-              Get Started
+              GET STARTED
             </button>
           </div>
         </div>
