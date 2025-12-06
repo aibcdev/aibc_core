@@ -33,36 +33,62 @@ export async function signUp(
   lastName?: string
 ): Promise<AuthResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password, firstName, lastName }),
-    });
+    // Add timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password, firstName, lastName }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      // Network error, CORS error, timeout, or any fetch failure - use fallback
+      console.log('Sign up fetch error, using fallback:', fetchError.message);
+      return signUpFallback(email, password, firstName, lastName);
+    }
+
+    // If response is not ok, check if it's a backend error or user error
     if (!response.ok) {
-      // If backend is unavailable or returns error, use client-side fallback
+      // For any server error or not found, use fallback
       if (response.status === 0 || response.status >= 500 || response.status === 404) {
         return signUpFallback(email, password, firstName, lastName);
       }
-      // Try to parse error, but fallback if it fails
+      // For client errors (400, 401, 403), try to parse error message
       try {
         const errorData = await response.json();
-        return {
-          success: false,
-          error: errorData.error || 'Failed to sign up',
-        };
+        // If it's a validation error, return it; otherwise fallback
+        if (response.status >= 400 && response.status < 500 && errorData.error) {
+          return {
+            success: false,
+            error: errorData.error || 'Failed to sign up',
+          };
+        }
+        return signUpFallback(email, password, firstName, lastName);
       } catch {
+        // Can't parse error, use fallback
         return signUpFallback(email, password, firstName, lastName);
       }
     }
 
-    const data = await response.json();
-    return data;
+    // Success - parse response
+    try {
+      const data = await response.json();
+      return data;
+    } catch {
+      // Can't parse success response, use fallback
+      return signUpFallback(email, password, firstName, lastName);
+    }
   } catch (error: any) {
-    // Backend unavailable - use client-side fallback
-    console.log('Sign up error, using fallback:', error);
+    // Any other error - use client-side fallback
+    console.log('Sign up error, using fallback:', error?.message || error);
     return signUpFallback(email, password, firstName, lastName);
   }
 }

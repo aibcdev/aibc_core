@@ -68,10 +68,13 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
         storeUser(result.user);
         onNavigate(ViewState.INGESTION);
       } else {
-        setError(result.error || 'Failed to create account');
+        // Only show error if it's not a fallback (fallback should succeed)
+        setError(result.error || 'Failed to create account. Please try again.');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to create account');
+      // This should rarely happen since signUp has fallback, but just in case
+      console.error('Sign up exception:', err);
+      setError('Failed to create account. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
