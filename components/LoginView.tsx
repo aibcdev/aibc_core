@@ -51,17 +51,22 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
           }
         );
 
-        // Render button after a short delay to ensure DOM is ready
+        // Render Google button after a short delay to ensure DOM is ready
+        // This will replace the fallback button if Google script loads
         setTimeout(() => {
           if (googleButtonRef.current) {
-            renderGoogleButton('google-signin-button', {
-              theme: 'outline',
-              size: 'large',
-              text: 'signup_with',
-              width: '100%'
-            });
+            try {
+              renderGoogleButton('google-signin-button', {
+                theme: 'outline',
+                size: 'large',
+                text: 'signup_with',
+                width: '100%'
+              });
+            } catch (err) {
+              console.warn('Failed to render Google button, using fallback:', err);
+            }
           }
-        }, 100);
+        }, 200);
       } else {
         // Retry after 100ms if Google script not loaded yet
         setTimeout(checkGoogleLoaded, 100);
