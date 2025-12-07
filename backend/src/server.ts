@@ -29,6 +29,24 @@ app.use('/api/podcast', podcastRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/auth', authRoutes);
 
+// Fast competitor discovery endpoint
+app.post('/api/competitors/discover-fast', async (req, res) => {
+  const { brandUrl, brandDNA, maxCompetitors } = req.body;
+  
+  if (!brandUrl) {
+    return res.status(400).json({ error: 'brandUrl is required' });
+  }
+  
+  try {
+    const { discoverCompetitorsFast } = await import('./services/fastCompetitorService');
+    const competitors = await discoverCompetitorsFast(brandUrl, brandDNA, maxCompetitors || 5);
+    res.json({ success: true, competitors });
+  } catch (error: any) {
+    console.error('Fast competitor discovery error:', error);
+    res.status(500).json({ error: error.message || 'Failed to discover competitors' });
+  }
+});
+
 // Verify handle endpoint (quick verification for integrations)
 app.post('/api/verify-handle', async (req, res) => {
   const { handle, platform } = req.body;
