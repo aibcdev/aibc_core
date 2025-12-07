@@ -138,16 +138,22 @@ export async function forgotPassword(email: string): Promise<AuthResponse> {
   // Use Supabase if configured (production)
   if (isSupabaseConfigured() && supabase) {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      console.log('Requesting password reset via Supabase for:', email);
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}#reset-password`,
       });
 
       if (error) {
         console.error('Supabase password reset error:', error);
-        // Still return success for security (don't reveal if email exists)
+        // Log the error but still return success for security (don't reveal if email exists)
+        // Check if it's a rate limit or configuration issue
+        if (error.message.includes('rate limit') || error.message.includes('email')) {
+          console.warn('Password reset may have rate limit or email configuration issue');
+        }
         return { success: true };
       }
 
+      console.log('Password reset email sent successfully via Supabase');
       // Success - Supabase will send email automatically
       return { success: true };
     } catch (error: any) {

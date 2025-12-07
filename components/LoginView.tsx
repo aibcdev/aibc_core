@@ -139,36 +139,41 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
             </div>
           )}
 
-          {/* Google Sign-In Button - Only show if configured */}
-          {getGoogleClientId() && (
-            <div className="mb-4">
-              <div id="google-signin-button" ref={googleButtonRef} className="w-full flex items-center justify-center min-h-[40px]">
-                <button
-                  onClick={async () => {
-                    // Try to trigger Google sign-in manually if script is loaded
-                    if (isGoogleLoaded() && window.google?.accounts?.id) {
-                      try {
-                        window.google.accounts.id.prompt();
-                      } catch (err) {
-                        setError('Please wait for Google sign-in to load and try again');
-                      }
-                    } else {
-                      setError('Google sign-in is loading. Please wait a moment and try again.');
+          {/* Google Sign-In Button */}
+          <div className="mb-4">
+            <div id="google-signin-button" ref={googleButtonRef} className="w-full flex items-center justify-center min-h-[40px]">
+              {/* Fallback button - shows while Google loads or if not configured */}
+              <button
+                onClick={async () => {
+                  const clientId = getGoogleClientId();
+                  if (!clientId) {
+                    setError('Google sign-in is not configured. Please set VITE_GOOGLE_CLIENT_ID in Netlify environment variables.');
+                    return;
+                  }
+                  
+                  // Try to trigger Google sign-in manually if script is loaded
+                  if (isGoogleLoaded() && window.google?.accounts?.id) {
+                    try {
+                      window.google.accounts.id.prompt();
+                    } catch (err) {
+                      setError('Please wait for Google sign-in to load and try again');
                     }
-                  }}
-                  className="w-full flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-white hover:bg-white/10 transition-all hover:border-white/20"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M23.52 12.29C23.52 11.43 23.44 10.61 23.3 9.82H12V14.45H18.45C18.17 15.93 17.32 17.18 16.05 18.03V21.01H19.92C22.18 18.93 23.52 15.86 23.52 12.29Z" fill="#4285F4"></path>
-                    <path d="M12 24C15.24 24 17.96 22.92 19.92 21.01L16.05 18.03C14.98 18.75 13.61 19.17 12 19.17C8.87 19.17 6.22 17.06 5.27 14.21H1.27V17.31C3.25 21.24 7.31 24 12 24Z" fill="#34A853"></path>
-                    <path d="M5.27 14.21C5.03 13.49 4.9 12.74 4.9 12C4.9 11.26 5.03 10.51 5.27 9.79V6.69H1.27C0.46 8.3 0 10.1 0 12C0 13.9 0.46 15.7 1.27 17.31L5.27 14.21Z" fill="#FBBC05"></path>
-                    <path d="M12 4.83C13.76 4.83 15.34 5.44 16.58 6.63L20.01 3.2C17.96 1.29 15.24 0 12 0C7.31 0 3.25 2.76 1.27 6.69L5.27 9.79C6.22 6.94 8.87 4.83 12 4.83Z" fill="#EA4335"></path>
-                  </svg>
-                  Continue with Google
-                </button>
-              </div>
+                  } else {
+                    setError('Google sign-in is loading. Please wait a moment and try again.');
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-white hover:bg-white/10 transition-all hover:border-white/20"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M23.52 12.29C23.52 11.43 23.44 10.61 23.3 9.82H12V14.45H18.45C18.17 15.93 17.32 17.18 16.05 18.03V21.01H19.92C22.18 18.93 23.52 15.86 23.52 12.29Z" fill="#4285F4"></path>
+                  <path d="M12 24C15.24 24 17.96 22.92 19.92 21.01L16.05 18.03C14.98 18.75 13.61 19.17 12 19.17C8.87 19.17 6.22 17.06 5.27 14.21H1.27V17.31C3.25 21.24 7.31 24 12 24Z" fill="#34A853"></path>
+                  <path d="M5.27 14.21C5.03 13.49 4.9 12.74 4.9 12C4.9 11.26 5.03 10.51 5.27 9.79V6.69H1.27C0.46 8.3 0 10.1 0 12C0 13.9 0.46 15.7 1.27 17.31L5.27 14.21Z" fill="#FBBC05"></path>
+                  <path d="M12 4.83C13.76 4.83 15.34 5.44 16.58 6.63L20.01 3.2C17.96 1.29 15.24 0 12 0C7.31 0 3.25 2.76 1.27 6.69L5.27 9.79C6.22 6.94 8.87 4.83 12 4.83Z" fill="#EA4335"></path>
+                </svg>
+                Continue with Google
+              </button>
             </div>
-          )}
+          </div>
 
           {/* Divider */}
           <div className="relative my-8">
