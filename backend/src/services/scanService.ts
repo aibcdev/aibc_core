@@ -75,10 +75,16 @@ export async function startScan(
     try {
       const scanTier = getScanTier(scanType);
       
-      // For now, use LLM research (scraping will be enabled in next phase)
-      // TODO: Enable scraping and use extractFromScrapedContent when ready
-      researchData = await researchBrandWithLLM(username, platforms, scanTier);
-      addLog(scanId, `[SUCCESS] Brand research completed`);
+      if (scrapedData.length > 0) {
+        // Use LLM to extract from REAL scraped content - PRODUCTION APPROACH
+        researchData = await extractFromScrapedContent(scrapedData, username, platforms, scanTier);
+        addLog(scanId, `[SUCCESS] Extracted content from ${scrapedData.length} scraped profiles`);
+      } else {
+        // Fallback: Use LLM research (but with better prompts)
+        addLog(scanId, `[FALLBACK] No scraped content - using LLM research with enhanced prompts`);
+        researchData = await researchBrandWithLLM(username, platforms, scanTier);
+        addLog(scanId, `[SUCCESS] Brand research completed`);
+      }
       
       // Validate research data quality
       if (!researchData || !researchData.profile) {
@@ -135,21 +141,15 @@ export async function startScan(
       }
     } catch (researchError: any) {
       addLog(scanId, `[ERROR] Brand research failed: ${researchError.message}`);
-      // Don't use fallback - throw error to surface the issue
-      throw new Error(`Research failed: ${researchError.message}`);
+      // For production quality - don't use fallback data
+      // Throw error so user knows scan failed quality checks
+      throw new Error(`Scan failed quality validation: ${researchError.message}`);
     }
 
-    // Check if we have real data
+    // Final validation - ensure we have real data
     if (allExtractedContent.length === 0) {
-      addLog(scanId, `[ERROR] Brand research failed. Using fallback data.`);
-      // Use fallback instead of throwing
-      allExtractedContent.push({
-        profile: { bio: `Digital presence for ${username}` },
-        posts: [],
-        content_themes: ['content creation', 'brand building'],
-        extraction_confidence: 0.3
-      });
-      successfulPlatforms = 1;
+      addLog(scanId, `[ERROR] No content extracted - scan failed`);
+      throw new Error('Scan failed: No content extracted');
     }
 
     storage.updateScan(scanId, { progress: 85 });
