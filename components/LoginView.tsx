@@ -145,6 +145,26 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
               {/* Fallback button - shows while Google loads or if not configured */}
               <button
                 onClick={async () => {
+                  // Check if Supabase is configured - use Supabase OAuth
+                  const { isSupabaseConfigured, supabase } = await import('../services/supabaseClient');
+                  if (isSupabaseConfigured() && supabase) {
+                    setLoading(true);
+                    setError('');
+                    try {
+                      const result = await signInWithGoogle('');
+                      if (!result.success) {
+                        setError(result.error || 'Google sign-in failed');
+                        setLoading(false);
+                      }
+                      // Will redirect, so don't set loading to false
+                    } catch (err: any) {
+                      setError(err.message || 'Google sign-in failed');
+                      setLoading(false);
+                    }
+                    return;
+                  }
+
+                  // Fallback: Use Google Identity Services if configured
                   const clientId = getGoogleClientId();
                   if (!clientId) {
                     setError('Google sign-in is not configured. Please set VITE_GOOGLE_CLIENT_ID in Netlify environment variables.');
@@ -162,7 +182,8 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
                     setError('Google sign-in is loading. Please wait a moment and try again.');
                   }
                 }}
-                className="w-full flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-white hover:bg-white/10 transition-all hover:border-white/20"
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-white hover:bg-white/10 transition-all hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M23.52 12.29C23.52 11.43 23.44 10.61 23.3 9.82H12V14.45H18.45C18.17 15.93 17.32 17.18 16.05 18.03V21.01H19.92C22.18 18.93 23.52 15.86 23.52 12.29Z" fill="#4285F4"></path>
