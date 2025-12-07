@@ -12,19 +12,37 @@
 
 ### 1. Configure Supabase Redirect URL
 
-In your Supabase Dashboard:
+**In your Supabase Dashboard:**
 
 1. Go to **Authentication** → **URL Configuration**
-2. Add to **Redirect URLs**:
+2. In the **"Redirect URLs"** section, click **"Add URL"** button
+3. Add these URLs **one at a time** (click "Add URL" for each):
    ```
    https://aibcmedia.com
    https://www.aibcmedia.com
+   https://aibcmedia.com#reset-password
+   https://www.aibcmedia.com#reset-password
    http://localhost:5173
    ```
-3. Add to **Site URL**:
+   **Important:** The URLs with `#reset-password` are required for password reset to work!
+4. In the **"Site URL"** field (at the top), set:
    ```
    https://aibcmedia.com
    ```
+5. Click **"Save"** or the save button
+
+**Visual Guide:**
+```
+Supabase Dashboard
+└── Authentication
+    └── URL Configuration  ← Go here
+        ├── Site URL: https://aibcmedia.com
+        └── Redirect URLs: [Add URL button]
+            ├── https://aibcmedia.com
+            ├── https://www.aibcmedia.com
+            ├── https://aibcmedia.com#reset-password  ← Add this!
+            └── https://www.aibcmedia.com#reset-password  ← Add this!
+```
 
 ### 2. Set Environment Variables
 
