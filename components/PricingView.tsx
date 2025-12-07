@@ -1,10 +1,24 @@
-import React, { useState } from 'react';
-import { Check, ChevronDown, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Check, ChevronDown, ArrowLeft, Loader2 } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
+import { getUserSubscription, SubscriptionTier } from '../services/subscriptionService';
+import { createCheckoutSession, getPrices } from '../services/stripeService';
 
 const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
+  const [loading, setLoading] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState(getUserSubscription());
+  const [stripePrices, setStripePrices] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Load Stripe prices
+    getPrices().then(prices => {
+      setStripePrices(prices);
+    }).catch(err => {
+      console.error('Failed to load prices:', err);
+    });
+  }, []);
 
   const plans = [
     {
@@ -37,35 +51,24 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
       popular: false
     },
     {
-      name: 'Business',
-      price: 79,
-      description: 'Growing businesses',
-      features: [
-        '50 Credits / Month',
-        'Short Videos (5/mo)',
-        'Advanced Analytics',
-        'Team Collaboration',
-        'Digital Footprint Scan (20/mo)'
-      ],
-      buttonText: 'Upgrade Now',
-      buttonStyle: 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500',
-      popular: true
-    },
-    {
-      name: 'Premium',
+      name: 'Enterprise',
       price: 149,
       description: 'Agencies & enterprises',
       features: [
-        '100 Credits / Month',
-        'Long Videos (6/mo)',
-        'Dedicated Support',
-        'Brand Voice Tuning',
-        'Unlimited Digital Footprint Scans',
-        'Deep Scan (API-based) - 5/mo'
+        'Unlimited Credits',
+        'Unlimited Scans',
+        'All Features',
+        'Priority Support',
+        'Custom Integrations',
+        'Dedicated Account Manager'
       ],
-      buttonText: 'Contact Sales',
-      buttonStyle: 'border border-white/20 bg-transparent text-white hover:bg-white/5',
-      popular: false
+      buttonText: subscription.tier === SubscriptionTier.ENTERPRISE ? 'Current Plan' : 'Contact Sales',
+      buttonStyle: subscription.tier === SubscriptionTier.ENTERPRISE
+        ? 'border border-white/20 bg-transparent text-white'
+        : 'border border-white/20 bg-transparent text-white hover:bg-white/5',
+      current: subscription.tier === SubscriptionTier.ENTERPRISE,
+      popular: false,
+      tier: SubscriptionTier.ENTERPRISE
     }
   ];
 
@@ -211,16 +214,58 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
               </ul>
 
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (plan.name === 'Free') return;
-                  onNavigate(ViewState.LOGIN);
+                  
+                  // Check if user is logged in
+                  const authToken = localStorage.getItem('authToken');
+                  if (!authToken) {
+                    onNavigate(ViewState.LOGIN);
+                    return;
+                  }
+
+                  setLoading(plan.name);
+                  
+                  try {
+                    // Find matching Stripe price
+                    const price = stripePrices.find(p => 
+                      p.tier === (plan.tier || plan.name.toLowerCase()) && 
+                      p.interval === (billingCycle === 'monthly' ? 'month' : 'year')
+                    );
+
+                    if (!price) {
+                      alert('Pricing not available. Please contact support.');
+                      setLoading(null);
+                      return;
+                    }
+
+                    // Create checkout session
+                    const session = await createCheckoutSession(
+                      price.id,
+                      plan.name.toLowerCase() === 'pro' ? SubscriptionTier.PRO : SubscriptionTier.ENTERPRISE
+                    );
+
+                    // Redirect to Stripe checkout
+                    window.location.href = session.url;
+                  } catch (error: any) {
+                    console.error('Checkout error:', error);
+                    alert(error.message || 'Failed to start checkout. Please try again.');
+                    setLoading(null);
+                  }
                 }}
                 className={`w-full py-3 rounded-lg font-semibold text-sm transition-all ${plan.buttonStyle} ${
                   plan.current ? 'cursor-default' : 'hover:scale-105'
                 }`}
-                disabled={plan.current}
+                disabled={plan.current || loading === plan.name}
               >
-                {plan.buttonText}
+                {loading === plan.name ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading...
+                  </span>
+                ) : (
+                  plan.buttonText
+                )}
               </button>
             </div>
           ))}

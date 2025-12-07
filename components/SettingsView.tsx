@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
-import { User, Bell, Shield, CreditCard, Globe, Moon, Sun, LogOut, Save, Eye, EyeOff, Trash2, Download, HelpCircle, Mail, Key, Smartphone } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Bell, Shield, CreditCard, Globe, Moon, Sun, LogOut, Save, Eye, EyeOff, Trash2, Download, HelpCircle, Mail, Key, Smartphone, Zap } from 'lucide-react';
+import { getUserSubscription, getCreditBalance, SubscriptionTier } from '../services/subscriptionService';
+import { getCustomerPortalUrl, createCheckoutSession } from '../services/stripeService';
+import { ViewState } from '../types';
 
 interface UserProfile {
   name: string;
@@ -18,16 +21,28 @@ interface NotificationSettings {
   newFeatures: boolean;
 }
 
-const SettingsView: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
+const SettingsView: React.FC<{ onLogout?: () => void; onNavigate?: (view: ViewState) => void }> = ({ onLogout, onNavigate }) => {
   const [activeSection, setActiveSection] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [subscription, setSubscription] = useState(getUserSubscription());
+  const [creditBalance, setCreditBalance] = useState(getCreditBalance());
+  const [loadingPortal, setLoadingPortal] = useState(false);
+  
+  useEffect(() => {
+    // Refresh subscription and credits periodically
+    const interval = setInterval(() => {
+      setSubscription(getUserSubscription());
+      setCreditBalance(getCreditBalance());
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
   
   const [profile, setProfile] = useState<UserProfile>({
     name: localStorage.getItem('userName') || '',
     email: localStorage.getItem('userEmail') || '',
-    plan: 'Pro',
+    plan: subscription.tier === SubscriptionTier.PRO ? 'Pro' : subscription.tier === SubscriptionTier.ENTERPRISE ? 'Enterprise' : 'Free',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
   });
   
@@ -355,46 +370,103 @@ const SettingsView: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
               <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-6">
                 <h2 className="text-lg font-bold text-white mb-6">Current Plan</h2>
                 
-                <div className="flex items-center justify-between p-4 bg-green-500/10 border border-green-500/20 rounded-xl mb-6">
+                <div className={`flex items-center justify-between p-4 rounded-xl mb-6 ${
+                  subscription.tier === SubscriptionTier.PRO 
+                    ? 'bg-green-500/10 border border-green-500/20' 
+                    : subscription.tier === SubscriptionTier.ENTERPRISE
+                    ? 'bg-purple-500/10 border border-purple-500/20'
+                    : 'bg-white/5 border border-white/10'
+                }`}>
                   <div>
-                    <p className="text-lg font-bold text-white">Pro Plan</p>
-                    <p className="text-sm text-white/40">$29/month • Renews Dec 15, 2024</p>
+                    <p className="text-lg font-bold text-white">
+                      {subscription.tier === SubscriptionTier.PRO ? 'Pro Plan' : 
+                       subscription.tier === SubscriptionTier.ENTERPRISE ? 'Enterprise Plan' : 'Free Plan'}
+                    </p>
+                    {subscription.currentPeriodEnd ? (
+                      <p className="text-sm text-white/40">
+                        {subscription.status === 'active' 
+                          ? `Renews ${subscription.currentPeriodEnd.toLocaleDateString()}`
+                          : `Expires ${subscription.currentPeriodEnd.toLocaleDateString()}`}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-white/40">No active subscription</p>
+                    )}
                   </div>
-                  <button className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm font-medium rounded-lg transition-colors">
-                    Manage Plan
-                  </button>
+                  {subscription.tier !== SubscriptionTier.FREE ? (
+                    <button 
+                      onClick={async () => {
+                        setLoadingPortal(true);
+                        try {
+                          const url = await getCustomerPortalUrl();
+                          window.location.href = url;
+                        } catch (error: any) {
+                          alert(error.message || 'Failed to open customer portal');
+                        } finally {
+                          setLoadingPortal(false);
+                        }
+                      }}
+                      disabled={loadingPortal}
+                      className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {loadingPortal ? 'Loading...' : 'Manage Plan'}
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => onNavigate?.(ViewState.PRICING)}
+                      className="px-4 py-2 bg-gradient-to-r from-orange-500 to-purple-600 hover:from-orange-600 hover:to-purple-700 text-white text-sm font-medium rounded-lg transition-all"
+                    >
+                      Upgrade
+                    </button>
+                  )}
                 </div>
 
-                <h3 className="text-sm font-bold text-white mb-4">Payment Method</h3>
-                <div className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/10 rounded-xl">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-8 bg-white/10 rounded flex items-center justify-center text-white/60 text-xs font-bold">
-                      VISA
+                {/* Credit Balance */}
+                <div className="mb-6 p-4 bg-gradient-to-r from-orange-500/10 to-purple-600/10 border border-orange-500/20 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-orange-500 to-purple-600 flex items-center justify-center">
+                        <Zap className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-white/60">Available Credits</p>
+                        <p className="text-2xl font-bold text-white">{creditBalance.credits}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm text-white">•••• •••• •••• 4242</p>
-                      <p className="text-xs text-white/40">Expires 12/25</p>
-                    </div>
+                    {subscription.tier === SubscriptionTier.FREE && (
+                      <button 
+                        onClick={() => onNavigate?.(ViewState.PRICING)}
+                        className="px-4 py-2 bg-gradient-to-r from-orange-500 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-orange-600 hover:to-purple-700 transition-all"
+                      >
+                        Buy Credits
+                      </button>
+                    )}
                   </div>
-                  <button className="text-xs text-white/40 hover:text-white">Update</button>
                 </div>
-              </div>
 
-              <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-6">
+                {/* Payment Method - Only show if subscribed */}
+                {subscription.tier !== SubscriptionTier.FREE && subscription.stripeCustomerId && (
+                  <>
+                    <h3 className="text-sm font-bold text-white mb-4">Payment Method</h3>
+                    <div className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/10 rounded-xl mb-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-8 bg-white/10 rounded flex items-center justify-center text-white/60 text-xs font-bold">
+                          CARD
+                        </div>
+                        <div>
+                          <p className="text-sm text-white">Manage payment method in customer portal</p>
+                          <p className="text-xs text-white/40">Click "Manage Plan" above to update</p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Billing History */}
                 <h2 className="text-lg font-bold text-white mb-4">Billing History</h2>
                 <div className="space-y-3">
-                  {[
-                    { date: 'Nov 15, 2024', amount: '$29.00', status: 'Paid' },
-                    { date: 'Oct 15, 2024', amount: '$29.00', status: 'Paid' },
-                    { date: 'Sep 15, 2024', amount: '$29.00', status: 'Paid' },
-                  ].map((invoice, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-white/[0.02] rounded-lg">
-                      <span className="text-sm text-white/60">{invoice.date}</span>
-                      <span className="text-sm text-white">{invoice.amount}</span>
-                      <span className="text-xs text-green-400">{invoice.status}</span>
-                      <button className="text-xs text-white/40 hover:text-white">Download</button>
-                    </div>
-                  ))}
+                  <div className="text-center py-8 text-white/40 text-sm">
+                    No billing history yet
+                  </div>
                 </div>
               </div>
             </div>

@@ -1,0 +1,282 @@
+/**
+ * Subscription and Credit Management Service
+ */
+
+export enum SubscriptionTier {
+  FREE = 'free',
+  PRO = 'pro',
+  ENTERPRISE = 'enterprise'
+}
+
+export interface Subscription {
+  tier: SubscriptionTier;
+  status: 'active' | 'cancelled' | 'past_due' | 'trialing';
+  currentPeriodEnd: Date | null;
+  cancelAtPeriodEnd: boolean;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+}
+
+export interface CreditBalance {
+  credits: number;
+  lastUpdated: Date;
+}
+
+export interface CreditTransaction {
+  id: string;
+  type: 'scan' | 'content_generation' | 'purchase' | 'refund' | 'bonus';
+  amount: number; // Positive for additions, negative for deductions
+  description: string;
+  timestamp: Date;
+  metadata?: Record<string, any>;
+}
+
+// Credit costs for different actions
+export const CREDIT_COSTS = {
+  DIGITAL_FOOTPRINT_SCAN: 10,
+  CONTENT_GENERATION: 5,
+  COMPETITOR_ANALYSIS: 15,
+  BRAND_DNA_EXTRACTION: 8,
+} as const;
+
+// Subscription tier limits
+export const TIER_LIMITS = {
+  [SubscriptionTier.FREE]: {
+    monthlyScans: 1,
+    monthlyCredits: 10,
+    contentGenerations: 0,
+    competitorTracking: 0,
+    features: ['basic_scan'] as const,
+  },
+  [SubscriptionTier.PRO]: {
+    monthlyScans: 50,
+    monthlyCredits: 500,
+    contentGenerations: 100,
+    competitorTracking: 10,
+    features: ['basic_scan', 'content_generation', 'competitor_tracking', 'advanced_analytics'] as const,
+  },
+  [SubscriptionTier.ENTERPRISE]: {
+    monthlyScans: -1, // Unlimited
+    monthlyCredits: -1, // Unlimited
+    contentGenerations: -1, // Unlimited
+    competitorTracking: -1, // Unlimited
+    features: ['all'] as const,
+  },
+} as const;
+
+/**
+ * Get user subscription from localStorage or API
+ */
+export function getUserSubscription(): Subscription {
+  try {
+    const stored = localStorage.getItem('userSubscription');
+    if (stored) {
+      const sub = JSON.parse(stored);
+      return {
+        ...sub,
+        currentPeriodEnd: sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd) : null,
+      };
+    }
+  } catch (e) {
+    console.error('Error parsing subscription:', e);
+  }
+  
+  // Default to free tier
+  return {
+    tier: SubscriptionTier.FREE,
+    status: 'active',
+    currentPeriodEnd: null,
+    cancelAtPeriodEnd: false,
+  };
+}
+
+/**
+ * Get user credit balance
+ */
+export function getCreditBalance(): CreditBalance {
+  try {
+    const stored = localStorage.getItem('creditBalance');
+    if (stored) {
+      const balance = JSON.parse(stored);
+      return {
+        ...balance,
+        lastUpdated: new Date(balance.lastUpdated),
+      };
+    }
+  } catch (e) {
+    console.error('Error parsing credit balance:', e);
+  }
+  
+  return {
+    credits: 0,
+    lastUpdated: new Date(),
+  };
+}
+
+/**
+ * Check if user has enough credits for an action
+ */
+export function hasEnoughCredits(action: keyof typeof CREDIT_COSTS): boolean {
+  const balance = getCreditBalance();
+  const cost = CREDIT_COSTS[action];
+  return balance.credits >= cost;
+}
+
+/**
+ * Deduct credits for an action
+ */
+export function deductCredits(action: keyof typeof CREDIT_COSTS): boolean {
+  const balance = getCreditBalance();
+  const cost = CREDIT_COSTS[action];
+  
+  if (balance.credits < cost) {
+    return false;
+  }
+  
+  const newBalance = balance.credits - cost;
+  const updated: CreditBalance = {
+    credits: newBalance,
+    lastUpdated: new Date(),
+  };
+  
+  localStorage.setItem('creditBalance', JSON.stringify(updated));
+  
+  // Log transaction
+  addCreditTransaction({
+    type: action === 'DIGITAL_FOOTPRINT_SCAN' ? 'scan' : 'content_generation',
+    amount: -cost,
+    description: `Used ${cost} credits for ${action}`,
+  });
+  
+  return true;
+}
+
+/**
+ * Add credits to user balance
+ */
+export function addCredits(amount: number, description: string, type: CreditTransaction['type'] = 'purchase'): void {
+  const balance = getCreditBalance();
+  const newBalance = balance.credits + amount;
+  
+  const updated: CreditBalance = {
+    credits: newBalance,
+    lastUpdated: new Date(),
+  };
+  
+  localStorage.setItem('creditBalance', JSON.stringify(updated));
+  
+  addCreditTransaction({
+    type,
+    amount,
+    description,
+  });
+}
+
+/**
+ * Add credit transaction to history
+ */
+function addCreditTransaction(transaction: Omit<CreditTransaction, 'id' | 'timestamp'>): void {
+  try {
+    const history = getCreditHistory();
+    const newTransaction: CreditTransaction = {
+      ...transaction,
+      id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date(),
+    };
+    
+    history.unshift(newTransaction);
+    // Keep only last 100 transactions
+    if (history.length > 100) {
+      history.splice(100);
+    }
+    
+    localStorage.setItem('creditHistory', JSON.stringify(history));
+  } catch (e) {
+    console.error('Error saving credit transaction:', e);
+  }
+}
+
+/**
+ * Get credit transaction history
+ */
+export function getCreditHistory(): CreditTransaction[] {
+  try {
+    const stored = localStorage.getItem('creditHistory');
+    if (stored) {
+      const history = JSON.parse(stored);
+      return history.map((tx: any) => ({
+        ...tx,
+        timestamp: new Date(tx.timestamp),
+      }));
+    }
+  } catch (e) {
+    console.error('Error parsing credit history:', e);
+  }
+  
+  return [];
+}
+
+/**
+ * Check if user has access to a feature
+ */
+export function hasFeatureAccess(feature: string): boolean {
+  const subscription = getUserSubscription();
+  const limits = TIER_LIMITS[subscription.tier];
+  
+  if (limits.features.includes('all' as any)) {
+    return true;
+  }
+  
+  return limits.features.includes(feature as any);
+}
+
+/**
+ * Check if user can perform an action based on subscription
+ */
+export function canPerformAction(action: 'scan' | 'content_generation' | 'competitor_tracking'): boolean {
+  const subscription = getUserSubscription();
+  const limits = TIER_LIMITS[subscription.tier];
+  
+  // Check if feature is available
+  if (action === 'scan' && !hasFeatureAccess('basic_scan')) {
+    return false;
+  }
+  
+  if (action === 'content_generation' && !hasFeatureAccess('content_generation')) {
+    return false;
+  }
+  
+  if (action === 'competitor_tracking' && !hasFeatureAccess('competitor_tracking')) {
+    return false;
+  }
+  
+  // Check credits
+  if (action === 'scan') {
+    return hasEnoughCredits('DIGITAL_FOOTPRINT_SCAN');
+  }
+  
+  if (action === 'content_generation') {
+    return hasEnoughCredits('CONTENT_GENERATION');
+  }
+  
+  if (action === 'competitor_tracking') {
+    return hasEnoughCredits('COMPETITOR_ANALYSIS');
+  }
+  
+  return false;
+}
+
+/**
+ * Update subscription (called after Stripe payment)
+ */
+export function updateSubscription(subscription: Subscription): void {
+  localStorage.setItem('userSubscription', JSON.stringify(subscription));
+  
+  // Give initial credits based on tier
+  const balance = getCreditBalance();
+  if (balance.credits === 0 && subscription.tier !== SubscriptionTier.FREE) {
+    const initialCredits = subscription.tier === SubscriptionTier.PRO ? 500 : 10000;
+    addCredits(initialCredits, 'Welcome bonus credits', 'bonus');
+  }
+}
+

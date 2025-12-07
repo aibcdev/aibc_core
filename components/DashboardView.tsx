@@ -225,6 +225,13 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
              <SidebarItem label="Analytics" active={currentPage === 'analytics'} onClick={() => setCurrentPage('analytics')} />
              <div className="mt-4 pt-4 border-t border-white/5">
                <SidebarItem label="Settings" active={currentPage === 'settings'} onClick={() => setCurrentPage('settings')} />
+               {isAdmin() && (
+                 <SidebarItem 
+                   label="Admin Panel" 
+                   active={false} 
+                   onClick={() => onNavigate(ViewState.ADMIN)} 
+                 />
+               )}
              </div>
          </div>
 
@@ -964,7 +971,15 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
             )}
 
             {/* Production Room */}
-            {currentPage === 'production' && <ProductionRoomView />}
+            {currentPage === 'production' && (
+              <FeatureLock 
+                feature="content_generation" 
+                requiredTier={SubscriptionTier.PRO}
+                onNavigate={onNavigate}
+              >
+                <ProductionRoomView />
+              </FeatureLock>
+            )}
 
             {/* Calendar */}
             {currentPage === 'calendar' && <CalendarView />}
@@ -979,7 +994,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
             {currentPage === 'integrations' && <IntegrationsView />}
 
             {/* Settings */}
-            {currentPage === 'settings' && <SettingsView onLogout={() => onNavigate(ViewState.LANDING)} />}
+            {currentPage === 'settings' && <SettingsView onLogout={() => onNavigate(ViewState.LANDING)} onNavigate={onNavigate} />}
 
         </main>
 

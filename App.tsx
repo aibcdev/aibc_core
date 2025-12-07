@@ -9,6 +9,7 @@ import AuditView from './components/AuditView';
 import VectorsView from './components/VectorsView';
 import DashboardView from './components/DashboardView';
 import PricingView from './components/PricingView';
+import AdminView from './components/AdminView';
 import { ViewState } from './types';
 import { supabase, isSupabaseConfigured } from './services/supabaseClient';
 
@@ -85,6 +86,23 @@ export default function App() {
 
     handleHashChange();
     checkSupabaseAuth();
+    
+    // Check for Stripe checkout completion
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    if (sessionId) {
+      // Verify session and update subscription
+      import('./services/stripeService').then(({ verifyCheckoutSession }) => {
+        verifyCheckoutSession(sessionId).then(() => {
+          // Redirect to dashboard after successful payment
+          setView(ViewState.DASHBOARD);
+          window.history.replaceState(null, '', window.location.pathname);
+        }).catch(err => {
+          console.error('Checkout verification error:', err);
+        });
+      });
+    }
+    
     window.addEventListener('hashchange', handleHashChange);
 
     return () => window.removeEventListener('hashchange', handleHashChange);
@@ -111,6 +129,7 @@ export default function App() {
       {view === ViewState.VECTORS && <VectorsView onNavigate={navigate} />}
       {view === ViewState.DASHBOARD && <DashboardView onNavigate={navigate} />}
       {view === ViewState.PRICING && <PricingView onNavigate={navigate} />}
+      {view === ViewState.ADMIN && <AdminView onNavigate={navigate} />}
     </>
   );
 }

@@ -5,6 +5,8 @@ import scanRoutes from './routes/scan';
 import podcastRoutes from './routes/podcast';
 import analyticsRoutes from './routes/analytics';
 import authRoutes from './routes/auth';
+import stripeRoutes from './routes/stripe';
+import adminRoutes from './routes/admin';
 
 dotenv.config();
 
@@ -30,6 +32,8 @@ app.use('/api/scan', scanRoutes);
 app.use('/api/podcast', podcastRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/stripe', stripeRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Verify handle endpoint (quick verification for integrations)
 app.post('/api/verify-handle', async (req, res) => {
