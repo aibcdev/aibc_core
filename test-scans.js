@@ -6,11 +6,11 @@
 const API_BASE_URL = process.env.API_URL || 'http://localhost:3001';
 
 const testSubjects = [
-  { username: 'elonmusk', platforms: ['twitter', 'youtube'], name: 'Elon Musk' },
-  { username: 'mrbeast', platforms: ['youtube', 'twitter', 'instagram'], name: 'MrBeast' },
-  { username: 'garyvee', platforms: ['twitter', 'linkedin', 'youtube'], name: 'Gary Vaynerchuk' },
-  { username: 'openai', platforms: ['twitter', 'linkedin'], name: 'OpenAI' },
-  { username: 'notion', platforms: ['twitter', 'linkedin'], name: 'Notion' },
+  { username: 'goodphats', platforms: ['twitter', 'instagram'], name: 'GoodPhats' },
+  { username: 'nike', platforms: ['twitter', 'instagram', 'youtube'], name: 'Nike' },
+  { username: 'lululemon', platforms: ['twitter', 'instagram', 'linkedin'], name: 'LuluLemon' },
+  { username: 'dipsea', platforms: ['twitter', 'instagram'], name: 'Dipsea' },
+  { username: 'kobobooks', platforms: ['twitter', 'linkedin'], name: 'Kobo Books' },
 ];
 
 async function sleep(ms) {

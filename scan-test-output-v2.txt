@@ -1,0 +1,100 @@
+================================================================================
+CEO QUALITY ASSURANCE TEST - 5 SCANS
+================================================================================
+
+
+[1/5] Scanning: GoodPhats (@goodphats)
+Platforms: twitter, instagram
+Scan ID: scan_1765146477440_30j5fjgea
+  Progress: 30% - [10:27:57 PM] [SCANNER] Using AI-powered brand research...
+✓ Scan completed successfully
+Waiting 10 seconds before next scan...
+
+[2/5] Scanning: Nike (@nike)
+Platforms: twitter, instagram, youtube
+Scan ID: scan_1765146492504_ms8fq8vbh
+  Progress: 30% - [10:28:12 PM] [SCANNER] Using AI-powered brand research...
+✓ Scan completed successfully
+Waiting 10 seconds before next scan...
+
+[3/5] Scanning: LuluLemon (@lululemon)
+Platforms: twitter, instagram, linkedin
+Scan ID: scan_1765146507525_8z7gjq328
+  Progress: 30% - [10:28:27 PM] [SCANNER] Using AI-powered brand research...
+✓ Scan completed successfully
+Waiting 10 seconds before next scan...
+
+[4/5] Scanning: Dipsea (@dipsea)
+Platforms: twitter, instagram
+Scan ID: scan_1765146522549_v2q4bnobj
+  Progress: 30% - [10:28:42 PM] [SCANNER] Using AI-powered brand research...
+✓ Scan completed successfully
+Waiting 10 seconds before next scan...
+
+[5/5] Scanning: Kobo Books (@kobobooks)
+Platforms: twitter, linkedin
+Scan ID: scan_1765146537572_0hvyblpjl
+  Progress: 30% - [10:28:57 PM] [SCANNER] Using AI-powered brand research...
+✓ Scan completed successfully
+
+================================================================================
+TEST RESULTS SUMMARY
+================================================================================
+
+🔍 CRITICAL EVALUATION (Skeptical CEO Perspective):
+
+Total Scans: 5
+Successful: 5
+Failed: 0
+
+--- Scan 1: GoodPhats ---
+✓ Profile bio: Profile for goodphats...
+❌ MISSING: Posts array
+❌ MISSING: Content themes
+✓ Voice: friendly (professional)
+✓ Core Pillars: 3 found
+⚠️  WEAK: Only 1 insights (expected 2-3)
+⚠️  WEAK: No competitors identified
+
+--- Scan 2: Nike ---
+⚠️  WEAK: Profile bio too short (16 chars)
+❌ MISSING: Posts array
+❌ MISSING: Content themes
+✓ Voice: friendly (professional)
+✓ Core Pillars: 3 found
+⚠️  WEAK: Only 1 insights (expected 2-3)
+⚠️  WEAK: No competitors identified
+
+--- Scan 3: LuluLemon ---
+✓ Profile bio: Profile for lululemon...
+❌ MISSING: Posts array
+❌ MISSING: Content themes
+✓ Voice: friendly (professional)
+✓ Core Pillars: 3 found
+⚠️  WEAK: Only 1 insights (expected 2-3)
+⚠️  WEAK: No competitors identified
+
+--- Scan 4: Dipsea ---
+⚠️  WEAK: Profile bio too short (18 chars)
+❌ MISSING: Posts array
+❌ MISSING: Content themes
+✓ Voice: friendly (professional)
+✓ Core Pillars: 3 found
+⚠️  WEAK: Only 1 insights (expected 2-3)
+⚠️  WEAK: No competitors identified
+
+--- Scan 5: Kobo Books ---
+✓ Profile bio: Profile for kobobooks...
+❌ MISSING: Posts array
+❌ MISSING: Content themes
+✓ Voice: friendly (professional)
+✓ Core Pillars: 3 found
+⚠️  WEAK: Only 1 insights (expected 2-3)
+⚠️  WEAK: No competitors identified
+
+================================================================================
+CEO VERDICT:
+================================================================================
+⚠️  CONCERNING: Not all scans have complete content
+
+Results saved to scan-test-results.json
