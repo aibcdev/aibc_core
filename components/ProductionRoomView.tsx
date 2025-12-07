@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Filter, Plus, FileText, Video, Image as ImageIcon, MoreHorizontal, Clock, Mic2, X, Play, Download, Sparkles, RefreshCw, Linkedin, Instagram, Music, Send, Copy, Edit3, Loader2, ChevronRight, Hash, AtSign, Calendar } from 'lucide-react';
 import { generatePodcast } from '../services/podcastClient';
+import { addToInbox } from '../services/inboxService';
+import { reserveCredits, CREDIT_COSTS } from '../services/subscriptionService';
 
 interface ContentAsset {
   id: string;
@@ -523,6 +525,13 @@ const ProductionRoomView: React.FC = () => {
       return;
     }
 
+    // Check if user has enough credits (but don't deduct yet)
+    const creditCheck = reserveCredits('AUDIO_GENERATION');
+    if (!creditCheck.reserved) {
+      setPodcastError(`Insufficient credits. Need ${creditCheck.cost} credits. Please upgrade or purchase credits.`);
+      return;
+    }
+
     setIsGeneratingPodcast(true);
     setPodcastError(null);
 
@@ -538,15 +547,27 @@ const ProductionRoomView: React.FC = () => {
       }, userTier);
 
       if (result.success) {
+        // Add to inbox instead of deducting credits immediately
+        const content = result.script || result.transcript || `Podcast script for: ${podcastTopic}`;
+        const inboxId = addToInbox(
+          'audio',
+          `Podcast: ${podcastTopic}`,
+          `${podcastDuration}-minute ${podcastStyle} podcast episode`,
+          content,
+          CREDIT_COSTS.AUDIO_GENERATION,
+          {
+            duration: podcastDuration,
+            style: podcastStyle,
+            podcastId: result.podcastId,
+          }
+        );
+
         setGeneratedPodcast(result);
-        setAssets([...assets, {
-          id: result.podcastId || `podcast_${Date.now()}`,
-          title: podcastTopic,
-          platform: 'PODCAST',
-          status: 'draft',
-          type: 'podcast',
-          timeAgo: 'just now'
-        }]);
+        setPodcastError(null);
+        setShowPodcastModal(false);
+        
+        // Show success message
+        alert(`Podcast generated! Check your Inbox to review and accept (${CREDIT_COSTS.AUDIO_GENERATION} credits will be deducted when you accept).`);
       } else {
         setPodcastError(result.error || 'Failed to generate podcast');
       }

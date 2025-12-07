@@ -10,6 +10,7 @@ import VectorsView from './components/VectorsView';
 import DashboardView from './components/DashboardView';
 import PricingView from './components/PricingView';
 import AdminView from './components/AdminView';
+import InboxView from './components/InboxView';
 import { ViewState } from './types';
 import { supabase, isSupabaseConfigured } from './services/supabaseClient';
 
@@ -131,6 +132,7 @@ export default function App() {
       {view === ViewState.DASHBOARD && <DashboardView onNavigate={navigate} />}
       {view === ViewState.PRICING && <PricingView onNavigate={navigate} />}
       {view === ViewState.ADMIN && <AdminView onNavigate={navigate} />}
+      {view === ViewState.INBOX && <InboxView onNavigate={navigate} />}
     </>
   );
 }

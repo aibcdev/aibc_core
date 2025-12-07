@@ -37,6 +37,10 @@ export const CREDIT_COSTS = {
   CONTENT_GENERATION: 5,
   COMPETITOR_ANALYSIS: 15,
   BRAND_DNA_EXTRACTION: 8,
+  AUDIO_GENERATION: 8, // Podcast/audio content
+  VIDEO_GENERATION: 15, // Video content
+  SHORT_VIDEO: 10, // Short-form video
+  LONG_VIDEO: 20, // Long-form video
 } as const;
 
 // Subscription tier limits
@@ -194,6 +198,19 @@ function addCreditTransaction(transaction: Omit<CreditTransaction, 'id' | 'times
   } catch (e) {
     console.error('Error saving credit transaction:', e);
   }
+}
+
+/**
+ * Accept audio/video content - deducts credits only when user accepts
+ * @param contentId - The ID of the content being accepted
+ * @param contentType - 'audio' or 'video'
+ */
+export function acceptContent(contentId: string, contentType: 'audio' | 'video'): boolean {
+  const action = contentType === 'audio' 
+    ? 'AUDIO_GENERATION' 
+    : 'VIDEO_GENERATION';
+  
+  return deductCredits(action, { contentId, accepted: true } as Record<string, any>);
 }
 
 /**

@@ -9,7 +9,8 @@ export enum ViewState {
   VECTORS = 'VECTORS',
   DASHBOARD = 'DASHBOARD',
   PRICING = 'PRICING',
-  ADMIN = 'ADMIN'
+  ADMIN = 'ADMIN',
+  INBOX = 'INBOX'
 }
 
 export interface NavProps {

@@ -219,6 +219,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
              <div className="text-[10px] font-bold text-white/30 uppercase tracking-widest px-4 mb-4 mt-2">Platform</div>
              <SidebarItem label="Dashboard" active={currentPage === 'dashboard'} onClick={() => setCurrentPage('dashboard')} />
              <SidebarItem label="Production Room" active={currentPage === 'production'} onClick={() => setCurrentPage('production')} />
+             <SidebarItem label="Inbox" active={false} onClick={() => onNavigate(ViewState.INBOX)} />
              <SidebarItem label="Calendar" active={currentPage === 'calendar'} onClick={() => setCurrentPage('calendar')} />
              <SidebarItem label="Brand Assets" active={currentPage === 'assets'} onClick={() => setCurrentPage('assets')} />
              <SidebarItem label="Integrations" active={currentPage === 'integrations'} onClick={() => setCurrentPage('integrations')} />

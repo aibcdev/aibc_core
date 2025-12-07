@@ -301,21 +301,26 @@ market knowledge and competitor data. Always return valid JSON with specific met
 Your job is to research brands and creators to provide actionable competitive intelligence.
 Always return valid JSON. Be specific and use real data when available.`;
   
+  // Deep scans return MORE information, not different LLM
   const depth = scanTier === 'deep' 
-    ? `Provide DEEP analysis including:
-- Detailed competitor benchmarking with specific metrics
-- Market positioning analysis
-- Content strategy gaps and opportunities
-- Audience overlap analysis
-- Engagement pattern deep-dive
-- Trend analysis and predictions
+    ? `Provide COMPREHENSIVE DEEP analysis with EXTENSIVE detail:
 
-1. PROFILE: Their bio, approximate follower count, verified status, and which platforms they're active on
-2. CONTENT: Summarize 5-8 of their recent/notable posts - what topics do they cover?
-3. THEMES: Identify 3-5 main content themes/topics they focus on
-4. VOICE: Analyze their communication style - tone, formality, vocabulary
-5. COMPETITORS: Identify 3 REAL competitors in their space (use actual names, not placeholders)`
-    : `Provide comprehensive analysis including:
+1. PROFILE: Full bio, detailed follower metrics, verification status, all active platforms, account age, posting frequency
+2. CONTENT: Summarize 15-20 of their most notable posts across all time periods - include engagement metrics, content types, posting patterns
+3. THEMES: Identify 8-12 main content themes/topics with detailed breakdowns
+4. VOICE: Deep analysis of communication style - tone variations, formality levels, vocabulary patterns, sentence structure, emotional range
+5. COMPETITORS: Identify 5-8 REAL competitors with detailed analysis:
+   - Market positioning comparison
+   - Content strategy differences
+   - Audience overlap analysis
+   - Engagement rate comparisons
+   - Specific advantages and opportunities
+6. MARKET ANALYSIS: Industry positioning, market share estimates, growth trends
+7. CONTENT PERFORMANCE: Best performing content types, optimal posting times, engagement patterns
+8. STRATEGIC RECOMMENDATIONS: 5-7 actionable insights with specific metrics
+
+Return EXTENSIVE data - deep scans should have 3-5x more detail than basic scans.`
+    : `Provide key analysis including:
 
 1. PROFILE: Their bio, approximate follower count, verified status, and which platforms they're active on
 2. CONTENT: Summarize 5-8 of their recent/notable posts - what topics do they cover?
@@ -323,15 +328,21 @@ Always return valid JSON. Be specific and use real data when available.`;
 4. VOICE: Analyze their communication style - tone, formality, vocabulary
 5. COMPETITORS: Identify 3 REAL competitors in their space (use actual names, not placeholders)`;
   
+  // Deep scans return MORE information (3-5x more detail), same LLM
+  const contentCount = scanTier === 'deep' ? '15-20' : '5-8';
+  const themeCount = scanTier === 'deep' ? '8-12' : '3-5';
+  const competitorCount = scanTier === 'deep' ? '5-8' : '3';
+  
   const prompt = `Research "${username}" across these platforms: ${platforms.join(', ')}.
 
-${depth}
+${scanTier === 'deep' ? 'Provide COMPREHENSIVE DEEP analysis with EXTENSIVE detail:' : 'Provide key analysis:'}
 
-1. PROFILE: Their bio, approximate follower count, verified status, and which platforms they're active on
-2. CONTENT: Summarize 5-8 of their recent/notable posts - what topics do they cover?
-3. THEMES: Identify 3-5 main content themes/topics they focus on
-4. VOICE: Analyze their communication style - tone, formality, vocabulary
-5. COMPETITORS: Identify 3 REAL competitors in their space (use actual names, not placeholders)
+1. PROFILE: ${scanTier === 'deep' ? 'Full bio, detailed follower metrics, verification status, all active platforms, account age, posting frequency, growth trends' : 'Their bio, approximate follower count, verified status, and which platforms they\'re active on'}
+2. CONTENT: Summarize ${contentCount} of their ${scanTier === 'deep' ? 'most notable posts across all time periods - include engagement metrics, content types, posting patterns, best performing content' : 'recent/notable posts - what topics do they cover?'}
+3. THEMES: Identify ${themeCount} main content themes/topics ${scanTier === 'deep' ? 'with detailed breakdowns, sub-themes, and content distribution' : 'they focus on'}
+4. VOICE: ${scanTier === 'deep' ? 'Deep analysis of communication style - tone variations, formality levels, vocabulary patterns, sentence structure, emotional range, consistency across platforms' : 'Analyze their communication style - tone, formality, vocabulary'}
+5. COMPETITORS: Identify ${competitorCount} REAL competitors ${scanTier === 'deep' ? 'with detailed analysis including market positioning, content strategy differences, audience overlap, engagement comparisons, specific advantages and opportunities' : 'in their space (use actual names, not placeholders)'}
+${scanTier === 'deep' ? '6. MARKET ANALYSIS: Industry positioning, market share estimates, growth trends, audience demographics\n7. CONTENT PERFORMANCE: Best performing content types, optimal posting times, engagement patterns, platform-specific strategies\n8. STRATEGIC RECOMMENDATIONS: 5-7 actionable insights with specific metrics' : ''}
 
 For competitors, be specific:
 - Use real company/creator names
@@ -369,6 +380,7 @@ Return ONLY valid JSON in this exact format:
       "yourOpportunity": "Focus on authenticity. Their content feels too corporate."
     }
   ],
+  ${scanTier === 'deep' ? '"market_analysis": {"positioning": "...", "share_estimate": 0, "growth_trends": "..."},\n  "content_performance": {"best_types": ["..."], "optimal_times": "...", "engagement_patterns": "..."},\n  "strategic_recommendations": ["..."],' : ''}
   "extraction_confidence": 0.8
 }`;
 
@@ -882,12 +894,12 @@ Return ONLY valid JSON:
     const jsonArrMatch = text.match(/\[[\s\S]*\]/);
     if (jsonArrMatch) {
       const competitors = JSON.parse(jsonArrMatch[0]);
-      return {
-        marketShare: null,
-        competitors: competitors
-          .filter((comp: any) => comp.name && comp.threatLevel)
-          .slice(0, 3)
-      };
+          return {
+            marketShare: null,
+            competitors: competitors
+              .filter((comp: any) => comp.name && comp.threatLevel)
+              .slice(0, scanTier === 'deep' ? 8 : 3) // Deep: 8 competitors, Basic: 3
+          };
     }
 
     throw new Error('Failed to parse competitor intelligence as JSON');
