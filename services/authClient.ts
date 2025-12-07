@@ -27,6 +27,64 @@ export async function signUp(
   firstName?: string,
   lastName?: string
 ): Promise<AuthResponse> {
+  // Use Supabase if configured (production)
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      console.log('Signing up via Supabase:', email);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: firstName && lastName ? `${firstName} ${lastName}` : firstName || email.split('@')[0],
+            first_name: firstName,
+            last_name: lastName,
+          },
+        },
+      });
+
+      if (error) {
+        console.error('Supabase sign-up error:', error);
+        return { success: false, error: error.message || 'Sign up failed' };
+      }
+
+      if (data.session) {
+        // User is automatically signed in
+        localStorage.setItem('authToken', data.session.access_token);
+        localStorage.setItem('user', JSON.stringify({
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.user_metadata?.name || email.split('@')[0],
+        }));
+        return { 
+          success: true, 
+          token: data.session.access_token, 
+          user: {
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.user_metadata?.name || email.split('@')[0],
+          }
+        };
+      } else if (data.user) {
+        // Email confirmation required
+        return { 
+          success: true, 
+          user: {
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.user_metadata?.name || email.split('@')[0],
+          }
+        };
+      }
+
+      return { success: false, error: 'Sign up failed' };
+    } catch (error: any) {
+      console.error('Supabase sign-up exception:', error);
+      return { success: false, error: error.message || 'Sign up failed' };
+    }
+  }
+
+  // Fallback to backend API if Supabase not configured
   try {
     const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
       method: 'POST',
@@ -67,6 +125,47 @@ export async function signUp(
  * Sign in with email and password
  */
 export async function signIn(email: string, password: string): Promise<AuthResponse> {
+  // Use Supabase if configured (production)
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      console.log('Signing in via Supabase:', email);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.error('Supabase sign-in error:', error);
+        return { success: false, error: error.message || 'Invalid email or password' };
+      }
+
+      if (data.session) {
+        // Store session token
+        localStorage.setItem('authToken', data.session.access_token);
+        localStorage.setItem('user', JSON.stringify({
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.user_metadata?.name || data.user.email,
+        }));
+        return { 
+          success: true, 
+          token: data.session.access_token, 
+          user: {
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.user_metadata?.name || data.user.email,
+          }
+        };
+      }
+
+      return { success: false, error: 'Sign in failed' };
+    } catch (error: any) {
+      console.error('Supabase sign-in exception:', error);
+      return { success: false, error: error.message || 'Sign in failed' };
+    }
+  }
+
+  // Fallback to backend API if Supabase not configured
   try {
     const response = await fetch(`${API_BASE_URL}/api/auth/signin`, {
       method: 'POST',
@@ -99,6 +198,58 @@ export async function signIn(email: string, password: string): Promise<AuthRespo
  * Sign in with Google (using JWT credential from Google Identity Services)
  */
 export async function signInWithGoogle(credential: string): Promise<AuthResponse> {
+  // Use Supabase if configured (production)
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      console.log('Signing in with Google via Supabase');
+      // Supabase doesn't directly support JWT tokens from Google Identity Services
+      // We need to verify the token first, then create a session
+      // For now, fall back to backend API or use OAuth flow
+      // Note: Google OAuth must be configured in Supabase Dashboard
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}`,
+        },
+      });
+
+      // If OAuth redirect is needed, return success and let Supabase handle redirect
+      if (!error && data.url) {
+        window.location.href = data.url;
+        return { success: true };
+      }
+
+      if (error) {
+        console.error('Supabase Google sign-in error:', error);
+        return { success: false, error: error.message || 'Google sign-in failed' };
+      }
+
+      if (data.session) {
+        localStorage.setItem('authToken', data.session.access_token);
+        localStorage.setItem('user', JSON.stringify({
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.user_metadata?.name || data.user.email,
+        }));
+        return { 
+          success: true, 
+          token: data.session.access_token, 
+          user: {
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.user_metadata?.name || data.user.email,
+          }
+        };
+      }
+
+      return { success: false, error: 'Google sign-in failed' };
+    } catch (error: any) {
+      console.error('Supabase Google sign-in exception:', error);
+      return { success: false, error: error.message || 'Google sign-in failed' };
+    }
+  }
+
+  // Fallback to backend API if Supabase not configured
   try {
     const response = await fetch(`${API_BASE_URL}/api/auth/google`, {
       method: 'POST',
@@ -141,6 +292,11 @@ export async function forgotPassword(email: string): Promise<AuthResponse> {
       console.log('Requesting password reset via Supabase for:', email);
       const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}#reset-password`,
+      });
+
+      console.log('Supabase password reset response:', { 
+        hasData: !!data, 
+        error: error ? { message: error.message, status: error.status } : null 
       });
 
       if (error) {
