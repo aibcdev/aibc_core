@@ -88,7 +88,7 @@ npm run dev
 
 Your Gemini API key is already configured in `backend/.env`:
 ```
-GEMINI_API_KEY=AIzaSyBjy_D8nYNgQ9XymEARDCQvAXIN6ApA25g
+GEMINI_API_KEY=your_new_api_key_here
 ```
 
 No need to edit anything - just run the commands above!
