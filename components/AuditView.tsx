@@ -91,20 +91,9 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
         
         addLog(`[SYSTEM] Connecting to backend services...`);
         
-        // Deduct credits before starting scan
-        const { deductCredits, CREDIT_COSTS } = await import('../services/subscriptionService');
-        const creditsDeducted = deductCredits('DIGITAL_FOOTPRINT_SCAN');
-        if (!creditsDeducted) {
-          throw new Error('Failed to deduct credits. Please try again.');
-        }
-        addLog(`[SYSTEM] Deducted ${CREDIT_COSTS.DIGITAL_FOOTPRINT_SCAN} credits for scan`);
-        
         const scanResponse = await startScan(scanUsername, platforms, 'standard');
         
         if (!scanResponse.success || !scanResponse.scanId) {
-          // Refund credits if scan fails to start
-          const { addCredits } = await import('../services/subscriptionService');
-          addCredits(CREDIT_COSTS.DIGITAL_FOOTPRINT_SCAN, 'Refund: Scan failed to start', 'refund');
           throw new Error(scanResponse.error || 'Failed to start scan');
         }
 
