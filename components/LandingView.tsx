@@ -245,15 +245,15 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
           <div className="flex items-center gap-4">
             <button 
               onClick={() => onNavigate(ViewState.LOGIN)} 
-              className="hidden md:flex items-center text-sm font-bold text-white/60 hover:text-white transition-colors uppercase tracking-wide whitespace-nowrap"
+              className="hidden md:inline-block text-sm font-bold text-white/60 hover:text-white transition-colors uppercase tracking-wide whitespace-nowrap px-2 py-1"
             >
-              <span>LOG IN</span>
+              LOG IN
             </button>
             <button 
               onClick={() => onNavigate(ViewState.LOGIN)} 
-              className="flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-5 py-2 text-xs font-bold text-white transition-all hover:bg-white/10 uppercase tracking-wide whitespace-nowrap min-w-[120px]"
+              className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-5 py-2 text-xs font-bold text-white transition-all hover:bg-white/10 uppercase tracking-wide whitespace-nowrap"
             >
-              <span>GET STARTED</span>
+              GET STARTED
             </button>
           </div>
         </div>
