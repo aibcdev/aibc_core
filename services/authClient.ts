@@ -2,6 +2,8 @@
  * Authentication Client Service
  */
 
+import { supabase, isSupabaseConfigured } from './supabaseClient';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export interface AuthResponse {
@@ -133,6 +135,28 @@ export async function signInWithGoogle(credential: string): Promise<AuthResponse
  * Request password reset
  */
 export async function forgotPassword(email: string): Promise<AuthResponse> {
+  // Use Supabase if configured (production)
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}#reset-password`,
+      });
+
+      if (error) {
+        console.error('Supabase password reset error:', error);
+        // Still return success for security (don't reveal if email exists)
+        return { success: true };
+      }
+
+      // Success - Supabase will send email automatically
+      return { success: true };
+    } catch (error: any) {
+      console.error('Supabase password reset exception:', error);
+      return { success: true }; // Always return success for security
+    }
+  }
+
+  // Fallback to backend API if Supabase not configured
   try {
     // Add timeout to prevent hanging
     const controller = new AbortController();
@@ -186,6 +210,28 @@ export async function resetPassword(
   token: string,
   newPassword: string
 ): Promise<AuthResponse> {
+  // Use Supabase if configured (production)
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      // Supabase uses session-based password reset
+      // The token is handled via URL hash after user clicks email link
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        console.error('Supabase password reset error:', error);
+        return { success: false, error: error.message || 'Failed to reset password' };
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Supabase password reset exception:', error);
+      return { success: false, error: 'Failed to reset password' };
+    }
+  }
+
+  // Fallback to backend API if Supabase not configured
   try {
     const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
       method: 'POST',

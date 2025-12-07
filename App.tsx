@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import LandingView from './components/LandingView';
 import LoginView from './components/LoginView';
 import SignInView from './components/SignInView';
+import ResetPasswordView from './components/ResetPasswordView';
 import IngestionView from './components/IngestionView';
 import AuditView from './components/AuditView';
 import VectorsView from './components/VectorsView';
@@ -22,11 +23,13 @@ export default function App() {
     }
   }, []);
 
-  // Handle hash routing for pricing page
+  // Handle hash routing for pricing and password reset
   useEffect(() => {
     const handleHashChange = () => {
       if (window.location.hash === '#pricing') {
         setView(ViewState.PRICING);
+      } else if (window.location.hash === '#reset-password' || window.location.hash.includes('access_token')) {
+        setView(ViewState.RESET_PASSWORD);
       }
     };
 
@@ -51,6 +54,7 @@ export default function App() {
       {view === ViewState.LANDING && <LandingView onNavigate={navigate} />}
       {view === ViewState.LOGIN && <LoginView onNavigate={navigate} />}
       {view === ViewState.SIGNIN && <SignInView onNavigate={navigate} />}
+      {view === ViewState.RESET_PASSWORD && <ResetPasswordView onNavigate={navigate} />}
       {view === ViewState.INGESTION && <IngestionView onNavigate={navigate} setUsername={setUsername} />}
       {view === ViewState.AUDIT && <AuditView onNavigate={navigate} username={username} />}
       {view === ViewState.VECTORS && <VectorsView onNavigate={navigate} />}
