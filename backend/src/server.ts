@@ -15,6 +15,8 @@ const PORT = process.env.PORT || 3001; // Default to 3001 for local dev
 app.use(cors({
   origin: [
     process.env.FRONTEND_URL || 'http://localhost:5173',
+    'https://aibcmedia.com',
+    'https://www.aibcmedia.com',
     'http://localhost:3003',
     'http://localhost:5173',
     'http://localhost:3000'
