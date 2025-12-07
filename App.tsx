@@ -62,7 +62,17 @@ export default function App() {
                 email: data.user.email,
                 name: data.user.user_metadata?.name || data.user.email,
               }));
-              setView(ViewState.DASHBOARD);
+              
+              // Check if user has completed onboarding (has scanned username)
+              const hasCompletedOnboarding = localStorage.getItem('lastScannedUsername');
+              
+              // New users go to ingestion (onboarding), existing users go to dashboard
+              if (hasCompletedOnboarding) {
+                setView(ViewState.DASHBOARD);
+              } else {
+                setView(ViewState.INGESTION);
+              }
+              
               // Clean up URL
               window.history.replaceState(null, '', window.location.pathname);
             }

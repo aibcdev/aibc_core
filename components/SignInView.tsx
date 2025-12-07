@@ -38,7 +38,15 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
               try {
                 const result = await signInWithGoogle(credential);
                 if (result.success) {
-                  onNavigate(ViewState.DASHBOARD);
+                  // Check if user has completed onboarding
+                  const hasCompletedOnboarding = localStorage.getItem('lastScannedUsername');
+                  
+                  // New users go to ingestion (onboarding), existing users go to dashboard
+                  if (hasCompletedOnboarding) {
+                    onNavigate(ViewState.DASHBOARD);
+                  } else {
+                    onNavigate(ViewState.INGESTION);
+                  }
                 } else {
                   setError(result.error || 'Failed to sign in with Google');
                 }
