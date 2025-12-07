@@ -10,6 +10,7 @@ import VectorsView from './components/VectorsView';
 import DashboardView from './components/DashboardView';
 import PricingView from './components/PricingView';
 import { ViewState } from './types';
+import { supabase, isSupabaseConfigured } from './services/supabaseClient';
 
 export default function App() {
   const [view, setView] = useState<ViewState>(ViewState.LANDING);
@@ -23,7 +24,7 @@ export default function App() {
     }
   }, []);
 
-  // Handle hash routing for pricing and password reset
+  // Handle hash routing for pricing, password reset, and OAuth callbacks
   useEffect(() => {
     const handleHashChange = () => {
       if (window.location.hash === '#pricing') {
@@ -33,7 +34,47 @@ export default function App() {
       }
     };
 
+    // Check for Supabase OAuth callback
+    const checkSupabaseAuth = async () => {
+      if (isSupabaseConfigured() && supabase) {
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const type = hashParams.get('type');
+        
+        if (accessToken && refreshToken && type === 'recovery') {
+          // Password reset callback - handled by ResetPasswordView
+          return;
+        }
+        
+        if (accessToken && refreshToken) {
+          // Supabase OAuth callback - set session
+          try {
+            const { data, error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            
+            if (!error && data.session) {
+              localStorage.setItem('authToken', data.session.access_token);
+              localStorage.setItem('user', JSON.stringify({
+                id: data.user.id,
+                email: data.user.email,
+                name: data.user.user_metadata?.name || data.user.email,
+              }));
+              setView(ViewState.DASHBOARD);
+              // Clean up URL
+              window.history.replaceState(null, '', window.location.pathname);
+            }
+          } catch (err) {
+            console.error('Error setting Supabase session:', err);
+          }
+        }
+      }
+    };
+
     handleHashChange();
+    checkSupabaseAuth();
     window.addEventListener('hashchange', handleHashChange);
 
     return () => window.removeEventListener('hashchange', handleHashChange);

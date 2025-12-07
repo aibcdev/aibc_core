@@ -202,10 +202,8 @@ export async function signInWithGoogle(credential: string): Promise<AuthResponse
   if (isSupabaseConfigured() && supabase) {
     try {
       console.log('Signing in with Google via Supabase');
-      // Supabase doesn't directly support JWT tokens from Google Identity Services
-      // We need to verify the token first, then create a session
-      // For now, fall back to backend API or use OAuth flow
-      // Note: Google OAuth must be configured in Supabase Dashboard
+      // Supabase OAuth flow - redirects to Google
+      // Note: Google OAuth must be enabled in Supabase Dashboard → Authentication → Providers
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -213,33 +211,15 @@ export async function signInWithGoogle(credential: string): Promise<AuthResponse
         },
       });
 
-      // If OAuth redirect is needed, return success and let Supabase handle redirect
-      if (!error && data.url) {
-        window.location.href = data.url;
-        return { success: true };
-      }
-
       if (error) {
-        console.error('Supabase Google sign-in error:', error);
+        console.error('Supabase Google OAuth error:', error);
         return { success: false, error: error.message || 'Google sign-in failed' };
       }
 
-      if (data.session) {
-        localStorage.setItem('authToken', data.session.access_token);
-        localStorage.setItem('user', JSON.stringify({
-          id: data.user.id,
-          email: data.user.email,
-          name: data.user.user_metadata?.name || data.user.email,
-        }));
-        return { 
-          success: true, 
-          token: data.session.access_token, 
-          user: {
-            id: data.user.id,
-            email: data.user.email,
-            name: data.user.user_metadata?.name || data.user.email,
-          }
-        };
+      // Redirect to Google OAuth
+      if (data.url) {
+        window.location.href = data.url;
+        return { success: true }; // Will redirect, so return success
       }
 
       return { success: false, error: 'Google sign-in failed' };
