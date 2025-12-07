@@ -278,7 +278,7 @@ const IntegrationsView: React.FC<IntegrationsProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+    <div className="max-w-4xl mx-auto p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -529,6 +529,18 @@ const IntegrationsView: React.FC<IntegrationsProps> = ({ onNavigate }) => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Continue Button - Only show if onNavigate is provided (standalone flow) */}
+      {onNavigate && (
+        <div className="mt-8 flex justify-end">
+          <button
+            onClick={() => onNavigate(ViewState.DASHBOARD)}
+            className="px-8 py-3 rounded bg-[#10B981] hover:bg-[#059669] text-[#050505] text-xs font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] transition-all flex items-center gap-2"
+          >
+            Continue <ArrowRight className="w-3 h-3" />
+          </button>
         </div>
       )}
     </div>
