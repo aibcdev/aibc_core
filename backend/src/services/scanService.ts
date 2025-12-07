@@ -46,8 +46,31 @@ export async function startScan(
     
     let researchData;
     try {
-      researchData = await researchBrandWithLLM(username, platforms);
+      const scanTier = getScanTier(scanType);
+      researchData = await researchBrandWithLLM(username, platforms, scanTier);
       addLog(scanId, `[SUCCESS] Brand research completed`);
+      
+      // Validate research data quality
+      if (!researchData || !researchData.profile) {
+        throw new Error('LLM returned invalid data structure');
+      }
+      
+      // Check for placeholder content - Log warning but don't fail
+      if (researchData.profile.bio && 
+          (researchData.profile.bio.toLowerCase().includes('digital presence for') ||
+           researchData.profile.bio.length < 20)) {
+        addLog(scanId, `[WARNING] Detected placeholder bio - LLM may not have real data`);
+        // Don't throw - continue with what we have
+      }
+      
+      // Validate posts array - Log warning if empty
+      if (!researchData.posts || researchData.posts.length === 0) {
+        addLog(scanId, `[WARNING] No posts extracted - LLM returned empty posts array`);
+        // Set empty array explicitly
+        researchData.posts = [];
+      } else {
+        addLog(scanId, `[SUCCESS] Extracted ${researchData.posts.length} posts`);
+      }
       
       // Convert research data to extracted content format
       if (researchData) {
@@ -64,6 +87,8 @@ export async function startScan(
       }
     } catch (researchError: any) {
       addLog(scanId, `[ERROR] Brand research failed: ${researchError.message}`);
+      // Don't use fallback - throw error to surface the issue
+      throw new Error(`Research failed: ${researchError.message}`);
     }
 
     // Check if we have real data
@@ -335,37 +360,57 @@ Return EXTENSIVE data - deep scans should have 3-5x more detail than basic scans
   
   const prompt = `Research "${username}" across these platforms: ${platforms.join(', ')}.
 
+CRITICAL: You MUST provide REAL, SPECIFIC data. Do NOT use placeholders like "Digital presence for..." or generic descriptions.
+If you don't have specific data, use your knowledge base to provide the most accurate information possible.
+
 ${scanTier === 'deep' ? 'Provide COMPREHENSIVE DEEP analysis with EXTENSIVE detail:' : 'Provide key analysis:'}
 
-1. PROFILE: ${scanTier === 'deep' ? 'Full bio, detailed follower metrics, verification status, all active platforms, account age, posting frequency, growth trends' : 'Their bio, approximate follower count, verified status, and which platforms they\'re active on'}
+1. PROFILE: ${scanTier === 'deep' ? 'Full bio, detailed follower metrics, verification status, all active platforms, account age, posting frequency, growth trends' : 'Their actual bio text, approximate follower count, verification status, and which platforms they\'re active on'}
+   - MUST be their REAL bio, not a placeholder
+   - If you know their actual bio, use it. If not, describe what they're known for based on your knowledge.
+
 2. CONTENT: Summarize ${contentCount} of their ${scanTier === 'deep' ? 'most notable posts across all time periods - include engagement metrics, content types, posting patterns, best performing content' : 'recent/notable posts - what topics do they cover?'}
+   - CRITICAL: You MUST provide at least ${scanTier === 'deep' ? '15' : '5'} posts in the posts array
+   - Each post must have: content (summary of what they posted), post_type, engagement metrics
+   - Use your knowledge of what this person/brand typically posts about
+   - Be specific: "Posted about X, Y, Z" not "Posts about various topics"
+
 3. THEMES: Identify ${themeCount} main content themes/topics ${scanTier === 'deep' ? 'with detailed breakdowns, sub-themes, and content distribution' : 'they focus on'}
+   - MUST be specific themes, not generic ones like "content creation" or "brand building"
+   - Examples: "Space exploration and Mars colonization", "Electric vehicles and sustainable energy", "AI safety and AGI development"
+
 4. VOICE: ${scanTier === 'deep' ? 'Deep analysis of communication style - tone variations, formality levels, vocabulary patterns, sentence structure, emotional range, consistency across platforms' : 'Analyze their communication style - tone, formality, vocabulary'}
+   - Be specific based on what you know about this person/brand
+   - Include actual vocabulary words they use if you know them
+
 5. COMPETITORS: Identify ${competitorCount} REAL competitors ${scanTier === 'deep' ? 'with detailed analysis including market positioning, content strategy differences, audience overlap, engagement comparisons, specific advantages and opportunities' : 'in their space (use actual names, not placeholders)'}
+   - MUST provide at least ${scanTier === 'deep' ? '5' : '3'} competitors
+   - Use REAL names: "Tesla" not "Electric vehicle company"
+   - Each competitor needs: name, threatLevel, primaryVector, theirAdvantage, yourOpportunity
 ${scanTier === 'deep' ? '6. MARKET ANALYSIS: Industry positioning, market share estimates, growth trends, audience demographics\n7. CONTENT PERFORMANCE: Best performing content types, optimal posting times, engagement patterns, platform-specific strategies\n8. STRATEGIC RECOMMENDATIONS: 5-7 actionable insights with specific metrics' : ''}
 
 For competitors, be specific:
-- Use real company/creator names
+- Use real company/creator names (e.g., "SpaceX", "Tesla", "OpenAI", "Anthropic")
 - "theirAdvantage" = one specific thing they do better
 - "yourOpportunity" = actionable advice to compete (start with a verb)
 
-Return ONLY valid JSON in this exact format:
+Return ONLY valid JSON in this exact format. The posts array MUST contain at least ${scanTier === 'deep' ? '15' : '5'} items:
 {
   "profile": {
-    "bio": "Their actual bio or description",
+    "bio": "Their ACTUAL bio text or detailed description based on what they're known for (minimum 50 characters, be specific)",
     "follower_count": 0,
     "verified": false,
     "platform_presence": ["twitter", "youtube"]
   },
   "posts": [
     {
-      "content": "Summary of what they posted about",
-      "post_type": "video",
+      "content": "Specific summary of what they posted about (e.g., 'Posted about SpaceX Starship launch, discussing reusable rocket technology and Mars colonization timeline')",
+      "post_type": "text",
       "engagement": {"likes": 0, "shares": 0, "comments": 0},
       "quality_score": 0.8
     }
   ],
-  "content_themes": ["theme1", "theme2", "theme3"],
+  "content_themes": ["Specific theme 1", "Specific theme 2", "Specific theme 3"],
   "brand_voice": {
     "tone": "casual",
     "style": "conversational",
@@ -373,7 +418,7 @@ Return ONLY valid JSON in this exact format:
   },
   "competitors": [
     {
-      "name": "Real Competitor Name",
+      "name": "Real Competitor Name (e.g., 'Tesla', 'SpaceX', 'OpenAI')",
       "threatLevel": "HIGH",
       "primaryVector": "YouTube - posts daily tutorials",
       "theirAdvantage": "Larger audience and professional production quality.",
@@ -384,8 +429,19 @@ Return ONLY valid JSON in this exact format:
   "extraction_confidence": 0.8
 }`;
 
+  const minPosts = scanTier === 'deep' ? '15' : '5';
+  const criticalNote = `
+CRITICAL: 
+- The posts array MUST have at least ${minPosts} items - this is non-negotiable
+- Each post's "content" field must be specific (what they actually post about), not generic
+- Bio must be at least 50 characters and specific to this person/brand
+- Competitors must be real company/creator names, not descriptions
+- If you don't know specific data, use your knowledge base to provide the most accurate information possible`;
+
+  const fullPrompt = prompt + criticalNote;
+
   try {
-    return await generateJSON(prompt, systemPrompt, { tier: scanTier });
+    return await generateJSON(fullPrompt, systemPrompt, { tier: scanTier });
   } catch (error) {
     console.error('LLM research error:', error);
     throw error;

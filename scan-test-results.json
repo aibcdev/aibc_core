@@ -1,0 +1,227 @@
+[
+  {
+    "subject": "Elon Musk",
+    "username": "elonmusk",
+    "scanId": "scan_1765146124562_j2cc9j69d",
+    "results": {
+      "extractedContent": {
+        "profile": {
+          "bio": "Profile for elonmusk"
+        },
+        "posts": [],
+        "content_themes": [],
+        "extraction_confidence": 0.1
+      },
+      "brandDNA": {
+        "archetype": "The Architect",
+        "voice": {
+          "style": "professional",
+          "formality": "casual",
+          "tone": "friendly",
+          "vocabulary": [],
+          "tones": [
+            "Systematic",
+            "Transparent",
+            "Dense"
+          ]
+        },
+        "themes": [],
+        "corePillars": [
+          "Automated Content Scale",
+          "Forensic Brand Analysis",
+          "Enterprise Reliability"
+        ]
+      },
+      "strategicInsights": [
+        {
+          "title": "Initial Scan Complete",
+          "description": "Digital footprint scan completed. Additional data will be available after full platform analysis.",
+          "impact": "LOW IMPACT",
+          "effort": "Quick win (1 week)"
+        }
+      ],
+      "competitorIntelligence": []
+    },
+    "success": true
+  },
+  {
+    "subject": "MrBeast",
+    "username": "mrbeast",
+    "scanId": "scan_1765146139621_g49ou2307",
+    "results": {
+      "extractedContent": {
+        "profile": {
+          "bio": "Profile for mrbeast"
+        },
+        "posts": [],
+        "content_themes": [],
+        "extraction_confidence": 0.1
+      },
+      "brandDNA": {
+        "archetype": "The Architect",
+        "voice": {
+          "style": "professional",
+          "formality": "casual",
+          "tone": "friendly",
+          "vocabulary": [],
+          "tones": [
+            "Systematic",
+            "Transparent",
+            "Dense"
+          ]
+        },
+        "themes": [],
+        "corePillars": [
+          "Automated Content Scale",
+          "Forensic Brand Analysis",
+          "Enterprise Reliability"
+        ]
+      },
+      "strategicInsights": [
+        {
+          "title": "Initial Scan Complete",
+          "description": "Digital footprint scan completed. Additional data will be available after full platform analysis.",
+          "impact": "LOW IMPACT",
+          "effort": "Quick win (1 week)"
+        }
+      ],
+      "competitorIntelligence": []
+    },
+    "success": true
+  },
+  {
+    "subject": "Gary Vaynerchuk",
+    "username": "garyvee",
+    "scanId": "scan_1765146154645_27ziiiq84",
+    "results": {
+      "extractedContent": {
+        "profile": {
+          "bio": "Profile for garyvee"
+        },
+        "posts": [],
+        "content_themes": [],
+        "extraction_confidence": 0.1
+      },
+      "brandDNA": {
+        "archetype": "The Architect",
+        "voice": {
+          "style": "professional",
+          "formality": "casual",
+          "tone": "friendly",
+          "vocabulary": [],
+          "tones": [
+            "Systematic",
+            "Transparent",
+            "Dense"
+          ]
+        },
+        "themes": [],
+        "corePillars": [
+          "Automated Content Scale",
+          "Forensic Brand Analysis",
+          "Enterprise Reliability"
+        ]
+      },
+      "strategicInsights": [
+        {
+          "title": "Initial Scan Complete",
+          "description": "Digital footprint scan completed. Additional data will be available after full platform analysis.",
+          "impact": "LOW IMPACT",
+          "effort": "Quick win (1 week)"
+        }
+      ],
+      "competitorIntelligence": []
+    },
+    "success": true
+  },
+  {
+    "subject": "OpenAI",
+    "username": "openai",
+    "scanId": "scan_1765146169663_15v331jrx",
+    "results": {
+      "extractedContent": {
+        "profile": {
+          "bio": "Profile for openai"
+        },
+        "posts": [],
+        "content_themes": [],
+        "extraction_confidence": 0.1
+      },
+      "brandDNA": {
+        "archetype": "The Architect",
+        "voice": {
+          "style": "professional",
+          "formality": "casual",
+          "tone": "friendly",
+          "vocabulary": [],
+          "tones": [
+            "Systematic",
+            "Transparent",
+            "Dense"
+          ]
+        },
+        "themes": [],
+        "corePillars": [
+          "Automated Content Scale",
+          "Forensic Brand Analysis",
+          "Enterprise Reliability"
+        ]
+      },
+      "strategicInsights": [
+        {
+          "title": "Initial Scan Complete",
+          "description": "Digital footprint scan completed. Additional data will be available after full platform analysis.",
+          "impact": "LOW IMPACT",
+          "effort": "Quick win (1 week)"
+        }
+      ],
+      "competitorIntelligence": []
+    },
+    "success": true
+  },
+  {
+    "subject": "Notion",
+    "username": "notion",
+    "scanId": "scan_1765146184686_1rpexgmqc",
+    "results": {
+      "extractedContent": {
+        "profile": {
+          "bio": "Profile for notion"
+        },
+        "posts": [],
+        "content_themes": [],
+        "extraction_confidence": 0.1
+      },
+      "brandDNA": {
+        "archetype": "The Architect",
+        "voice": {
+          "style": "professional",
+          "formality": "casual",
+          "tone": "friendly",
+          "vocabulary": [],
+          "tones": [
+            "Systematic",
+            "Transparent",
+            "Dense"
+          ]
+        },
+        "themes": [],
+        "corePillars": [
+          "Automated Content Scale",
+          "Forensic Brand Analysis",
+          "Enterprise Reliability"
+        ]
+      },
+      "strategicInsights": [
+        {
+          "title": "Initial Scan Complete",
+          "description": "Digital footprint scan completed. Additional data will be available after full platform analysis.",
+          "impact": "LOW IMPACT",
+          "effort": "Quick win (1 week)"
+        }
+      ],
+      "competitorIntelligence": []
+    },
+    "success": true
+  }
+]
