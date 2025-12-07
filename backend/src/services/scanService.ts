@@ -1,12 +1,18 @@
 import { chromium, Browser } from 'playwright';
 import { storage } from './storage';
-import { generateJSON, isLLMConfigured, getActiveProvider } from './llmService';
+import { generateJSON, isLLMConfigured, getActiveProvider, ScanTier } from './llmService';
 import dotenv from 'dotenv';
 
 // Load environment variables
 dotenv.config();
 
 console.log(`LLM configured: ${isLLMConfigured() ? `Yes (${getActiveProvider()})` : 'No'}`);
+
+// Map scanType to tier
+function getScanTier(scanType: string): ScanTier {
+  if (scanType === 'deep') return 'deep';
+  return 'basic';
+}
 
 
 export async function startScan(
@@ -78,6 +84,9 @@ export async function startScan(
     addLog(scanId, `[ANALYSIS] Successfully scanned ${successfulPlatforms}/${totalPlatforms} platforms`);
     addLog(scanId, `[ANALYSIS] Extracting voice & tone patterns...`);
     addLog(scanId, `[ANALYSIS] Identifying content themes...`);
+    
+    // Store scan tier for later use
+    const scanTier = getScanTier(scanType);
 
     // Merge content from all platforms - only real data
     const mergedContent = {
@@ -101,7 +110,7 @@ export async function startScan(
     storage.updateScan(scanId, { progress: 90 });
     let brandDNA;
     try {
-      brandDNA = await extractBrandDNA(validatedContent);
+      brandDNA = await extractBrandDNA(validatedContent, scanTier);
       addLog(scanId, `[SUCCESS] Brand DNA extracted`);
     } catch (error: any) {
       addLog(scanId, `[WARNING] Brand DNA extraction failed: ${error.message} - using fallback`);
@@ -116,7 +125,7 @@ export async function startScan(
     storage.updateScan(scanId, { progress: 95 });
     let strategicInsights;
     try {
-      strategicInsights = await generateStrategicInsights(validatedContent, brandDNA);
+      strategicInsights = await generateStrategicInsights(validatedContent, brandDNA, scanTier);
       addLog(scanId, `[SUCCESS] Strategic insights generated`);
     } catch (error: any) {
       addLog(scanId, `[WARNING] Strategic insights generation failed: ${error.message} - using fallback`);
@@ -143,7 +152,7 @@ export async function startScan(
     } else {
       // Generate using LLM if not available
       try {
-        const competitorData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username);
+        const competitorData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier);
         
         // Handle new format with marketShare
         if (competitorData && competitorData.competitors) {
@@ -279,18 +288,44 @@ async function scrapeProfile(url: string, platform: string): Promise<{ html: str
 }
 
 // Use LLM to research a brand/creator directly
-async function researchBrandWithLLM(username: string, platforms: string[]): Promise<any> {
+async function researchBrandWithLLM(username: string, platforms: string[], scanTier: ScanTier = 'basic'): Promise<any> {
   if (!isLLMConfigured()) {
-    throw new Error('No LLM API configured. Set DEEPSEEK_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY.');
+    throw new Error('No LLM API configured. Set GEMINI_API_KEY (basic) or ANTHROPIC_API_KEY (deep).');
   }
   
-  const systemPrompt = `You are an expert brand analyst and digital marketing researcher. 
+  const systemPrompt = scanTier === 'deep' 
+    ? `You are an elite competitive intelligence analyst specializing in deep brand research. 
+Your analysis must be comprehensive, data-driven, and actionable. You have access to extensive 
+market knowledge and competitor data. Always return valid JSON with specific metrics and insights.`
+    : `You are an expert brand analyst and digital marketing researcher. 
 Your job is to research brands and creators to provide actionable competitive intelligence.
 Always return valid JSON. Be specific and use real data when available.`;
   
+  const depth = scanTier === 'deep' 
+    ? `Provide DEEP analysis including:
+- Detailed competitor benchmarking with specific metrics
+- Market positioning analysis
+- Content strategy gaps and opportunities
+- Audience overlap analysis
+- Engagement pattern deep-dive
+- Trend analysis and predictions
+
+1. PROFILE: Their bio, approximate follower count, verified status, and which platforms they're active on
+2. CONTENT: Summarize 5-8 of their recent/notable posts - what topics do they cover?
+3. THEMES: Identify 3-5 main content themes/topics they focus on
+4. VOICE: Analyze their communication style - tone, formality, vocabulary
+5. COMPETITORS: Identify 3 REAL competitors in their space (use actual names, not placeholders)`
+    : `Provide comprehensive analysis including:
+
+1. PROFILE: Their bio, approximate follower count, verified status, and which platforms they're active on
+2. CONTENT: Summarize 5-8 of their recent/notable posts - what topics do they cover?
+3. THEMES: Identify 3-5 main content themes/topics they focus on
+4. VOICE: Analyze their communication style - tone, formality, vocabulary
+5. COMPETITORS: Identify 3 REAL competitors in their space (use actual names, not placeholders)`;
+  
   const prompt = `Research "${username}" across these platforms: ${platforms.join(', ')}.
 
-Provide comprehensive analysis including:
+${depth}
 
 1. PROFILE: Their bio, approximate follower count, verified status, and which platforms they're active on
 2. CONTENT: Summarize 5-8 of their recent/notable posts - what topics do they cover?
@@ -338,7 +373,7 @@ Return ONLY valid JSON in this exact format:
 }`;
 
   try {
-    return await generateJSON(prompt, systemPrompt);
+    return await generateJSON(prompt, systemPrompt, { tier: scanTier });
   } catch (error) {
     console.error('LLM research error:', error);
     throw error;
@@ -437,7 +472,8 @@ Return ONLY valid JSON, no markdown, no code blocks, no explanations:
   "extraction_confidence": 0.0-1.0
 }`;
 
-    const extracted: any = await generateJSON(prompt, systemPrompt);
+    // Use basic tier for content extraction (always free)
+    const extracted: any = await generateJSON(prompt, systemPrompt, { tier: 'basic' });
     
     // Additional client-side filtering
     if (extracted.posts && Array.isArray(extracted.posts)) {
@@ -510,7 +546,7 @@ function validateOutputOnly(content: any, username: string): any {
   };
 }
 
-async function extractBrandDNA(validatedContent: any): Promise<any> {
+async function extractBrandDNA(validatedContent: any, scanTier: ScanTier = 'basic'): Promise<any> {
   if (!isLLMConfigured()) {
     return {
       archetype: 'The Architect',
@@ -586,7 +622,7 @@ Return ONLY valid JSON:
   }
 }`;
 
-    const parsed: any = await generateJSON(prompt, systemPrompt);
+    const parsed: any = await generateJSON(prompt, systemPrompt, { tier: scanTier });
     // Ensure required fields
     return {
       archetype: parsed.archetype || 'The Architect',
@@ -617,7 +653,7 @@ Return ONLY valid JSON:
   }
 }
 
-async function generateStrategicInsights(validatedContent: any, brandDNA: any): Promise<any[]> {
+async function generateStrategicInsights(validatedContent: any, brandDNA: any, scanTier: ScanTier = 'basic'): Promise<any[]> {
   const defaultInsights = [
     {
       title: 'No Video Content Strategy',
@@ -714,8 +750,10 @@ Return ONLY valid JSON:
 ]`;
 
     const { generateText } = await import('./llmService');
-    const systemPrompt = 'You are a content strategist. Provide specific, data-driven insights. Always return valid JSON array.';
-    const text = await generateText(prompt, systemPrompt);
+    const systemPrompt = scanTier === 'deep' 
+      ? 'You are an elite content strategist with deep market knowledge. Provide comprehensive, data-driven insights with specific metrics. Always return valid JSON array.'
+      : 'You are a content strategist. Provide specific, data-driven insights. Always return valid JSON array.';
+    const text = await generateText(prompt, systemPrompt, { tier: scanTier });
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     
     if (jsonMatch) {
@@ -737,7 +775,7 @@ Return ONLY valid JSON:
   }
 }
 
-async function generateCompetitorIntelligence(validatedContent: any, brandDNA: any, username?: string): Promise<any> {
+async function generateCompetitorIntelligence(validatedContent: any, brandDNA: any, username?: string, scanTier: ScanTier = 'basic'): Promise<any> {
   // If no real content was extracted, return empty
   const hasRealContent = validatedContent.posts && validatedContent.posts.length > 0;
   const hasRealProfile = validatedContent.profile && validatedContent.profile.bio && 
@@ -805,8 +843,10 @@ Return ONLY valid JSON:
 }`;
 
     const { generateText } = await import('./llmService');
-    const systemPrompt = 'You are a competitive intelligence analyst. Provide specific data on competitors. Always return valid JSON.';
-    const text = await generateText(prompt, systemPrompt);
+    const systemPrompt = scanTier === 'deep'
+      ? 'You are an elite competitive intelligence analyst with deep market knowledge. Provide comprehensive competitor analysis with specific metrics, market positioning, and actionable insights. Always return valid JSON.'
+      : 'You are a competitive intelligence analyst. Provide specific data on competitors. Always return valid JSON.';
+    const text = await generateText(prompt, systemPrompt, { tier: scanTier });
     
     // Try to parse as object first (new format)
     const jsonObjMatch = text.match(/\{[\s\S]*\}/);

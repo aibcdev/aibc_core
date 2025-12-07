@@ -16,6 +16,7 @@ import { supabase, isSupabaseConfigured } from './services/supabaseClient';
 export default function App() {
   const [view, setView] = useState<ViewState>(ViewState.LANDING);
   const [username, setUsername] = useState<string>('');
+  const [scanType, setScanType] = useState<'basic' | 'deep'>('basic');
 
   // Load username from localStorage on mount
   useEffect(() => {
@@ -124,8 +125,8 @@ export default function App() {
       {view === ViewState.LOGIN && <LoginView onNavigate={navigate} />}
       {view === ViewState.SIGNIN && <SignInView onNavigate={navigate} />}
       {view === ViewState.RESET_PASSWORD && <ResetPasswordView onNavigate={navigate} />}
-      {view === ViewState.INGESTION && <IngestionView onNavigate={navigate} setUsername={setUsername} />}
-      {view === ViewState.AUDIT && <AuditView onNavigate={navigate} username={username} />}
+      {view === ViewState.INGESTION && <IngestionView onNavigate={navigate} setUsername={setUsername} setScanType={setScanType} />}
+      {view === ViewState.AUDIT && <AuditView onNavigate={navigate} username={username} scanType={scanType} />}
       {view === ViewState.VECTORS && <VectorsView onNavigate={navigate} />}
       {view === ViewState.DASHBOARD && <DashboardView onNavigate={navigate} />}
       {view === ViewState.PRICING && <PricingView onNavigate={navigate} />}

@@ -1,19 +1,29 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ScanLine } from 'lucide-react';
+import { ArrowLeft, ScanLine, Zap, Lock } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
-import { scanBrandFootprint } from '../services/footprintScanner';
+import { getUserSubscription, SubscriptionTier, canPerformAction } from '../services/subscriptionService';
 
 interface IngestionProps extends NavProps {
   setUsername: (username: string) => void;
+  setScanType?: (type: 'basic' | 'deep') => void;
 }
 
-const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername }) => {
+const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setScanType }) => {
   const [inputVal, setInputVal] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedScanType, setSelectedScanType] = useState<'basic' | 'deep'>('basic');
+  const subscription = getUserSubscription();
+  const canUseDeepScan = subscription.tier === SubscriptionTier.PRO || subscription.tier === SubscriptionTier.ENTERPRISE;
 
   const handleNext = async () => {
     if (!inputVal.trim()) return;
+    
+    // Check if deep scan is selected but user doesn't have access
+    if (selectedScanType === 'deep' && !canUseDeepScan) {
+      setError('Deep scan is only available for Pro and Enterprise plans. Upgrade to unlock.');
+      return;
+    }
     
     setIsScanning(true);
     setError(null);
@@ -22,6 +32,12 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername }) =>
       // Start the digital footprint scan
       const username = inputVal.trim().replace('@', ''); // Remove @ if present
       setUsername(username);
+      
+      // Store scan type
+      if (setScanType) {
+        setScanType(selectedScanType);
+      }
+      localStorage.setItem('lastScanType', selectedScanType);
       
       // Store in localStorage for persistence
       localStorage.setItem('lastScannedUsername', username);
@@ -104,6 +120,52 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername }) =>
                             <span className="text-[10px] font-bold text-white/40 bg-white/5 border border-white/10 px-2 py-1 rounded pointer-events-none">ENTER</span>
                          </div>
                     </div>
+                </div>
+
+                {/* Scan Type Selection */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setSelectedScanType('basic')}
+                    className={`flex-1 py-3 px-4 rounded-xl border transition-all ${
+                      selectedScanType === 'basic'
+                        ? 'bg-gradient-to-r from-orange-500/20 to-red-600/20 border-orange-500/50 text-white'
+                        : 'bg-white/5 border-white/10 text-white/60 hover:border-white/20'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <ScanLine className="w-4 h-4" />
+                      <span className="text-xs font-bold uppercase">Basic Scan</span>
+                    </div>
+                    <div className="text-[10px] text-white/40 mt-1">Free • Gemini 2.0</div>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      if (!canUseDeepScan) {
+                        setError('Deep scan requires Pro or Enterprise plan');
+                        return;
+                      }
+                      setSelectedScanType('deep');
+                      setError(null);
+                    }}
+                    className={`flex-1 py-3 px-4 rounded-xl border transition-all relative ${
+                      selectedScanType === 'deep'
+                        ? 'bg-gradient-to-r from-purple-500/20 to-pink-600/20 border-purple-500/50 text-white'
+                        : canUseDeepScan
+                        ? 'bg-white/5 border-white/10 text-white/60 hover:border-white/20'
+                        : 'bg-white/5 border-white/10 text-white/30 opacity-50 cursor-not-allowed'
+                    }`}
+                    disabled={!canUseDeepScan && selectedScanType !== 'deep'}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      {!canUseDeepScan && <Lock className="w-3 h-3" />}
+                      <Zap className="w-4 h-4" />
+                      <span className="text-xs font-bold uppercase">Deep Scan</span>
+                    </div>
+                    <div className="text-[10px] text-white/40 mt-1">
+                      {canUseDeepScan ? 'Premium • Claude 3.5' : 'Pro+ Only'}
+                    </div>
+                  </button>
                 </div>
 
                 {/* Error Message */}

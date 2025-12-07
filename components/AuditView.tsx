@@ -5,6 +5,7 @@ import { startScan, pollScanStatus } from '../services/apiClient';
 
 interface AuditProps extends NavProps {
   username: string;
+  scanType?: 'basic' | 'deep';
 }
 
 interface ScanStage {
@@ -16,7 +17,7 @@ interface ScanStage {
   icon: React.ReactNode;
 }
 
-const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
+const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'basic' }) => {
   const [logs, setLogs] = useState<string[]>([]);
   const [showButton, setShowButton] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +92,13 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
         
         addLog(`[SYSTEM] Connecting to backend services...`);
         
-        const scanResponse = await startScan(scanUsername, platforms, 'standard');
+        // Get scan type from localStorage or prop
+        const finalScanType = scanType || localStorage.getItem('lastScanType') || 'basic';
+        const scanTypeParam = finalScanType === 'deep' ? 'deep' : 'standard';
+        
+        addLog(`[SYSTEM] Scan mode: ${finalScanType.toUpperCase()} (${finalScanType === 'deep' ? 'Claude 3.5 Sonnet' : 'Gemini 2.0 Flash'})`);
+        
+        const scanResponse = await startScan(scanUsername, platforms, scanTypeParam);
         
         if (!scanResponse.success || !scanResponse.scanId) {
           throw new Error(scanResponse.error || 'Failed to start scan');
