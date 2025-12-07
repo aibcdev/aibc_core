@@ -1,0 +1,9 @@
+================================================================================
+CEO QUALITY ASSURANCE TEST - 5 SCANS
+================================================================================
+
+
+[1/5] Scanning: GoodPhats (@goodphats)
+Platforms: twitter, instagram
+Scan ID: scan_1765150218609_y28cq6lpr
+  Progress: 20% - [11:30:18 PM] [SCRAPE] Scraping twitter: https://twitter.com/goodphats
