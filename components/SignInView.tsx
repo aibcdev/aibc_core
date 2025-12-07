@@ -97,7 +97,15 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
     try {
       const result = await signIn(email, password);
       if (result.success) {
-        onNavigate(ViewState.DASHBOARD);
+        // Check if user has completed onboarding
+        const hasCompletedOnboarding = localStorage.getItem('lastScannedUsername');
+        
+        // New users go to ingestion (onboarding), existing users go to dashboard
+        if (hasCompletedOnboarding) {
+          onNavigate(ViewState.DASHBOARD);
+        } else {
+          onNavigate(ViewState.INGESTION);
+        }
       } else {
         setError(result.error || 'Invalid email or password');
       }
