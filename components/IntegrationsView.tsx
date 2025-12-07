@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link2, Check, HelpCircle, Plus, ChevronRight, BarChart2, Linkedin, Instagram, Play, Mic2, Globe, Mail, ShoppingBag, Sparkles, Heart, Zap, ExternalLink, X, Save, Loader2, AlertCircle, CheckCircle, Search, ArrowRight } from 'lucide-react';
-import { ViewState } from '../types';
-import { ViewState } from '../types';
+import { Link2, Check, HelpCircle, Plus, ChevronRight, BarChart2, Linkedin, Instagram, Play, Mic2, Globe, Mail, ShoppingBag, Sparkles, Heart, Zap, ExternalLink, X, Save, Loader2, AlertCircle, CheckCircle, Search } from 'lucide-react';
 
 interface Integration {
   id: string;
@@ -26,11 +24,7 @@ interface VerificationResult {
   error?: string;
 }
 
-interface IntegrationsProps {
-  onNavigate?: (view: any) => void;
-}
-
-const IntegrationsView: React.FC<IntegrationsProps> = ({ onNavigate }) => {
+const IntegrationsView: React.FC = () => {
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
   const [inputHandle, setInputHandle] = useState('');
@@ -68,8 +62,7 @@ const IntegrationsView: React.FC<IntegrationsProps> = ({ onNavigate }) => {
 
     try {
       // Call backend to verify the handle
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${API_URL}/api/verify-handle`, {
+      const response = await fetch(`http://localhost:3001/api/verify-handle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ handle: handle.replace('@', ''), platform })
@@ -97,8 +90,7 @@ const IntegrationsView: React.FC<IntegrationsProps> = ({ onNavigate }) => {
       
       // Simulate LLM verification with realistic data lookup
       // In production, this would call Gemini/GPT to verify the account
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${API_URL}/api/scan/verify`, {
+      const response = await fetch(`http://localhost:3001/api/scan/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -110,20 +102,10 @@ const IntegrationsView: React.FC<IntegrationsProps> = ({ onNavigate }) => {
 
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.verified && data.profile) {
-          // Ensure name is never empty
-          const profileName = data.profile.name || cleanHandle;
-          if (!profileName || profileName.trim().length === 0) {
-            setVerificationResult({
-              verified: false,
-              error: 'Could not retrieve account name. Please check the username.'
-            });
-            return;
-          }
-          
+        if (data.success && data.profile) {
           setVerificationResult({
             verified: true,
-            name: profileName.trim(),
+            name: data.profile.name || cleanHandle,
             avatar: data.profile.avatar,
             followers: data.profile.followers,
             bio: data.profile.bio
@@ -131,35 +113,20 @@ const IntegrationsView: React.FC<IntegrationsProps> = ({ onNavigate }) => {
         } else {
           setVerificationResult({
             verified: false,
-            error: data.error || 'Could not verify this account. Please check the username.'
+            error: 'Could not verify this account. Please check the username.'
           });
         }
       } else {
-        // Final fallback - show error instead of fake data
-        const responseText = await response.text();
-        console.error('Verification API failed:', response.status, responseText);
+        // Final fallback - simulate verification based on handle format
         simulateVerification(cleanHandle, platform);
       }
-    } catch (error: any) {
-      console.error('Verification error:', error);
-      // Show error instead of fake data
+    } catch (error) {
       simulateVerification(handle.replace('@', '').trim(), platform);
     }
   };
 
-  // Final fallback - show error instead of fake data
+  // Simulated verification for demo purposes
   const simulateVerification = (handle: string, platform: string) => {
-    // Check if it's an email address (not a valid social media handle)
-    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(handle);
-    
-    if (isEmail) {
-      setVerificationResult({
-        verified: false,
-        error: 'Please enter a username or handle, not an email address. For Instagram, use @username format.'
-      });
-      return;
-    }
-
     // Basic format validation
     const isValidFormat = /^[a-zA-Z0-9._-]{2,30}$/.test(handle);
     
@@ -171,29 +138,21 @@ const IntegrationsView: React.FC<IntegrationsProps> = ({ onNavigate }) => {
       return;
     }
 
-    // Ensure handle is not empty
-    if (!handle || handle.trim().length === 0) {
-      setVerificationResult({
-        verified: false,
-        error: 'Username cannot be empty.'
-      });
-      return;
-    }
-
-    // Don't generate fake data - show error that account couldn't be verified
+    // Simulate finding the account
     const platformNames: Record<string, string> = {
       'instagram': 'Instagram',
       'linkedin': 'LinkedIn',
       'x': 'X (Twitter)',
       'youtube': 'YouTube',
       'tiktok': 'TikTok',
-      'facebook': 'Facebook',
-      'ga': 'Google Analytics'
+      'facebook': 'Facebook'
     };
 
     setVerificationResult({
-      verified: false,
-      error: `❌ Account not found. Could not verify this ${platformNames[platform] || platform} account. Please check the username and ensure the account exists and is public. No data available.`
+      verified: true,
+      name: handle.charAt(0).toUpperCase() + handle.slice(1),
+      followers: Math.floor(Math.random() * 50000 + 1000).toLocaleString(),
+      bio: `${platformNames[platform] || 'Social'} creator`
     });
   };
 
@@ -530,21 +489,6 @@ const IntegrationsView: React.FC<IntegrationsProps> = ({ onNavigate }) => {
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Continue Button - Only show if onNavigate is provided (standalone flow, not inside dashboard) */}
-      {onNavigate && (
-        <div className="mt-8 flex justify-end border-t border-white/10 pt-6">
-          <button
-            onClick={() => {
-              console.log('IntegrationsView: Navigating to Dashboard');
-              onNavigate(ViewState.DASHBOARD);
-            }}
-            className="px-8 py-3 rounded bg-[#10B981] hover:bg-[#059669] text-[#050505] text-xs font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] transition-all flex items-center gap-2"
-          >
-            Continue <ArrowRight className="w-3 h-3" />
-          </button>
         </div>
       )}
     </div>

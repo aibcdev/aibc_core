@@ -5,23 +5,17 @@ import {
   AlertCircle, Briefcase, Plus, Trash2,
   X, Zap, Globe, Users, Activity, BarChart2, ShieldAlert,
   Target, FileText, Send, CheckCircle, Sparkles, TrendingUp,
-  Linkedin, Instagram, Play, Loader2, LogOut, RefreshCw, Scan
+  Linkedin, Instagram, Play, Loader2
 } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
 import { fetchAnalyticsData, fetchCalendarEvents, fetchCompetitors, fetchContentPipeline } from '../services/dashboardData';
-import { getDashboardAnalytics } from '../services/analyticsClient';
 import { getLatestScanResults } from '../services/apiClient';
-import { getCreditBalance, checkFeatureAccess, type UserTier } from '../services/creditClient';
-import { logout, getUser, isAuthenticated } from '../services/authClient';
 import ProductionRoomView from './ProductionRoomView';
 import CalendarView from './CalendarView';
 import AnalyticsView from './AnalyticsView';
 import BrandAssetsView from './BrandAssetsView';
 import IntegrationsView from './IntegrationsView';
 import SettingsView from './SettingsView';
-import InboxView from './InboxView';
-import AdminView from './AdminView';
-import FeatureLock from './FeatureLock';
 
 // Task Interface
 interface Task {
@@ -38,7 +32,7 @@ interface Task {
   notificationEmail?: string;
 }
 
-type DashboardPage = 'dashboard' | 'production' | 'calendar' | 'assets' | 'integrations' | 'competitors' | 'analytics' | 'settings' | 'inbox' | 'admin';
+type DashboardPage = 'dashboard' | 'production' | 'calendar' | 'assets' | 'integrations' | 'competitors' | 'analytics' | 'settings';
 
 const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
   const [currentPage, setCurrentPage] = useState<DashboardPage>('dashboard');
@@ -63,12 +57,6 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
   const [competitorIntelligence, setCompetitorIntelligence] = useState<any[]>([]);
   const [marketShare, setMarketShare] = useState<any>(null);
   const [scanUsername, setScanUsername] = useState<string | null>(null);
-  const [profileName, setProfileName] = useState<string>('');
-  const [profileBio, setProfileBio] = useState<string>('');
-  
-  // Credit & Tier State
-  const [userTier, setUserTier] = useState<UserTier>('free');
-  const [creditBalance, setCreditBalance] = useState(0);
   const [showAddCompetitor, setShowAddCompetitor] = useState(false);
   const [newCompetitor, setNewCompetitor] = useState({
     name: '',
@@ -88,16 +76,6 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
   } | null>(null);
   const [competitorSearchTimeout, setCompetitorSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   
-  // Load user tier and credits
-  useEffect(() => {
-    const storedTier = localStorage.getItem('userTier') as UserTier || 'free';
-    setUserTier(storedTier);
-    
-    const userId = localStorage.getItem('userId') || 'anonymous';
-    const balance = getCreditBalance(userId, storedTier);
-    setCreditBalance(balance.credits);
-  }, []);
-  
   // Debug: Log state changes
   useEffect(() => {
     console.log('Dashboard state updated:', {
@@ -110,14 +88,23 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
 
   // Fetch real data on mount
   useEffect(() => {
-    let isMounted = true;
-    
     const loadData = async () => {
-      if (!isMounted) return;
       setLoading(true);
       try {
-        // Load scan results first to get competitors and brand DNA
-        const loadScanData = async () => {
+        const [analyticsData, events, competitorData, pipeline] = await Promise.all([
+          fetchAnalyticsData(),
+          fetchCalendarEvents(),
+          fetchCompetitors(),
+          fetchContentPipeline(),
+        ]);
+        
+        setAnalytics(analyticsData);
+        setCalendarEvents(events);
+        setCompetitors(competitorData);
+        setContentPipeline(pipeline);
+        
+        // Load scan results - try multiple methods
+        const loadScanData = () => {
           // Method 1: Try localStorage cache first (fastest)
           const cachedResults = localStorage.getItem('lastScanResults');
           if (cachedResults) {
@@ -130,16 +117,6 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
               if (cached.marketShare) setMarketShare(cached.marketShare);
               const username = localStorage.getItem('lastScannedUsername');
               if (username) setScanUsername(username);
-              // Extract profile name from cached data
-              if (cached.extractedContent?.profile) {
-                const profile = cached.extractedContent.profile;
-                const name = profile.name || profile.bio?.split(' ')[0] || username || '';
-                setProfileName(name);
-                setProfileBio(profile.bio || '');
-              } else if (username) {
-                setProfileName(username);
-              }
-              return cached;
             } catch (e) {
               console.error('Error parsing cached results:', e);
             }
@@ -148,106 +125,35 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
           // Method 2: Try API fetch
           const storedUsername = localStorage.getItem('lastScannedUsername');
           if (storedUsername) {
-            try {
-              const scanResults = await getLatestScanResults(storedUsername);
-              console.log('API scan results:', scanResults);
-              if (scanResults.success && scanResults.data) {
-                setStrategicInsights(scanResults.data.strategicInsights || []);
-                setBrandDNA(scanResults.data.brandDNA || null);
-                setCompetitorIntelligence(scanResults.data.competitorIntelligence || []);
-                setMarketShare(scanResults.data.marketShare || null);
-                setScanUsername(storedUsername);
-                // Extract profile name from scan results
-                if (scanResults.data.extractedContent?.profile) {
-                  const profile = scanResults.data.extractedContent.profile;
-                  const name = profile.name || profile.bio?.split(' ')[0] || storedUsername || '';
-                  setProfileName(name);
-                  setProfileBio(profile.bio || '');
-                } else {
-                  setProfileName(storedUsername);
+            getLatestScanResults(storedUsername)
+              .then(scanResults => {
+                console.log('API scan results:', scanResults);
+                if (scanResults.success && scanResults.data) {
+                  setStrategicInsights(scanResults.data.strategicInsights || []);
+                  setBrandDNA(scanResults.data.brandDNA || null);
+                  setCompetitorIntelligence(scanResults.data.competitorIntelligence || []);
+                  setMarketShare(scanResults.data.marketShare || null);
+                  setScanUsername(storedUsername);
+                  // Update cache
+                  localStorage.setItem('lastScanResults', JSON.stringify(scanResults.data));
                 }
-                // Update cache
-                localStorage.setItem('lastScanResults', JSON.stringify(scanResults.data));
-                return scanResults.data;
-              }
-            } catch (error) {
-              console.error('Error loading scan results from API:', error);
-            }
+              })
+              .catch(error => {
+                console.error('Error loading scan results from API:', error);
+                // Keep cached data if API fails
+              });
           }
-          return null;
         };
         
-        const scanData = await loadScanData();
-        
-        // Get competitors list for analytics
-        const competitorsList = (scanData?.competitorIntelligence || []).map((c: any) => c.name || c.domain).filter(Boolean);
-        
-        // Fetch real analytics data with competitors and brand DNA
-        const [analyticsResult, events, competitorData, pipeline] = await Promise.all([
-          getDashboardAnalytics(competitorsList, scanData?.brandDNA),
-          fetchCalendarEvents(),
-          fetchCompetitors(),
-          fetchContentPipeline(),
-        ]);
-        
-        // Update analytics with real data
-        if (analyticsResult.success && analyticsResult.data) {
-          // Merge real analytics with existing structure
-          const realAnalytics = {
-            ...analyticsResult.data.contentPerformance,
-            marketShare: analyticsResult.data.marketShare,
-            engagement: analyticsResult.data.engagement,
-            insights: analyticsResult.data.insights
-          };
-          setAnalytics(realAnalytics);
-          
-          // Update market share with real data
-          if (analyticsResult.data.marketShare) {
-            setMarketShare({
-              percentage: analyticsResult.data.marketShare.yourShare,
-              industry: 'Content Creation',
-              rank: analyticsResult.data.marketShare.rank,
-              totalMarket: analyticsResult.data.marketShare.totalMarket
-            });
-          }
-        } else {
-          // Fallback to mock data
-          const [analyticsData] = await Promise.all([fetchAnalyticsData()]);
-          setAnalytics(analyticsData);
-        }
-        
-        setCalendarEvents(events);
-        setCompetitors(competitorData);
-        setContentPipeline(pipeline);
+        loadScanData();
       } catch (error) {
         console.error('Error loading dashboard data:', error);
-        // Fallback to mock data on error
-        try {
-          const [analyticsData, events, competitorData, pipeline] = await Promise.all([
-            fetchAnalyticsData(),
-            fetchCalendarEvents(),
-            fetchCompetitors(),
-            fetchContentPipeline(),
-          ]);
-          setAnalytics(analyticsData);
-          setCalendarEvents(events);
-          setCompetitors(competitorData);
-          setContentPipeline(pipeline);
-        } catch (fallbackError) {
-          console.error('Error loading fallback data:', fallbackError);
-        }
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 
     loadData();
-    
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
   const toggleTask = (id: number) => {
@@ -316,126 +222,40 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
              <SidebarItem label="Brand Assets" active={currentPage === 'assets'} onClick={() => setCurrentPage('assets')} />
              <SidebarItem label="Integrations" active={currentPage === 'integrations'} onClick={() => setCurrentPage('integrations')} />
              <SidebarItem label="Analytics" active={currentPage === 'analytics'} onClick={() => setCurrentPage('analytics')} />
-             <SidebarItem label="Inbox" active={currentPage === 'inbox'} onClick={() => setCurrentPage('inbox')} />
              <div className="mt-4 pt-4 border-t border-white/5">
                <SidebarItem label="Settings" active={currentPage === 'settings'} onClick={() => setCurrentPage('settings')} />
-               <SidebarItem label="Admin" active={currentPage === 'admin'} onClick={() => setCurrentPage('admin')} />
              </div>
          </div>
 
-         <div className="p-4 border-t border-white/10 space-y-3">
+         <div className="p-4 border-t border-white/10">
              <div className="flex items-center gap-3 px-2">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 to-purple-600 flex items-center justify-center text-xs font-bold border border-white/20">
-                    {profileName ? profileName.charAt(0).toUpperCase() : scanUsername ? scanUsername.charAt(0).toUpperCase() : 'U'}
+                    JD
                 </div>
-                <div className="min-w-0 flex-1">
-                    <div className="text-xs font-bold text-white truncate">
-                      {profileName || scanUsername || 'User'}
-                    </div>
-                    <div className="text-[10px] text-white/40 capitalize">
-                      {userTier} Plan
-                    </div>
+                <div>
+                    <div className="text-xs font-bold text-white">John Doe</div>
+                    <div className="text-[10px] text-white/40">Pro Plan</div>
                 </div>
              </div>
-             <button
-               onClick={() => {
-                 logout();
-                 onNavigate(ViewState.LANDING);
-               }}
-               className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors"
-             >
-               <LogOut className="w-3 h-3" />
-               Log Out
-             </button>
          </div>
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        
-        {/* Email Verification Banner */}
-        {(() => {
-          const user = getUser();
-          if (user && !user.emailVerified) {
-            return (
-              <div className="bg-gradient-to-r from-orange-500/20 to-red-500/20 border-b border-orange-500/30 px-6 py-3 flex items-center justify-between flex-shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(255,94,30,0.8)] animate-pulse"></div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-white/90 uppercase tracking-wider">Live Feed:</span>
-                    <span className="text-sm text-white font-medium">Please verify your email to upgrade your account</span>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => {
-                    // In production, this would trigger email verification
-                    alert('Verification email sent! Check your inbox.');
-                  }}
-                  className="text-xs font-bold text-orange-400 hover:text-orange-300 transition-colors uppercase tracking-wide"
-                >
-                  Resend Email
-                </button>
-              </div>
-            );
-          }
-          return null;
-        })()}
+      <div className="flex-1 flex flex-col min-w-0">
         
         {/* Header */}
-        <header className="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-[#050505]/50 backdrop-blur-sm z-10 flex-shrink-0">
-          <div className="flex items-center gap-6">
-            {/* Company/Person Name - Prominent */}
-            {profileName && (
-              <div className="flex items-center gap-3">
-                <h1 className="text-lg font-black text-white tracking-tight">
-                  {profileName}
-                </h1>
-                {profileBio && (
-                  <span className="text-xs text-white/50 hidden md:block max-w-md truncate">
-                    {profileBio}
-                  </span>
-                )}
-              </div>
-            )}
+        <header className="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-[#050505]/50 backdrop-blur-sm z-10">
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-xs text-white/40">
               <Calendar className="w-3 h-3" />
               <span>{new Date().toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
-              {scanUsername && !profileName && (
+              {scanUsername && (
                 <span className="bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded text-[10px] font-bold">Scan: {scanUsername}</span>
               )}
             </div>
           </div>
           
           <div className="flex items-center gap-2">
-            {(scanUsername || profileName) && (
-              <button
-                onClick={() => {
-                  // Rescan existing user/company
-                  const existingUsername = scanUsername || localStorage.getItem('lastScannedUsername') || '';
-                  if (existingUsername) {
-                    localStorage.setItem('lastScannedUsername', existingUsername);
-                    onNavigate(ViewState.AUDIT);
-                  } else {
-                    onNavigate(ViewState.INGESTION);
-                  }
-                }}
-                className="px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs font-bold text-white hover:bg-white/20 transition-colors flex items-center gap-2"
-                title="Rescan current brand/account"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                Rescan
-              </button>
-            )}
-            <button
-              onClick={() => {
-                // Navigate to ingestion page to start a new scan
-                onNavigate(ViewState.INGESTION);
-              }}
-              className="px-3 py-1.5 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 rounded-lg text-xs font-bold text-orange-300 hover:bg-orange-500/30 transition-colors flex items-center gap-2"
-            >
-              <Scan className="w-3.5 h-3.5" />
-              New Scan
-            </button>
             <button
               onClick={async () => {
                 console.log('Manual refresh triggered');
@@ -478,9 +298,8 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                   console.log('No username found in localStorage');
                 }
               }}
-              className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs font-bold text-white hover:bg-white/10 transition-colors flex items-center gap-2"
+              className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs font-bold text-white hover:bg-white/10 transition-colors"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
               Refresh Data
             </button>
           </div>
@@ -506,26 +325,6 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                 <span className="text-xs font-medium text-white/40 hover:text-white cursor-pointer">Year</span>
              </div>
              
-             {/* Credit Display */}
-             <div className="flex items-center gap-2 bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-full px-3 py-1.5">
-               <Zap className="w-3.5 h-3.5 text-orange-400" />
-               <div className="flex flex-col">
-                 <span className="text-xs font-bold text-white leading-none">{creditBalance}</span>
-                 <span className="text-[9px] text-white/50 uppercase tracking-wider">{userTier}</span>
-               </div>
-               {creditBalance < 10 && userTier !== 'free' && (
-                 <button
-                   onClick={() => {
-                     // Navigate to pricing or show upgrade modal
-                     window.location.href = '#pricing';
-                   }}
-                   className="ml-2 text-[10px] font-bold text-orange-400 hover:text-orange-300 transition-colors"
-                 >
-                   Refill
-                 </button>
-               )}
-             </div>
-             
              <button className="h-9 w-9 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/5 text-white/60 relative">
                 <Bell className="w-4 h-4" />
                 <span className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-black"></span>
@@ -534,7 +333,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
         </header>
 
         {/* Dynamic Page Content */}
-        <main className="flex-1 overflow-y-auto p-6 bg-[#050505] custom-scrollbar relative min-h-0">
+        <main className="flex-1 overflow-y-auto p-6 bg-[#050505] custom-scrollbar relative">
             
             {/* 1. DASHBOARD VIEW (Default) */}
             {currentPage === 'dashboard' && (
@@ -637,19 +436,12 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                 <div className="text-center py-12">
                                     <Sparkles className="w-12 h-12 text-white/20 mx-auto mb-4" />
                                     <p className="text-white/40 text-sm mb-2">No insights available yet</p>
-                                    <p className="text-white/20 text-xs mb-4">Run a digital footprint scan to generate strategic insights</p>
-                                    <button
-                                      onClick={() => onNavigate(ViewState.INGESTION)}
-                                      className="px-4 py-2 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 rounded-lg text-xs font-bold text-orange-300 hover:bg-orange-500/30 transition-colors flex items-center gap-2 mx-auto"
-                                    >
-                                      <Scan className="w-3.5 h-3.5" />
-                                      Start Digital Footprint Scan
-                                    </button>
+                                    <p className="text-white/20 text-xs">Run a digital footprint scan to generate strategic insights</p>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
                                     {strategicInsights.map((insight, index) => (
-                                        <StrategicInsightCard key={`insight-${index}`} insight={insight} {...({} as any)} />
+                                        <StrategicInsightCard key={`insight-${index}`} insight={insight} />
                                     ))}
                                 </div>
                             )}
@@ -718,8 +510,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                           const timeout = setTimeout(async () => {
                                             setCompetitorVerification({ isVerifying: true, verified: false });
                                             try {
-                                              const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-                                              const response = await fetch(`${API_URL}/api/verify-competitor`, {
+                                              const response = await fetch('http://localhost:3001/api/verify-competitor', {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json' },
                                                 body: JSON.stringify({ name, industry: brandDNA?.industry })
@@ -898,14 +689,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                 <div className="text-center py-12">
                                     <Target className="w-12 h-12 text-white/20 mx-auto mb-4" />
                                     <p className="text-white/40 text-sm mb-2">No competitors identified yet</p>
-                                    <p className="text-white/20 text-xs mb-4">Run a digital footprint scan to identify competitors</p>
-                                    <button
-                                      onClick={() => onNavigate(ViewState.INGESTION)}
-                                      className="px-4 py-2 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 rounded-lg text-xs font-bold text-orange-300 hover:bg-orange-500/30 transition-colors flex items-center gap-2 mx-auto"
-                                    >
-                                      <Scan className="w-3.5 h-3.5" />
-                                      Start Digital Footprint Scan
-                                    </button>
+                                    <p className="text-white/20 text-xs">Run a digital footprint scan to identify competitors</p>
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -916,7 +700,6 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                           onRemove={() => {
                                             setCompetitorIntelligence(competitorIntelligence.filter((_, i) => i !== index));
                                           }}
-                                          {...({} as any)}
                                         />
                                     ))}
                                 </div>
@@ -933,14 +716,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                 <div className="text-center py-12 text-white/40">
                                     <Sparkles className="w-12 h-12 text-white/20 mx-auto mb-4" />
                                     <p className="text-sm mb-2">No brand DNA extracted yet</p>
-                                    <p className="text-xs text-white/20 mb-3">Run a digital footprint scan</p>
-                                    <button
-                                      onClick={() => onNavigate(ViewState.INGESTION)}
-                                      className="px-3 py-1.5 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 rounded-lg text-[10px] font-bold text-orange-300 hover:bg-orange-500/30 transition-colors flex items-center gap-2 mx-auto"
-                                    >
-                                      <Scan className="w-3 h-3" />
-                                      Start Scan
-                                    </button>
+                                    <p className="text-xs text-white/20">Run a digital footprint scan</p>
                                 </div>
                             ) : (
                                 <div className="space-y-6">
@@ -1173,80 +949,22 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
             )}
 
             {/* Production Room */}
-            {!loading && currentPage === 'production' && (
-              <div className="w-full min-h-full">
-                <ProductionRoomView />
-              </div>
-            )}
+            {currentPage === 'production' && <ProductionRoomView />}
 
             {/* Calendar */}
-            {!loading && currentPage === 'calendar' && (
-              <div className="w-full min-h-full">
-                <CalendarView />
-              </div>
-            )}
+            {currentPage === 'calendar' && <CalendarView />}
 
             {/* Analytics */}
-            {!loading && currentPage === 'analytics' && (
-              <FeatureLock 
-                feature="analytics.custom" 
-                userTier={userTier}
-                fallback={
-                  <div className="max-w-[1600px] mx-auto space-y-6 p-6">
-                    <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-12 text-center">
-                      <h2 className="text-2xl font-bold text-white mb-4">Advanced Analytics Locked</h2>
-                      <p className="text-white/60 mb-6">
-                        Advanced analytics and custom reports are available for Business+ tier subscribers.
-                      </p>
-                      <button
-                        onClick={() => onNavigate(ViewState.PRICING)}
-                        className="bg-orange-500 hover:bg-orange-400 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-                      >
-                        View Pricing Plans
-                      </button>
-                    </div>
-                  </div>
-                }
-              >
-                <AnalyticsView />
-              </FeatureLock>
-            )}
-
-            {/* Inbox */}
-            {!loading && currentPage === 'inbox' && (
-              <div className="w-full min-h-full">
-                <InboxView />
-              </div>
-            )}
-
-            {/* Admin */}
-            {!loading && currentPage === 'admin' && (
-              <div className="w-full min-h-full">
-                <AdminView />
-              </div>
-            )}
+            {currentPage === 'analytics' && <AnalyticsView />}
 
             {/* Brand Assets */}
-            {!loading && currentPage === 'assets' && (
-              <div className="w-full min-h-full">
-                <BrandAssetsView />
-              </div>
-            )}
+            {currentPage === 'assets' && <BrandAssetsView />}
 
             {/* Integrations */}
-            {!loading && currentPage === 'integrations' && (
-              <div className="w-full min-h-full">
-                <IntegrationsView onNavigate={onNavigate} />
-              </div>
-            )}
+            {currentPage === 'integrations' && <IntegrationsView />}
 
             {/* Settings */}
-            {!loading && currentPage === 'settings' && (
-              <SettingsView onLogout={() => {
-                logout();
-                onNavigate(ViewState.LANDING);
-              }} />
-            )}
+            {currentPage === 'settings' && <SettingsView onLogout={() => onNavigate(ViewState.LANDING)} />}
 
         </main>
 
@@ -1618,80 +1336,19 @@ const ForensicCompetitorCard = ({ competitor, onRemove }: { competitor: any; onR
                 </span>
             </div>
             
-            <p className="text-[11px] text-white/40 mb-3">{competitor.primaryVector || competitor.platform}</p>
-            
-            {/* Posting Behavior */}
-            {(competitor.postingFrequency || competitor.postingTimes) && (
-              <div className="mb-3 space-y-2 py-2 border-y border-white/5">
-                {competitor.postingFrequency && (
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-3 h-3 text-white/40" />
-                    <div>
-                      <div className="text-[10px] text-white/30">Posting Frequency</div>
-                      <div className="text-xs font-bold text-white">{competitor.postingFrequency}</div>
-                    </div>
-                  </div>
-                )}
-                {competitor.postingTimes && (
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-3 h-3 text-white/40" />
-                    <div>
-                      <div className="text-[10px] text-white/30">Posting Times</div>
-                      <div className="text-xs text-white/80">{competitor.postingTimes}</div>
-                    </div>
-                  </div>
-                )}
-                {competitor.avgPostLength && (
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-3 h-3 text-white/40" />
-                    <div>
-                      <div className="text-[10px] text-white/30">Avg Length</div>
-                      <div className="text-xs text-white/80">{competitor.avgPostLength}</div>
-                    </div>
-                  </div>
-                )}
-                {competitor.contentTypes && Array.isArray(competitor.contentTypes) && competitor.contentTypes.length > 0 && (
-                  <div>
-                    <div className="text-[10px] text-white/30 mb-1">Content Types</div>
-                    <div className="flex flex-wrap gap-1">
-                      {competitor.contentTypes.slice(0, 3).map((type: string, idx: number) => (
-                        <span key={idx} className="text-[10px] px-1.5 py-0.5 bg-white/5 rounded text-white/60">
-                          {type}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {competitor.platformFocus && (
-                  <div>
-                    <div className="text-[10px] text-white/30 mb-1">Platform Focus</div>
-                    <div className="text-xs text-white/80">{competitor.platformFocus}</div>
-                  </div>
-                )}
-              </div>
-            )}
+            <p className="text-[11px] text-white/40 mb-3">{competitor.primaryVector}</p>
             
             {/* Engagement Stats */}
-            {(competitor.weeklyViews || competitor.weeklyEngagement || competitor.avgEngagementRate) && (
+            {(competitor.weeklyViews || competitor.weeklyEngagement) && (
               <div className="flex gap-3 mb-3 py-2 border-y border-white/5">
-                {competitor.weeklyViews && (
-                  <div>
-                    <div className="text-[10px] text-white/30">Views/wk</div>
-                    <div className="text-sm font-bold text-white">{formatNumber(competitor.weeklyViews)}</div>
-                  </div>
-                )}
-                {competitor.weeklyEngagement && (
-                  <div>
-                    <div className="text-[10px] text-white/30">Engagement</div>
-                    <div className="text-sm font-bold text-white">{formatNumber(competitor.weeklyEngagement)}</div>
-                  </div>
-                )}
-                {competitor.avgEngagementRate && (
-                  <div>
-                    <div className="text-[10px] text-white/30">Eng. Rate</div>
-                    <div className="text-sm font-bold text-white">{competitor.avgEngagementRate}%</div>
-                  </div>
-                )}
+                <div>
+                  <div className="text-[10px] text-white/30">Views/wk</div>
+                  <div className="text-sm font-bold text-white">{formatNumber(competitor.weeklyViews)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-white/30">Engagement</div>
+                  <div className="text-sm font-bold text-white">{formatNumber(competitor.weeklyEngagement)}</div>
+                </div>
               </div>
             )}
             
