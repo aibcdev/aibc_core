@@ -574,6 +574,107 @@ CRITICAL:
   }
 }
 
+/**
+ * Extract content from multiple scraped profiles using LLM
+ * This is the PRODUCTION approach - analyzing REAL scraped content
+ */
+async function extractFromScrapedContent(
+  scrapedData: Array<{ platform: string; content: { html: string; text: string; url: string } }>,
+  username: string,
+  platforms: string[],
+  scanTier: ScanTier
+): Promise<any> {
+  if (!isLLMConfigured()) {
+    throw new Error('No LLM API configured');
+  }
+
+  // Combine all scraped content (limit to avoid token limits)
+  const combinedText = scrapedData
+    .map(sd => `=== ${sd.platform.toUpperCase()} PROFILE ===\n${sd.content.text.substring(0, 30000)}`)
+    .join('\n\n');
+
+  const systemPrompt = `You are an expert content analyst. Extract REAL content from scraped social media profiles.
+CRITICAL: You are analyzing ACTUAL scraped content, not generating placeholders.
+Extract posts, bio, themes from the REAL text provided. Empty arrays are UNACCEPTABLE.`;
+
+  const contentCount = scanTier === 'deep' ? '15-20' : '5-8';
+  const themeCount = scanTier === 'deep' ? '8-12' : '3-5';
+  
+  const prompt = `Extract content for "${username}" from the following scraped profile data:
+
+${combinedText.substring(0, 150000)}
+
+REQUIREMENTS - STRICTLY ENFORCED:
+1. PROFILE: Extract their actual bio/description from the scraped content (minimum 50 characters)
+   - Look for bio sections, "About" sections, profile descriptions
+   - If multiple platforms, use the most complete bio
+
+2. POSTS: Extract at least ${contentCount} posts/content items from the scraped text
+   - Each post must have: content (actual post text), post_type (text/video/image), engagement metrics
+   - Extract REAL posts from the scraped content, not generic summaries
+   - Look for post text, tweet text, video descriptions, image captions
+   - Include engagement numbers if visible (likes, shares, comments, views)
+
+3. THEMES: Identify ${themeCount} specific content themes based on the actual content
+   - Analyze what topics they actually post about
+   - Be specific: "Sustainable fashion" not "fashion", "AI safety research" not "technology"
+
+4. VOICE: Analyze communication style from the actual posts
+   - Tone, formality, vocabulary patterns
+   - Extract actual words/phrases they use
+
+5. COMPETITORS: Identify 3-5 real competitors in their space
+   - Use real company/brand names
+   - Based on industry/market positioning
+
+Return ONLY valid JSON:
+{
+  "profile": {
+    "bio": "Their actual bio from scraped content (minimum 50 chars, be specific)",
+    "follower_count": 0,
+    "verified": false,
+    "platform_presence": ${JSON.stringify(platforms)}
+  },
+  "posts": [
+    {
+      "content": "Actual post content extracted from scraped text (be specific)",
+      "post_type": "text",
+      "engagement": {"likes": 0, "shares": 0, "comments": 0},
+      "quality_score": 0.8
+    }
+  ],
+  "content_themes": ["Specific theme 1", "Specific theme 2", "Specific theme 3"],
+  "brand_voice": {
+    "tone": "casual",
+    "style": "conversational",
+    "vocabulary": []
+  },
+  "competitors": [
+    {
+      "name": "Real Competitor Name",
+      "threatLevel": "HIGH",
+      "primaryVector": "Platform - strategy",
+      "theirAdvantage": "Specific advantage",
+      "yourOpportunity": "Actionable advice"
+    }
+  ],
+  "extraction_confidence": 0.8
+}
+
+CRITICAL: 
+- Posts array MUST have at least ${contentCount} items
+- Bio MUST be at least 50 characters
+- Themes MUST be specific, not generic
+- All data must come from the scraped content provided`;
+
+  try {
+    return await generateJSON(prompt, systemPrompt, { tier: scanTier });
+  } catch (error) {
+    console.error('Extraction from scraped content failed:', error);
+    throw error;
+  }
+}
+
 async function extractOutputContent(
   scrapedContent: { html: string; text: string; url: string },
   username: string,
