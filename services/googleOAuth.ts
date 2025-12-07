@@ -103,20 +103,30 @@ export function renderGoogleButton(
     logo_alignment?: 'left' | 'center';
   }
 ): void {
-  if (!googleClient) {
+  if (!googleClient || !window.google) {
     console.error('Google Sign-In not initialized');
     return;
   }
 
+  const element = document.getElementById(elementId);
+  if (!element) {
+    console.error(`Element with id "${elementId}" not found`);
+    return;
+  }
+
+  // Clear existing content
+  element.innerHTML = '';
+
   try {
-    googleClient.renderButton(
-      document.getElementById(elementId),
+    window.google.accounts.id.renderButton(
+      element,
       {
         theme: options?.theme || 'outline',
         size: options?.size || 'large',
         text: options?.text || 'continue_with',
         shape: options?.shape || 'rectangular',
         logo_alignment: options?.logo_alignment || 'left',
+        width: '100%',
       }
     );
   } catch (error) {
