@@ -11,6 +11,66 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+
+  // Initialize Google Sign-In
+  useEffect(() => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    
+    if (!clientId) {
+      console.warn('VITE_GOOGLE_CLIENT_ID not set - Google sign-in disabled');
+      return;
+    }
+
+    // Wait for Google script to load
+    const checkGoogleLoaded = () => {
+      if (isGoogleLoaded()) {
+        initializeGoogleSignIn(
+          clientId,
+          async (credential: string) => {
+            setLoading(true);
+            setError('');
+            try {
+              // Send JWT token to backend for verification
+              const result = await signInWithGoogle(credential);
+              if (result.success && result.user && result.token) {
+                storeAuthToken(result.token);
+                storeUser(result.user);
+                onNavigate(ViewState.INGESTION);
+              } else {
+                setError(result.error || 'Failed to sign up with Google');
+              }
+            } catch (err: any) {
+              setError(err.message || 'Failed to sign up with Google. Please try email sign-up instead.');
+            } finally {
+              setLoading(false);
+            }
+          },
+          (error: any) => {
+            console.error('Google Sign-In initialization error:', error);
+          }
+        );
+
+        // Render button after a short delay to ensure DOM is ready
+        setTimeout(() => {
+          if (googleButtonRef.current) {
+            renderGoogleButton('google-signin-button', {
+              theme: 'outline',
+              size: 'large',
+              text: 'signup_with',
+              width: '100%'
+            });
+          }
+        }, 100);
+      } else {
+        // Retry after 100ms if Google script not loaded yet
+        setTimeout(checkGoogleLoaded, 100);
+      }
+    };
+
+    // Start checking after component mounts
+    checkGoogleLoaded();
+  }, [onNavigate]);
 
   const handleGoogleSignUp = async () => {
     setLoading(true);
@@ -82,7 +142,7 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div id="login-view" className="fixed inset-0 z-[60] bg-[#050505] overflow-y-auto animate-in fade-in duration-300">
+    <div id="login-view" className="fixed inset-0 z-[60] bg-[#050505] overflow-y-auto">
       {/* Step Indicator */}
       <div className="absolute top-12 left-0 right-0 flex flex-col items-center gap-6 z-10">
         <div className="px-4 py-1.5 rounded-full border border-white/10 bg-white/5 text-[10px] font-mono text-white/40 tracking-widest">
