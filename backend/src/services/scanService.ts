@@ -85,22 +85,40 @@ export async function startScan(
         throw new Error('LLM returned invalid data structure');
       }
       
-      // Check for placeholder content - Log warning but don't fail
-      if (researchData.profile.bio && 
-          (researchData.profile.bio.toLowerCase().includes('digital presence for') ||
-           researchData.profile.bio.length < 20)) {
-        addLog(scanId, `[WARNING] Detected placeholder bio - LLM may not have real data`);
-        // Don't throw - continue with what we have
+      // STRICT QUALITY VALIDATION for 95% CEO satisfaction
+      const minPosts = scanTier === 'deep' ? 15 : 5;
+      const minBioLength = 50;
+      const minThemes = scanTier === 'deep' ? 8 : 3;
+      
+      // Validate bio
+      if (!researchData.profile?.bio || researchData.profile.bio.length < minBioLength) {
+        const bioLength = researchData.profile?.bio?.length || 0;
+        addLog(scanId, `[ERROR] Bio quality check failed: ${bioLength} chars (required: ${minBioLength})`);
+        throw new Error(`Quality check failed: Bio too short (${bioLength} chars, minimum ${minBioLength} required)`);
       }
       
-      // Validate posts array - Log warning if empty
-      if (!researchData.posts || researchData.posts.length === 0) {
-        addLog(scanId, `[WARNING] No posts extracted - LLM returned empty posts array`);
-        // Set empty array explicitly
-        researchData.posts = [];
-      } else {
-        addLog(scanId, `[SUCCESS] Extracted ${researchData.posts.length} posts`);
+      // Check for placeholder content
+      if (researchData.profile.bio.toLowerCase().includes('digital presence for') ||
+          researchData.profile.bio.toLowerCase().includes('profile for')) {
+        addLog(scanId, `[ERROR] Placeholder bio detected - unacceptable for production`);
+        throw new Error('Quality check failed: Placeholder bio detected');
       }
+      
+      // Validate posts array - CRITICAL
+      if (!researchData.posts || researchData.posts.length < minPosts) {
+        const postCount = researchData.posts?.length || 0;
+        addLog(scanId, `[ERROR] Posts quality check failed: ${postCount} posts (required: ${minPosts})`);
+        throw new Error(`Quality check failed: Only ${postCount} posts extracted (minimum ${minPosts} required)`);
+      }
+      
+      // Validate themes
+      if (!researchData.content_themes || researchData.content_themes.length < minThemes) {
+        const themeCount = researchData.content_themes?.length || 0;
+        addLog(scanId, `[ERROR] Themes quality check failed: ${themeCount} themes (required: ${minThemes})`);
+        throw new Error(`Quality check failed: Only ${themeCount} themes (minimum ${minThemes} required)`);
+      }
+      
+      addLog(scanId, `[SUCCESS] Quality check passed: ${researchData.posts.length} posts, ${researchData.profile.bio.length} char bio, ${researchData.content_themes.length} themes`);
       
       // Convert research data to extracted content format
       if (researchData) {
@@ -332,14 +350,65 @@ function getProfileUrl(username: string, platform: string): string | null {
 }
 
 async function scrapeProfile(url: string, platform: string): Promise<{ html: string; text: string; url: string }> {
-  // Skip scraping - platforms like Twitter/X block bots
-  // Instead, we'll use the LLM to research the brand directly
-  console.log(`Skipping scrape for ${platform} - will use LLM research instead`);
-  return { 
-    html: '', 
-    text: '', 
-    url 
-  };
+  // CRITICAL: Enable scraping for production quality
+  // LLM-only approach produces placeholders - unacceptable for CEO satisfaction
+  
+  try {
+    const browser = await chromium.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled'],
+    });
+
+    const context = await browser.newContext({
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      viewport: { width: 1920, height: 1080 },
+    });
+
+    const page = await context.newPage();
+    
+    // Set additional headers to avoid detection
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    });
+
+    try {
+      // Load page with timeout
+      await page.goto(url, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
+      
+      // Wait for dynamic content to load
+      await page.waitForTimeout(5000);
+      
+      // Try to scroll to load more content
+      await page.evaluate(() => {
+        window.scrollTo(0, document.body.scrollHeight);
+      });
+      await page.waitForTimeout(2000);
+      
+      // Extract content
+      const html = await page.content();
+      const text = await page.innerText('body').catch(() => '');
+      
+      await browser.close();
+      
+      if (text && text.length > 100) {
+        return { html, text, url };
+      } else {
+        console.log(`Scraped content too short for ${url}: ${text.length} chars`);
+        return { html: '', text: '', url };
+      }
+    } catch (error: any) {
+      await browser.close();
+      console.log(`Scraping failed for ${url}: ${error.message}`);
+      return { html: '', text: '', url };
+    }
+  } catch (error: any) {
+    console.log(`Browser launch failed: ${error.message}`);
+    return { html: '', text: '', url };
+  }
 }
 
 // Use LLM to research a brand/creator directly
