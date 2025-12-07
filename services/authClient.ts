@@ -269,32 +269,74 @@ export async function forgotPassword(email: string): Promise<AuthResponse> {
   // Use Supabase if configured (production)
   if (isSupabaseConfigured() && supabase) {
     try {
-      console.log('Requesting password reset via Supabase for:', email);
+      console.log('🔐 Requesting password reset via Supabase for:', email);
+      console.log('🔐 Redirect URL:', `${window.location.origin}#reset-password`);
+      
+      const redirectUrl = `${window.location.origin}#reset-password`;
       const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}#reset-password`,
+        redirectTo: redirectUrl,
       });
 
-      console.log('Supabase password reset response:', { 
+      console.log('🔐 Supabase password reset response:', { 
         hasData: !!data, 
-        error: error ? { message: error.message, status: error.status } : null 
+        error: error ? { 
+          message: error.message, 
+          status: error.status,
+          name: error.name
+        } : null,
+        redirectUrl
       });
 
       if (error) {
-        console.error('Supabase password reset error:', error);
-        // Log the error but still return success for security (don't reveal if email exists)
-        // Check if it's a rate limit or configuration issue
-        if (error.message.includes('rate limit') || error.message.includes('email')) {
-          console.warn('Password reset may have rate limit or email configuration issue');
+        console.error('❌ Supabase password reset error:', error);
+        console.error('❌ Error details:', {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+          stack: error.stack
+        });
+        
+        // Return the actual error so user can see what went wrong
+        // Common errors:
+        // - "Email rate limit exceeded" - too many requests
+        // - "Email not confirmed" - user needs to confirm email first
+        // - "User not found" - email doesn't exist (but we won't reveal this)
+        if (error.message.includes('rate limit')) {
+          return { 
+            success: false, 
+            error: 'Too many password reset requests. Please wait a few minutes and try again.' 
+          };
         }
-        return { success: true };
+        
+        if (error.message.includes('not confirmed') || error.message.includes('email')) {
+          return { 
+            success: false, 
+            error: 'Please check your email and confirm your account first, or contact support.' 
+          };
+        }
+        
+        // For other errors, return a generic message but log the actual error
+        return { 
+          success: false, 
+          error: 'Failed to send reset email. Please check your email address or try again later.' 
+        };
       }
 
-      console.log('Password reset email sent successfully via Supabase');
+      console.log('✅ Password reset email sent successfully via Supabase');
+      console.log('✅ Check email inbox (and spam folder) for reset link');
       // Success - Supabase will send email automatically
       return { success: true };
     } catch (error: any) {
-      console.error('Supabase password reset exception:', error);
-      return { success: true }; // Always return success for security
+      console.error('❌ Supabase password reset exception:', error);
+      console.error('❌ Exception details:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      });
+      return { 
+        success: false, 
+        error: 'An unexpected error occurred. Please try again later.' 
+      };
     }
   }
 

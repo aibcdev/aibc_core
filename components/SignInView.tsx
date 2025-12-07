@@ -112,14 +112,23 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
     }
 
     try {
+      console.log('🔐 Forgot password form submitted for:', forgotPasswordEmail);
       const result = await forgotPassword(forgotPasswordEmail);
+      console.log('🔐 Forgot password result:', result);
+      
       if (result.success) {
         setForgotPasswordSent(true);
+        setError(''); // Clear any previous errors
       } else {
-        setError(result.error || 'Failed to send reset email');
+        // Show the actual error from Supabase
+        const errorMsg = result.error || 'Failed to send reset email. Please try again.';
+        setError(errorMsg);
+        console.error('❌ Password reset failed:', errorMsg);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to send reset email');
+      const errorMsg = err.message || 'Failed to send reset email. Please try again.';
+      setError(errorMsg);
+      console.error('❌ Password reset exception:', err);
     } finally {
       setForgotPasswordLoading(false);
     }
