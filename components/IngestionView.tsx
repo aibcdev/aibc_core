@@ -127,7 +127,7 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername }) =>
   };
 
   return (
-    <div id="ingestion-view" className="fixed inset-0 z-[70] overflow-y-auto animate-in fade-in duration-300 bg-black">
+    <div id="ingestion-view" className="fixed inset-0 z-[70] overflow-y-auto bg-black">
       {/* Subtle Orange Glow Background */}
       <div 
         className="absolute inset-0"

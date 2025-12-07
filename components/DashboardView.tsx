@@ -290,7 +290,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="flex h-screen bg-[#050505] text-white overflow-hidden font-sans animate-in fade-in duration-500 relative">
+    <div className="flex h-screen bg-[#050505] text-white overflow-hidden font-sans relative">
       
       {/* Sidebar */}
       <aside className="w-64 flex-shrink-0 border-r border-white/10 flex flex-col bg-[#080808]">
