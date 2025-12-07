@@ -384,6 +384,7 @@ async function scrapeProfile(url: string, platform: string): Promise<{ html: str
       
       // Try to scroll to load more content
       await page.evaluate(() => {
+        // @ts-ignore - window/document available in browser context
         window.scrollTo(0, document.body.scrollHeight);
       });
       await page.waitForTimeout(2000);
