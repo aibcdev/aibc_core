@@ -32,7 +32,7 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
                   <circle cx="50" cy="50" r="6" fill="currentColor" />
                 </svg>
               </div>
-              <span className="text-2xl font-black tracking-tighter text-white">AIBC</span>
+              <span className="text-2xl font-black tracking-tighter text-white relative z-10">AIBC</span>
             </div>
 
             {/* Vertical Divider */}
