@@ -1,75 +1,93 @@
 /**
- * Google OAuth Service
- * Handles Google Sign-In using Google Identity Services
+ * Google OAuth Service using Google Identity Services
  */
 
 declare global {
   interface Window {
-    google?: {
-      accounts: {
-        id: {
-          initialize: (config: GoogleIdConfiguration) => void;
-          renderButton: (element: HTMLElement | null, config?: ButtonConfig) => void;
-          prompt: () => void;
-        };
-      };
-    };
+    google?: any;
   }
 }
 
-export interface GoogleIdConfiguration {
-  client_id: string;
-  callback: (response: GoogleCredentialResponse) => void;
-  auto_select?: boolean;
-  cancel_on_tap_outside?: boolean;
-}
+let googleLoaded = false;
+let googleClient: any = null;
 
-export interface GoogleCredentialResponse {
-  credential: string; // JWT token
-  select_by: string;
-}
+/**
+ * Load Google Identity Services script
+ */
+export function loadGoogleScript(clientId: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (googleLoaded && window.google) {
+      resolve();
+      return;
+    }
 
-export interface ButtonConfig {
-  theme?: 'outline' | 'filled_blue' | 'filled_black';
-  size?: 'large' | 'medium' | 'small';
-  text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin';
-  shape?: 'rectangular' | 'pill' | 'circle' | 'square';
-  logo_alignment?: 'left' | 'center';
-  width?: string | number;
-  locale?: string;
-}
+    // Check if script already exists
+    const existingScript = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
+    if (existingScript) {
+      // Wait for it to load
+      const checkInterval = setInterval(() => {
+        if (window.google) {
+          googleLoaded = true;
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 100);
+      
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        if (!window.google) {
+          reject(new Error('Google script timeout'));
+        }
+      }, 10000);
+      return;
+    }
 
-let isInitialized = false;
-let clientId: string | null = null;
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      googleLoaded = true;
+      resolve();
+    };
+    script.onerror = () => {
+      reject(new Error('Failed to load Google Identity Services'));
+    };
+    document.head.appendChild(script);
+  });
+}
 
 /**
  * Initialize Google Sign-In
  */
-export function initializeGoogleSignIn(
-  googleClientId: string,
+export async function initializeGoogleSignIn(
+  clientId: string,
   callback: (credential: string) => void,
-  errorCallback?: (error: any) => void
-): void {
-  if (!window.google) {
-    console.error('Google Identity Services not loaded. Make sure script is in index.html');
-    if (errorCallback) {
-      errorCallback(new Error('Google Identity Services not loaded'));
+  errorCallback?: (error: string) => void
+): Promise<void> {
+  try {
+    await loadGoogleScript(clientId);
+    
+    if (!window.google) {
+      throw new Error('Google Identity Services not loaded');
     }
-    return;
+
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: (response: any) => {
+        if (response.credential) {
+          callback(response.credential);
+        } else {
+          errorCallback?.('No credential received');
+        }
+      },
+    });
+
+    googleClient = window.google.accounts.id;
+  } catch (error: any) {
+    console.error('Failed to initialize Google Sign-In:', error);
+    errorCallback?.(error.message || 'Failed to initialize Google Sign-In');
   }
-
-  clientId = googleClientId;
-  
-  window.google.accounts.id.initialize({
-    client_id: googleClientId,
-    callback: (response: GoogleCredentialResponse) => {
-      callback(response.credential);
-    },
-    auto_select: false,
-    cancel_on_tap_outside: true,
-  });
-
-  isInitialized = true;
 }
 
 /**
@@ -77,64 +95,46 @@ export function initializeGoogleSignIn(
  */
 export function renderGoogleButton(
   elementId: string,
-  config?: ButtonConfig
+  options?: {
+    theme?: 'outline' | 'filled_blue' | 'filled_black';
+    size?: 'large' | 'medium' | 'small';
+    text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin';
+    shape?: 'rectangular' | 'pill' | 'circle' | 'square';
+    logo_alignment?: 'left' | 'center';
+  }
 ): void {
-  if (!window.google) {
-    console.error('Google Identity Services not loaded');
-    return;
-  }
-
-  if (!isInitialized) {
-    console.error('Google Sign-In not initialized. Call initializeGoogleSignIn first.');
-    return;
-  }
-
-  const element = document.getElementById(elementId);
-  if (!element) {
-    console.error(`Element with id "${elementId}" not found`);
-    return;
-  }
-
-  // Clear existing content
-  element.innerHTML = '';
-
-  window.google.accounts.id.renderButton(element, {
-    theme: config?.theme || 'outline',
-    size: config?.size || 'large',
-    text: config?.text || 'signin_with',
-    width: config?.width || '100%',
-    ...config,
-  });
-}
-
-/**
- * Prompt Google Sign-In (one-tap)
- */
-export function promptGoogleSignIn(): void {
-  if (!window.google) {
-    console.error('Google Identity Services not loaded');
-    return;
-  }
-
-  if (!isInitialized) {
+  if (!googleClient) {
     console.error('Google Sign-In not initialized');
     return;
   }
 
-  window.google.accounts.id.prompt();
+  try {
+    googleClient.renderButton(
+      document.getElementById(elementId),
+      {
+        theme: options?.theme || 'outline',
+        size: options?.size || 'large',
+        text: options?.text || 'continue_with',
+        shape: options?.shape || 'rectangular',
+        logo_alignment: options?.logo_alignment || 'left',
+      }
+    );
+  } catch (error) {
+    console.error('Failed to render Google button:', error);
+  }
 }
 
 /**
- * Check if Google Identity Services is loaded
+ * Check if Google is loaded
  */
 export function isGoogleLoaded(): boolean {
-  return typeof window.google !== 'undefined';
+  return googleLoaded && !!window.google;
 }
 
 /**
- * Get client ID if initialized
+ * Get Google Client ID from environment
  */
-export function getClientId(): string | null {
-  return clientId;
+export function getGoogleClientId(): string | null {
+  return import.meta.env.VITE_GOOGLE_CLIENT_ID || null;
 }
 

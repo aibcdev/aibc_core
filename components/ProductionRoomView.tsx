@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Filter, Plus, FileText, Video, Image as ImageIcon, MoreHorizontal, Clock, Mic2, X, Play, Download, Sparkles, RefreshCw, Linkedin, Instagram, Music, Send, Copy, Edit3, Loader2, ChevronRight, Hash, AtSign, Calendar } from 'lucide-react';
 import { generatePodcast } from '../services/podcastClient';
-import { generateImageForContent } from '../services/imageGenerationClient';
-import { generateBrandVoiceContent } from '../services/contentGenerationClient';
-import { checkFeatureAccess, useCredits, getCreditBalance, type UserTier } from '../services/creditClient';
-import UpgradePrompt from './UpgradePrompt';
 
 interface ContentAsset {
   id: string;
@@ -37,8 +33,6 @@ const ProductionRoomView: React.FC = () => {
   const [isCreatingContent, setIsCreatingContent] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<string>('');
   const [contentNotes, setContentNotes] = useState('');
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   // Podcast Generation State
   const [showPodcastModal, setShowPodcastModal] = useState(false);
@@ -54,51 +48,7 @@ const ProductionRoomView: React.FC = () => {
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
   
-  // Request Modal State (for video/audio)
-  const [showRequestModal, setShowRequestModal] = useState(false);
-  
-  // New Content Modal State
-  const [showNewContentModal, setShowNewContentModal] = useState(false);
-  const [newContent, setNewContent] = useState({
-    title: '',
-    platform: 'X',
-    type: 'post',
-    description: ''
-  });
-  
-  const [userTier, setUserTier] = useState<UserTier>('free');
-  const [creditBalance, setCreditBalance] = useState(0);
-  const [featureAccess, setFeatureAccess] = useState<Record<string, boolean>>({});
-  const [upgradePrompt, setUpgradePrompt] = useState<{
-    feature: string;
-    requiredTier: UserTier;
-    creditsRequired?: number;
-    creditsAvailable?: number;
-  } | null>(null);
-  
-  // Load user tier and credits
-  useEffect(() => {
-    const storedTier = localStorage.getItem('userTier') as UserTier || 'free';
-    setUserTier(storedTier);
-    
-    const userId = localStorage.getItem('userId') || 'anonymous';
-    const balance = getCreditBalance(userId, storedTier);
-    setCreditBalance(balance.credits);
-    
-    // Check access for key features
-    Promise.all([
-      checkFeatureAccess('content.video', storedTier),
-      checkFeatureAccess('content.audio', storedTier),
-      checkFeatureAccess('content.podcast', storedTier),
-      checkFeatureAccess('content.image', storedTier)
-    ]).then(results => {
-      const access: Record<string, boolean> = {};
-      results.forEach(result => {
-        access[result.feature] = result.allowed;
-      });
-      setFeatureAccess(access);
-    });
-  }, []);
+  const userTier = 'premium';
 
   useEffect(() => {
     const loadScanData = () => {
@@ -317,101 +267,190 @@ const ProductionRoomView: React.FC = () => {
     setSelectedAsset(asset);
     setGeneratedContent('');
     setContentNotes('');
-    setGeneratedImage(null);
-    setIsGeneratingImage(false);
     generateContentForPlatform(asset);
   };
 
-  // Generate platform-specific content using brand voice
+  // Generate platform-specific content
   const generateContentForPlatform = async (asset: ContentAsset) => {
     setIsCreatingContent(true);
     
-    // Ensure scanData is loaded
-    if (!scanData) {
-      const lastScanResults = localStorage.getItem('lastScanResults');
-      if (lastScanResults) {
-        try {
-          const parsed = JSON.parse(lastScanResults);
-          setScanData({
-            brandDNA: parsed.brandDNA || {},
-            extractedContent: parsed.extractedContent || {},
-            strategicInsights: parsed.strategicInsights || [],
-            competitorIntelligence: parsed.competitorIntelligence || []
-          });
-        } catch (e) {
-          console.error('Error parsing scan data:', e);
+    // Simulate AI content generation with platform-specific templates
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const brandVoice = scanData?.brandDNA?.voice?.tone || 'professional yet approachable';
+    const theme = asset.basedOn || 'your expertise';
+    
+    let content = '';
+    
+    switch (asset.platform) {
+      case 'X':
+        if (asset.type === 'thread') {
+          content = `🧵 Thread: ${asset.title}\n\n` +
+            `1/ Let's talk about ${theme}.\n\n` +
+            `Most people get this wrong. Here's what I've learned after years in the game:\n\n` +
+            `2/ The biggest misconception about ${theme} is...\n\n` +
+            `[Your insight here]\n\n` +
+            `3/ Here's what actually works:\n\n` +
+            `• Point 1\n• Point 2\n• Point 3\n\n` +
+            `4/ The game-changer nobody talks about:\n\n` +
+            `[Your unique perspective]\n\n` +
+            `5/ If you take one thing from this thread:\n\n` +
+            `[Key takeaway]\n\n` +
+            `6/ Want more insights like this?\n\n` +
+            `Follow @${username || 'me'} for daily takes on ${theme}.\n\n` +
+            `Like this thread? Repost to help others. 🔄`;
+        } else {
+          content = `Hot take: ${theme} is misunderstood.\n\n` +
+            `Here's the truth nobody wants to hear:\n\n` +
+            `[Your bold opinion]\n\n` +
+            `Agree? Disagree? Let me know 👇`;
         }
-      }
-    }
-    
-    const theme = asset.basedOn || asset.title || 'your expertise';
-    const contentType = asset.type || 'post';
-    
-    // Use current scanData or reload from localStorage
-    const currentScanData = scanData || (() => {
-      const lastScanResults = localStorage.getItem('lastScanResults');
-      if (lastScanResults) {
-        try {
-          return JSON.parse(lastScanResults);
-        } catch (e) {
-          return null;
-        }
-      }
-      return null;
-    })();
-    
-    let generatedText = '';
-    
-    try {
-      // Use brand voice API to generate authentic content
-      const result = await generateBrandVoiceContent({
-        platform: asset.platform,
-        contentType: contentType,
-        topic: theme,
-        brandDNA: currentScanData?.brandDNA || {},
-        extractedContent: currentScanData?.extractedContent || {}
-      });
-      
-      if (result.success && result.content) {
-        generatedText = result.content;
-        setGeneratedContent(generatedText);
-      } else {
-        // Fallback to basic content if API fails
-        generatedText = `Content about ${theme}\n\n[Content generation failed. Please try again.]`;
-        setGeneratedContent(generatedText);
-        console.error('Content generation error:', result.error);
-      }
-    } catch (error: any) {
-      console.error('Content generation error:', error);
-      // Fallback content
-      generatedText = `Content about ${theme}\n\n[Error generating content. Please try again.]`;
-      setGeneratedContent(generatedText);
-    }
-    
-    setIsCreatingContent(false);
-    
-    // Generate image for social platforms that require images
-    const platformsNeedingImages = ['INSTAGRAM', 'TIKTOK', 'LINKEDIN', 'X'];
-    if (platformsNeedingImages.includes(asset.platform) && generatedText) {
-      setIsGeneratingImage(true);
-      setGeneratedImage(null);
-      
-      try {
-        const imageResult = await generateImageForContent({
-          content: generatedText.substring(0, 500), // Use first 500 chars for image prompt
-          platform: asset.platform.toLowerCase() as any,
-          brandDNA: scanData?.brandDNA
-        });
+        break;
         
-        if (imageResult.success && imageResult.imageUrl) {
-          setGeneratedImage(imageResult.imageUrl);
+      case 'LINKEDIN':
+        content = `${asset.title}\n\n` +
+          `I've been thinking about ${theme} a lot lately.\n\n` +
+          `Here's what most people miss:\n\n` +
+          `When I first started, I made every mistake in the book.\n\n` +
+          `But then I realized something crucial:\n\n` +
+          `[Your key insight]\n\n` +
+          `The lesson?\n\n` +
+          `→ Point 1\n→ Point 2\n→ Point 3\n\n` +
+          `What's your experience with ${theme}?\n\n` +
+          `Drop a comment below - I read every single one.\n\n` +
+          `#${theme.replace(/\s+/g, '')} #ContentCreation #PersonalBrand`;
+        break;
+        
+      case 'INSTAGRAM':
+        if (asset.type === 'reel') {
+          content = `🎬 REEL SCRIPT: ${asset.title}\n\n` +
+            `[HOOK - 0-3 seconds]\n` +
+            `"Stop scrolling if you care about ${theme}"\n\n` +
+            `[PROBLEM - 3-10 seconds]\n` +
+            `"Most people think... but that's wrong"\n\n` +
+            `[SOLUTION - 10-45 seconds]\n` +
+            `"Here's what actually works:"\n` +
+            `• Point 1 (with text overlay)\n` +
+            `• Point 2 (with visual demo)\n` +
+            `• Point 3 (quick tip)\n\n` +
+            `[CTA - 45-60 seconds]\n` +
+            `"Save this for later. Follow for more."\n\n` +
+            `---\n` +
+            `CAPTION:\n` +
+            `${theme} simplified 💡\n\n` +
+            `Save this for when you need it ⬇️\n\n` +
+            `#${theme.replace(/\s+/g, '')} #Reels #Tips`;
+        } else if (asset.type === 'carousel') {
+          content = `📱 CAROUSEL: ${asset.title}\n\n` +
+            `SLIDE 1 (Cover):\n` +
+            `"5 Facts About ${theme}"\n` +
+            `[Bold text, eye-catching design]\n\n` +
+            `SLIDE 2:\n` +
+            `Fact #1: [Your insight]\n\n` +
+            `SLIDE 3:\n` +
+            `Fact #2: [Your insight]\n\n` +
+            `SLIDE 4:\n` +
+            `Fact #3: [Your insight]\n\n` +
+            `SLIDE 5:\n` +
+            `Fact #4: [Your insight]\n\n` +
+            `SLIDE 6:\n` +
+            `Fact #5: [Your insight]\n\n` +
+            `SLIDE 7 (CTA):\n` +
+            `"Follow @${username || 'me'} for more"\n\n` +
+            `---\n` +
+            `CAPTION:\n` +
+            `Which fact surprised you most? 🤔\n\n` +
+            `Save this post and share with someone who needs it!`;
+        } else {
+          content = `📸 STORY SERIES: ${asset.title}\n\n` +
+            `STORY 1: Hook\n` +
+            `"Behind the scenes today..."\n\n` +
+            `STORY 2: Context\n` +
+            `[Quick video/photo of your process]\n\n` +
+            `STORY 3: Interactive\n` +
+            `Poll: "Do you struggle with ${theme}?"\n` +
+            `Yes / Sometimes\n\n` +
+            `STORY 4: Value\n` +
+            `"Here's my secret..."\n\n` +
+            `STORY 5: CTA\n` +
+            `"DM me 'TIPS' for more"`;
         }
-      } catch (error) {
-        console.error('Failed to generate image:', error);
-      } finally {
-        setIsGeneratingImage(false);
-      }
+        break;
+        
+      case 'TIKTOK':
+        content = `🎵 TIKTOK SCRIPT: ${asset.title}\n\n` +
+          `[HOOK - First 1 second]\n` +
+          `"POV: You finally understand ${theme}"\n\n` +
+          `[SETUP - 1-5 seconds]\n` +
+          `Start with relatable situation\n\n` +
+          `[CONTENT - 5-45 seconds]\n` +
+          `• Key point 1 (with text on screen)\n` +
+          `• Key point 2 (demonstrate if possible)\n` +
+          `• Key point 3 (quick tip)\n\n` +
+          `[PAYOFF - 45-60 seconds]\n` +
+          `The revelation/transformation moment\n\n` +
+          `---\n` +
+          `CAPTION:\n` +
+          `${theme} explained in 60 seconds 🔥\n\n` +
+          `#${theme.replace(/\s+/g, '')} #LearnOnTikTok #Tips`;
+        break;
+        
+      case 'YOUTUBE':
+        content = `🎬 YOUTUBE SCRIPT: ${asset.title}\n\n` +
+          `[INTRO - 0:00-0:30]\n` +
+          `Hook: "If you've ever wondered about ${theme}, this video is for you."\n` +
+          `Promise: "By the end, you'll know exactly..."\n\n` +
+          `[CHAPTER 1 - 0:30-3:00]\n` +
+          `The Problem\n` +
+          `• What most people get wrong\n` +
+          `• Why it matters\n\n` +
+          `[CHAPTER 2 - 3:00-6:00]\n` +
+          `The Solution\n` +
+          `• Step-by-step breakdown\n` +
+          `• Real examples\n\n` +
+          `[CHAPTER 3 - 6:00-9:00]\n` +
+          `Advanced Tips\n` +
+          `• Pro strategies\n` +
+          `• Common mistakes to avoid\n\n` +
+          `[OUTRO - 9:00-10:00]\n` +
+          `Recap key points\n` +
+          `CTA: "Subscribe and hit the bell"\n` +
+          `Tease next video\n\n` +
+          `---\n` +
+          `TITLE OPTIONS:\n` +
+          `• ${theme}: The Complete Guide (2024)\n` +
+          `• I Wish I Knew This About ${theme} Sooner\n` +
+          `• ${theme} Explained in 10 Minutes`;
+        break;
+        
+      case 'PODCAST':
+      case 'AUDIO':
+        content = `🎙️ PODCAST SCRIPT: ${asset.title}\n\n` +
+          `[INTRO - 0:00-0:30]\n` +
+          `"Hey everyone, welcome back. Today we're diving into ${theme}..."\n\n` +
+          `[MAIN CONTENT - 0:30-4:00]\n` +
+          `\n` +
+          `Section 1: The Basics\n` +
+          `"Let's start with what ${theme} actually means..."\n\n` +
+          `Section 2: My Experience\n` +
+          `"When I first encountered this, I..."\n\n` +
+          `Section 3: Actionable Tips\n` +
+          `"Here's what you can do right now..."\n\n` +
+          `[OUTRO - 4:00-5:00]\n` +
+          `"So to wrap up..."\n` +
+          `"If you found this valuable, subscribe..."\n` +
+          `"Next episode, we'll cover..."\n\n` +
+          `---\n` +
+          `EPISODE TITLE: ${theme} - What You Need to Know\n` +
+          `DESCRIPTION: In this episode, I break down ${theme}...`;
+        break;
+        
+      default:
+        content = `Content for ${asset.title}\n\n[Your content here]`;
     }
+    
+    setGeneratedContent(content);
+    setIsCreatingContent(false);
   };
 
   const handleSaveAsDraft = () => {
@@ -423,115 +462,13 @@ const ProductionRoomView: React.FC = () => {
     }
   };
 
-  const handleScheduleClick = async () => {
-    // Check if this is video or audio content - show request modal instead
-    if (selectedAsset && (selectedAsset.type === 'video' || selectedAsset.type === 'audio' || selectedAsset.type === 'podcast')) {
-      // Check feature access first
-      const feature = selectedAsset.type === 'video' ? 'content.video' : 
-                     selectedAsset.type === 'podcast' ? 'content.podcast' : 'content.audio';
-      
-      const access = await checkFeatureAccess(feature, userTier);
-      if (!access.allowed) {
-        // Determine required tier
-        let requiredTier: UserTier = 'premium';
-        const featureStr = String(feature);
-        if (featureStr === 'content.video' || featureStr === 'content.audio' || featureStr === 'content.podcast') {
-          requiredTier = 'premium';
-        } else if (featureStr === 'content.image') {
-          requiredTier = 'pro';
-        } else if (featureStr.includes('custom') || featureStr.includes('deep')) {
-          requiredTier = 'business';
-        }
-        
-        setUpgradePrompt({
-          feature,
-          requiredTier,
-          creditsRequired: access.creditsRequired,
-          creditsAvailable: access.creditsAvailable
-        });
-        return;
-      }
-      
-      // Check credits
-      if (access.creditsRequired && creditBalance < access.creditsRequired) {
-        setUpgradePrompt({
-          feature,
-          requiredTier: userTier, // Same tier, just need credits
-          creditsRequired: access.creditsRequired,
-          creditsAvailable: creditBalance
-        });
-        return;
-      }
-      
-      setShowRequestModal(true);
-      return;
-    }
-    
-    // For other content types, show schedule modal
+  const handleScheduleClick = () => {
+    // Set default date to tomorrow and time to 9 AM
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     setScheduleDate(tomorrow.toISOString().split('T')[0]);
     setScheduleTime('09:00');
     setShowScheduleModal(true);
-  };
-
-  const handleConfirmRequest = async () => {
-    if (!selectedAsset) return;
-    
-    // Determine feature and deduct credits
-    const feature = selectedAsset.type === 'video' ? 'content.video' : 
-                   selectedAsset.type === 'podcast' ? 'content.podcast' : 'content.audio';
-    
-    const creditResult = await useCredits(feature, userTier);
-    if (!creditResult.success) {
-      alert(creditResult.error || 'Failed to process request');
-      return;
-    }
-    
-    // Update credit balance
-    setCreditBalance(creditResult.newBalance);
-    
-    // Calculate 72 hours from now
-    const estimatedReadyAt = new Date();
-    estimatedReadyAt.setHours(estimatedReadyAt.getHours() + 72);
-    
-    // Create request object
-    const request = {
-      id: `req-${Date.now()}`,
-      type: (selectedAsset.type === 'video' || selectedAsset.type === 'podcast') ? 'video' as const : 'audio' as const,
-      title: selectedAsset.title,
-      description: selectedAsset.description || generatedContent.substring(0, 200) || 'Video/Audio content request',
-      status: 'pending' as const,
-      requestedAt: new Date().toISOString(),
-      estimatedReadyAt: estimatedReadyAt.toISOString(),
-      draftsRemaining: 3,
-      revisions: [],
-      content: undefined // Will be populated when ready
-    };
-    
-    // Save to localStorage
-    const existingRequests = JSON.parse(localStorage.getItem('videoAudioRequests') || '[]');
-    existingRequests.push(request);
-    localStorage.setItem('videoAudioRequests', JSON.stringify(existingRequests));
-    
-    // Update asset status
-    setAssets(assets.map(a => 
-      a.id === selectedAsset.id ? { 
-        ...a, 
-        status: 'scheduled' as const, 
-        timeAgo: 'Requested - check Inbox' 
-      } : a
-    ));
-    
-    setShowRequestModal(false);
-    setSelectedAsset(null);
-    
-    // Trigger custom event for Inbox to update (same-tab)
-    window.dispatchEvent(new CustomEvent('videoAudioRequestAdded'));
-    
-    // Also update localStorage to trigger storage event (for cross-tab)
-    const currentValue = localStorage.getItem('videoAudioRequests');
-    localStorage.setItem('videoAudioRequests', currentValue || '[]');
   };
 
   const handleConfirmSchedule = () => {
@@ -574,37 +511,6 @@ const ProductionRoomView: React.FC = () => {
     
     setShowScheduleModal(false);
     setSelectedAsset(null);
-  };
-
-  const handleCreateNewContent = () => {
-    if (!newContent.title.trim()) return;
-    
-    // Create new content asset
-    const newAsset: ContentAsset = {
-      id: `manual-${Date.now()}`,
-      title: newContent.title,
-      description: newContent.description,
-      platform: newContent.platform,
-      type: newContent.type as any,
-      status: 'draft',
-      timeAgo: 'just now'
-    };
-    
-    // Add to assets
-    setAssets([newAsset, ...assets]);
-    
-    // Reset form and close modal
-    setNewContent({
-      title: '',
-      platform: 'X',
-      type: 'post',
-      description: ''
-    });
-    setShowNewContentModal(false);
-    
-    // Open content creation panel for the new asset
-    setSelectedAsset(newAsset);
-    generateContentForPlatform(newAsset);
   };
 
   const handleCopyContent = () => {
@@ -743,12 +649,9 @@ const ProductionRoomView: React.FC = () => {
                 <Mic2 className="w-4 h-4" />
                 Generate Podcast
               </button>
-              <button 
-                onClick={() => setShowNewContentModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 text-white text-sm hover:bg-white/20 transition-all"
-              >
+              <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 text-white text-sm hover:bg-white/20 transition-all">
                 <Plus className="w-4 h-4" />
-                New Content
+                New Asset
               </button>
             </div>
           </div>
@@ -938,56 +841,6 @@ const ProductionRoomView: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Generated Image (for social platforms) */}
-                {(['INSTAGRAM', 'TIKTOK', 'LINKEDIN', 'X'].includes(selectedAsset.platform)) && (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-xs font-bold text-white/60 uppercase tracking-wider">Generated Image</label>
-                      {isGeneratingImage && (
-                        <Loader2 className="w-3 h-3 text-purple-400 animate-spin" />
-                      )}
-                    </div>
-                    {isGeneratingImage ? (
-                      <div className="w-full aspect-square bg-[#050505] border border-white/10 rounded-xl flex items-center justify-center">
-                        <div className="text-center">
-                          <Loader2 className="w-8 h-8 text-purple-400 animate-spin mx-auto mb-2" />
-                          <p className="text-xs text-white/40">Generating image...</p>
-                        </div>
-                      </div>
-                    ) : generatedImage ? (
-                      <div className="w-full bg-[#050505] border border-white/10 rounded-xl overflow-hidden">
-                        <img 
-                          src={generatedImage} 
-                          alt="Generated content image" 
-                          className="w-full h-auto object-cover"
-                        />
-                        <div className="p-3 flex items-center justify-between bg-[#050505] border-t border-white/10">
-                          <span className="text-xs text-white/40">AI Generated Image</span>
-                          <button
-                            onClick={() => {
-                              const link = document.createElement('a');
-                              link.href = generatedImage;
-                              link.download = `${selectedAsset.title.replace(/\s+/g, '-')}.jpg`;
-                              link.click();
-                            }}
-                            className="text-xs text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1"
-                          >
-                            <Download className="w-3 h-3" />
-                            Download
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="w-full aspect-square bg-[#050505] border border-dashed border-white/10 rounded-xl flex items-center justify-center">
-                        <div className="text-center">
-                          <ImageIcon className="w-8 h-8 text-white/20 mx-auto mb-2" />
-                          <p className="text-xs text-white/40">Image will be generated</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 {/* Generated Content */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -1096,7 +949,7 @@ const ProductionRoomView: React.FC = () => {
                 className="flex-1 py-3 bg-green-500 hover:bg-green-400 text-black text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
               >
                 <Send className="w-4 h-4" />
-                {selectedAsset && (selectedAsset.type === 'video' || selectedAsset.type === 'audio' || selectedAsset.type === 'podcast') ? 'Request' : 'Schedule'}
+                Schedule
               </button>
             </div>
           </div>
@@ -1219,68 +1072,6 @@ const ProductionRoomView: React.FC = () => {
         </div>
       )}
 
-      {/* Request Modal (for video/audio) */}
-      {showRequestModal && selectedAsset && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowRequestModal(false)}></div>
-          <div className="relative w-full max-w-md bg-[#0A0A0A] border border-white/10 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-            <button 
-              onClick={() => setShowRequestModal(false)} 
-              className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="mb-6">
-              <h2 className="text-xl font-bold text-white mb-2">Request {selectedAsset.type === 'video' ? 'Video' : 'Audio'} Generation</h2>
-              <p className="text-sm text-white/60">
-                Your {selectedAsset.type === 'video' ? 'video' : 'audio'} will be curated and ready within 72 hours.
-              </p>
-            </div>
-
-            <div className="bg-white/5 rounded-lg p-4 mb-6">
-              <div className="flex items-start gap-3">
-                <Clock className="w-5 h-5 text-yellow-400 mt-0.5" />
-                <div>
-                  <div className="text-sm font-bold text-white mb-1">Processing Time</div>
-                  <div className="text-xs text-white/60">
-                    Your content will be ready within 72 hours. Check your Inbox once it's ready.
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white/5 rounded-lg p-4 mb-6">
-              <div className="flex items-start gap-3">
-                <RefreshCw className="w-5 h-5 text-green-400 mt-0.5" />
-                <div>
-                  <div className="text-sm font-bold text-white mb-1">Revisions Available</div>
-                  <div className="text-xs text-white/60">
-                    You have 3 drafts/changes available to refine your content.
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowRequestModal(false)}
-                className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white/60 text-sm font-medium rounded-xl transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmRequest}
-                className="flex-1 py-3 bg-green-500 hover:bg-green-400 text-black text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
-              >
-                <Send className="w-4 h-4" />
-                Request {selectedAsset.type === 'video' ? 'Video' : 'Audio'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Schedule Modal */}
       {showScheduleModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -1357,133 +1148,6 @@ const ProductionRoomView: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* New Content Modal */}
-      {showNewContentModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowNewContentModal(false)}></div>
-          <div className="relative w-full max-w-lg bg-[#0A0A0A] border border-white/10 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-            <button 
-              onClick={() => setShowNewContentModal(false)} 
-              className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="mb-6">
-              <h2 className="text-xl font-bold text-white mb-2">Create New Content</h2>
-              <p className="text-sm text-white/60">Manually create content for any platform</p>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">
-                  Title *
-                </label>
-                <input
-                  type="text"
-                  value={newContent.title}
-                  onChange={(e) => setNewContent({ ...newContent, title: e.target.value })}
-                  placeholder="e.g., My thoughts on AI content"
-                  className="w-full bg-[#050505] border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">
-                    Platform *
-                  </label>
-                  <select
-                    value={newContent.platform}
-                    onChange={(e) => setNewContent({ ...newContent, platform: e.target.value })}
-                    className="w-full bg-[#050505] border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:border-white/30 focus:outline-none appearance-none"
-                  >
-                    <option value="X">X (Twitter)</option>
-                    <option value="LINKEDIN">LinkedIn</option>
-                    <option value="INSTAGRAM">Instagram</option>
-                    <option value="TIKTOK">TikTok</option>
-                    <option value="YOUTUBE">YouTube</option>
-                    <option value="AUDIO">Audio</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">
-                    Type *
-                  </label>
-                  <select
-                    value={newContent.type}
-                    onChange={(e) => setNewContent({ ...newContent, type: e.target.value })}
-                    className="w-full bg-[#050505] border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:border-white/30 focus:outline-none appearance-none"
-                  >
-                    <option value="post">Post</option>
-                    <option value="thread">Thread</option>
-                    <option value="reel">Reel</option>
-                    <option value="carousel">Carousel</option>
-                    <option value="video">Video</option>
-                    <option value="audio">Audio</option>
-                    <option value="document">Document</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">
-                  Description (Optional)
-                </label>
-                <textarea
-                  value={newContent.description}
-                  onChange={(e) => setNewContent({ ...newContent, description: e.target.value })}
-                  placeholder="Brief description or notes..."
-                  rows={3}
-                  className="w-full bg-[#050505] border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none resize-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowNewContentModal(false);
-                  setNewContent({
-                    title: '',
-                    platform: 'X',
-                    type: 'post',
-                    description: ''
-                  });
-                }}
-                className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white/60 text-sm font-medium rounded-xl transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateNewContent}
-                disabled={!newContent.title.trim()}
-                className="flex-1 py-3 bg-green-500 hover:bg-green-400 disabled:bg-white/10 disabled:text-white/30 disabled:cursor-not-allowed text-black text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Create Content
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Upgrade Prompt */}
-      {upgradePrompt && (
-        <UpgradePrompt
-          feature={upgradePrompt.feature}
-          requiredTier={upgradePrompt.requiredTier}
-          currentTier={userTier}
-          creditsRequired={upgradePrompt.creditsRequired}
-          creditsAvailable={upgradePrompt.creditsAvailable}
-          onClose={() => setUpgradePrompt(null)}
-          onUpgrade={() => {
-            window.location.href = '#pricing';
-          }}
-        />
       )}
     </div>
   );

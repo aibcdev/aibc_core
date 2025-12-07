@@ -1,252 +1,223 @@
+/**
+ * Authentication Service
+ */
+
+import { OAuth2Client } from 'google-auth-library';
 import crypto from 'crypto';
-import jwt from 'jsonwebtoken';
 
-export interface User {
-  id: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  name?: string;
-  passwordHash?: string; // Only for email/password users
-  googleId?: string; // Only for Google OAuth users
-  tier: 'free' | 'pro' | 'business' | 'premium';
-  credits: number;
-  createdAt: string;
-  lastLoginAt?: string;
-  emailVerified: boolean;
-  resetPasswordToken?: string;
-  resetPasswordExpires?: string;
+// Initialize Google OAuth client (optional - only if GOOGLE_CLIENT_ID is set)
+let googleClient: OAuth2Client | null = null;
+if (process.env.GOOGLE_CLIENT_ID) {
+  googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 }
 
-// In-memory storage (replace with database in production)
-const users: Map<string, User> = new Map();
-const usersByEmail: Map<string, User> = new Map();
-const usersByGoogleId: Map<string, User> = new Map();
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const JWT_EXPIRES_IN = '7d';
+// In-memory user store (replace with database in production)
+const users: Map<string, any> = new Map();
+const resetTokens: Map<string, { email: string; expires: number }> = new Map();
 
 /**
- * Hash password using SHA-256 (use bcrypt in production)
+ * Verify Google JWT credential
  */
-function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password + (process.env.PASSWORD_SALT || 'salt')).digest('hex');
-}
-
-/**
- * Generate JWT token
- */
-export function generateToken(userId: string): string {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-}
-
-/**
- * Verify JWT token
- */
-export function verifyToken(token: string): { userId: string } | null {
+export async function verifyGoogleCredential(credential: string): Promise<any> {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    return decoded;
-  } catch (error) {
-    return null;
+    if (!googleClient || !process.env.GOOGLE_CLIENT_ID) {
+      throw new Error('Google OAuth not configured. Set GOOGLE_CLIENT_ID environment variable.');
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload) {
+      throw new Error('Invalid token payload');
+    }
+
+    return {
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture,
+      sub: payload.sub,
+    };
+  } catch (error: any) {
+    console.error('Google credential verification error:', error);
+    throw new Error('Invalid Google credential');
   }
 }
 
 /**
- * Create user account with email/password
+ * Create or get user from Google auth
+ */
+export async function getOrCreateGoogleUser(googleUser: any): Promise<any> {
+  const userId = `google_${googleUser.sub}`;
+  
+  if (users.has(userId)) {
+    return users.get(userId);
+  }
+
+  const newUser = {
+    id: userId,
+    email: googleUser.email,
+    name: googleUser.name,
+    picture: googleUser.picture,
+    provider: 'google',
+    createdAt: new Date().toISOString(),
+  };
+
+  users.set(userId, newUser);
+  return newUser;
+}
+
+/**
+ * Create user with email/password
  */
 export function createUser(
   email: string,
   password: string,
   firstName?: string,
   lastName?: string
-): { user: User; token: string } {
-  // Check if user already exists
-  if (usersByEmail.has(email.toLowerCase())) {
-    throw new Error('User with this email already exists');
+): any {
+  // Check if user exists
+  for (const [_, user] of users) {
+    if (user.email === email && user.provider === 'email') {
+      throw new Error('User already exists');
+    }
   }
 
-  const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  const passwordHash = hashPassword(password);
-  
-  const user: User = {
+  const userId = `email_${crypto.randomBytes(16).toString('hex')}`;
+  const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
+
+  const newUser = {
     id: userId,
-    email: email.toLowerCase(),
+    email,
     firstName,
     lastName,
-    name: firstName && lastName ? `${firstName} ${lastName}` : firstName || lastName || email.split('@')[0],
-    passwordHash,
-    tier: 'free',
-    credits: 100, // Starting credits for free tier
+    name: firstName && lastName ? `${firstName} ${lastName}` : firstName || email.split('@')[0],
+    password: hashedPassword,
+    provider: 'email',
     createdAt: new Date().toISOString(),
-    emailVerified: false
   };
 
-  users.set(userId, user);
-  usersByEmail.set(email.toLowerCase(), user);
-
-  const token = generateToken(userId);
-
-  return { user, token };
+  users.set(userId, newUser);
+  return newUser;
 }
 
 /**
- * Sign in with email/password
+ * Verify email/password
  */
-export function signInWithEmail(email: string, password: string): { user: User; token: string } {
-  const user = usersByEmail.get(email.toLowerCase());
-  
-  if (!user || !user.passwordHash) {
-    throw new Error('Invalid email or password');
+export function verifyUser(email: string, password: string): any {
+  const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
+
+  for (const [_, user] of users) {
+    if (user.email === email && user.provider === 'email' && user.password === hashedPassword) {
+      return user;
+    }
   }
 
-  const passwordHash = hashPassword(password);
-  if (passwordHash !== user.passwordHash) {
-    throw new Error('Invalid email or password');
-  }
-
-  // Update last login
-  user.lastLoginAt = new Date().toISOString();
-  users.set(user.id, user);
-
-  const token = generateToken(user.id);
-
-  return { user, token };
-}
-
-/**
- * Sign in or create user with Google OAuth
- */
-export function signInWithGoogle(
-  googleId: string,
-  email: string,
-  name?: string,
-  picture?: string
-): { user: User; token: string; isNewUser: boolean } {
-  // Check if user exists by Google ID
-  let user = usersByGoogleId.get(googleId);
-
-  if (user) {
-    // Existing user - update last login
-    user.lastLoginAt = new Date().toISOString();
-    users.set(user.id, user);
-    const token = generateToken(user.id);
-    return { user, token, isNewUser: false };
-  }
-
-  // Check if user exists by email (account merge scenario)
-  user = usersByEmail.get(email.toLowerCase());
-  
-  if (user) {
-    // Link Google account to existing email account
-    user.googleId = googleId;
-    user.lastLoginAt = new Date().toISOString();
-    user.emailVerified = true;
-    users.set(user.id, user);
-    usersByGoogleId.set(googleId, user);
-    const token = generateToken(user.id);
-    return { user, token, isNewUser: false };
-  }
-
-  // New user - create account
-  const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
-  user = {
-    id: userId,
-    email: email.toLowerCase(),
-    name: name || email.split('@')[0],
-    googleId,
-    tier: 'free',
-    credits: 100,
-    createdAt: new Date().toISOString(),
-    lastLoginAt: new Date().toISOString(),
-    emailVerified: true
-  };
-
-  users.set(userId, user);
-  usersByEmail.set(email.toLowerCase(), user);
-  usersByGoogleId.set(googleId, user);
-
-  const token = generateToken(userId);
-
-  return { user, token, isNewUser: true };
+  throw new Error('Invalid email or password');
 }
 
 /**
  * Generate password reset token
  */
-export function generatePasswordResetToken(email: string): string {
-  const user = usersByEmail.get(email.toLowerCase());
-  
-  if (!user || !user.passwordHash) {
-    throw new Error('User not found or account uses Google sign-in');
-  }
-
-  const resetToken = crypto.randomBytes(32).toString('hex');
-  const resetExpires = new Date(Date.now() + 3600000).toISOString(); // 1 hour
-
-  user.resetPasswordToken = resetToken;
-  user.resetPasswordExpires = resetExpires;
-  users.set(user.id, user);
-
-  return resetToken;
-}
-
-/**
- * Reset password with token
- */
-export function resetPassword(token: string, newPassword: string): void {
-  // Find user by reset token
-  let user: User | undefined;
-  
-  for (const u of users.values()) {
-    if (u.resetPasswordToken === token && u.resetPasswordExpires) {
-      const expires = new Date(u.resetPasswordExpires);
-      if (expires > new Date()) {
-        user = u;
-        break;
-      }
+export function generateResetToken(email: string): string {
+  // Check if user exists
+  let userExists = false;
+  for (const [_, user] of users) {
+    if (user.email === email) {
+      userExists = true;
+      break;
     }
   }
 
-  if (!user) {
+  if (!userExists) {
+    // Don't reveal if user exists for security
+    // Still generate token but it won't work
+  }
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const expires = Date.now() + 3600000; // 1 hour
+
+  resetTokens.set(token, { email, expires });
+
+  // Clean up expired tokens
+  setTimeout(() => {
+    resetTokens.delete(token);
+  }, 3600000);
+
+  return token;
+}
+
+/**
+ * Verify reset token
+ */
+export function verifyResetToken(token: string): string {
+  const tokenData = resetTokens.get(token);
+  
+  if (!tokenData) {
     throw new Error('Invalid or expired reset token');
   }
 
-  user.passwordHash = hashPassword(newPassword);
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpires = undefined;
-  users.set(user.id, user);
-}
-
-/**
- * Get user by ID
- */
-export function getUserById(userId: string): User | undefined {
-  return users.get(userId);
-}
-
-/**
- * Get user by email
- */
-export function getUserByEmail(email: string): User | undefined {
-  return usersByEmail.get(email.toLowerCase());
-}
-
-/**
- * Update user
- */
-export function updateUser(userId: string, updates: Partial<User>): User | null {
-  const user = users.get(userId);
-  if (!user) return null;
-
-  const updated = { ...user, ...updates };
-  users.set(userId, updated);
-  usersByEmail.set(user.email.toLowerCase(), updated);
-  if (user.googleId) {
-    usersByGoogleId.set(user.googleId, updated);
+  if (Date.now() > tokenData.expires) {
+    resetTokens.delete(token);
+    throw new Error('Reset token has expired');
   }
 
-  return updated;
+  return tokenData.email;
+}
+
+/**
+ * Reset password
+ */
+export function resetUserPassword(token: string, newPassword: string): void {
+  const email = verifyResetToken(token);
+  const hashedPassword = crypto.createHash('sha256').update(newPassword).digest('hex');
+
+  // Find user and update password
+  for (const [userId, user] of users) {
+    if (user.email === email && user.provider === 'email') {
+      user.password = hashedPassword;
+      users.set(userId, user);
+      resetTokens.delete(token);
+      return;
+    }
+  }
+
+  throw new Error('User not found');
+}
+
+/**
+ * Generate JWT token (simplified - use proper JWT library in production)
+ */
+export function generateToken(user: any): string {
+  const payload = {
+    id: user.id,
+    email: user.email,
+    exp: Math.floor(Date.now() / 1000) + 86400, // 24 hours
+  };
+
+  // In production, use proper JWT signing
+  return Buffer.from(JSON.stringify(payload)).toString('base64');
+}
+
+/**
+ * Send password reset email (mock - replace with real email service)
+ */
+export async function sendPasswordResetEmail(email: string, token: string): Promise<void> {
+  // In production, use SendGrid, AWS SES, or similar
+  const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${token}`;
+  
+  console.log('📧 Password reset email (mock):');
+  console.log(`To: ${email}`);
+  console.log(`Reset URL: ${resetUrl}`);
+  console.log(`Token: ${token}`);
+  
+  // TODO: Integrate with email service
+  // await emailService.send({
+  //   to: email,
+  //   subject: 'Reset your AIBC password',
+  //   html: `Click here to reset your password: <a href="${resetUrl}">${resetUrl}</a>`
+  // });
 }
 

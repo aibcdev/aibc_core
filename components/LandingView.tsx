@@ -1,20 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   ArrowRight, Play, Star, Code2, 
   Database, User, Globe, Braces, 
   ShieldCheck, Lock, Server, Mic, Sparkles, Bot, Twitter, 
   Github, Linkedin, Image as ImageIcon, Footprints, Cpu, Sliders, 
   BrainCircuit, FileText, FileCheck, Archive, Video, Mic2, BarChart3,
-  Zap, MessageSquareText, Sparkles as SparklesIcon, MessageCircle,
-  ChevronDown, Triangle, X
+  Zap
 } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
 
-// Landing page component with navigation buttons
-
 const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
-  const [showSampleModal, setShowSampleModal] = useState(false);
-
   return (
     <div id="landing-view" className="animate-in fade-in duration-500">
       {/* Navigation */}
@@ -34,7 +29,7 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
                   <circle cx="50" cy="50" r="6" fill="currentColor" />
                 </svg>
               </div>
-              <span className="text-2xl font-black tracking-tighter text-white relative z-10">AIBC</span>
+              <span className="text-2xl font-black tracking-tighter text-white">AIBC</span>
             </div>
 
             {/* Vertical Divider */}
@@ -49,233 +44,49 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
               >
                 Pricing
               </button>
-              
-              {/* AIBC Stream Dropdown */}
-              <div className="group relative">
-                <button 
-                  className="flex items-center gap-1 text-sm font-bold text-white hover:text-orange-500 transition-colors uppercase tracking-wide focus:outline-none"
-                  onClick={() => window.open('https://aibroadcasting.xyz', '_blank', 'noopener,noreferrer')}
-                >
-                  AIBC Stream
-                  <ChevronDown className="w-4 h-4 text-white/60 group-hover:text-orange-500 transition-colors" />
-                </button>
-                
-                {/* Dropdown Menu */}
-                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-4 w-[600px] origin-top opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out transform group-hover:translate-y-0 translate-y-2 z-50">
-                  <div className="bg-[#0A0A0A] border border-white/10 rounded-xl shadow-2xl shadow-black overflow-hidden ring-1 ring-white/5">
-                    
-                    {/* Live Feed Header */}
-                    <div className="border-b border-white/10 p-3 bg-gradient-to-r from-red-600/20 to-transparent">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse"></div>
-                          <span className="text-[10px] font-mono text-white/80 uppercase tracking-wider">Live Feed</span>
-                        </div>
-                        <div className="text-[10px] font-mono text-white/60">
-                          <span className="text-white/40">Minutes Watched: </span>
-                          <span className="text-emerald-400 font-semibold">30,000+</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Dropdown Header */}
-                    <div className="border-b border-white/10 p-4 flex items-end justify-between bg-[#111]/50">
-                      <div>
-                        <h2 className="text-xl font-semibold tracking-tight text-white mb-1 uppercase">AI Streaming Channels</h2>
-                        <div className="flex items-center gap-2 text-emerald-500 font-mono text-[10px] tracking-wide">
-                          <span>///</span>
-                          <span>REAL-TIME VIDEO SYNTHESIS ENGINE</span>
-                        </div>
-                      </div>
-                      <a 
-                        href="https://aibroadcasting.xyz"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] font-mono text-emerald-400 hover:text-emerald-300 transition-colors underline"
-                      >
-                        aibroadcasting.xyz
-                      </a>
-                    </div>
-                    
-                    <div className="grid grid-cols-12 min-h-[350px]">
-                      
-                      {/* Left Sidebar: Latest Generations */}
-                      <div className="col-span-5 border-r border-white/10 bg-[#050505]/50 flex flex-col">
-                        <div className="p-2.5 border-b border-white/10 flex items-center justify-between">
-                          <span className="text-[10px] font-mono uppercase tracking-wider text-white/40 pl-1">Latest Generations</span>
-                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)] animate-pulse mr-2"></div>
-                        </div>
-                        <div className="flex-1 overflow-y-auto">
-                          
-                          {/* List Item 1 */}
-                          <div className="group/item p-3 hover:bg-white/5 cursor-pointer border-b border-white/10 transition-colors">
-                            <div className="flex justify-between items-start mb-1">
-                              <span className="text-[10px] font-mono text-blue-400 font-medium uppercase">Crypto Macro</span>
-                              <span className="text-[10px] font-mono text-white/30">12:42 UTC</span>
-                            </div>
-                            <h3 className="text-xs font-medium text-white/70 group-hover/item:text-white leading-snug mb-2">Bitcoin Breaches $100k: Market Analysis Video</h3>
-                            <div className="flex gap-2">
-                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[9px] font-mono text-white/40 bg-white/5">VIDEO</span>
-                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[9px] font-mono text-white/40 bg-white/5">1:20</span>
-                            </div>
-                          </div>
-                          
-                          {/* List Item 2 */}
-                          <div className="group/item p-3 hover:bg-white/5 cursor-pointer border-b border-white/10 transition-colors bg-white/5">
-                            <div className="flex justify-between items-start mb-1">
-                              <span className="text-[10px] font-mono text-fuchsia-400 font-medium uppercase">Tech Earnings</span>
-                              <span className="text-[10px] font-mono text-white/30">12:38 UTC</span>
-                            </div>
-                            <h3 className="text-xs font-medium text-white leading-snug mb-2">NVIDIA Q4 Earnings Call: AI Summary & Highlights</h3>
-                            <div className="flex gap-2">
-                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[9px] font-mono text-white/40 bg-white/5">AUDIO</span>
-                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[9px] font-mono text-white/40 bg-white/5">3:45</span>
-                            </div>
-                          </div>
-                          
-                          {/* List Item 3 */}
-                          <div className="group/item p-3 hover:bg-white/5 cursor-pointer border-b border-white/10 transition-colors">
-                            <div className="flex justify-between items-start mb-1">
-                              <span className="text-[10px] font-mono text-emerald-400 font-medium uppercase">Regulation</span>
-                              <span className="text-[10px] font-mono text-white/30">12:15 UTC</span>
-                            </div>
-                            <h3 className="text-xs font-medium text-white/70 group-hover/item:text-white leading-snug mb-2">SEC Approval Odds Increase: Legal Breakdown</h3>
-                            <div className="flex gap-2">
-                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[9px] font-mono text-white/40 bg-white/5">VIDEO</span>
-                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[9px] font-mono text-white/40 bg-white/5">2:10</span>
-                            </div>
-                          </div>
-                          
-                          {/* List Item 4 */}
-                          <div className="group/item p-3 hover:bg-white/5 cursor-pointer transition-colors">
-                            <div className="flex justify-between items-start mb-1">
-                              <span className="text-[10px] font-mono text-violet-400 font-medium uppercase">Defi</span>
-                              <span className="text-[10px] font-mono text-white/30">11:50 UTC</span>
-                            </div>
-                            <h3 className="text-xs font-medium text-white/70 group-hover/item:text-white leading-snug mb-2">Uniswap V4 Launch Date Confirmed</h3>
-                            <div className="flex gap-2">
-                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[9px] font-mono text-white/40 bg-white/5">SHORT</span>
-                              <span className="px-1.5 py-0.5 rounded border border-white/10 text-[9px] font-mono text-white/40 bg-white/5">0:45</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Right Content: Video & Stats */}
-                      <div className="col-span-7 p-3 flex flex-col gap-3 bg-[#050505]">
-                        
-                        {/* Video Player Area */}
-                        <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-white/10 group/video cursor-pointer">
-                          {/* Background Gradient */}
-                          <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/40 via-purple-900/20 to-black"></div>
-                          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80"></div>
-                          
-                          {/* Play Button */}
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="relative w-20 h-20">
-                              <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500 to-purple-500 rounded-xl blur-xl opacity-40 animate-pulse"></div>
-                              <div className="relative z-10 w-full h-full rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 flex items-center justify-center group-hover/video:scale-105 transition-transform duration-300">
-                                <Play className="w-8 h-8 text-white fill-white ml-1" />
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Live Ticker Bar */}
-                          <div className="absolute bottom-0 left-0 right-0 h-9 bg-black/80 backdrop-blur border-t border-white/10 flex items-center">
-                            <div className="h-full px-2.5 bg-red-600 flex items-center justify-center">
-                              <div className="flex flex-col items-center leading-none">
-                                <span className="text-[8px] font-bold text-white uppercase tracking-tighter">Live</span>
-                                <span className="text-[8px] font-bold text-white uppercase tracking-tighter">News</span>
-                              </div>
-                            </div>
-                            <div className="flex-1 overflow-hidden relative mx-2">
-                              <div className="text-[9px] font-mono text-white/70 whitespace-nowrap uppercase tracking-wide">
-                                MARKET CLOSE: AI SECTOR LEADS RALLY AMID NEW REGULATION TALKS
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 pr-2.5 border-l border-white/10 pl-2.5 h-full">
-                              <div className="flex flex-col leading-none">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-[8px] font-mono text-emerald-500">BTC</span>
-                                  <span className="text-[8px] font-mono text-emerald-500">$98,230</span>
-                                  <Triangle className="w-1 h-1 fill-emerald-500 text-emerald-500 rotate-0" />
-                                </div>
-                                <span className="text-[8px] font-mono text-white/40 text-right">2.4%</span>
-                              </div>
-                              <div className="flex flex-col leading-none">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-[8px] font-mono text-emerald-500">ETH</span>
-                                  <span className="text-[8px] font-mono text-emerald-500">$4,102</span>
-                                  <Triangle className="w-1 h-1 fill-emerald-500 text-emerald-500 rotate-0" />
-                                </div>
-                                <span className="text-[8px] font-mono text-white/40 text-right">1.8%</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Bottom Stats Grid */}
-                        <div className="grid grid-cols-4 gap-3 mt-auto">
-                          <div className="p-2.5 rounded border border-white/10 bg-white/5">
-                            <div className="text-[8px] font-mono text-white/40 uppercase tracking-wide mb-1">Video Generations</div>
-                            <div className="text-lg font-semibold text-white tracking-tight">100+</div>
-                          </div>
-                          <div className="p-2.5 rounded border border-white/10 bg-white/5">
-                            <div className="text-[8px] font-mono text-white/40 uppercase tracking-wide mb-1">Active Users</div>
-                            <div className="text-lg font-semibold text-white tracking-tight">22,000+</div>
-                          </div>
-                          <div className="p-2.5 rounded border border-white/10 bg-white/5">
-                            <div className="text-[8px] font-mono text-white/40 uppercase tracking-wide mb-1">Content Strands</div>
-                            <div className="text-lg font-semibold text-white tracking-tight">4</div>
-                          </div>
-                          <div className="p-2.5 rounded border border-white/10 bg-white/5 relative">
-                            <div className="text-[8px] font-mono text-white/40 uppercase tracking-wide mb-1">Languages</div>
-                            <div className="text-lg font-semibold text-white tracking-tight">64</div>
-                            <div className="absolute bottom-1.5 right-1.5">
-                              <Globe className="w-2.5 h-2.5 text-white/30" />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <a 
+                href="https://aibroadcasting.xyz"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-bold text-white hover:text-orange-500 transition-colors uppercase tracking-wide"
+              >
+                AIBC Stream
+              </a>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
             <button 
-              onClick={() => onNavigate(ViewState.LOGIN)} 
-              className="hidden md:inline-block text-sm font-bold text-white/60 hover:text-white transition-colors uppercase tracking-wide whitespace-nowrap px-2 py-1"
+              onClick={() => onNavigate(ViewState.SIGNIN)} 
+              className="hidden md:block text-xs font-medium text-white/60 hover:text-white transition-colors"
             >
-              LOG IN
+              Log In
             </button>
             <button 
-              onClick={() => onNavigate(ViewState.LOGIN)} 
-              className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-5 py-2 text-xs font-bold text-white transition-all hover:bg-white/10 uppercase tracking-wide whitespace-nowrap"
+              onClick={() => onNavigate(ViewState.SIGNIN)} 
+              className="rounded-full border border-white/10 bg-white/5 px-5 py-2 text-xs font-semibold text-white transition-all hover:bg-white/10"
             >
-              GET STARTED
+              Get Started
             </button>
           </div>
         </div>
       </nav>
 
-      <main className="pt-24 px-4 sm:px-6 lg:px-8 overflow-hidden" role="main" itemScope itemType="https://schema.org/WebPage">
+      <main className="pt-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
         
         {/* HERO SECTION */}
-        <section id="home" className="mx-auto max-w-7xl mb-4 relative" aria-label="Hero section" itemScope itemType="https://schema.org/WebPageElement">
+        <section id="home" className="mx-auto max-w-7xl mb-4 relative">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
             
             {/* Left Content */}
             <div className="relative z-10 pt-8 lg:pt-0">
-              <h1 className="text-5xl sm:text-6xl lg:text-[4.5rem] font-sans font-medium tracking-tight text-white leading-[1.1] mb-8" itemProp="headline">
+              <h1 className="text-5xl sm:text-6xl lg:text-[4.5rem] font-sans font-medium tracking-tight text-white leading-[1.1] mb-8">
                 Never Hire a <br />
                 <span className="text-orange-500">Marketing Employee</span> Again.
               </h1>
               
-              <p className="text-lg text-[#888] max-w-lg mb-10 leading-relaxed font-light" itemProp="description">
-                Using our highly trained AI agents, we scan your digital footprint and give you automated content based on how you talk, write, and post. Whether you're a large business, or creator, we have the model to remove the guesswork out of creatives, to save you time and money.
+              <p className="text-lg text-[#888] max-w-lg mb-10 leading-relaxed font-light">
+                Using our highly trained agents, we scan your digital footprint and give you automated content based on how you talk, write, and post. Whether you're a large business, or creator, we have the model to remove the guesswork out of creatives, to save you time and money.
               </p>
               
               {/* Buttons */}
@@ -292,10 +103,7 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
                   </span>
                 </button>
                 
-                <button 
-                  onClick={() => setShowSampleModal(true)}
-                  className="px-8 py-4 rounded-full border border-white/10 hover:bg-white/5 transition-all text-sm font-medium text-white/80 hover:text-white flex items-center gap-2"
-                >
+                <button className="px-8 py-4 rounded-full border border-white/10 hover:bg-white/5 transition-all text-sm font-medium text-white/80 hover:text-white flex items-center gap-2">
                   See Sample Output <Play className="w-3 h-3 fill-current ml-1" />
                 </button>
               </div>
@@ -307,18 +115,16 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
                   <div className="w-10 h-10 rounded-full border-2 border-black relative z-50 overflow-hidden bg-[#1a1a1a]">
                     <img 
                       src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop" 
-                      alt="AIBC platform user - content creator testimonial" 
+                      alt="Creator" 
                       className="w-full h-full object-cover"
-                      loading="lazy"
                     />
                   </div>
                   {/* Creator 2 */}
                   <div className="w-10 h-10 rounded-full border-2 border-black relative z-40 overflow-hidden bg-[#1a1a1a]">
                     <img 
                       src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop" 
-                      alt="AIBC platform user - marketing professional testimonial" 
+                      alt="Creator" 
                       className="w-full h-full object-cover"
-                      loading="lazy"
                     />
                   </div>
                   {/* Company Logo 1 */}
@@ -329,8 +135,7 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
                   <div className="w-10 h-10 rounded-full border-2 border-black relative z-20 overflow-hidden bg-[#1a1a1a]">
                     <img 
                       src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&h=100&fit=crop" 
-                      alt="AIBC platform user - business owner testimonial"
-                      loading="lazy" 
+                      alt="Creator" 
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -363,8 +168,7 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
                 <div className="absolute inset-0 bg-black">
                    <img 
                       src="https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?auto=format&fit=crop&w=600&q=80" 
-                      alt="AI-powered content generation visualization - AIBC platform interface"
-                      loading="lazy" 
+                      alt="AI Art" 
                       className="w-full h-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-[2s]"
                    />
                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
@@ -632,103 +436,59 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
           </div>
         </section>
 
-        {/* OUTPUT COMPARISON - NIKE.COM SAMPLE */}
+        {/* OUTPUT COMPARISON */}
         <section className="py-6 border-t border-white/5 bg-[#050505] relative">
           <div className="mx-auto max-w-6xl px-6">
             <div className="text-center mb-10">
               <h2 className="text-3xl font-medium tracking-tight text-white">High Fidelity Output</h2>
-              <p className="mt-3 text-white/50 text-base">Sample output from <span className="text-orange-400 font-semibold">Nike.com</span> digital footprint scan.</p>
+              <p className="mt-3 text-white/50 text-base">See the difference between generic AI and <span className="text-orange-400">Brand-Tuned AI</span>.</p>
             </div>
 
             <div className="rounded-xl border border-white/10 bg-[#0A0A0A] overflow-hidden shadow-2xl">
               <div className="flex border-b border-white/10 bg-white/5 backdrop-blur">
                 <div className="flex-1 px-5 py-3 text-[10px] font-bold text-white/40 border-r border-white/10 flex items-center justify-between">
-                  <span>INPUT: nike.com</span>
-                  <Globe className="h-3 w-3" strokeWidth={1.5} />
+                  <span>INPUT: RAW THOUGHTS</span>
+                  <Mic className="h-3 w-3" strokeWidth={1.5} />
                 </div>
                 <div className="flex-1 px-5 py-3 text-[10px] font-bold text-orange-400 bg-orange-500/5 flex items-center justify-between">
-                  <span>OUTPUT: BRAND DNA & CONTENT</span>
-                  <span className="text-[9px] text-orange-300 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1"><Sparkles className="h-2.5 w-2.5" /> Analyzed</span>
+                  <span>OUTPUT: LINKEDIN POST</span>
+                  <span className="text-[9px] text-orange-300 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1"><Sparkles className="h-2.5 w-2.5" /> Optimized</span>
                 </div>
               </div>
-              <div className="flex flex-col md:flex-row min-h-[400px]">
-                {/* Brand DNA Output */}
+              <div className="flex flex-col md:flex-row min-h-[300px]">
+                {/* Before */}
                 <div className="flex-1 p-6 border-r border-white/10 bg-[#050505]">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/20">
-                        <Bot className="h-4 w-4 text-white" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-white">Nike Brand DNA</div>
-                        <div className="text-[10px] text-white/40">Extracted from digital footprint</div>
-                      </div>
+                  <div className="flex items-start gap-3">
+                    <div className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/10">
+                      <span className="text-[9px] text-white/40 font-bold">YOU</span>
                     </div>
-                    
-                    <div className="space-y-3">
+                    <div className="space-y-3 w-full">
                       <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
-                        <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Brand Archetype</div>
-                        <p className="text-sm font-semibold text-white">The Hero</p>
-                      </div>
-                      
-                      <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
-                        <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Voice & Tone</div>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          <span className="px-2 py-1 rounded bg-orange-500/10 text-orange-300 text-[10px] font-medium border border-orange-500/20">Empowering</span>
-                          <span className="px-2 py-1 rounded bg-orange-500/10 text-orange-300 text-[10px] font-medium border border-orange-500/20">Motivational</span>
-                          <span className="px-2 py-1 rounded bg-orange-500/10 text-orange-300 text-[10px] font-medium border border-orange-500/20">Bold</span>
-                        </div>
-                      </div>
-                      
-                      <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
-                        <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Core Pillars</div>
-                        <ul className="text-xs text-white/80 space-y-1 mt-2">
-                          <li>• Just Do It - Action-oriented messaging</li>
-                          <li>• Innovation & Performance</li>
-                          <li>• Athlete Empowerment</li>
-                        </ul>
+                        <p className="font-mono text-[11px] leading-relaxed text-white/50 italic">
+                          "Basically we are seeing that companies spend way too much time on meetings. Like, asynchronous work is better..."
+                        </p>
                       </div>
                     </div>
                   </div>
                 </div>
-                
-                {/* Generated Content Output */}
+                {/* After */}
                 <div className="flex-1 p-6 bg-[#080808] relative overflow-hidden">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/10">
-                        <span className="text-[9px] text-white/40 font-bold">AIBC</span>
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-white">Generated Content</div>
-                        <div className="text-[10px] text-white/40">Brand-voice matched</div>
-                      </div>
+                  <div className="flex items-start gap-3 relative z-10">
+                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/20">
+                      <Bot className="h-4 w-4 text-white" />
                     </div>
-                    
-                    <div className="space-y-3">
-                      <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
-                        <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">LinkedIn Post</div>
-                        <p className="text-[13px] text-white/90 leading-relaxed font-serif mb-2">
-                          Your limits are just suggestions. 🏃‍♂️
-                        </p>
-                        <p className="text-[13px] text-white/80 leading-relaxed font-serif">
-                          Every breakthrough starts with a single step. At Nike, we don't just make products—we build the tools that help athletes push beyond what they thought possible.
-                        </p>
-                        <div className="mt-3 flex items-center gap-2">
-                          <span className="text-[9px] text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">Brand Match: 94%</span>
-                        </div>
+                    <div className="space-y-3 w-full">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-bold text-white">Felix Chen</span>
+                        <span className="text-[10px] text-white/40">• CMO at TechFlow</span>
                       </div>
-                      
-                      <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
-                        <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Instagram Caption</div>
-                        <p className="text-[13px] text-white/90 leading-relaxed font-serif">
-                          Just Do It. ✨
-                          <br /><br />
-                          Because greatness isn't found in comfort zones. It's built in the moments when you choose to push harder, run faster, jump higher.
-                          <br /><br />
-                          #JustDoIt #Nike
-                        </p>
-                      </div>
+                      <p className="text-[13px] text-white/90 leading-relaxed font-serif">
+                        Your calendar is killing your company. 💀
+                      </p>
+                      <p className="text-[13px] text-white/80 leading-relaxed font-serif">
+                        We analyzed 500+ startups.
+                        The #1 cause of stalled growth? <span className="bg-orange-500/10 text-orange-200 px-1 rounded font-medium">Meeting density.</span>
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -737,199 +497,155 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
           </div>
         </section>
 
-        {/* CONTENT EVOLVED SECTION */}
-        <section className="py-24 bg-[#030303] relative overflow-hidden">
-          {/* Grid Background */}
-          <div 
-            className="fixed inset-0 z-0 pointer-events-none"
-            style={{
-              backgroundSize: '40px 40px',
-              backgroundImage: 'linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px)',
-              maskImage: 'linear-gradient(to bottom, transparent, black 20%, black 80%, transparent)'
-            }}
-          ></div>
+        {/* WORKFLOW DIAGRAM */}
+        <section className="py-6 bg-[#050505] relative overflow-hidden">
+            <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
+            <div className="mx-auto max-w-[1200px] px-6 relative z-10">
+                <div className="relative w-full h-[600px] rounded-3xl bg-[#030303]/80 border border-white/5 p-8 overflow-hidden backdrop-blur-sm shadow-2xl">
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/5 via-[#000000] to-[#000000] opacity-50"></div>
+                    
+                    {/* Nodes Container */}
+                    <div className="relative w-full h-full text-white/80 text-[10px] font-mono tracking-wide">
+                        
+                        {/* SVG Connectors - Calculated approx positions */}
+                        <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-40">
+                            {/* Main trunk */}
+                            <path d="M100 300 L200 300" stroke="white" strokeWidth="1" />
+                            <path d="M250 300 L350 300" stroke="white" strokeWidth="1" />
+                            <path d="M400 300 L480 300" stroke="white" strokeWidth="1" />
+                            
+                            {/* Split */}
+                            <path d="M530 300 C 560 300, 560 180, 620 180" stroke="white" strokeWidth="1" fill="none" />
+                            <path d="M530 300 C 560 300, 560 420, 620 420" stroke="white" strokeWidth="1" fill="none" />
 
-          <main className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            {/* Header */}
-            <div className="mb-20 flex flex-col items-center text-center">
-              <h1 className="text-4xl font-semibold tracking-tighter text-white sm:text-5xl md:text-6xl lg:text-7xl">
-                Content, evolved.
-              </h1>
-              <p className="mt-6 max-w-2xl text-lg text-white/70">
-                Transform raw ideas into multi-channel campaigns.<br className="hidden sm:block" />
-                A unified operating system for modern creators.
-              </p>
+                            {/* Top Branch Outputs */}
+                            <path d="M670 180 C 720 180, 720 100, 780 100" stroke="white" strokeWidth="1" fill="none" />
+                            <path d="M670 180 C 720 180, 720 180, 780 180" stroke="white" strokeWidth="1" fill="none" />
+                            <path d="M670 180 C 720 180, 720 260, 780 260" stroke="white" strokeWidth="1" fill="none" />
+
+                            {/* Bottom Branch Outputs */}
+                            <path d="M670 420 C 720 420, 720 360, 780 360" stroke="white" strokeWidth="1" fill="none" />
+                            <path d="M670 420 C 720 420, 720 440, 780 440" stroke="white" strokeWidth="1" fill="none" />
+                            <path d="M670 420 C 720 420, 720 520, 780 520" stroke="white" strokeWidth="1" fill="none" />
+
+                            {/* Final Convergence */}
+                            <path d="M830 100 C 900 100, 900 300, 950 300" stroke="white" strokeWidth="1" fill="none" opacity="0.5" />
+                            <path d="M830 260 C 880 260, 880 300, 950 300" stroke="white" strokeWidth="1" fill="none" opacity="0.5" />
+                            <path d="M830 360 C 880 360, 880 300, 950 300" stroke="white" strokeWidth="1" fill="none" opacity="0.5" />
+                            <path d="M830 520 C 900 520, 900 300, 950 300" stroke="white" strokeWidth="1" fill="none" opacity="0.5" />
+                        </svg>
+
+                        {/* Node 1: Footprint */}
+                        <div className="absolute top-[300px] left-[50px] -translate-y-1/2 flex flex-col items-center gap-3">
+                            <div className="w-14 h-14 rounded-xl bg-[#0A0A0A] border border-white/20 flex items-center justify-center relative shadow-[0_0_15px_rgba(255,255,255,0.05)]">
+                                <Footprints className="w-6 h-6 text-white" />
+                                <div className="absolute -inset-1 border border-white/5 rounded-xl pointer-events-none"></div>
+                            </div>
+                            <span>Digital Footprint</span>
+                        </div>
+
+                        {/* Node 2: Scoring */}
+                        <div className="absolute top-[300px] left-[225px] -translate-y-1/2 flex flex-col items-center gap-3">
+                            <div className="w-14 h-14 rounded-xl bg-[#0A0A0A] border border-dashed border-white/20 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                                <Cpu className="w-6 h-6 text-emerald-400" />
+                            </div>
+                            <div className="text-center">
+                                <span>Scoring AI</span>
+                                <div className="h-4 w-[1px] bg-white/10 mx-auto my-1"></div>
+                                <div className="text-[8px] text-white/40 leading-tight">ENGAGEMENT DATA<br/>COMPETITOR ANALYSIS</div>
+                            </div>
+                        </div>
+
+                        {/* Node 3: Code */}
+                        <div className="absolute top-[300px] left-[375px] -translate-y-1/2 flex flex-col items-center gap-3">
+                             <div className="w-14 h-14 rounded-xl bg-[#1a1a1a] border border-white/20 flex items-center justify-center">
+                                <Code2 className="w-6 h-6 text-white" />
+                            </div>
+                            <span>Code</span>
+                        </div>
+
+                        {/* Node 4: Quality Filter 1 */}
+                        <div className="absolute top-[300px] left-[505px] -translate-y-1/2 flex flex-col items-center gap-3">
+                             <div className="w-14 h-14 rounded-xl bg-[#111] border border-white/10 flex items-center justify-center">
+                                <Sliders className="w-6 h-6 text-white" />
+                            </div>
+                            <span>Quality Filter</span>
+                        </div>
+
+                        {/* Top Branch: Content AI */}
+                        <div className="absolute top-[180px] left-[645px] -translate-y-1/2 flex flex-col items-center gap-3">
+                             <div className="w-14 h-14 rounded-xl bg-[#0A0A0A] border border-dashed border-blue-500/30 flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.15)]">
+                                <BrainCircuit className="w-6 h-6 text-blue-400" />
+                            </div>
+                            <span>Content AI</span>
+                        </div>
+
+                        {/* Bottom Branch: Quality Filter 2 */}
+                        <div className="absolute top-[420px] left-[645px] -translate-y-1/2 flex flex-col items-center gap-3">
+                             <div className="w-14 h-14 rounded-xl bg-[#111] border border-white/10 flex items-center justify-center">
+                                <Sliders className="w-6 h-6 text-white" />
+                            </div>
+                            <span>Quality Filter 2</span>
+                        </div>
+
+                        {/* Leaf Nodes Top */}
+                        <div className="absolute top-[100px] left-[805px] -translate-y-1/2 flex flex-col items-center gap-1 group">
+                             <div className="w-12 h-12 rounded-lg bg-[#0A0A0A] border border-white/10 flex items-center justify-center hover:bg-white/5 transition-colors">
+                                <Twitter className="w-5 h-5 text-white" />
+                            </div>
+                        </div>
+                         <div className="absolute top-[180px] left-[805px] -translate-y-1/2 flex flex-col items-center gap-1 group">
+                             <div className="text-[8px] text-white/40 mb-1">X Post</div>
+                             <div className="w-12 h-12 rounded-lg bg-[#0A0A0A] border border-white/10 flex items-center justify-center hover:bg-white/5 transition-colors">
+                                <FileText className="w-5 h-5 text-white" />
+                            </div>
+                        </div>
+                         <div className="absolute top-[260px] left-[805px] -translate-y-1/2 flex flex-col items-center gap-1 group">
+                             <div className="text-[8px] text-white/40 mb-1">Store</div>
+                             <div className="w-12 h-12 rounded-lg bg-[#0A0A0A] border border-white/10 flex items-center justify-center hover:bg-white/5 transition-colors">
+                                <Linkedin className="w-5 h-5 text-white" />
+                            </div>
+                             <span className="text-[8px]">LinkedIn</span>
+                        </div>
+
+                        {/* Leaf Nodes Bottom */}
+                        <div className="absolute top-[360px] left-[805px] -translate-y-1/2 flex flex-col items-center gap-1 group">
+                             <div className="w-12 h-12 rounded-lg bg-[#0A0A0A] border border-white/10 flex items-center justify-center hover:bg-white/5 transition-colors">
+                                <FileText className="w-5 h-5 text-white" />
+                            </div>
+                        </div>
+                        <div className="absolute top-[440px] left-[805px] -translate-y-1/2 flex flex-col items-center gap-1 group">
+                             <div className="text-[8px] text-white/40 mb-1">Store</div>
+                             <div className="w-12 h-12 rounded-lg bg-[#0A0A0A] border border-white/10 flex items-center justify-center hover:bg-white/5 transition-colors">
+                                <FileCheck className="w-5 h-5 text-white" />
+                            </div>
+                        </div>
+                        <div className="absolute top-[520px] left-[805px] -translate-y-1/2 flex flex-col items-center gap-1 group">
+                             <div className="text-[8px] text-white/40 mb-1">Review</div>
+                             <div className="w-12 h-12 rounded-lg bg-[#0A0A0A] border border-white/10 flex items-center justify-center hover:bg-white/5 transition-colors">
+                                <Archive className="w-5 h-5 text-white" />
+                            </div>
+                            <span className="text-[8px]">Archive</span>
+                        </div>
+
+                        {/* Final Output */}
+                        <div className="absolute top-[300px] left-[980px] -translate-y-1/2 flex flex-col items-center gap-4">
+                            <div className="relative">
+                                {/* Ripple effect */}
+                                <div className="absolute inset-0 rounded-full border border-white/10 animate-ping opacity-20 duration-[3s]"></div>
+                                <div className="absolute -inset-4 rounded-full border border-white/5"></div>
+                                <div className="absolute -inset-8 rounded-full border border-white/5"></div>
+                                
+                                <div className="w-20 h-20 rounded-full bg-[#111] border border-white/20 flex items-center justify-center z-10 relative">
+                                    <Globe className="w-8 h-8 text-white font-thin" strokeWidth={1} />
+                                </div>
+                            </div>
+                            <span>Final Content Output</span>
+                        </div>
+
+                    </div>
+                </div>
             </div>
-
-            {/* Bento Grid */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:grid-rows-2 h-auto md:h-[600px]">
-              {/* Card 1: Thread Composer (Large Vertical) */}
-              <div className="group relative row-span-2 flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/40 backdrop-blur-xl transition-all hover:bg-zinc-900/60">
-                <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"></div>
-                
-                {/* Content UI Mockup */}
-                <div className="relative flex-1 overflow-hidden p-6">
-                  <div className="flex flex-col space-y-4">
-                    <div className="flex items-start gap-3 opacity-60">
-                      <div className="h-6 w-6 rounded-full bg-zinc-700 flex-shrink-0"></div>
-                      <div className="space-y-2 w-full">
-                        <div className="h-2 w-1/3 rounded bg-zinc-700"></div>
-                        <div className="h-16 w-full rounded-lg bg-zinc-800/50 border border-white/5 p-3">
-                          <div className="h-2 w-3/4 rounded bg-zinc-700 mb-2"></div>
-                          <div className="h-2 w-1/2 rounded bg-zinc-700"></div>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Active Message */}
-                    <div className="flex items-start gap-3 transition-transform duration-500 group-hover:-translate-y-1">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex-shrink-0">
-                        <SparklesIcon className="h-3 w-3" />
-                      </div>
-                      <div className="w-full space-y-3">
-                        <div className="relative overflow-hidden rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4 shadow-inner">
-                          <p className="text-xs leading-relaxed text-indigo-100/90 font-mono">
-                            Generating thread structure...<br />
-                            <span className="text-indigo-400">1. Hook:</span> The hidden cost of latency.<br />
-                            <span className="text-indigo-400">2. Body:</span> Why milliseconds matter.<br />
-                            <span className="text-indigo-400">3. CTA:</span> Download the benchmark report.
-                          </p>
-                          <div className="mt-2 h-3 w-1 bg-indigo-500 animate-pulse"></div>
-                        </div>
-                        <div className="flex gap-2">
-                          <div className="h-6 w-16 rounded-full bg-white/5 border border-white/5"></div>
-                          <div className="h-6 w-12 rounded-full bg-white/5 border border-white/5"></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="relative p-6 border-t border-white/5 bg-white/[0.01]">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MessageSquareText className="h-4 w-4 text-indigo-400" />
-                    <h3 className="text-sm font-medium text-white">Thread Composer</h3>
-                  </div>
-                  <p className="text-xs text-zinc-500">Auto-convert blogs into viral threads.</p>
-                </div>
-              </div>
-
-              {/* Card 2: Analytics (Wide Top) */}
-              <div className="group relative col-span-1 md:col-span-2 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/40 backdrop-blur-xl transition-all hover:bg-zinc-900/60">
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"></div>
-                
-                <div className="flex h-full flex-col sm:flex-row">
-                  <div className="flex flex-col justify-between p-6 sm:w-1/2 z-10">
-                    <div>
-                      <div className="mb-3 inline-flex items-center rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[10px] font-medium text-emerald-400">
-                        +124% Growth
-                      </div>
-                      <h3 className="text-lg font-medium tracking-tight text-white">Predictive Analytics</h3>
-                      <p className="mt-2 text-sm text-zinc-500">
-                        Forecast engagement before you hit publish. Our models train on millions of data points.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="relative min-h-[160px] flex-1 overflow-hidden sm:w-1/2">
-                    <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between px-6 pb-6 pt-12 gap-2 h-full">
-                      <div className="w-full bg-emerald-500/10 rounded-t-sm h-[30%] group-hover:h-[45%] transition-all duration-700 ease-out border-t border-x border-emerald-500/20"></div>
-                      <div className="w-full bg-emerald-500/10 rounded-t-sm h-[50%] group-hover:h-[65%] transition-all duration-700 delay-75 ease-out border-t border-x border-emerald-500/20"></div>
-                      <div className="w-full bg-emerald-500/10 rounded-t-sm h-[40%] group-hover:h-[50%] transition-all duration-700 delay-100 ease-out border-t border-x border-emerald-500/20"></div>
-                      <div className="w-full bg-emerald-500/10 rounded-t-sm h-[70%] group-hover:h-[85%] transition-all duration-700 delay-150 ease-out border-t border-x border-emerald-500/20 relative">
-                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-zinc-800 text-[10px] text-white py-1 px-2 rounded border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity delay-300">
-                          2.4k
-                        </div>
-                      </div>
-                      <div className="w-full bg-emerald-500/10 rounded-t-sm h-[60%] group-hover:h-[75%] transition-all duration-700 delay-200 ease-out border-t border-x border-emerald-500/20"></div>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-transparent to-transparent"></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 3: Auto-Shorts (Small) */}
-              <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/40 backdrop-blur-xl transition-all hover:bg-zinc-900/60">
-                <div className="absolute inset-0 bg-gradient-to-b from-rose-500/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"></div>
-                <div className="relative h-32 w-full overflow-hidden border-b border-white/5 bg-black/20">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="h-16 w-32 rounded-lg bg-zinc-800/50 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-500">
-                      <div className="absolute inset-0 bg-gradient-to-tr from-rose-500/10 to-blue-500/10"></div>
-                      <div className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-lg group-hover:bg-white/20 transition-colors">
-                        <Play className="h-3 w-3 text-white ml-0.5 fill-white" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="absolute bottom-3 left-4 right-4 h-1 rounded-full bg-white/10 overflow-hidden">
-                    <div className="h-full w-1/3 bg-rose-500 rounded-full"></div>
-                  </div>
-                </div>
-                <div className="p-5">
-                  <h3 className="text-sm font-medium text-white">Auto-Shorts</h3>
-                  <p className="mt-1 text-xs text-zinc-500">Long-form to viral clips in seconds.</p>
-                </div>
-              </div>
-
-              {/* Card 4: Voice Synthesis (Small) */}
-              <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/40 backdrop-blur-xl transition-all hover:bg-zinc-900/60">
-                <div className="absolute inset-0 bg-gradient-to-b from-orange-500/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"></div>
-                <div className="relative h-32 w-full flex items-center justify-center gap-1 border-b border-white/5 bg-black/20 px-8">
-                  <div className="h-4 w-1 bg-orange-500/40 rounded-full animate-[pulse_1s_ease-in-out_infinite]"></div>
-                  <div className="h-8 w-1 bg-orange-500/60 rounded-full animate-[pulse_1.2s_ease-in-out_infinite]"></div>
-                  <div className="h-12 w-1 bg-orange-500/80 rounded-full animate-[pulse_0.8s_ease-in-out_infinite]"></div>
-                  <div className="h-6 w-1 bg-orange-500/60 rounded-full animate-[pulse_1.5s_ease-in-out_infinite]"></div>
-                  <div className="h-10 w-1 bg-orange-500/50 rounded-full animate-[pulse_1.1s_ease-in-out_infinite]"></div>
-                  <div className="h-4 w-1 bg-orange-500/30 rounded-full animate-[pulse_0.9s_ease-in-out_infinite]"></div>
-                </div>
-                <div className="p-5">
-                  <h3 className="text-sm font-medium text-white">Voice Synthesis</h3>
-                  <p className="mt-1 text-xs text-zinc-500">Ultra-realistic AI voiceovers.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Feature Bar */}
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Integration Marquee */}
-              <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/40 p-6 backdrop-blur-xl">
-                <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">Native Integrations</h3>
-                <div className="relative w-full overflow-hidden" style={{ maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' }}>
-                  <div className="flex w-[200%] gap-8 animate-scroll-left">
-                    <div className="flex items-center gap-8 text-zinc-400">
-                      <Github className="h-5 w-5" />
-                      <MessageCircle className="h-5 w-5" />
-                      <Twitter className="h-5 w-5" />
-                      <ImageIcon className="h-5 w-5" />
-                      <Video className="h-5 w-5" />
-                      <Linkedin className="h-5 w-5" />
-                    </div>
-                    <div className="flex items-center gap-8 text-zinc-400">
-                      <Github className="h-5 w-5" />
-                      <MessageCircle className="h-5 w-5" />
-                      <Twitter className="h-5 w-5" />
-                      <ImageIcon className="h-5 w-5" />
-                      <Video className="h-5 w-5" />
-                      <Linkedin className="h-5 w-5" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Call to Action */}
-              <div className="group relative flex items-center justify-between overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 backdrop-blur-xl">
-                <div className="relative z-10">
-                  <h3 className="text-lg font-medium text-white">Start Building</h3>
-                  <p className="text-xs text-zinc-400 mt-1">14-day free trial. No credit card required.</p>
-                </div>
-                <div className="relative z-10">
-                  <button 
-                    onClick={() => onNavigate(ViewState.LOGIN)}
-                    className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-105 active:scale-95"
-                  >
-                    Get Started
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </main>
         </section>
 
 
@@ -1045,127 +761,99 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
         <section id="streams" className="py-6 bg-[#050505]">
            <div className="mx-auto max-w-7xl px-6">
                <div className="mb-10">
-                   <h2 className="text-3xl font-medium tracking-tight text-white mb-4">Exactly What You'll Get Each Month</h2>
+                   <h2 className="text-3xl font-medium tracking-tight text-white mb-4">Exactly What You’ll Get Each Month</h2>
                    <div className="h-1 w-20 bg-orange-500 rounded-full"></div>
                </div>
                
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                    
                    {/* Card 1: Text Posts */}
-                   <div className="rounded-2xl p-8 bg-gradient-to-br from-cyan-900/30 to-teal-900/20 border border-cyan-500/30 hover:border-cyan-500/50 transition-all hover:-translate-y-1 group relative overflow-hidden h-[300px] flex flex-col">
-                       <div className="absolute inset-0 opacity-20">
-                           <div className="absolute right-[-40px] top-[-40px] w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
-                       </div>
-                       <div className="absolute right-[-20px] top-[-20px] w-32 h-32 opacity-30">
-                           <div className="w-full h-full bg-gradient-to-br from-cyan-500/20 to-transparent rounded-2xl rotate-12"></div>
-                       </div>
+                   <div className="rounded-3xl p-8 bg-gradient-to-br from-cyan-900/20 to-blue-900/10 border border-cyan-500/20 hover:border-cyan-500/40 transition-all hover:-translate-y-1 group relative overflow-hidden h-[320px] flex flex-col">
+                       <div className="absolute inset-0 bg-noise opacity-10"></div>
+                       <img src="https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=600&q=80" className="absolute right-[-20px] top-[-20px] w-40 h-40 object-cover rounded-2xl rotate-12 opacity-40 group-hover:opacity-60 transition-opacity" alt="Social" />
                        
                        <div className="mt-auto relative z-10">
-                           <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4">
-                               <FileText className="w-6 h-6 text-white" />
+                           <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400 mb-4">
+                               <FileText className="w-6 h-6" />
                            </div>
                            <h3 className="text-2xl font-bold text-white mb-2">Text Posts</h3>
-                           <div className="inline-block px-3 py-1 rounded-full bg-white/10 text-[11px] text-white/70 mb-3 border border-white/10">All Tiers</div>
-                           <p className="text-sm text-white/70 leading-relaxed">Threads, captions, newsletters, and short-form posts optimized for engagement.</p>
+                           <div className="inline-block px-2 py-0.5 rounded bg-white/10 text-[10px] text-white/60 mb-3 border border-white/5">All Tiers</div>
+                           <p className="text-sm text-white/60 leading-relaxed">Threads, captions, newsletters, and short-form posts optimized for engagement.</p>
                        </div>
                    </div>
 
                    {/* Card 2: Articles */}
-                   <div className="rounded-2xl p-8 bg-gradient-to-br from-emerald-900/30 to-green-900/20 border border-emerald-500/30 hover:border-emerald-500/50 transition-all hover:-translate-y-1 group relative overflow-hidden h-[300px] flex flex-col">
-                       <div className="absolute inset-0 opacity-20">
-                           <div className="absolute right-[-40px] top-[-40px] w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
-                       </div>
-                       <div className="absolute right-[-20px] top-[-20px] w-32 h-32 opacity-30">
-                           <div className="w-full h-full bg-gradient-to-br from-emerald-500/20 to-transparent rounded-2xl rotate-12"></div>
-                       </div>
+                   <div className="rounded-3xl p-8 bg-gradient-to-br from-emerald-900/20 to-green-900/10 border border-emerald-500/20 hover:border-emerald-500/40 transition-all hover:-translate-y-1 group relative overflow-hidden h-[320px] flex flex-col">
+                       <div className="absolute inset-0 bg-noise opacity-10"></div>
+                       <img src="https://images.unsplash.com/photo-1499750310159-5418f31b1936?auto=format&fit=crop&w=600&q=80" className="absolute right-[-20px] top-[-20px] w-40 h-40 object-cover rounded-2xl rotate-12 opacity-40 group-hover:opacity-60 transition-opacity" alt="Article" />
                        
                        <div className="mt-auto relative z-10">
-                           <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4">
-                               <FileCheck className="w-6 h-6 text-white" />
+                           <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4">
+                               <FileCheck className="w-6 h-6" />
                            </div>
                            <h3 className="text-2xl font-bold text-white mb-2">Articles</h3>
-                           <div className="inline-block px-3 py-1 rounded-full bg-white/10 text-[11px] text-white/70 mb-3 border border-white/10">Pro & Premium</div>
-                           <p className="text-sm text-white/70 leading-relaxed">Blogs, op-eds, and PR-ready long-form content SEO-tuned for your niche.</p>
+                           <div className="inline-block px-2 py-0.5 rounded bg-white/10 text-[10px] text-white/60 mb-3 border border-white/5">Pro & Premium</div>
+                           <p className="text-sm text-white/60 leading-relaxed">Blogs, op-eds, and PR-ready long-form content SEO-tuned for your niche.</p>
                        </div>
                    </div>
 
                    {/* Card 3: Short Videos */}
-                   <div className="rounded-2xl p-8 bg-gradient-to-br from-purple-900/30 to-fuchsia-900/20 border border-purple-500/30 hover:border-purple-500/50 transition-all hover:-translate-y-1 group relative overflow-hidden h-[300px] flex flex-col">
-                       <div className="absolute inset-0 opacity-20">
-                           <div className="absolute right-[-40px] top-[-40px] w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
-                       </div>
-                       <div className="absolute right-[-20px] top-[-20px] w-32 h-32 opacity-30">
-                           <div className="w-full h-full bg-gradient-to-br from-purple-500/20 to-transparent rounded-2xl rotate-12 flex items-center justify-center">
-                               <Play className="w-8 h-8 text-white/20" />
-                           </div>
-                       </div>
+                   <div className="rounded-3xl p-8 bg-gradient-to-br from-purple-900/20 to-fuchsia-900/10 border border-purple-500/20 hover:border-purple-500/40 transition-all hover:-translate-y-1 group relative overflow-hidden h-[320px] flex flex-col">
+                       <div className="absolute inset-0 bg-noise opacity-10"></div>
+                       <img src="https://images.unsplash.com/photo-1611162616475-46b635cb6868?auto=format&fit=crop&w=600&q=80" className="absolute right-[-20px] top-[-20px] w-40 h-40 object-cover rounded-2xl rotate-12 opacity-40 group-hover:opacity-60 transition-opacity" alt="Shorts" />
                        
                        <div className="mt-auto relative z-10">
-                           <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4">
-                               <Video className="w-6 h-6 text-white" />
+                           <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 mb-4">
+                               <Video className="w-6 h-6" />
                            </div>
                            <h3 className="text-2xl font-bold text-white mb-2">Short Videos</h3>
-                           <div className="inline-block px-3 py-1 rounded-full bg-white/10 text-[11px] text-white/70 mb-3 border border-white/10">Premium</div>
-                           <p className="text-sm text-white/70 leading-relaxed">15s-30s reels, promos, and social shorts generated from your text content.</p>
+                           <div className="inline-block px-2 py-0.5 rounded bg-white/10 text-[10px] text-white/60 mb-3 border border-white/5">Premium</div>
+                           <p className="text-sm text-white/60 leading-relaxed">15s–30s reels, promos, and social shorts generated from your text content.</p>
                        </div>
                    </div>
 
                    {/* Card 4: Explainer Videos */}
-                   <div className="rounded-2xl p-8 bg-gradient-to-br from-orange-900/30 to-amber-900/20 border border-orange-500/30 hover:border-orange-500/50 transition-all hover:-translate-y-1 group relative overflow-hidden h-[300px] flex flex-col">
-                       <div className="absolute inset-0 opacity-20">
-                           <div className="absolute right-[-40px] top-[-40px] w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
-                       </div>
-                       <div className="absolute right-[-20px] top-[-20px] w-32 h-32 opacity-30">
-                           <div className="w-full h-full bg-gradient-to-br from-orange-500/20 to-transparent rounded-2xl rotate-12"></div>
-                       </div>
+                   <div className="rounded-3xl p-8 bg-gradient-to-br from-orange-900/20 to-red-900/10 border border-orange-500/20 hover:border-orange-500/40 transition-all hover:-translate-y-1 group relative overflow-hidden h-[320px] flex flex-col">
+                       <div className="absolute inset-0 bg-noise opacity-10"></div>
+                       <img src="https://images.unsplash.com/photo-1536240478700-b869070f9279?auto=format&fit=crop&w=600&q=80" className="absolute right-[-20px] top-[-20px] w-40 h-40 object-cover rounded-2xl rotate-12 opacity-40 group-hover:opacity-60 transition-opacity" alt="Explainer" />
                        
                        <div className="mt-auto relative z-10">
-                           <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4">
-                               <Play className="w-6 h-6 text-white" />
+                           <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400 mb-4">
+                               <Play className="w-6 h-6" />
                            </div>
                            <h3 className="text-2xl font-bold text-white mb-2">Explainer Videos</h3>
-                           <div className="inline-block px-3 py-1 rounded-full bg-white/10 text-[11px] text-white/70 mb-3 border border-white/10">Premium</div>
-                           <p className="text-sm text-white/70 leading-relaxed">30s-3m deep-dive brand explainers and tutorials.</p>
+                           <div className="inline-block px-2 py-0.5 rounded bg-white/10 text-[10px] text-white/60 mb-3 border border-white/5">Premium</div>
+                           <p className="text-sm text-white/60 leading-relaxed">30s–3m deep-dive brand explainers and tutorials.</p>
                        </div>
                    </div>
 
                    {/* Card 5: Podcasts */}
-                   <div className="rounded-2xl p-8 bg-gradient-to-br from-pink-900/30 to-rose-900/20 border border-pink-500/30 hover:border-pink-500/50 transition-all hover:-translate-y-1 group relative overflow-hidden h-[300px] flex flex-col">
-                       <div className="absolute inset-0 opacity-20">
-                           <div className="absolute right-[-40px] top-[-40px] w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
-                       </div>
-                       <div className="absolute right-[-20px] top-[-20px] w-32 h-32 opacity-30">
-                           <div className="w-full h-full bg-gradient-to-br from-pink-500/20 to-transparent rounded-2xl rotate-12"></div>
-                       </div>
+                   <div className="rounded-3xl p-8 bg-gradient-to-br from-pink-900/20 to-rose-900/10 border border-pink-500/20 hover:border-pink-500/40 transition-all hover:-translate-y-1 group relative overflow-hidden h-[320px] flex flex-col">
+                       <div className="absolute inset-0 bg-noise opacity-10"></div>
+                       <img src="https://images.unsplash.com/photo-1478737270239-2f02b77ac6d5?auto=format&fit=crop&w=600&q=80" className="absolute right-[-20px] top-[-20px] w-40 h-40 object-cover rounded-2xl rotate-12 opacity-40 group-hover:opacity-60 transition-opacity" alt="Podcast" />
                        
                        <div className="mt-auto relative z-10">
-                           <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4">
-                               <Mic2 className="w-6 h-6 text-white" />
+                           <div className="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center text-pink-400 mb-4">
+                               <Mic2 className="w-6 h-6" />
                            </div>
                            <h3 className="text-2xl font-bold text-white mb-2">Podcasts</h3>
-                           <div className="inline-block px-3 py-1 rounded-full bg-white/10 text-[11px] text-white/70 mb-3 border border-white/10">Premium</div>
-                           <p className="text-sm text-white/70 leading-relaxed">2-5 min narrative audio clips and mini-podcasts featuring AI voice clones.</p>
+                           <div className="inline-block px-2 py-0.5 rounded bg-white/10 text-[10px] text-white/60 mb-3 border border-white/5">Premium</div>
+                           <p className="text-sm text-white/60 leading-relaxed">2–5 min narrative audio clips and mini-podcasts featuring AI voice clones.</p>
                        </div>
                    </div>
 
                    {/* Card 6: Analytics */}
-                   <div className="rounded-2xl p-8 bg-gradient-to-br from-indigo-900/30 to-blue-900/20 border border-indigo-500/30 hover:border-indigo-500/50 transition-all hover:-translate-y-1 group relative overflow-hidden h-[300px] flex flex-col">
-                       <div className="absolute inset-0 opacity-20">
-                           <div className="absolute right-[-40px] top-[-40px] w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
-                       </div>
-                       <div className="absolute right-[-20px] top-[-20px] w-32 h-32 opacity-30">
-                           <div className="w-full h-full bg-gradient-to-br from-indigo-500/20 to-transparent rounded-2xl rotate-12 flex items-center justify-center">
-                               <BarChart3 className="w-8 h-8 text-white/20" />
-                           </div>
-                       </div>
+                   <div className="rounded-3xl p-8 bg-gradient-to-br from-indigo-900/20 to-slate-900/10 border border-indigo-500/20 hover:border-indigo-500/40 transition-all hover:-translate-y-1 group relative overflow-hidden h-[320px] flex flex-col">
+                       <div className="absolute inset-0 bg-noise opacity-10"></div>
+                       <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80" className="absolute right-[-20px] top-[-20px] w-40 h-40 object-cover rounded-2xl rotate-12 opacity-40 group-hover:opacity-60 transition-opacity" alt="Analytics" />
                        
                        <div className="mt-auto relative z-10">
-                           <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4">
-                               <BarChart3 className="w-6 h-6 text-white" />
+                           <div className="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 mb-4">
+                               <BarChart3 className="w-6 h-6" />
                            </div>
                            <h3 className="text-2xl font-bold text-white mb-2">Analytics</h3>
-                           <div className="inline-block px-3 py-1 rounded-full bg-white/10 text-[11px] text-white/70 mb-3 border border-white/10">Business+</div>
-                           <p className="text-sm text-white/70 leading-relaxed">Deep tone reports, content tracking, and schedule performance views.</p>
+                           <div className="inline-block px-2 py-0.5 rounded bg-white/10 text-[10px] text-white/60 mb-3 border border-white/5">Business+</div>
+                           <p className="text-sm text-white/60 leading-relaxed">Deep tone reports, content tracking, and schedule performance views.</p>
                        </div>
                    </div>
 
@@ -1207,7 +895,7 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
                  <div className="flex justify-center gap-4">
                      <button onClick={() => onNavigate(ViewState.INGESTION)} className="text-xs font-bold text-white border-b border-orange-500 pb-0.5 hover:text-orange-400 transition-colors">Scan My Brand</button>
                      <span className="text-white/20">•</span>
-                     <button onClick={() => onNavigate(ViewState.LOGIN)} className="text-xs font-bold text-white border-b border-white/20 pb-0.5 hover:text-white/80 transition-colors">Login</button>
+                     <button onClick={() => onNavigate(ViewState.SIGNIN)} className="text-xs font-bold text-white border-b border-white/20 pb-0.5 hover:text-white/80 transition-colors">Login</button>
                  </div>
             </div>
 
@@ -1242,11 +930,9 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
           <div className="col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <div className="h-6 w-6 flex items-center justify-center text-white">
-                <svg viewBox="0 0 100 100" className="w-full h-full text-white" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="50" cy="50" r="48" stroke="currentColor" strokeWidth="4" />
-                  <circle cx="50" cy="50" r="34" stroke="currentColor" strokeWidth="4" />
-                  <circle cx="50" cy="50" r="20" stroke="currentColor" strokeWidth="4" />
-                  <circle cx="50" cy="50" r="6" fill="currentColor" />
+                <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="48" stroke="currentColor" strokeWidth="12" />
+                    <circle cx="50" cy="50" r="20" fill="currentColor" />
                 </svg>
               </div>
               <span className="text-lg font-bold tracking-tight text-white">AIBC</span>
@@ -1255,187 +941,48 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
               Turning your digital footprint into a scalable content engine. Automated, authentic, and always on brand.
             </p>
             <div className="flex gap-3">
-              <a href="https://x.com/aibc" target="_blank" rel="noopener noreferrer" className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors"><Twitter className="h-3.5 w-3.5" strokeWidth={1.5} /></a>
-              <a href="https://github.com/aibc" target="_blank" rel="noopener noreferrer" className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors"><Github className="h-3.5 w-3.5" strokeWidth={1.5} /></a>
-              <a href="https://linkedin.com/company/aibc" target="_blank" rel="noopener noreferrer" className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors"><Linkedin className="h-3.5 w-3.5" strokeWidth={1.5} /></a>
+              <a href="#" className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors"><Twitter className="h-3.5 w-3.5" strokeWidth={1.5} /></a>
+              <a href="#" className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors"><Github className="h-3.5 w-3.5" strokeWidth={1.5} /></a>
+              <a href="#" className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors"><Linkedin className="h-3.5 w-3.5" strokeWidth={1.5} /></a>
             </div>
           </div>
           
           <div>
             <h4 className="font-bold text-white mb-4 text-xs uppercase tracking-wider">Product</h4>
             <ul className="space-y-3 text-white/40 text-xs font-medium">
-              <li><a href="#features" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-orange-400 transition-colors cursor-pointer">Features</a></li>
-              <li><button onClick={() => onNavigate(ViewState.DASHBOARD)} className="hover:text-orange-400 transition-colors text-left">Integrations</button></li>
-              <li><button onClick={() => onNavigate(ViewState.PRICING)} className="hover:text-orange-400 transition-colors text-left">Pricing</button></li>
+              <li><a href="#" className="hover:text-orange-400 transition-colors">Features</a></li>
+              <li><a href="#" className="hover:text-orange-400 transition-colors">Integrations</a></li>
+              <li><button onClick={() => onNavigate(ViewState.PRICING)} className="hover:text-orange-400 transition-colors">Pricing</button></li>
             </ul>
           </div>
 
           <div>
             <h4 className="font-bold text-white mb-4 text-xs uppercase tracking-wider">Resources</h4>
             <ul className="space-y-3 text-white/40 text-xs font-medium">
-              <li><a href="https://aibroadcasting.xyz" target="_blank" rel="noopener noreferrer" className="hover:text-orange-400 transition-colors">Community</a></li>
-              <li><button onClick={() => onNavigate(ViewState.HELPCENTER)} className="hover:text-orange-400 transition-colors text-left">Help Center</button></li>
-              <li><a href="https://docs.aibcmedia.com" target="_blank" rel="noopener noreferrer" className="hover:text-orange-400 transition-colors">API Docs</a></li>
+              <li><a href="#" className="hover:text-orange-400 transition-colors">Community</a></li>
+              <li><a href="#" className="hover:text-orange-400 transition-colors">Help Center</a></li>
+              <li><a href="#" className="hover:text-orange-400 transition-colors">API Docs</a></li>
             </ul>
           </div>
 
            <div>
             <h4 className="font-bold text-white mb-4 text-xs uppercase tracking-wider">Company</h4>
             <ul className="space-y-3 text-white/40 text-xs font-medium">
-              <li><a href="mailto:hello@aibcmedia.com" className="hover:text-orange-400 transition-colors">About</a></li>
-              <li><a href="mailto:careers@aibcmedia.com" className="hover:text-orange-400 transition-colors">Careers</a></li>
-              <li><a href="mailto:legal@aibcmedia.com" className="hover:text-orange-400 transition-colors">Legal</a></li>
+              <li><a href="#" className="hover:text-orange-400 transition-colors">About</a></li>
+              <li><a href="#" className="hover:text-orange-400 transition-colors">Careers</a></li>
+              <li><a href="#" className="hover:text-orange-400 transition-colors">Legal</a></li>
             </ul>
           </div>
         </div>
         <div className="mx-auto max-w-7xl px-6 pt-6 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] text-white/30 font-medium">
           <p>© 2024 AIBC Inc. All rights reserved.</p>
           <div className="flex gap-6">
-            <a href="mailto:legal@aibcmedia.com" className="hover:text-white transition-colors">Privacy Policy</a>
-            <a href="mailto:legal@aibcmedia.com" className="hover:text-white transition-colors">Terms of Service</a>
-            <button onClick={() => {}} className="hover:text-white transition-colors">Cookie Settings</button>
+            <a href="#" className="hover:text-white">Privacy Policy</a>
+            <a href="#" className="hover:text-white">Terms of Service</a>
+            <a href="#" className="hover:text-white">Cookie Settings</a>
           </div>
         </div>
       </footer>
-
-      {/* Sample Output Modal */}
-      {showSampleModal && (
-        <div 
-          className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowSampleModal(false);
-            }
-          }}
-          style={{ animation: 'fadeIn 0.3s ease-in' }}
-        >
-          <div className="relative bg-[#0A0A0A] rounded-2xl border border-white/10 shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-300">
-            {/* Close Button */}
-            <button
-              onClick={() => setShowSampleModal(false)}
-              className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            {/* Modal Content */}
-            <div className="p-8">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-medium tracking-tight text-white mb-2">Sample Output</h2>
-                <p className="text-white/50 text-base">Digital footprint scan results from <span className="text-orange-400 font-semibold">Nike.com</span></p>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-[#050505] overflow-hidden shadow-xl">
-                <div className="flex border-b border-white/10 bg-white/5 backdrop-blur">
-                  <div className="flex-1 px-5 py-3 text-[10px] font-bold text-white/40 border-r border-white/10 flex items-center justify-between">
-                    <span>INPUT: nike.com</span>
-                    <Globe className="h-3 w-3" strokeWidth={1.5} />
-                  </div>
-                  <div className="flex-1 px-5 py-3 text-[10px] font-bold text-orange-400 bg-orange-500/5 flex items-center justify-between">
-                    <span>OUTPUT: BRAND DNA & CONTENT</span>
-                    <span className="text-[9px] text-orange-300 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1"><Sparkles className="h-2.5 w-2.5" /> Analyzed</span>
-                  </div>
-                </div>
-                <div className="flex flex-col md:flex-row min-h-[400px]">
-                  {/* Brand DNA Output */}
-                  <div className="flex-1 p-6 border-r border-white/10 bg-[#050505]">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 mb-4">
-                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/20">
-                          <Bot className="h-4 w-4 text-white" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-white">Nike Brand DNA</div>
-                          <div className="text-[10px] text-white/40">Extracted from digital footprint</div>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-3">
-                        <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
-                          <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Brand Archetype</div>
-                          <p className="text-sm font-semibold text-white">The Hero</p>
-                        </div>
-                        
-                        <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
-                          <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Voice & Tone</div>
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            <span className="px-2 py-1 rounded bg-orange-500/10 text-orange-300 text-[10px] font-medium border border-orange-500/20">Empowering</span>
-                            <span className="px-2 py-1 rounded bg-orange-500/10 text-orange-300 text-[10px] font-medium border border-orange-500/20">Motivational</span>
-                            <span className="px-2 py-1 rounded bg-orange-500/10 text-orange-300 text-[10px] font-medium border border-orange-500/20">Bold</span>
-                          </div>
-                        </div>
-                        
-                        <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
-                          <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Core Pillars</div>
-                          <ul className="text-xs text-white/80 space-y-1 mt-2">
-                            <li>• Just Do It - Action-oriented messaging</li>
-                            <li>• Innovation & Performance</li>
-                            <li>• Athlete Empowerment</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Generated Content Output */}
-                  <div className="flex-1 p-6 bg-[#080808] relative overflow-hidden">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 mb-4">
-                        <div className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/10">
-                          <span className="text-[9px] text-white/40 font-bold">AIBC</span>
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-white">Generated Content</div>
-                          <div className="text-[10px] text-white/40">Brand-voice matched</div>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-3">
-                        <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
-                          <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">LinkedIn Post</div>
-                          <p className="text-[13px] text-white/90 leading-relaxed font-serif mb-2">
-                            Your limits are just suggestions. 🏃‍♂️
-                          </p>
-                          <p className="text-[13px] text-white/80 leading-relaxed font-serif">
-                            Every breakthrough starts with a single step. At Nike, we don't just make products—we build the tools that help athletes push beyond what they thought possible.
-                          </p>
-                          <div className="mt-3 flex items-center gap-2">
-                            <span className="text-[9px] text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">Brand Match: 94%</span>
-                          </div>
-                        </div>
-                        
-                        <div className="w-full rounded-xl bg-white/5 border border-white/5 p-4">
-                          <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Instagram Caption</div>
-                          <p className="text-[13px] text-white/90 leading-relaxed font-serif">
-                            Just Do It. ✨
-                            <br /><br />
-                            Because greatness isn't found in comfort zones. It's built in the moments when you choose to push harder, run faster, jump higher.
-                            <br /><br />
-                            #JustDoIt #Nike
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* CTA Button */}
-              <div className="mt-8 flex justify-center">
-                <button
-                  onClick={() => {
-                    setShowSampleModal(false);
-                    onNavigate(ViewState.LOGIN);
-                  }}
-                  className="px-8 py-3 rounded-full bg-white text-black font-bold text-sm hover:bg-gray-200 transition-colors flex items-center gap-2"
-                >
-                  Get Started <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

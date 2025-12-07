@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Loader2, Mail } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
-import { signIn, signInWithGoogle, forgotPassword, storeAuthToken, storeUser } from '../services/authClient';
-import { initializeGoogleSignIn, renderGoogleButton, isGoogleLoaded } from '../services/googleOAuth';
+import { signIn, signInWithGoogle, forgotPassword } from '../services/authClient';
+import { initializeGoogleSignIn, renderGoogleButton, isGoogleLoaded, getGoogleClientId } from '../services/googleOAuth';
 
 const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
   const [email, setEmail] = useState('');
@@ -13,12 +13,11 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
   const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
-  const [resetToken, setResetToken] = useState('');
   const googleButtonRef = useRef<HTMLDivElement>(null);
 
   // Initialize Google Sign-In
   useEffect(() => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const clientId = getGoogleClientId();
     
     if (!clientId) {
       console.warn('VITE_GOOGLE_CLIENT_ID not set - Google sign-in disabled');
@@ -34,53 +33,40 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
             setLoading(true);
             setError('');
             try {
-              // Send JWT token to backend for verification
               const result = await signInWithGoogle(credential);
-              if (result.success && result.user && result.token) {
-                storeAuthToken(result.token);
-                storeUser(result.user);
+              if (result.success) {
                 onNavigate(ViewState.DASHBOARD);
               } else {
                 setError(result.error || 'Failed to sign in with Google');
               }
             } catch (err: any) {
-              setError(err.message || 'Failed to sign in with Google. Please try email sign-in instead.');
+              setError(err.message || 'Google sign-in failed');
             } finally {
               setLoading(false);
             }
           },
-          (err: any) => {
-            console.error('Google Sign-In error:', err);
-            setError('Failed to initialize Google sign-in');
+          (error: string) => {
+            setError(error);
+            setLoading(false);
           }
         );
 
-        // Render button after initialization
+        // Render Google button after a short delay
         setTimeout(() => {
           if (googleButtonRef.current) {
-            renderGoogleButton(googleButtonRef.current.id, {
-              theme: 'outline',
-              size: 'large',
-              text: 'signin_with',
-              width: '100%',
-            });
+            renderGoogleButton(googleButtonRef.current.id);
           }
         }, 100);
       } else {
-        // Retry after a short delay
         setTimeout(checkGoogleLoaded, 100);
       }
     };
 
-    checkGoogleLoaded();
+    // Start checking after a short delay
+    setTimeout(checkGoogleLoaded, 500);
   }, []);
 
-  const handleGoogleSignIn = async () => {
-    // This is now handled by the Google button callback
-    setError('Please use the "Continue with Google" button above');
-  };
-
-  const handleEmailSignIn = async (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -92,17 +78,14 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
     }
 
     try {
-      // Use mock auth (Supabase will be added later)
       const result = await signIn(email, password);
-      if (result.success && result.user && result.token) {
-        storeAuthToken(result.token);
-        storeUser(result.user);
+      if (result.success) {
         onNavigate(ViewState.DASHBOARD);
       } else {
         setError(result.error || 'Invalid email or password');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in');
+      setError(err.message || 'Sign in failed');
     } finally {
       setLoading(false);
     }
@@ -121,20 +104,13 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
 
     try {
       const result = await forgotPassword(forgotPasswordEmail);
-      console.log('Password reset result:', result);
       if (result.success) {
         setForgotPasswordSent(true);
-        setError(''); // Clear any previous errors
-        // In development, show the token
-        if (result.resetToken) {
-          setResetToken(result.resetToken);
-        }
       } else {
-        setError(result.error || 'Failed to send reset email. Please try again.');
+        setError(result.error || 'Failed to send reset email');
       }
     } catch (err: any) {
-      console.error('Password reset error:', err);
-      setError(err.message || 'Failed to send reset email. Please try again.');
+      setError(err.message || 'Failed to send reset email');
     } finally {
       setForgotPasswordLoading(false);
     }
@@ -152,82 +128,77 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
           </button>
 
           <div className="w-full max-w-[400px]">
-            <div className="mb-8 flex items-center gap-3 justify-center">
+            <div className="mb-8 flex items-center gap-2 justify-center">
               <div className="h-8 w-8 flex items-center justify-center text-white">
-                <svg viewBox="0 0 100 100" className="w-full h-full text-white" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="50" cy="50" r="48" stroke="currentColor" strokeWidth="4" />
-                  <circle cx="50" cy="50" r="34" stroke="currentColor" strokeWidth="4" />
-                  <circle cx="50" cy="50" r="20" stroke="currentColor" strokeWidth="4" />
-                  <circle cx="50" cy="50" r="6" fill="currentColor" />
+                <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="50" cy="50" r="48" stroke="currentColor" strokeWidth="12" />
+                  <circle cx="50" cy="50" r="20" fill="currentColor" />
                 </svg>
               </div>
               <span className="text-xl font-bold tracking-tight text-white">AIBC</span>
             </div>
 
-            <h1 className="text-3xl font-serif font-medium tracking-tight text-center text-white mb-2">Reset your password</h1>
-            <p className="text-center text-white/50 mb-8 text-sm">Enter your email and we'll send you a reset link.</p>
-
-            {error && (
-              <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                {error}
-              </div>
-            )}
-
             {forgotPasswordSent ? (
-              <div className="space-y-4">
-                <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm">
-                  <p className="font-medium mb-2">Password reset email sent!</p>
-                  <p className="text-white/60">Check your email for instructions to reset your password.</p>
-                  {resetToken && (
-                    <div className="mt-4 p-3 rounded bg-white/5 border border-white/10">
-                      <p className="text-xs text-white/40 mb-2">Development Mode - Reset Token:</p>
-                      <code className="text-xs text-white/80 break-all">{resetToken}</code>
-                    </div>
-                  )}
+              <>
+                <h1 className="text-3xl font-serif font-medium tracking-tight text-center text-white mb-2">Reset your password</h1>
+                <p className="text-center text-white/50 mb-8 text-sm">Enter your email and we'll send you a reset link.</p>
+                
+                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-6">
+                  <p className="text-green-400 text-sm font-medium">Password reset email sent!</p>
+                  <p className="text-green-400/80 text-xs mt-1">Check your email for instructions to reset your password.</p>
                 </div>
+
                 <button
                   onClick={() => {
                     setShowForgotPassword(false);
                     setForgotPasswordSent(false);
-                    setResetToken('');
+                    setForgotPasswordEmail('');
                   }}
                   className="w-full rounded-lg bg-[#FF5E1E] py-3 text-sm font-semibold text-white shadow-lg shadow-orange-500/25 hover:bg-[#FF5E1E]/90 transition-all"
                 >
                   Back to Sign In
                 </button>
-              </div>
+              </>
             ) : (
-              <form onSubmit={handleForgotPassword} className="space-y-5">
-                <div>
-                  <label className="block text-xs font-medium text-white/70 mb-1.5 ml-1">Email</label>
-                  <input 
-                    type="email" 
-                    placeholder="jenny@example.com" 
-                    value={forgotPasswordEmail}
-                    onChange={(e) => setForgotPasswordEmail(e.target.value)}
-                    required
-                    className="w-full rounded-lg bg-[#0A0A0A] border border-white/10 px-4 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 transition-all" 
-                  />
-                </div>
+              <>
+                <h1 className="text-3xl font-serif font-medium tracking-tight text-center text-white mb-2">Reset your password</h1>
+                <p className="text-center text-white/50 mb-8 text-sm">Enter your email and we'll send you a reset link.</p>
 
-                <button 
-                  type="submit" 
-                  disabled={forgotPasswordLoading}
-                  className="w-full rounded-lg bg-[#FF5E1E] py-3 text-sm font-semibold text-white shadow-lg shadow-orange-500/25 hover:bg-[#FF5E1E]/90 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
-                >
-                  {forgotPasswordLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Mail className="w-4 h-4" />
-                      Send Reset Link
-                    </>
-                  )}
-                </button>
-              </form>
+                {error && (
+                  <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <form onSubmit={handleForgotPassword} className="space-y-5">
+                  <div>
+                    <label className="block text-xs font-medium text-white/70 mb-1.5 ml-1">Email</label>
+                    <input 
+                      type="email" 
+                      placeholder="jenny@example.com" 
+                      value={forgotPasswordEmail}
+                      onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                      required
+                      className="w-full rounded-lg bg-[#0A0A0A] border border-white/10 px-4 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 transition-all" 
+                    />
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    disabled={forgotPasswordLoading}
+                    className="w-full rounded-lg bg-[#FF5E1E] py-3 text-sm font-semibold text-white shadow-lg shadow-orange-500/25 hover:bg-[#FF5E1E]/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {forgotPasswordLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      'Send reset link'
+                    )}
+                  </button>
+                </form>
+              </>
             )}
           </div>
         </div>
@@ -247,11 +218,9 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
 
         <div className="mb-8 flex items-center gap-2">
           <div className="h-8 w-8 flex items-center justify-center text-white">
-            <svg viewBox="0 0 100 100" className="w-full h-full text-white" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="50" cy="50" r="48" stroke="currentColor" strokeWidth="4" />
-              <circle cx="50" cy="50" r="34" stroke="currentColor" strokeWidth="4" />
-              <circle cx="50" cy="50" r="20" stroke="currentColor" strokeWidth="4" />
-              <circle cx="50" cy="50" r="6" fill="currentColor" />
+            <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="50" cy="50" r="48" stroke="currentColor" strokeWidth="12" />
+              <circle cx="50" cy="50" r="20" fill="currentColor" />
             </svg>
           </div>
           <span className="text-xl font-bold tracking-tight text-white">AIBC</span>
@@ -259,55 +228,41 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
 
         <div className="w-full max-w-[400px]">
           <h1 className="text-3xl font-serif font-medium tracking-tight text-center text-white mb-2">Welcome back</h1>
-          <p className="text-center text-white/50 mb-8 text-sm">Sign in to your account to continue.</p>
+          <p className="text-center text-white/50 mb-8 text-sm">Sign in to your account</p>
 
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
               {error}
             </div>
           )}
 
-          {/* Google Sign-In Button Container */}
-          <div 
-            id="google-signin-button-signin" 
-            ref={googleButtonRef}
-            className="w-full mb-6"
-            style={{ minHeight: '40px' }}
-          >
-            {/* Fallback button if Google script doesn't load */}
-            {!isGoogleLoaded() && import.meta.env.VITE_GOOGLE_CLIENT_ID && (
-              <button 
-                onClick={handleGoogleSignIn}
-                disabled={loading || !import.meta.env.VITE_GOOGLE_CLIENT_ID}
-                className="w-full flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-white hover:bg-white/10 transition-all hover:border-white/20 group disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M23.52 12.29C23.52 11.43 23.44 10.61 23.3 9.82H12V14.45H18.45C18.17 15.93 17.32 17.18 16.05 18.03V21.01H19.92C22.18 18.93 23.52 15.86 23.52 12.29Z" fill="#4285F4"></path>
-                      <path d="M12 24C15.24 24 17.96 22.92 19.92 21.01L16.05 18.03C14.98 18.75 13.61 19.17 12 19.17C8.87 19.17 6.22 17.06 5.27 14.21H1.27V17.31C3.25 21.24 7.31 24 12 24Z" fill="#34A853"></path>
-                      <path d="M5.27 14.21C5.03 13.49 4.9 12.74 4.9 12C4.9 11.26 5.03 10.51 5.27 9.79V6.69H1.27C0.46 8.3 0 10.1 0 12C0 13.9 0.46 15.7 1.27 17.31L5.27 14.21Z" fill="#FBBC05"></path>
-                      <path d="M12 4.83C13.76 4.83 15.34 5.44 16.58 6.63L20.01 3.2C17.96 1.29 15.24 0 12 0C7.31 0 3.25 2.76 1.27 6.69L5.27 9.79C6.22 6.94 8.87 4.83 12 4.83Z" fill="#EA4335"></path>
-                    </svg>
-                    Continue with Google
-                  </>
-                )}
-              </button>
-            )}
+          {/* Google Sign-In Button */}
+          <div className="mb-4">
+            <div id="google-signin-button-signin" ref={googleButtonRef} className="w-full flex items-center justify-center min-h-[40px]">
+              {!isGoogleLoaded() && (
+                <button
+                  onClick={() => setError('Please configure VITE_GOOGLE_CLIENT_ID for Google sign-in')}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-white hover:bg-white/10 transition-all hover:border-white/20"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M23.52 12.29C23.52 11.43 23.44 10.61 23.3 9.82H12V14.45H18.45C18.17 15.93 17.32 17.18 16.05 18.03V21.01H19.92C22.18 18.93 23.52 15.86 23.52 12.29Z" fill="#4285F4"></path>
+                    <path d="M12 24C15.24 24 17.96 22.92 19.92 21.01L16.05 18.03C14.98 18.75 13.61 19.17 12 19.17C8.87 19.17 6.22 17.06 5.27 14.21H1.27V17.31C3.25 21.24 7.31 24 12 24Z" fill="#34A853"></path>
+                    <path d="M5.27 14.21C5.03 13.49 4.9 12.74 4.9 12C4.9 11.26 5.03 10.51 5.27 9.79V6.69H1.27C0.46 8.3 0 10.1 0 12C0 13.9 0.46 15.7 1.27 17.31L5.27 14.21Z" fill="#FBBC05"></path>
+                    <path d="M12 4.83C13.76 4.83 15.34 5.44 16.58 6.63L20.01 3.2C17.96 1.29 15.24 0 12 0C7.31 0 3.25 2.76 1.27 6.69L5.27 9.79C6.22 6.94 8.87 4.83 12 4.83Z" fill="#EA4335"></path>
+                  </svg>
+                  Continue with Google
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="relative my-6">
+          <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-white/10"></div>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-[#050505] px-2 text-white/40">Or</span>
-            </div>
           </div>
 
-          <form onSubmit={handleEmailSignIn} className="space-y-5">
+          <form onSubmit={handleSignIn} className="space-y-5">
             <div>
               <label className="block text-xs font-medium text-white/70 mb-1.5 ml-1">Email</label>
               <input 
@@ -324,7 +279,7 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
               <label className="block text-xs font-medium text-white/70 mb-1.5 ml-1">Password</label>
               <input 
                 type="password" 
-                placeholder="Enter your password" 
+                placeholder="••••••••" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -332,11 +287,11 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
               />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-end">
               <button
                 type="button"
                 onClick={() => setShowForgotPassword(true)}
-                className="text-xs text-orange-500 hover:text-orange-400 transition-colors"
+                className="text-xs text-orange-500 hover:text-orange-400 font-medium transition-colors"
               >
                 Forgot password?
               </button>
@@ -345,7 +300,7 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full rounded-lg bg-[#FF5E1E] py-3 text-sm font-semibold text-white shadow-lg shadow-orange-500/25 hover:bg-[#FF5E1E]/90 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+              className="w-full rounded-lg bg-[#FF5E1E] py-3 text-sm font-semibold text-white shadow-lg shadow-orange-500/25 hover:bg-[#FF5E1E]/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>

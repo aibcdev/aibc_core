@@ -1,281 +1,183 @@
-import { Router, Request, Response } from 'express';
-import { OAuth2Client } from 'google-auth-library';
+/**
+ * Authentication Routes
+ */
+
+import express from 'express';
 import {
+  verifyGoogleCredential,
+  getOrCreateGoogleUser,
   createUser,
-  signInWithEmail,
-  signInWithGoogle,
-  generatePasswordResetToken,
-  resetPassword,
-  getUserById,
-  verifyToken
+  verifyUser,
+  generateResetToken,
+  verifyResetToken,
+  resetUserPassword,
+  generateToken,
+  sendPasswordResetEmail,
 } from '../services/authService';
 
-const router = Router();
+const router = express.Router();
 
-// Initialize Google OAuth client
-let googleClient: OAuth2Client | null = null;
-if (process.env.GOOGLE_CLIENT_ID) {
-  googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-}
+/**
+ * POST /api/auth/google
+ * Sign in with Google
+ */
+router.post('/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
 
-// Sign up with email/password
-router.post('/signup', async (req: Request, res: Response) => {
+    if (!credential) {
+      return res.status(400).json({ error: 'Google credential required' });
+    }
+
+    // Verify Google credential
+    const googleUser = await verifyGoogleCredential(credential);
+
+    // Get or create user
+    const user = await getOrCreateGoogleUser(googleUser);
+
+    // Generate token
+    const token = generateToken(user);
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
+    });
+  } catch (error: any) {
+    console.error('Google auth error:', error);
+    res.status(401).json({ error: error.message || 'Google authentication failed' });
+  }
+});
+
+/**
+ * POST /api/auth/signup
+ * Sign up with email and password
+ */
+router.post('/signup', async (req, res) => {
   try {
     const { email, password, firstName, lastName } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email and password are required'
-      });
+      return res.status(400).json({ error: 'Email and password required' });
     }
 
-    if (password.length < 8) {
-      return res.status(400).json({
-        success: false,
-        error: 'Password must be at least 8 characters'
-      });
-    }
+    // Create user
+    const user = createUser(email, password, firstName, lastName);
 
-    const { user, token } = createUser(email, password, firstName, lastName);
-
-    // Remove sensitive data
-    const { passwordHash, resetPasswordToken, resetPasswordExpires, ...userResponse } = user;
+    // Generate token
+    const token = generateToken(user);
 
     res.json({
       success: true,
-      user: userResponse,
-      token
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
     });
   } catch (error: any) {
-    res.status(400).json({
-      success: false,
-      error: error.message || 'Failed to create account'
-    });
+    console.error('Signup error:', error);
+    res.status(400).json({ error: error.message || 'Signup failed' });
   }
 });
 
-// Sign in with email/password
-router.post('/signin', async (req: Request, res: Response) => {
+/**
+ * POST /api/auth/signin
+ * Sign in with email and password
+ */
+router.post('/signin', async (req, res) => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email and password are required'
-      });
+      return res.status(400).json({ error: 'Email and password required' });
     }
 
-    const { user, token } = signInWithEmail(email, password);
+    // Verify user
+    const user = verifyUser(email, password);
 
-    // Remove sensitive data
-    const { passwordHash, resetPasswordToken, resetPasswordExpires, ...userResponse } = user;
+    // Generate token
+    const token = generateToken(user);
 
     res.json({
       success: true,
-      user: userResponse,
-      token
-    });
-  } catch (error: any) {
-    res.status(401).json({
-      success: false,
-      error: error.message || 'Invalid credentials'
-    });
-  }
-});
-
-// Sign in with Google OAuth
-router.post('/google', async (req: Request, res: Response) => {
-  try {
-    const { credential, googleId, email, name, picture } = req.body;
-
-    let verifiedEmail: string;
-    let verifiedName: string | undefined;
-    let verifiedPicture: string | undefined;
-    let verifiedGoogleId: string;
-
-    // If credential (JWT token) is provided, verify it
-    if (credential && googleClient) {
-      try {
-        const ticket = await googleClient.verifyIdToken({
-          idToken: credential,
-          audience: process.env.GOOGLE_CLIENT_ID,
-        });
-
-        const payload = ticket.getPayload();
-        if (!payload) {
-          return res.status(400).json({
-            success: false,
-            error: 'Invalid Google token'
-          });
-        }
-
-        verifiedGoogleId = payload.sub;
-        verifiedEmail = payload.email || '';
-        verifiedName = payload.name;
-        verifiedPicture = payload.picture;
-
-        if (!verifiedEmail) {
-          return res.status(400).json({
-            success: false,
-            error: 'Email not provided by Google'
-          });
-        }
-      } catch (verifyError: any) {
-        console.error('Google token verification failed:', verifyError.message);
-        return res.status(401).json({
-          success: false,
-          error: 'Invalid Google token'
-        });
-      }
-    } else if (googleId && email) {
-      // Legacy mode: trust client-provided data (fallback)
-      verifiedGoogleId = googleId;
-      verifiedEmail = email;
-      verifiedName = name;
-      verifiedPicture = picture;
-    } else {
-      return res.status(400).json({
-        success: false,
-        error: 'Either credential (JWT) or googleId and email are required'
-      });
-    }
-
-    // Create or get user with verified Google data
-    const { user, token, isNewUser } = signInWithGoogle(
-      verifiedGoogleId,
-      verifiedEmail,
-      verifiedName,
-      verifiedPicture
-    );
-
-    // Remove sensitive data
-    const { passwordHash, resetPasswordToken, resetPasswordExpires, ...userResponse } = user;
-
-    res.json({
-      success: true,
-      user: userResponse,
       token,
-      isNewUser
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
     });
   } catch (error: any) {
-    console.error('Google sign-in error:', error);
-    res.status(400).json({
-      success: false,
-      error: error.message || 'Failed to sign in with Google'
-    });
+    console.error('Signin error:', error);
+    res.status(401).json({ error: error.message || 'Invalid email or password' });
   }
 });
 
-// Request password reset
-router.post('/forgot-password', async (req: Request, res: Response) => {
+/**
+ * POST /api/auth/forgot-password
+ * Request password reset
+ */
+router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
 
     if (!email) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email is required'
-      });
+      return res.status(400).json({ error: 'Email required' });
     }
 
     // Generate reset token
-    const resetToken = generatePasswordResetToken(email);
+    const token = generateResetToken(email);
 
-    // In production, send email with reset link
-    // For now, return token (remove in production!)
-    console.log(`Password reset token for ${email}: ${resetToken}`);
+    // Send reset email
+    await sendPasswordResetEmail(email, token);
 
     res.json({
       success: true,
       message: 'Password reset email sent',
-      // Remove this in production - only for development
-      resetToken: process.env.NODE_ENV === 'development' ? resetToken : undefined
+      resetToken: process.env.NODE_ENV === 'development' ? token : undefined, // Only in dev
     });
   } catch (error: any) {
-    // Don't reveal if email exists or not (security best practice)
+    console.error('Forgot password error:', error);
+    // Don't reveal if email exists
     res.json({
       success: true,
-      message: 'If an account exists, a password reset email has been sent'
+      message: 'If that email exists, a password reset link has been sent',
     });
   }
 });
 
-// Reset password with token
-router.post('/reset-password', async (req: Request, res: Response) => {
+/**
+ * POST /api/auth/reset-password
+ * Reset password with token
+ */
+router.post('/reset-password', async (req, res) => {
   try {
     const { token, newPassword } = req.body;
 
     if (!token || !newPassword) {
-      return res.status(400).json({
-        success: false,
-        error: 'Token and new password are required'
-      });
+      return res.status(400).json({ error: 'Token and new password required' });
     }
 
-    if (newPassword.length < 8) {
-      return res.status(400).json({
-        success: false,
-        error: 'Password must be at least 8 characters'
-      });
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
-    resetPassword(token, newPassword);
+    // Reset password
+    resetUserPassword(token, newPassword);
 
     res.json({
       success: true,
-      message: 'Password reset successfully'
+      message: 'Password reset successfully',
     });
   } catch (error: any) {
-    res.status(400).json({
-      success: false,
-      error: error.message || 'Failed to reset password'
-    });
-  }
-});
-
-// Get current user (requires authentication)
-router.get('/me', async (req: Request, res: Response) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required'
-      });
-    }
-
-    const token = authHeader.substring(7);
-    const decoded = verifyToken(token);
-
-    if (!decoded) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid or expired token'
-      });
-    }
-
-    const user = getUserById(decoded.userId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
-    }
-
-    // Remove sensitive data
-    const { passwordHash, resetPasswordToken, resetPasswordExpires, ...userResponse } = user;
-
-    res.json({
-      success: true,
-      user: userResponse
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to get user'
-    });
+    console.error('Reset password error:', error);
+    res.status(400).json({ error: error.message || 'Failed to reset password' });
   }
 });
 

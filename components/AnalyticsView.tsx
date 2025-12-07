@@ -1,295 +1,228 @@
-import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Eye, Calendar, Tag, Users, RefreshCw, ChevronDown } from 'lucide-react';
-import { getDashboardAnalytics } from '../services/analyticsClient';
-
-interface VisibilityDataPoint {
-  date: string;
-  score: number;
-}
-
-interface CompetitorRanking {
-  rank: number;
-  brand: string;
-  brandUrl?: string;
-  mentions: number;
-  position: number;
-  change: number;
-  visibility: number;
-  logo?: string;
-  isYou?: boolean;
-}
+import React, { useState } from 'react';
+import { TrendingUp, TrendingDown, Search, Bell, Download, Filter } from 'lucide-react';
 
 const AnalyticsView: React.FC = () => {
-  const [dateRange, setDateRange] = useState('Last 7 days');
-  const [platform, setPlatform] = useState('All Platforms');
-  const [topic, setTopic] = useState('All Topics');
-  const [analyticsData, setAnalyticsData] = useState<any>(null);
-  const [visibilityScore, setVisibilityScore] = useState(72.5);
-  const [visibilityChange, setVisibilityChange] = useState(2.5);
-  const [visibilityTrend, setVisibilityTrend] = useState<VisibilityDataPoint[]>([
-    { date: 'Nov 30', score: 68.0 },
-    { date: 'Dec 1', score: 69.2 },
-    { date: 'Dec 2', score: 71.5 },
-    { date: 'Dec 3', score: 70.8 },
-    { date: 'Dec 4', score: 72.1 },
-    { date: 'Dec 5', score: 71.9 },
-    { date: 'Dec 6', score: 72.5 },
-  ]);
-  const [competitorRankings, setCompetitorRankings] = useState<CompetitorRanking[]>([
-    { rank: 1, brand: 'Lottie.org', mentions: 156, position: 1.8, change: 2.5, visibility: 72.5, isYou: true },
-    { rank: 2, brand: 'Birdie', mentions: 142, position: 2.1, change: -1.2, visibility: 68.3 },
-    { rank: 3, brand: 'KareHero', mentions: 128, position: 2.4, change: 0.8, visibility: 62.1 },
-    { rank: 4, brand: 'Mobilise', mentions: 115, position: 2.9, change: -2.3, visibility: 55.9 },
-    { rank: 5, brand: 'Carehome.co.uk', mentions: 98, position: 3.2, change: 1.1, visibility: 48.7 },
-  ]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadAnalytics = async () => {
-      setLoading(true);
-      try {
-        // Get competitors from scan results
-        const scanResults = localStorage.getItem('lastScanResults');
-        const scanData = scanResults ? JSON.parse(scanResults) : null;
-        const competitors = (scanData?.competitorIntelligence || []).map((c: any) => c.name || c.domain).filter(Boolean);
-        
-        const result = await getDashboardAnalytics(competitors, scanData?.brandDNA);
-        if (result.success && result.data) {
-          setAnalyticsData(result.data);
-          
-          // Update visibility score if available
-          if (result.data.visibilityScore) {
-            setVisibilityScore(result.data.visibilityScore.value || 72.5);
-            setVisibilityChange(result.data.visibilityScore.change || 2.5);
-            if (result.data.visibilityScore.trend) {
-              setVisibilityTrend(result.data.visibilityScore.trend);
-            }
-          }
-          
-          // Update competitor rankings if available
-          if (result.data.competitorRankings) {
-            setCompetitorRankings(result.data.competitorRankings);
-          }
-        }
-      } catch (error) {
-        console.error('Error loading analytics:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadAnalytics();
-  }, []);
-
-  // Generate dates for last 7 days
-  const getLast7Days = () => {
-    const days = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      days.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-    }
-    return days;
-  };
-
-  // Calculate graph points for visibility trend
-  const calculateGraphPoints = (data: VisibilityDataPoint[]) => {
-    const maxScore = 100;
-    const minScore = 0;
-    const height = 200;
-    
-    return data.map((point, index) => {
-      const x = (index / (data.length - 1)) * 100;
-      const y = height - ((point.score - minScore) / (maxScore - minScore)) * height;
-      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-    }).join(' ');
-  };
-
-  const getBrandInitials = (brand: string) => {
-    return brand
-      .split(/[.\s]+/)
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
-  };
+  const [dateRange] = useState('Last 30 Days');
 
   return (
-    <div className="w-full min-h-full bg-[#050505] p-6">
-      <div className="max-w-[1600px] mx-auto space-y-6">
-        {/* Filter Bar */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative">
-            <button className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg text-sm text-black hover:bg-gray-100 transition-colors">
-              <Calendar className="w-4 h-4" />
-              <span>{dateRange}</span>
-              <ChevronDown className="w-4 h-4" />
-            </button>
+    <div className="max-w-[1600px] mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <div className="text-sm text-white/40 mb-1">Dashboards / Market Overview</div>
+          <h1 className="text-3xl font-black tracking-tight text-white">Market Overview</h1>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#0A0A0A] border border-white/10 rounded-lg">
+            <span className="text-xs text-white/60">{dateRange}</span>
+            <span className="text-xs text-white/40">•</span>
+            <span className="text-xs text-white">Oct 14 - Nov 14</span>
           </div>
-          
-          <div className="relative">
-            <button className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg text-sm text-black hover:bg-gray-100 transition-colors">
-              <Eye className="w-4 h-4" />
-              <span>{platform}</span>
-              <ChevronDown className="w-4 h-4" />
-            </button>
+          <button className="p-2 hover:bg-white/5 rounded-lg transition-colors">
+            <Search className="w-5 h-5 text-white/60" />
+          </button>
+          <button className="p-2 hover:bg-white/5 rounded-lg transition-colors relative">
+            <Bell className="w-5 h-5 text-white/60" />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+          </button>
+        </div>
+      </div>
+
+      {/* Top Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Total Market Share */}
+        <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+          <div className="text-xs text-white/40 mb-2 uppercase tracking-wider">Total Market Share</div>
+          <div className="flex items-baseline gap-2 mb-3">
+            <span className="text-3xl font-bold text-white">32.8%</span>
+            <span className="text-sm font-bold text-green-400 flex items-center gap-1">
+              <TrendingUp className="w-4 h-4" />
+              +2.4%
+            </span>
           </div>
-          
-          <div className="relative">
-            <button className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg text-sm text-black hover:bg-gray-100 transition-colors">
-              <Tag className="w-4 h-4" />
-              <span>{topic}</span>
-              <ChevronDown className="w-4 h-4" />
-            </button>
+          <div className="h-2 bg-white/5 rounded-full overflow-hidden mb-2">
+            <div className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full" style={{ width: '32.8%' }}></div>
           </div>
-          
-          <div className="relative ml-auto">
-            <button className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg text-sm text-black hover:bg-gray-100 transition-colors">
-              <Users className="w-4 h-4" />
-              <span>Competitors</span>
-              <ChevronDown className="w-4 h-4" />
+          <div className="text-xs text-white/60">Ranked #2 in Industry</div>
+        </div>
+
+        {/* Brand Sentiment */}
+        <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+          <div className="text-xs text-white/40 mb-2 uppercase tracking-wider">Brand Sentiment</div>
+          <div className="flex items-baseline gap-2 mb-3">
+            <span className="text-3xl font-bold text-white">84.2</span>
+            <span className="text-sm font-bold text-green-400 flex items-center gap-1">
+              <TrendingUp className="w-4 h-4" />
+              +1.1%
+            </span>
+          </div>
+          <div className="flex gap-1 mb-2">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                className={`h-2 flex-1 rounded ${
+                  i === 5 ? 'bg-green-500' : 'bg-white/10'
+                }`}
+              ></div>
+            ))}
+          </div>
+        </div>
+
+        {/* Competitor Mentions */}
+        <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+          <div className="text-xs text-white/40 mb-2 uppercase tracking-wider">Competitor Mentions</div>
+          <div className="flex items-baseline gap-2 mb-3">
+            <span className="text-3xl font-bold text-white">12.4k</span>
+            <span className="text-sm font-bold text-green-400 flex items-center gap-1">
+              <TrendingUp className="w-4 h-4" />
+              +12%
+            </span>
+          </div>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex -space-x-2">
+              {['A', 'B', 'C'].map((letter, i) => (
+                <div
+                  key={i}
+                  className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xs font-bold text-white border-2 border-[#0A0A0A]"
+                >
+                  {letter}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="text-xs text-white/60">Spike detected in Region EU-West</div>
+        </div>
+      </div>
+
+      {/* Competitor Insights Chart */}
+      <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-bold text-white mb-1">Competitor Insights</h3>
+            <p className="text-sm text-white/40">Traffic growth comparison vs Top 3 Competitors</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button className="px-3 py-1.5 bg-[#1A1A1A] border border-white/10 rounded-lg text-xs font-bold text-white hover:bg-white/5 transition-colors flex items-center gap-2">
+              <Download className="w-4 h-4" />
+              Export Report
+            </button>
+            <button className="p-2 hover:bg-white/5 rounded-lg transition-colors">
+              <Filter className="w-5 h-5 text-white/60" />
             </button>
           </div>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Panel: AI Visibility Score */}
-          <div className="bg-white rounded-xl p-6 shadow-sm">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-black mb-1">AI Visibility Score</h2>
-              <p className="text-sm text-gray-600">Trend over the last 7 days</p>
+        {/* Chart Area */}
+        <div className="h-[400px] bg-[#050505] rounded-lg border border-white/5 p-6 relative">
+          {/* Y-axis labels */}
+          <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between text-xs text-white/40 font-mono py-6">
+            <span>100k</span>
+            <span>75k</span>
+            <span>50k</span>
+            <span>25k</span>
+            <span>0</span>
+          </div>
+
+          {/* Chart content */}
+          <div className="ml-12 h-full relative">
+            {/* Grid lines */}
+            <div className="absolute inset-0 flex flex-col justify-between">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div key={i} className="border-t border-white/5"></div>
+              ))}
             </div>
-            
-            <div className="mb-6">
-              <div className="flex items-baseline gap-2 mb-1">
-                <span className="text-4xl font-bold text-black">
-                  {loading ? '...' : visibilityScore.toFixed(1)}%
-                </span>
-                <span className={`text-sm font-medium ${visibilityChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {visibilityChange >= 0 ? '+' : ''}{visibilityChange.toFixed(1)}% vs yesterday
-                </span>
+
+            {/* Legend */}
+            <div className="absolute top-0 right-0 flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-0.5 bg-purple-500"></div>
+                <span className="text-white/60">Your Company</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-0.5 bg-white/30"></div>
+                <span className="text-white/60">Acme Corp</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-0.5 bg-white/20 border-dashed border-t"></div>
+                <span className="text-white/60">Globex Inc</span>
               </div>
             </div>
 
-            {/* Trend Graph */}
-            <div className="h-[200px] relative">
-              <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                {/* Grid lines */}
-                <line x1="0" y1="25" x2="100" y2="25" stroke="#e5e7eb" strokeWidth="0.5" />
-                <line x1="0" y1="50" x2="100" y2="50" stroke="#e5e7eb" strokeWidth="0.5" />
-                <line x1="0" y1="75" x2="100" y2="75" stroke="#e5e7eb" strokeWidth="0.5" />
-                
-                {/* Trend line */}
-                <path
-                  d={calculateGraphPoints(visibilityTrend)}
-                  fill="none"
-                  stroke="#f97316"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                
-                {/* Area fill */}
-                <defs>
-                  <linearGradient id="visibilityGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#f97316" stopOpacity="0.3" />
-                    <stop offset="100%" stopColor="#f97316" stopOpacity="0.05" />
-                  </linearGradient>
-                </defs>
-                <path
-                  d={`${calculateGraphPoints(visibilityTrend)} L 100 100 L 0 100 Z`}
-                  fill="url(#visibilityGradient)"
-                />
-              </svg>
-              
-              {/* X-axis labels */}
-              <div className="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-gray-500 px-2">
-                {visibilityTrend.map((point, index) => (
-                  <span key={index}>{point.date}</span>
-                ))}
-              </div>
-              
-              {/* Y-axis labels */}
-              <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-gray-500 py-2">
-                <span>100%</span>
-                <span>75%</span>
-                <span>50%</span>
-                <span>25%</span>
-                <span>0%</span>
-              </div>
+            {/* Placeholder for chart - would use a charting library in production */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-white/20 text-sm">Chart visualization would appear here</div>
             </div>
           </div>
 
-          {/* Right Panel: Industry Ranking */}
-          <div className="bg-white rounded-xl p-6 shadow-sm">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-black mb-1">Industry Ranking</h2>
-              <p className="text-sm text-gray-600">Brands with highest visibility</p>
-            </div>
-            
-            <div className="mb-6">
-              <div className="flex items-baseline gap-2 mb-1">
-                <span className="text-4xl font-bold text-black">
-                  {loading ? '...' : visibilityScore.toFixed(1)}%
-                </span>
-                <span className={`text-sm font-medium ${visibilityChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {visibilityChange >= 0 ? '+' : ''}{visibilityChange.toFixed(1)}% vs yesterday
+          {/* X-axis labels */}
+          <div className="ml-12 mt-4 flex justify-between text-xs text-white/40 font-mono">
+            <span>Oct 14</span>
+            <span>Oct 21</span>
+            <span>Oct 28</span>
+            <span>Nov 4</span>
+            <span>Nov 11</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Market Positioning */}
+        <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+          <h3 className="text-lg font-bold text-white mb-4">Market Positioning</h3>
+          <div className="space-y-3">
+            {[
+              { name: 'Your Company', growth: '+12%', share: '32.8%', status: 'Leader', statusColor: 'bg-green-500/20 text-green-400' },
+              { name: 'Acme Corp', growth: '-2%', share: '28.4%', status: 'Stable', statusColor: 'bg-white/10 text-white/60' },
+              { name: 'Globex Inc', growth: '+4%', share: '15.2%', status: 'Rising', statusColor: 'bg-orange-500/20 text-orange-400' },
+              { name: 'Soylent Corp', growth: '0%', share: '10.1%', status: 'Stable', statusColor: 'bg-white/10 text-white/60' },
+            ].map((company, i) => (
+              <div key={i} className="flex items-center justify-between p-3 bg-[#050505] rounded-lg border border-white/5">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xs font-bold text-white">
+                    {company.name[0]}
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-white">{company.name}</div>
+                    <div className="text-xs text-white/40">Growth: {company.growth} • Share: {company.share}</div>
+                  </div>
+                </div>
+                <span className={`px-2 py-1 rounded text-[10px] font-bold ${company.statusColor}`}>
+                  {company.status}
                 </span>
               </div>
-            </div>
+            ))}
+          </div>
+        </div>
 
-            {/* Rankings Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-2 text-xs font-semibold text-gray-600">#</th>
-                    <th className="text-left py-3 px-2 text-xs font-semibold text-gray-600">BRAND</th>
-                    <th className="text-right py-3 px-2 text-xs font-semibold text-gray-600">MENTIONS</th>
-                    <th className="text-right py-3 px-2 text-xs font-semibold text-gray-600">POSITION</th>
-                    <th className="text-right py-3 px-2 text-xs font-semibold text-gray-600">CHANGE</th>
-                    <th className="text-right py-3 px-2 text-xs font-semibold text-gray-600">VISIBILITY</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {competitorRankings.map((competitor) => (
-                    <tr key={competitor.rank} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                      <td className="py-3 px-2 text-sm text-gray-600">{competitor.rank}</td>
-                      <td className="py-3 px-2">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white ${
-                            competitor.isYou 
-                              ? 'bg-pink-500' 
-                              : 'bg-blue-500'
-                          }`}>
-                            {getBrandInitials(competitor.brand)}
-                          </div>
-                          <div>
-                            <div className="text-sm font-semibold text-black">
-                              {competitor.brand}
-                              {competitor.isYou && (
-                                <span className="ml-2 text-xs text-gray-500">(YOU)</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-2 text-right text-sm text-gray-900">{competitor.mentions.toLocaleString()}</td>
-                      <td className="py-3 px-2 text-right text-sm text-gray-900">{competitor.position.toFixed(1)}</td>
-                      <td className={`py-3 px-2 text-right text-sm font-medium ${
-                        competitor.change >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {competitor.change >= 0 ? '+' : ''}{competitor.change.toFixed(1)}%
-                      </td>
-                      <td className="py-3 px-2 text-right text-sm font-semibold text-gray-900">
-                        {competitor.visibility.toFixed(1)}%
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        {/* Feature Gap Analysis */}
+        <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-white">Feature Gap Analysis</h3>
+            <span className="text-xs text-white/40">Q4 2023</span>
+          </div>
+          <div className="space-y-4">
+            {[
+              { feature: 'API Performance', us: 98, avg: 80, status: 'Superior', statusColor: 'text-green-400' },
+              { feature: 'User Retention', us: 85, avg: 84, status: 'Parity', statusColor: 'text-orange-400' },
+              { feature: 'Mobile Experience', us: 62, avg: 78, status: 'Lagging', statusColor: 'text-red-400' },
+            ].map((item, i) => (
+              <div key={i}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-white">{item.feature}</span>
+                  <span className={`text-xs font-bold ${item.statusColor}`}>{item.status}</span>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-white/60">{item.us}/100 (Us)</span>
+                    <span className="text-white/40">{item.avg}/100 (Avg)</span>
+                  </div>
+                  <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" style={{ width: `${item.us}%` }}></div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -298,3 +231,4 @@ const AnalyticsView: React.FC = () => {
 };
 
 export default AnalyticsView;
+

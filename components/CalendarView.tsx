@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Video, Image as ImageIcon, FileText, Clock, X, Users, User, Calendar, MessageSquare, Send, Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 interface CalendarEvent {
@@ -25,91 +25,146 @@ const CalendarView: React.FC = () => {
   const [currentMonth] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [newComment, setNewComment] = useState('');
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
   
-  // Load events from localStorage and sync with Production Room
-  useEffect(() => {
-    const loadEvents = () => {
-      try {
-        const storedEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
-        
-        // Convert stored events to CalendarEvent format
-        const convertedEvents: CalendarEvent[] = storedEvents.map((stored: any) => {
-          const eventDate = stored.date ? new Date(stored.date) : new Date();
-          const dayOfMonth = eventDate.getDate();
-          
-          // Map platform to type
-          const platformToType: Record<string, 'video' | 'image' | 'document' | 'social' | 'email' | 'pr'> = {
-            'X': 'social',
-            'LINKEDIN': 'social',
-            'INSTAGRAM': 'image',
-            'TIKTOK': 'video',
-            'YOUTUBE': 'video',
-            'AUDIO': 'document',
-            'PODCAST': 'document'
-          };
-          
-          // Map content type to thumbnail color
-          const typeToThumbnail: Record<string, string> = {
-            'video': 'red',
-            'image': 'blue',
-            'document': 'green',
-            'social': 'purple'
-          };
-          
-          const eventType = platformToType[stored.platform] || 'social';
-          
-          return {
-            id: stored.id,
-            date: dayOfMonth,
-            title: stored.title || 'Untitled Content',
-            description: stored.description || '',
-            type: eventType,
-            time: stored.time || '09:00',
-            thumbnail: typeToThumbnail[eventType] || 'blue',
-            team: 'Content',
-            status: (stored.status || 'scheduled') as any,
-            platform: stored.platform || 'Unknown',
-            createdAt: stored.createdAt || new Date().toISOString(),
-            tasks: [],
-            comments: []
-          };
-        });
-        
-        // Merge with default events (for demo purposes, you can remove these later)
-        // For now, we'll use only the converted events from localStorage
-        setEvents(convertedEvents);
-      } catch (error) {
-        console.error('Error loading calendar events:', error);
-        setEvents([]);
-      }
-    };
-    
-    // Load events on mount
-    loadEvents();
-    
-    // Listen for storage changes (when Production Room schedules content)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'calendarEvents') {
-        loadEvents();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Also check periodically (for same-tab updates)
-    const interval = setInterval(() => {
-      loadEvents();
-    }, 2000);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
-  }, []);
-  
-  // Events are now loaded from localStorage (synced with Production Room)
-  
+  const events: CalendarEvent[] = [
+    { 
+      id: '1', 
+      date: 5, 
+      title: 'X Thread: Football Analysis', 
+      description: 'Weekly football breakdown thread covering Premier League highlights and tactical analysis.',
+      type: 'social', 
+      time: '14:00 UTC', 
+      thumbnail: 'blue',
+      team: 'Content',
+      status: 'review',
+      platform: 'X (Twitter)',
+      lead: { name: 'Sarah Chen' },
+      assignee: { name: 'Marcus Thorne' },
+      createdAt: 'Dec 1, 2024 • 10:30 AM',
+      deadline: 'Dec 5, 2024',
+      tasks: [
+        'Write 10-tweet thread',
+        'Add relevant stats and graphics',
+        'Schedule for peak engagement time'
+      ],
+      comments: [
+        { user: 'Marcus Thorne', text: 'Draft ready for review. Added the latest match stats.', time: 'Yesterday 4:20 PM' }
+      ]
+    },
+    { 
+      id: '2', 
+      date: 8, 
+      title: 'YouTube: Match Review', 
+      description: 'Full match breakdown video with tactical analysis, key moments, and player ratings.',
+      type: 'video', 
+      time: '09:00 UTC', 
+      thumbnail: 'red',
+      team: 'Video',
+      status: 'draft',
+      platform: 'YouTube',
+      lead: { name: 'Alex Rivera' },
+      assignee: { name: 'Jordan Kim' },
+      createdAt: 'Dec 2, 2024 • 2:15 PM',
+      deadline: 'Dec 8, 2024',
+      tasks: [
+        'Edit 12-minute video',
+        'Add graphics and overlays',
+        'Create thumbnail',
+        'Write description and tags'
+      ],
+      comments: []
+    },
+    { 
+      id: '3', 
+      date: 12, 
+      title: 'LinkedIn: Industry Insights', 
+      description: 'Professional post about content creation trends and industry insights.',
+      type: 'document', 
+      time: '10:00 UTC',
+      team: 'Strategy',
+      status: 'approved',
+      platform: 'LinkedIn',
+      lead: { name: 'Sarah Chen' },
+      assignee: { name: 'Sarah Chen' },
+      createdAt: 'Dec 3, 2024 • 9:00 AM',
+      deadline: 'Dec 12, 2024',
+      tasks: [
+        'Write thought leadership post',
+        'Add relevant hashtags'
+      ],
+      comments: [
+        { user: 'Sarah Chen', text: 'Approved and scheduled!', time: '2 hours ago' }
+      ]
+    },
+    { 
+      id: '4', 
+      date: 15, 
+      title: 'Instagram Reel: Behind Scenes', 
+      description: 'Casual behind-the-scenes content showing the content creation process.',
+      type: 'video', 
+      time: '16:00 UTC', 
+      thumbnail: 'purple',
+      team: 'Content',
+      status: 'scheduled',
+      platform: 'Instagram',
+      lead: { name: 'Jordan Kim' },
+      assignee: { name: 'Alex Rivera' },
+      createdAt: 'Dec 4, 2024 • 11:00 AM',
+      deadline: 'Dec 15, 2024',
+      tasks: [
+        'Film 60-second Reel',
+        'Add trending audio',
+        'Write caption'
+      ],
+      comments: []
+    },
+    { 
+      id: '5', 
+      date: 19, 
+      title: 'TikTok: Quick Tips', 
+      description: 'Series of quick tips in trending TikTok format.',
+      type: 'video', 
+      time: '12:00 UTC', 
+      thumbnail: 'black',
+      team: 'Social',
+      status: 'draft',
+      platform: 'TikTok',
+      lead: { name: 'Marcus Thorne' },
+      assignee: { name: 'Jordan Kim' },
+      createdAt: 'Dec 5, 2024 • 3:30 PM',
+      deadline: 'Dec 19, 2024',
+      tasks: [
+        'Script 3 TikTok videos',
+        'Film with trending sounds',
+        'Edit with text overlays'
+      ],
+      comments: []
+    },
+    { 
+      id: '6', 
+      date: 22, 
+      title: 'Podcast Episode', 
+      description: 'Weekly podcast discussing current topics and trends.',
+      type: 'video', 
+      time: '08:00 UTC', 
+      thumbnail: 'orange',
+      team: 'Audio',
+      status: 'draft',
+      platform: 'Podcast',
+      lead: { name: 'Alex Rivera' },
+      assignee: { name: 'Marcus Thorne' },
+      createdAt: 'Dec 5, 2024 • 5:00 PM',
+      deadline: 'Dec 22, 2024',
+      tasks: [
+        'Record 20-minute episode',
+        'Edit and master audio',
+        'Write show notes',
+        'Create clips for social'
+      ],
+      comments: []
+    },
+  ];
+
   const getEventIcon = (type: string) => {
     switch (type) {
       case 'video': return <Video className="w-4 h-4 text-red-400" />;

@@ -287,102 +287,50 @@ async function researchBrandWithLLM(username: string, platforms: string[]): Prom
   
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
   
-  const prompt = `You are a professional digital footprint analyst. Research "${username}" across ${platforms.join(', ')} and extract comprehensive brand data.
+  const prompt = `Research "${username}" on ${platforms.join(', ')}. Give me the key facts.
 
-CRITICAL REQUIREMENTS:
-1. Extract ONLY content published BY ${username} (OUTPUT only)
-2. NO retweets, shares, reposts, or third-party content
-3. NO mentions of ${username} by others
-4. Focus on recent content (last 3-6 months) but include historical patterns
-5. Ensure all data is accurate and specific
+I need:
+1. Their profile (bio, followers, verified status)
+2. What they post about (5-8 recent posts, summarized)
+3. Their main topics (3-5 themes)
+4. How they talk (tone, style)
+5. Who they compete with (3 real competitors)
 
-EXTRACT THE FOLLOWING:
+WRITING STYLE FOR COMPETITORS:
+- Use real names, not generic labels
+- Short sentences only
+- "theirAdvantage" = one sentence, what they're good at
+- "yourOpportunity" = one sentence, how to beat them (start with a verb)
 
-1. PROFILE INFORMATION:
-   - Full bio/description (exact text)
-   - Follower count (if available)
-   - Following count (if available)
-   - Verification status (true/false)
-   - Account creation date (if available)
-   - Profile image URL (if available)
-   - Platform presence (which platforms they actively use)
-
-2. CONTENT POSTS (10-15 recent posts, prioritize high-engagement):
-   For each post, extract:
-   - Full content text (complete, not truncated)
-   - Exact timestamp (ISO 8601 format, use dates from past 2-4 weeks for recent posts)
-   - Post type (text, image, video, thread, link, carousel)
-   - Media URLs (if any)
-   - Engagement metrics (likes, shares, comments, views - use realistic numbers)
-   - Quality score (0.0-1.0 based on content depth and engagement)
-
-3. CONTENT THEMES (5-7 main themes):
-   - Primary topics they consistently discuss
-   - Secondary topics
-   - Content categories
-
-4. BRAND VOICE ANALYSIS:
-   - Tone (casual, professional, humorous, serious, etc.)
-   - Style (conversational, technical, narrative, etc.)
-   - Formality level (formal, casual, mixed)
-   - Vocabulary patterns (5-10 key words/phrases they use frequently)
-   - Sentence structure (short, long, varied)
-   - Emotional tone (friendly, authoritative, inspiring, etc.)
-
-5. POSTING PATTERNS:
-   - Posting frequency (e.g., "Daily", "3x/week", "Weekly")
-   - Typical posting times (analyze timestamps if available)
-   - Best performing content types
-   - Engagement patterns
-
-6. COMPETITORS (3 closest competitors):
-   - Real names/company names (not generic labels)
-   - Primary platform
-   - Threat level (HIGH, MEDIUM, LOW)
-   - What they're good at (one sentence)
-   - Opportunity to beat them (one sentence, start with verb)
-
-Return ONLY valid JSON (no markdown, no code blocks):
+Return ONLY valid JSON:
 {
   "profile": {
-    "bio": "Full bio text here",
+    "bio": "Their bio",
     "follower_count": 0,
-    "following_count": 0,
     "verified": false,
-    "platform_presence": ["twitter", "youtube"],
-    "profile_image": "url or null"
+    "platform_presence": ["twitter", "youtube"]
   },
   "posts": [
     {
-      "content": "Complete post text - full content, not summary",
-      "post_type": "text|image|video|thread|link",
-      "timestamp": "2024-12-01T10:30:00Z",
-      "media_urls": ["url1", "url2"],
-      "engagement": {"likes": 0, "shares": 0, "comments": 0, "views": 0},
+      "content": "Short summary of what they posted",
+      "post_type": "video",
+      "engagement": {"likes": 0, "shares": 0, "comments": 0},
       "quality_score": 0.8
     }
   ],
-  "content_themes": ["theme1", "theme2", "theme3"],
+  "content_themes": ["topic1", "topic2", "topic3"],
   "brand_voice": {
     "tone": "casual",
     "style": "conversational",
-    "formality": "casual",
-    "vocabulary": ["key", "words", "phrases"],
-    "sentence_structure": "varied",
-    "emotional_tone": "friendly"
-  },
-  "posting_patterns": {
-    "frequency": "Daily",
-    "typical_times": "9am-11am EST",
-    "best_content_types": ["threads", "videos"]
+    "vocabulary": ["key", "words"]
   },
   "competitors": [
     {
       "name": "Real Competitor Name",
-      "platform": "YouTube",
       "threatLevel": "HIGH",
-      "theirAdvantage": "Bigger audience and better production quality.",
-      "yourOpportunity": "Focus on authenticity. Their content feels too corporate."
+      "primaryVector": "YouTube - posts daily",
+      "theirAdvantage": "Bigger audience and better production.",
+      "yourOpportunity": "Be more authentic. Their content feels corporate."
     }
   ],
   "extraction_confidence": 0.8
@@ -538,110 +486,45 @@ Return ONLY valid JSON, no markdown, no code blocks, no explanations:
 }
 
 function validateOutputOnly(content: any, username: string): any {
-  const cleanUsername = username.toLowerCase().replace('@', '').trim();
-  
   const validatedPosts = (content.posts || []).filter((post: any) => {
     const postContent = (post.content || '').trim();
-    if (!postContent || postContent.length === 0) return false;
-    
     const lowerContent = postContent.toLowerCase();
     
-    // STRICT FILTERING: Remove retweets/shares/reposts
-    const retweetPatterns = [
-      /^rt\s+@/i,
-      /^retweeting/i,
-      /shared a post/i,
-      /reposted/i,
-      /^via @/i,
-      /retweeted/i,
-      /shared from/i
-    ];
-    
-    if (retweetPatterns.some(pattern => pattern.test(postContent))) {
+    // Filter retweets/shares
+    if (lowerContent.startsWith('rt @') || 
+        lowerContent.startsWith('retweeting') ||
+        lowerContent.includes('shared a post') ||
+        lowerContent.includes('reposted')) {
       return false;
     }
     
-    // Filter quote tweets that are just sharing others' content
-    if (lowerContent.includes('"') && lowerContent.includes('@') && 
-        !lowerContent.includes(`@${cleanUsername}`)) {
-      // Likely a quote tweet of someone else
-      return false;
-    }
-    
-    // Filter replies that are just @mentions without substantial content
-    if (lowerContent.startsWith('@') && postContent.length < 50) {
-      // Short replies - likely not original content
-      const mentionOnly = /^@\w+\s*[^\w\s]*$/i.test(postContent);
-      if (mentionOnly) return false;
+    // Filter mentions of others (unless it's the brand mentioning themselves)
+    if (lowerContent.includes('@') && !lowerContent.includes(`@${username.toLowerCase().replace('@', '')}`)) {
+      // Check if it's a reply/mention to someone else
+      const mentionPattern = /@\w+/g;
+      const mentions = lowerContent.match(mentionPattern) || [];
+      const brandMention = mentions.some((m: string) => m.toLowerCase().includes(username.toLowerCase().replace('@', '')));
+      if (!brandMention && mentions.length > 0) {
+        return false; // It's mentioning others, not the brand
+      }
     }
     
     // Filter low-quality content
-    if (postContent.length < 15) return false; // Increased minimum length
+    if (postContent.length < 10) return false;
     if (postContent.match(/^[^\w\s]*$/)) return false; // Only emojis/symbols
     
-    // Filter spam-like patterns
-    const spamPatterns = [
-      /(click here|buy now|limited time|act now){2,}/i,
-      /(free|discount|sale|offer){3,}/i,
-      /(http|www\.){3,}/i, // Multiple links
-      /^[^\w]*$/ // Only special characters
-    ];
-    
-    if (spamPatterns.some(pattern => pattern.test(postContent))) {
-      return false;
-    }
-    
     // Filter based on quality score if available
-    if (post.quality_score !== undefined && post.quality_score < 0.4) {
-      return false; // Stricter quality threshold
-    }
+    if (post.quality_score && post.quality_score < 0.3) return false;
     
-    // Filter posts that are just links without context
-    const linkOnlyPattern = /^(https?:\/\/|www\.)/i;
-    if (linkOnlyPattern.test(postContent) && postContent.length < 100) {
-      return false; // Just a link, no context
-    }
-    
-    // Ensure post has meaningful content
-    const wordCount = postContent.split(/\s+/).filter((w: string) => w.length > 0).length;
-    if (wordCount < 3) return false; // At least 3 words
+    // Filter spam-like patterns
+    if (lowerContent.match(/(click here|buy now|limited time|act now){2,}/i)) return false;
     
     return true;
   });
 
-  // Validate profile
-  const validatedProfile = content.profile || {};
-  if (validatedProfile.bio) {
-    const bio = validatedProfile.bio.trim();
-    if (bio.length < 10 || bio === 'Sample bio' || bio.includes('Profile for')) {
-      validatedProfile.bio = validatedProfile.bio || `Digital presence for ${username}`;
-    }
-  }
-
-  // Validate content themes
-  const validatedThemes = (content.content_themes || [])
-    .filter((theme: any) => theme && typeof theme === 'string' && theme.trim().length > 2)
-    .slice(0, 10); // Limit to 10 themes
-
-  // Calculate improved extraction confidence
-  const postCount = validatedPosts.length;
-  const hasProfile = validatedProfile.bio && validatedProfile.bio.length > 20;
-  const hasThemes = validatedThemes.length > 0;
-  
-  let confidence = 0.5; // Base confidence
-  if (hasProfile) confidence += 0.15;
-  if (postCount > 0) confidence += Math.min(0.25, postCount * 0.02);
-  if (hasThemes) confidence += 0.1;
-  if (postCount > 10) confidence += 0.1; // Bonus for substantial content
-  
-  confidence = Math.min(0.95, confidence); // Cap at 95%
-
   return {
     ...content,
-    profile: validatedProfile,
     posts: validatedPosts,
-    content_themes: validatedThemes,
-    extraction_confidence: confidence
   };
 }
 
@@ -667,95 +550,58 @@ async function extractBrandDNA(validatedContent: any): Promise<any> {
     const allPosts = (validatedContent.posts || []).map((p: any) => p.content).join('\n\n');
     const combinedText = allPosts.substring(0, 50000);
 
-    const prompt = `You are a brand DNA extraction expert. Analyze this brand's content to extract their complete, unique DNA profile.
+    const prompt = `Analyze this brand's content to extract their unique DNA:
 
-CONTENT TO ANALYZE (${validatedContent.posts.length} posts):
+Content:
 ${combinedText}
 
-PROFILE INFO:
-${validatedContent.profile?.bio || 'No bio available'}
+Extract:
 
-CONTENT THEMES:
-${(validatedContent.content_themes || []).join(', ')}
+1. Brand Archetype (choose ONE from: The Architect, The Hero, The Sage, The Explorer, The Creator, The Ruler, The Caregiver, The Innocent, The Magician, The Outlaw, The Lover, The Jester):
+   - Most fitting archetype based on their content
 
-EXTRACTION REQUIREMENTS:
+2. Voice & Tone:
+   - Writing style (formal, casual, technical, etc.)
+   - Vocabulary patterns (list 5-10 key words)
+   - Sentence structure (short, long, varied)
+   - Emotional tone (professional, friendly, humorous, etc.)
+   - Primary voice tones (list 3, e.g., "Systematic", "Transparent", "Dense", "Bold", "Analytical", "Creative")
 
-1. BRAND ARCHETYPE (choose ONE that best fits):
-   - The Architect: Builds systems, creates structure, methodical
-   - The Hero: Overcomes challenges, inspires action, courageous
-   - The Sage: Seeks truth, shares wisdom, analytical
-   - The Explorer: Seeks new experiences, adventurous, independent
-   - The Creator: Expresses creativity, innovative, artistic
-   - The Ruler: Takes control, leads, authoritative
-   - The Caregiver: Helps others, compassionate, nurturing
-   - The Innocent: Optimistic, simple, pure
-   - The Magician: Transforms reality, visionary, powerful
-   - The Outlaw: Breaks rules, revolutionary, disruptive
-   - The Lover: Passionate, sensual, emotional
-   - The Jester: Fun-loving, humorous, playful
+3. Content Themes:
+   - Main topics they discuss (list 3-5)
+   - Value propositions
+   - Messaging pillars
 
-2. VOICE & TONE (detailed analysis):
-   - Style: How they write (formal, casual, technical, narrative, etc.)
-   - Formality: Level of formality (formal, casual, mixed)
-   - Tone: Emotional tone (professional, friendly, humorous, serious, inspiring, etc.)
-   - Vocabulary: 8-12 key words/phrases they use frequently (extract from actual content)
-   - Sentence structure: How they structure sentences (short, long, varied, complex)
-   - Primary tones: 3-4 descriptive tones (e.g., "Systematic", "Transparent", "Dense", "Bold", "Analytical", "Creative", "Authentic", "Direct")
-   - Communication style: How they communicate (direct, storytelling, educational, etc.)
-
-3. CONTENT THEMES (5-7 main themes):
-   - Primary topics they consistently discuss
-   - Secondary topics
-   - Value propositions they communicate
-   - Recurring messages
-
-4. CORE PILLARS (3-5 key brand pillars):
+4. Core Pillars (list 3-5 key brand pillars/messaging themes):
    - What they consistently communicate about
-   - Core messaging themes
-   - Brand values they express
 
-5. VISUAL IDENTITY (infer from content descriptions):
-   - Color preferences (if mentioned or implied)
-   - Visual style (minimalist, bold, colorful, etc.)
-   - Design aesthetic
+5. Visual Identity (from descriptions):
+   - Color preferences
+   - Style (minimalist, bold, etc.)
 
-6. ENGAGEMENT PATTERNS:
-   - Posting frequency (analyze from timestamps)
-   - Best performing content types (from engagement data)
-   - Optimal posting times (if timestamps available)
-   - Content format preferences
+6. Engagement Patterns:
+   - Posting frequency
+   - Best performing content types
 
-7. CONTENT STRATEGY INSIGHTS:
-   - What works best for them
-   - Content gaps or opportunities
-   - Unique differentiators
-
-Return ONLY valid JSON (no markdown, no explanations):
+Return ONLY valid JSON:
 {
   "archetype": "The Architect",
   "voice": {
-    "style": "professional",
-    "formality": "casual",
-    "tone": "friendly",
-    "vocabulary": ["word1", "word2", "word3"],
-    "sentence_structure": "varied",
-    "tones": ["Systematic", "Transparent", "Dense"],
-    "communication_style": "direct"
+    "style": "...",
+    "formality": "...",
+    "tone": "...",
+    "vocabulary": ["..."],
+    "tones": ["Systematic", "Transparent", "Dense"]
   },
-  "themes": ["theme1", "theme2", "theme3"],
-  "corePillars": ["pillar1", "pillar2", "pillar3"],
+  "themes": ["..."],
+  "corePillars": ["...", "...", "..."],
   "visual_identity": {
-    "colors": ["color1", "color2"],
-    "style": "minimalist"
+    "colors": ["..."],
+    "style": "..."
   },
   "engagement_patterns": {
-    "frequency": "Daily",
-    "best_content_types": ["threads", "videos"],
-    "optimal_times": "9am-11am EST"
-  },
-  "content_strategy": {
-    "strengths": ["strength1", "strength2"],
-    "opportunities": ["opportunity1", "opportunity2"]
+    "frequency": "...",
+    "best_content_types": ["..."]
   }
 }`;
 
@@ -766,33 +612,17 @@ Return ONLY valid JSON (no markdown, no explanations):
     
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
-      // Ensure required fields with new structure
+      // Ensure required fields
       return {
         archetype: parsed.archetype || 'The Architect',
         voice: {
-          style: parsed.voice?.style || 'professional',
-          formality: parsed.voice?.formality || 'casual',
-          tone: parsed.voice?.tone || 'friendly',
-          vocabulary: parsed.voice?.vocabulary || [],
-          sentence_structure: parsed.voice?.sentence_structure || 'varied',
-          tones: parsed.voice?.tones || ['Systematic', 'Transparent', 'Dense'],
-          communication_style: parsed.voice?.communication_style || 'direct'
+          ...parsed.voice,
+          tones: parsed.voice?.tones || ['Systematic', 'Transparent', 'Dense']
         },
-        themes: parsed.themes || validatedContent.content_themes || [],
+        themes: parsed.themes || [],
         corePillars: parsed.corePillars || ['Automated Content Scale', 'Forensic Brand Analysis', 'Enterprise Reliability'],
-        visual_identity: parsed.visual_identity || {
-          colors: [],
-          style: 'minimalist'
-        },
-        engagement_patterns: parsed.engagement_patterns || {
-          frequency: 'Unknown',
-          best_content_types: [],
-          optimal_times: 'Unknown'
-        },
-        content_strategy: parsed.content_strategy || {
-          strengths: [],
-          opportunities: []
-        }
+        visual_identity: parsed.visual_identity || {},
+        engagement_patterns: parsed.engagement_patterns || {}
       };
     }
 
@@ -863,76 +693,50 @@ async function generateStrategicInsights(validatedContent: any, brandDNA: any): 
       ? avgEngagement.reduce((a: number, b: number) => a + b, 0) / avgEngagement.length 
       : 0;
 
-    const prompt = `You're a world-class content strategist. Analyze this creator's content and their competitive landscape to provide actionable, data-driven insights.
+    const prompt = `You're a straight-talking content strategist. Research this creator's competitors and give 2-3 specific, data-driven insights.
 
-CREATOR CONTENT (${validatedContent.posts.length} posts analyzed):
-${combinedText.substring(0, 30000)}
+Creator content (${validatedContent.posts.length} posts):
+${combinedText}
 
-BRAND DNA:
-${JSON.stringify(brandDNA, null, 2)}
+Brand DNA: ${JSON.stringify(brandDNA, null, 2)}
 
-CONTENT STATISTICS:
-- Total posts analyzed: ${validatedContent.posts.length}
+Stats:
+- Posts analyzed: ${validatedContent.posts.length}
 - Video content: ${hasVideo ? 'Yes' : 'No'}
 - Image content: ${hasImages ? 'Yes' : 'No'}
-- Average engagement per post: ${Math.round(avgEng)}
-- Primary topics: ${(validatedContent.content_themes || []).join(', ')}
-- Posting frequency: ${brandDNA.engagement_patterns?.frequency || 'Unknown'}
-- Best content types: ${(brandDNA.engagement_patterns?.best_content_types || []).join(', ') || 'Unknown'}
-
-ANALYSIS REQUIREMENTS:
-
-1. RESEARCH COMPETITORS:
-   - Identify 2-3 actual competitors in their space
-   - Compare SPECIFIC metrics (posting frequency, content length, engagement rates)
-   - Analyze what competitors do differently
-
-2. IDENTIFY GAPS:
-   - Content gaps (what they're missing)
-   - Format gaps (video, images, threads, etc.)
-   - Frequency gaps (posting cadence)
-   - Engagement gaps (what's not working)
-
-3. PROVIDE ACTIONABLE INSIGHTS:
-   - Each insight must be SPECIFIC with numbers/data
-   - Compare creator vs competitors with concrete metrics
-   - Tell them EXACTLY what to do differently
-   - No generic advice
+- Avg engagement: ${Math.round(avgEng)}
+- Topics: ${(validatedContent.content_themes || []).join(', ')}
 
 CRITICAL RULES:
-- Include NUMBERS in every insight (video lengths, posting frequency, engagement rates, etc.)
-- Reference SPECIFIC competitors when possible
-- Compare their current state vs optimal state
-- Every insight must be actionable and measurable
-- NO generic advice like "post more" or "be consistent"
+1. Research their actual competitors and compare SPECIFIC metrics
+2. Include NUMBERS - video lengths, posting frequency, engagement rates
+3. Tell them exactly what to do differently based on competitor data
+4. No generic advice like "post more" or "be consistent"
+5. Every insight must reference what competitors are doing
 
-BAD EXAMPLES (too generic - DON'T use these):
+BAD examples (too generic, don't say these):
 - "Keep posting and you'll grow"
 - "Try short-form video"
 - "Engage with your audience more"
-- "Post consistently"
-- "Use better hashtags"
 
-GOOD EXAMPLES (specific with data - USE THIS STYLE):
-- "Your videos average 4 mins. Top creators in your space do 8-12 mins - longer videos rank better and get 2x watch time."
-- "You post 2x/week. Competitors like [Name] post daily and get 3x your views. Try 4x/week minimum to match algorithm preferences."
-- "Your thumbnails are text-heavy (avg 15 words). Top creators use faces + 3 words max - their CTR is 2x higher."
-- "You post at random times. Competitors post 9am-11am EST and see 40% higher engagement. Schedule posts during peak hours."
+GOOD examples (specific with data):
+- "Your videos average 4 mins. Top creators in your space do 8-12 mins - longer videos rank better."
+- "You post 2x/week. Chunkz posts daily and gets 3x your views. Try 4x/week minimum."
+- "Your thumbnails are text-heavy. MKBHD uses faces + 3 words max - his CTR is 2x higher."
 
-GENERATE 2-4 INSIGHTS:
-Each insight must have:
-- Title: 4-6 words, action-focused (e.g., "Post longer videos", "Increase posting frequency")
-- Description: 2-3 sentences with SPECIFIC numbers/comparisons. What competitors do vs what you do. Include actionable steps.
-- Impact: "HIGH IMPACT" or "MEDIUM IMPACT" or "LOW IMPACT"
-- Effort: "Quick win (1 week)" or "Medium effort (1 month)" or "Takes time (3+ months)"
+Generate 2-3 insights with SPECIFIC data:
+- Title: 4-6 words, action-focused
+- Description: Include specific numbers/comparisons. What competitors do vs what you do.
+- Impact: "HIGH IMPACT" or "MEDIUM IMPACT"
+- Effort: "Quick win" or "Takes time"
 
-Return ONLY valid JSON array (no markdown, no code blocks):
+Return ONLY valid JSON:
 [
   {
-    "title": "Post longer videos",
-    "description": "Your videos average 4 mins. Top creators in your space do 8-12 mins and get 2x watch time. YouTube's algorithm favors longer-form content (8+ mins) for better ranking.",
+    "title": "Make longer videos",
+    "description": "Your videos are 4 mins avg. Top creators do 8-12 mins and get 2x watch time.",
     "impact": "HIGH IMPACT",
-    "effort": "Takes time (3+ months)"
+    "effort": "Takes time"
   }
 ]`;
 
@@ -996,83 +800,30 @@ async function generateCompetitorIntelligence(validatedContent: any, brandDNA: a
     const allPosts = (validatedContent.posts || []).map((p: any) => p.content).join('\n\n');
     const combinedText = allPosts.substring(0, 40000);
 
-    // Extract actual topics and market from their content
-    const actualTopics = (validatedContent.content_themes || []).slice(0, 10).join(', ');
-    const samplePosts = (validatedContent.posts || []).slice(0, 20).map((p: any) => p.content).join('\n\n---\n\n');
-    const marketIndicators = [
-      ...(validatedContent.content_themes || []),
-      ...(brandDNA.themes || []),
-      ...(brandDNA.corePillars || [])
-    ].filter(Boolean).join(', ');
+    const prompt = `Competitive analysis for this creator. Research their space and give me hard numbers.
 
-    const prompt = `You are a competitive intelligence analyst. Your task is to find the 3 CLOSEST competitors to "${username || 'this creator'}".
+Creator: ${username || 'Unknown'}
+Their content: ${combinedText}
+Brand DNA: ${JSON.stringify(brandDNA, null, 2)}
+Topics: ${(validatedContent.content_themes || []).join(', ')}
 
-CRITICAL: Analyze their ACTUAL social activity, topics, and market - NOT just industry category.
+I need:
+1. Market share estimate (what % of their niche's total attention do they capture?)
+2. Top 3 competitors with engagement data
 
-MATCHING CRITERIA - Find competitors that match based on:
-1. ACTUAL TOPICS they discuss (from their posts, not generic industry)
-2. MARKET they operate in (based on content themes and audience)
-3. CONTENT STYLE and approach (how they communicate)
-4. AUDIENCE overlap (similar followers/engagement levels)
+MARKET SHARE:
+- Look at their niche/industry (e.g., "football content creators", "tech reviewers")
+- Estimate what % of total audience attention they get vs the whole space
+- This is an ESTIMATE - be realistic (most creators are under 5%)
 
-DO NOT find random companies in the same industry. Focus on:
-- What topics they ACTUALLY post about
-- What market/niche they ACTUALLY serve (from content analysis)
-- Similar content style and communication approach
-- Similar audience size and engagement patterns
-
-Their ACTUAL Profile:
-- Username/Name: ${username}
-- Bio: ${validatedContent.profile?.bio || 'N/A'}
-- ACTUAL Topics They Discuss: ${actualTopics || 'N/A'}
-- Market/Niche (from content): ${marketIndicators || 'N/A'}
-- Content Sample (what they actually post about):
-${samplePosts.substring(0, 15000)}
-
-Brand DNA:
-- Voice: ${brandDNA.voice?.style || 'N/A'}
-- Tone: ${brandDNA.voice?.tone || 'N/A'}
-- Core Themes: ${(brandDNA.themes || []).join(', ') || 'N/A'}
-- Posting Frequency: ${brandDNA.engagement_patterns?.frequency || 'Unknown'}
-- Content Types: ${(brandDNA.engagement_patterns?.best_content_types || []).join(', ') || 'Unknown'}
-
-ANALYSIS INSTRUCTIONS:
-1. Read their ACTUAL posts above - what topics do they consistently discuss?
-2. What market/niche do they serve based on their content (not generic industry)?
-3. Find competitors who:
-   - Discuss SIMILAR topics
-   - Serve the SAME market/niche
-   - Have SIMILAR content style
-   - Target SIMILAR audience
-
-For EACH of the 3 closest competitors, I need you to research them and provide:
-
-1. BASIC INFO:
-   - name: Real name/company name
-   - platform: Primary platform (X, YouTube, LinkedIn, Instagram, TikTok)
-   - handle: Their handle/username
-   - threatLevel: "HIGH", "MEDIUM", or "LOW"
-
-2. POSTING BEHAVIOR (research their actual posting patterns):
-   - postingFrequency: How often they post (e.g., "Daily", "3x/week", "Weekly")
-   - postingTimes: When they typically post (e.g., "9am-11am EST", "Evenings 6-8pm")
-   - avgPostLength: Average content length (e.g., "280 chars", "8-10 min videos", "500 words")
-   - contentTypes: What they post (e.g., ["Threads", "Video breakdowns", "Quick tips"])
-
-3. ENGAGEMENT METRICS (estimated from their public data):
-   - weeklyViews: Estimated weekly views/reach
-   - weeklyEngagement: Estimated weekly likes+comments+shares
-   - avgEngagementRate: Estimated engagement rate percentage
-
-4. STRATEGIC INSIGHTS:
-   - theirAdvantage: One specific sentence about what they do better
-   - yourOpportunity: One actionable sentence starting with a verb
-   - platformFocus: Which platform they prioritize most
-
-5. MARKET SHARE:
-   - Estimate what % of their niche's total attention "${username}" captures
-   - Industry/niche name
-   - Their rank in that space
+For each competitor:
+- name: Real name
+- threatLevel: "HIGH", "MEDIUM", or "LOW"
+- primaryVector: Platform + posting frequency (e.g. "YouTube - 3x/week")
+- weeklyViews: Estimated weekly views (number)
+- weeklyEngagement: Estimated weekly likes+comments (number)
+- theirAdvantage: One sentence, be specific
+- yourOpportunity: One sentence, start with a verb
 
 Return ONLY valid JSON:
 {
@@ -1086,19 +837,12 @@ Return ONLY valid JSON:
   "competitors": [
     {
       "name": "Chunkz",
-      "platform": "YouTube",
-      "handle": "@chunkz",
       "threatLevel": "HIGH",
-      "postingFrequency": "4x/week",
-      "postingTimes": "Tuesdays & Fridays 6pm GMT, Weekend uploads",
-      "avgPostLength": "12-15 min videos",
-      "contentTypes": ["Football vlogs", "Challenge videos", "Collabs"],
+      "primaryVector": "YouTube - 4x/week",
       "weeklyViews": 2500000,
       "weeklyEngagement": 150000,
-      "avgEngagementRate": 6.0,
-      "theirAdvantage": "Massive crossover appeal beyond just football - reaches gaming and entertainment audiences.",
-      "yourOpportunity": "Focus on tactical breakdowns. His content is entertainment-first, you can own the analysis space.",
-      "platformFocus": "YouTube (primary), Instagram (secondary)"
+      "theirAdvantage": "Massive crossover appeal beyond just football.",
+      "yourOpportunity": "Go deeper on tactics. His content is entertainment-first."
     }
   ]
 }`;
@@ -1107,134 +851,46 @@ Return ONLY valid JSON:
     const response = await result.response;
     const text = response.text();
     
-    // Try to parse as object first
+    // Try to parse as object first (new format)
     const jsonObjMatch = text.match(/\{[\s\S]*\}/);
     if (jsonObjMatch) {
       try {
         const parsed = JSON.parse(jsonObjMatch[0]);
         
+        // New format with marketShare and competitors
         if (parsed.competitors && parsed.marketShare) {
-          // Now scan each competitor to get their actual posting data
-          const enrichedCompetitors = await Promise.all(
-            parsed.competitors.slice(0, 3).map(async (comp: any) => {
-              try {
-                // Research competitor's actual posting patterns
-                const competitorData = await researchBrandWithLLM(
-                  comp.handle || comp.name,
-                  [comp.platform || 'youtube', 'twitter', 'linkedin', 'instagram']
-                );
-                
-                // Enrich with actual posting data
-                if (competitorData.posts && competitorData.posts.length > 0) {
-                  const posts = competitorData.posts;
-                  
-                  // Calculate posting frequency from timestamps
-                  const postDates = posts
-                    .map((p: any) => {
-                      if (p.timestamp) {
-                        try {
-                          return new Date(p.timestamp);
-                        } catch (e) {
-                          return null;
-                        }
-                      }
-                      return null;
-                    })
-                    .filter((d: any) => d && !isNaN(d.getTime()))
-                    .sort((a: Date, b: Date) => b.getTime() - a.getTime()); // Sort newest first
-                  
-                  let postingFrequency = comp.postingFrequency || 'Unknown';
-                  if (postDates.length > 1) {
-                    // Calculate time span between oldest and newest post
-                    const oldestPost = postDates[postDates.length - 1];
-                    const newestPost = postDates[0];
-                    const daysDiff = Math.max(1, (newestPost.getTime() - oldestPost.getTime()) / (1000 * 60 * 60 * 24));
-                    const postsPerWeek = (postDates.length / daysDiff) * 7;
-                    
-                    if (postsPerWeek >= 7) {
-                      postingFrequency = 'Daily';
-                    } else if (postsPerWeek >= 4) {
-                      postingFrequency = `${Math.round(postsPerWeek)}x/week`;
-                    } else if (postsPerWeek >= 2) {
-                      postingFrequency = `${Math.round(postsPerWeek)}x/week`;
-                    } else if (postsPerWeek >= 1) {
-                      postingFrequency = 'Weekly';
-                    } else {
-                      postingFrequency = 'Less than weekly';
-                    }
-                  } else if (postDates.length === 1) {
-                    postingFrequency = '1 post found';
-                  }
-                  
-                  // Calculate average post length
-                  const postLengths = posts.map((p: any) => (p.content || '').length).filter((len: number) => len > 0);
-                  const avgLength = postLengths.length > 0 
-                    ? postLengths.reduce((sum: number, len: number) => sum + len, 0) / postLengths.length 
-                    : 0;
-                  
-                  // Extract posting times - analyze hour distribution
-                  let postingTimes = comp.postingTimes || 'Unknown';
-                  if (postDates.length > 0) {
-                    const hours = postDates.map((d: Date) => d.getHours());
-                    const hourCounts: Record<number, number> = {};
-                    hours.forEach((h: number) => {
-                      hourCounts[h] = (hourCounts[h] || 0) + 1;
-                    });
-                    
-                    // Find most common posting hours
-                    const sortedHours = Object.entries(hourCounts)
-                      .sort((a, b) => b[1] - a[1])
-                      .slice(0, 2)
-                      .map(([h]) => parseInt(h));
-                    
-                    if (sortedHours.length > 0) {
-                      const primaryHour = sortedHours[0];
-                      const timeRange = sortedHours.length > 1 
-                        ? `${primaryHour}:00-${sortedHours[1]}:00`
-                        : `${primaryHour}:00-${(primaryHour + 2) % 24}:00`;
-                      postingTimes = `Most posts between ${timeRange} (${new Intl.DateTimeFormat('en-US', { timeZoneName: 'short' }).resolvedOptions().timeZone})`;
-                    }
-                  }
-                  
-                  // Extract content types from posts
-                  const contentTypes = competitorData.content_themes || comp.contentTypes || [];
-                  
-                  return {
-                    ...comp,
-                    postingFrequency,
-                    postingTimes,
-                    avgPostLength: avgLength > 0 
-                      ? avgLength < 100 
-                        ? `${Math.round(avgLength)} chars` 
-                        : avgLength < 500
-                        ? `${Math.round(avgLength / 100) * 100} words`
-                        : `${Math.round(avgLength / 60)} min read`
-                      : comp.avgPostLength || 'Unknown',
-                    contentTypes: contentTypes.length > 0 ? contentTypes : comp.contentTypes || [],
-                    actualPosts: posts.length,
-                    // Keep LLM-generated engagement if available, otherwise calculate from posts
-                    weeklyViews: comp.weeklyViews || (posts.length * 10000), // Estimate
-                    weeklyEngagement: comp.weeklyEngagement || (posts.length * 500), // Estimate
-                    avgEngagementRate: comp.avgEngagementRate || 5.0 // Default estimate
-                  };
-                }
-                
-                return comp;
-              } catch (error) {
-                console.error(`Error researching competitor ${comp.name}:`, error);
-                return comp; // Return original if research fails
-              }
-            })
-          );
+          const competitors = parsed.competitors
+            .filter((comp: any) => comp.name && comp.threatLevel)
+            .slice(0, 3);
           
           return {
             marketShare: parsed.marketShare,
-            competitors: enrichedCompetitors
+            competitors: competitors
+          };
+        }
+        
+        // If it's an array wrapped in object, extract it
+        if (Array.isArray(parsed)) {
+          return {
+            marketShare: null,
+            competitors: parsed.slice(0, 3)
           };
         }
       } catch (e) {
-        console.error('Error parsing competitor intelligence:', e);
+        // Try array format
       }
+    }
+    
+    // Fallback: try array format
+    const jsonArrMatch = text.match(/\[[\s\S]*\]/);
+    if (jsonArrMatch) {
+      const competitors = JSON.parse(jsonArrMatch[0]);
+      return {
+        marketShare: null,
+        competitors: competitors
+          .filter((comp: any) => comp.name && comp.threatLevel)
+          .slice(0, 3)
+      };
     }
 
     throw new Error('Failed to parse competitor intelligence as JSON');
