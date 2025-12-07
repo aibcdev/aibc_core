@@ -69,7 +69,7 @@ export async function generateAnalyticsReport(
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const reportId = `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 

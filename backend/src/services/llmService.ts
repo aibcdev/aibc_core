@@ -21,7 +21,7 @@ export type Provider = 'gemini-2-flash' | 'gemini-flash' | 'gemini-pro' | 'deeps
 
 // Provider configuration
 export const PROVIDER_CONFIG: Record<Provider, { name: string; model: string; costPer1kTokens: number }> = {
-  'gemini-2-flash': { name: 'Gemini 2.0 Flash', model: 'gemini-2.0-flash-exp', costPer1kTokens: 0 },
+  'gemini-2-flash': { name: 'Gemini 2.0 Flash', model: 'gemini-2.0-flash', costPer1kTokens: 0 },
   'gemini-flash': { name: 'Gemini 1.5 Flash', model: 'gemini-1.5-flash', costPer1kTokens: 0 },
   'gemini-pro': { name: 'Gemini 1.5 Pro', model: 'gemini-1.5-pro', costPer1kTokens: 0.003 },
   'deepseek': { name: 'DeepSeek Chat', model: 'deepseek-chat', costPer1kTokens: 0.001 },
@@ -220,7 +220,7 @@ export async function generateText(
     case 'openai':
       return callOpenAI(prompt, systemPrompt, 'gpt-4o');
     case 'gemini-2-flash':
-      return callGemini(prompt, systemPrompt, 'gemini-2.0-flash-exp');
+      return callGemini(prompt, systemPrompt, 'gemini-2.0-flash');
     case 'gemini-flash':
       return callGemini(prompt, systemPrompt, 'gemini-1.5-flash');
     case 'gemini-pro':

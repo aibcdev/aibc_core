@@ -33,7 +33,7 @@ export async function generatePodcastScript(
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const brandVoiceContext = request.brandVoice
       ? `\n\nBrand Voice Guidelines:\n- Style: ${request.brandVoice.voice?.style || 'professional'}\n- Tone: ${(request.brandVoice.voice?.tones || []).join(', ')}\n- Core Pillars: ${(request.brandVoice.corePillars || []).join(', ')}`
