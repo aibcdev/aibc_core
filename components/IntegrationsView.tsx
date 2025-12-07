@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link2, Check, HelpCircle, Plus, ChevronRight, BarChart2, Linkedin, Instagram, Play, Mic2, Globe, Mail, ShoppingBag, Sparkles, Heart, Zap, ExternalLink, X, Save, Loader2, AlertCircle, CheckCircle, Search, ArrowRight } from 'lucide-react';
 import { ViewState } from '../types';
+import { ViewState } from '../types';
 
 interface Integration {
   id: string;
