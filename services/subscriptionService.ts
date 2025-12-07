@@ -50,21 +50,21 @@ export const TIER_LIMITS = {
     monthlyCredits: 10,
     contentGenerations: 0,
     competitorTracking: 0,
-    features: ['basic_scan'] as const,
+    features: ['basic_scan'] as string[],
   },
   [SubscriptionTier.PRO]: {
     monthlyScans: 50,
     monthlyCredits: 500,
     contentGenerations: 100,
     competitorTracking: 10,
-    features: ['basic_scan', 'content_generation', 'competitor_tracking', 'advanced_analytics'] as const,
+    features: ['basic_scan', 'content_generation', 'competitor_tracking', 'advanced_analytics'] as string[],
   },
   [SubscriptionTier.ENTERPRISE]: {
     monthlyScans: -1, // Unlimited
     monthlyCredits: -1, // Unlimited
     contentGenerations: -1, // Unlimited
     competitorTracking: -1, // Unlimited
-    features: ['all'] as const,
+    features: ['all'] as string[],
   },
 } as const;
 
@@ -128,8 +128,10 @@ export function hasEnoughCredits(action: keyof typeof CREDIT_COSTS): boolean {
 
 /**
  * Deduct credits for an action
+ * @param action - The action to deduct credits for
+ * @param metadata - Optional metadata (e.g., contentId for audio/video)
  */
-export function deductCredits(action: keyof typeof CREDIT_COSTS): boolean {
+export function deductCredits(action: keyof typeof CREDIT_COSTS, metadata?: Record<string, unknown>): boolean {
   const balance = getCreditBalance();
   const cost = CREDIT_COSTS[action];
   
@@ -145,11 +147,18 @@ export function deductCredits(action: keyof typeof CREDIT_COSTS): boolean {
   
   localStorage.setItem('creditBalance', JSON.stringify(updated));
   
+  // Determine transaction type
+  let transactionType: CreditTransaction['type'] = 'content_generation';
+  if (action === 'DIGITAL_FOOTPRINT_SCAN') transactionType = 'scan';
+  if (action === 'COMPETITOR_ANALYSIS') transactionType = 'scan';
+  if (action.includes('AUDIO') || action.includes('VIDEO')) transactionType = 'content_generation';
+  
   // Log transaction
   addCreditTransaction({
-    type: action === 'DIGITAL_FOOTPRINT_SCAN' ? 'scan' : 'content_generation',
+    type: transactionType,
     amount: -cost,
     description: `Used ${cost} credits for ${action}`,
+    metadata: metadata as Record<string, any> | undefined,
   });
   
   return true;
@@ -240,11 +249,11 @@ export function hasFeatureAccess(feature: string): boolean {
   const subscription = getUserSubscription();
   const limits = TIER_LIMITS[subscription.tier];
   
-  if (limits.features.includes('all' as any)) {
+  if (limits.features.includes('all')) {
     return true;
   }
   
-  return limits.features.includes(feature as any);
+  return limits.features.includes(feature);
 }
 
 /**
