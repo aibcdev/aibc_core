@@ -21,10 +21,12 @@
    - Authentication → Email Templates
    - Make sure "Reset password" is enabled (click on it to see template)
 
-2. **Check SMTP Settings:**
-   - Authentication → Email → SMTP Settings
-   - Verify SMTP is configured (SendGrid or your provider)
-   - Test the connection if possible
+2. **Check Email Service:**
+   - Supabase has a **built-in email service** that works without SMTP setup
+   - Go to Authentication → Email → SMTP Settings
+   - If you see "Set up custom SMTP" warning, that's OK - built-in service still works
+   - Built-in service has rate limits but works for testing/production
+   - Custom SMTP (SendGrid) is optional for higher volume
 
 ### Step 3: Check Supabase Logs
 
