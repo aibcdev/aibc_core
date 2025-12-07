@@ -1,14 +1,13 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { chromium, Browser } from 'playwright';
 import { storage } from './storage';
+import { generateJSON, isLLMConfigured, getActiveProvider } from './llmService';
 import dotenv from 'dotenv';
 
 // Load environment variables
 dotenv.config();
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-console.log(`Gemini API Key configured: ${GEMINI_API_KEY ? 'Yes (length: ' + GEMINI_API_KEY.length + ')' : 'No'}`);
-const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
+console.log(`LLM configured: ${isLLMConfigured() ? `Yes (${getActiveProvider()})` : 'No'}`);
+
 
 export async function startScan(
   scanId: string,
@@ -281,71 +280,65 @@ async function scrapeProfile(url: string, platform: string): Promise<{ html: str
 
 // Use LLM to research a brand/creator directly
 async function researchBrandWithLLM(username: string, platforms: string[]): Promise<any> {
-  if (!genAI) {
-    throw new Error('Gemini API not configured');
+  if (!isLLMConfigured()) {
+    throw new Error('No LLM API configured. Set DEEPSEEK_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY.');
   }
   
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const systemPrompt = `You are an expert brand analyst and digital marketing researcher. 
+Your job is to research brands and creators to provide actionable competitive intelligence.
+Always return valid JSON. Be specific and use real data when available.`;
   
-  const prompt = `Research "${username}" on ${platforms.join(', ')}. Give me the key facts.
+  const prompt = `Research "${username}" across these platforms: ${platforms.join(', ')}.
 
-I need:
-1. Their profile (bio, followers, verified status)
-2. What they post about (5-8 recent posts, summarized)
-3. Their main topics (3-5 themes)
-4. How they talk (tone, style)
-5. Who they compete with (3 real competitors)
+Provide comprehensive analysis including:
 
-WRITING STYLE FOR COMPETITORS:
-- Use real names, not generic labels
-- Short sentences only
-- "theirAdvantage" = one sentence, what they're good at
-- "yourOpportunity" = one sentence, how to beat them (start with a verb)
+1. PROFILE: Their bio, approximate follower count, verified status, and which platforms they're active on
+2. CONTENT: Summarize 5-8 of their recent/notable posts - what topics do they cover?
+3. THEMES: Identify 3-5 main content themes/topics they focus on
+4. VOICE: Analyze their communication style - tone, formality, vocabulary
+5. COMPETITORS: Identify 3 REAL competitors in their space (use actual names, not placeholders)
 
-Return ONLY valid JSON:
+For competitors, be specific:
+- Use real company/creator names
+- "theirAdvantage" = one specific thing they do better
+- "yourOpportunity" = actionable advice to compete (start with a verb)
+
+Return ONLY valid JSON in this exact format:
 {
   "profile": {
-    "bio": "Their bio",
+    "bio": "Their actual bio or description",
     "follower_count": 0,
     "verified": false,
     "platform_presence": ["twitter", "youtube"]
   },
   "posts": [
     {
-      "content": "Short summary of what they posted",
+      "content": "Summary of what they posted about",
       "post_type": "video",
       "engagement": {"likes": 0, "shares": 0, "comments": 0},
       "quality_score": 0.8
     }
   ],
-  "content_themes": ["topic1", "topic2", "topic3"],
+  "content_themes": ["theme1", "theme2", "theme3"],
   "brand_voice": {
     "tone": "casual",
     "style": "conversational",
-    "vocabulary": ["key", "words"]
+    "vocabulary": ["key", "words", "they", "use"]
   },
   "competitors": [
     {
       "name": "Real Competitor Name",
       "threatLevel": "HIGH",
-      "primaryVector": "YouTube - posts daily",
-      "theirAdvantage": "Bigger audience and better production.",
-      "yourOpportunity": "Be more authentic. Their content feels corporate."
+      "primaryVector": "YouTube - posts daily tutorials",
+      "theirAdvantage": "Larger audience and professional production quality.",
+      "yourOpportunity": "Focus on authenticity. Their content feels too corporate."
     }
   ],
   "extraction_confidence": 0.8
 }`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    throw new Error('Failed to parse LLM response');
+    return await generateJSON(prompt, systemPrompt);
   } catch (error) {
     console.error('LLM research error:', error);
     throw error;
@@ -357,7 +350,7 @@ async function extractOutputContent(
   username: string,
   platform: string
 ): Promise<any> {
-  if (!genAI) {
+  if (!isLLMConfigured()) {
     // Fallback mock data
     return {
       profile: { bio: 'Sample bio' },
@@ -368,9 +361,8 @@ async function extractOutputContent(
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
-    const prompt = `You are a world-class digital footprint analyst extracting ONLY original content published BY ${username} from ${platform}.
+    const systemPrompt = 'You are a world-class digital footprint analyst. Always return valid JSON.';
+    const prompt = `Extract ONLY original content published BY ${username} from ${platform}.
 
 CRITICAL FILTERING RULES - STRICTLY ENFORCE:
 1. OUTPUT ONLY: Extract ONLY posts/content directly published by ${username}
@@ -445,18 +437,11 @@ Return ONLY valid JSON, no markdown, no code blocks, no explanations:
   "extraction_confidence": 0.0-1.0
 }`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const extracted: any = await generateJSON(prompt, systemPrompt);
     
-    // Extract JSON from response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const extracted = JSON.parse(jsonMatch[0]);
-      
-      // Additional client-side filtering
-      if (extracted.posts && Array.isArray(extracted.posts)) {
-        extracted.posts = extracted.posts.filter((post: any) => {
+    // Additional client-side filtering
+    if (extracted.posts && Array.isArray(extracted.posts)) {
+      extracted.posts = extracted.posts.filter((post: any) => {
           // Filter low-quality posts
           const content = (post.content || '').trim();
           if (content.length < 10) return false;
@@ -475,10 +460,7 @@ Return ONLY valid JSON, no markdown, no code blocks, no explanations:
         });
       }
       
-      return extracted;
-    }
-
-    throw new Error('Failed to parse LLM response as JSON');
+    return extracted;
   } catch (error) {
     console.error('LLM extraction error:', error);
     throw error;
@@ -529,7 +511,7 @@ function validateOutputOnly(content: any, username: string): any {
 }
 
 async function extractBrandDNA(validatedContent: any): Promise<any> {
-  if (!genAI) {
+  if (!isLLMConfigured()) {
     return {
       archetype: 'The Architect',
       voice: {
@@ -545,11 +527,10 @@ async function extractBrandDNA(validatedContent: any): Promise<any> {
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
     const allPosts = (validatedContent.posts || []).map((p: any) => p.content).join('\n\n');
     const combinedText = allPosts.substring(0, 50000);
 
+    const systemPrompt = 'You are a brand strategist expert. Analyze content and extract brand DNA. Always return valid JSON.';
     const prompt = `Analyze this brand's content to extract their unique DNA:
 
 Content:
@@ -605,28 +586,19 @@ Return ONLY valid JSON:
   }
 }`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      // Ensure required fields
-      return {
-        archetype: parsed.archetype || 'The Architect',
-        voice: {
-          ...parsed.voice,
-          tones: parsed.voice?.tones || ['Systematic', 'Transparent', 'Dense']
-        },
-        themes: parsed.themes || [],
-        corePillars: parsed.corePillars || ['Automated Content Scale', 'Forensic Brand Analysis', 'Enterprise Reliability'],
-        visual_identity: parsed.visual_identity || {},
-        engagement_patterns: parsed.engagement_patterns || {}
-      };
-    }
-
-    throw new Error('Failed to parse Brand DNA response as JSON');
+    const parsed: any = await generateJSON(prompt, systemPrompt);
+    // Ensure required fields
+    return {
+      archetype: parsed.archetype || 'The Architect',
+      voice: {
+        ...parsed.voice,
+        tones: parsed.voice?.tones || ['Systematic', 'Transparent', 'Dense']
+      },
+      themes: parsed.themes || [],
+      corePillars: parsed.corePillars || ['Automated Content Scale', 'Forensic Brand Analysis', 'Enterprise Reliability'],
+      visual_identity: parsed.visual_identity || {},
+      engagement_patterns: parsed.engagement_patterns || {}
+    };
   } catch (error) {
     console.error('Brand DNA extraction error:', error);
     // Return fallback
@@ -646,25 +618,26 @@ Return ONLY valid JSON:
 }
 
 async function generateStrategicInsights(validatedContent: any, brandDNA: any): Promise<any[]> {
-  if (!genAI) {
-    return [
-      {
-        title: 'No Video Content Strategy',
-        description: 'Zero presence on YouTube or TikTok while competitors like Jasper post 2x weekly product demos averaging 10k views. Video drives 3x more engagement than text.',
-        impact: 'HIGH IMPACT',
-        effort: 'Medium effort (1 month)'
-      },
-      {
-        title: 'Inconsistent Posting Cadence',
-        description: 'Posting frequency varies from 5x/week to 0x/week. Competitors maintain daily cadence. Algorithm penalizes inconsistency by 40%.',
-        impact: 'MEDIUM IMPACT',
-        effort: 'Quick win (1 week)'
-      }
-    ];
+  const defaultInsights = [
+    {
+      title: 'No Video Content Strategy',
+      description: 'Zero presence on YouTube or TikTok while competitors like Jasper post 2x weekly product demos averaging 10k views. Video drives 3x more engagement than text.',
+      impact: 'HIGH IMPACT',
+      effort: 'Medium effort (1 month)'
+    },
+    {
+      title: 'Inconsistent Posting Cadence',
+      description: 'Posting frequency varies from 5x/week to 0x/week. Competitors maintain daily cadence. Algorithm penalizes inconsistency by 40%.',
+      impact: 'MEDIUM IMPACT',
+      effort: 'Quick win (1 week)'
+    }
+  ];
+
+  if (!isLLMConfigured()) {
+    return defaultInsights;
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // Multi-step analysis: First analyze patterns, then generate insights
     const allPosts = (validatedContent.posts || []).map((p: any) => p.content).join('\n\n');
@@ -740,9 +713,9 @@ Return ONLY valid JSON:
   }
 ]`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const { generateText } = await import('./llmService');
+    const systemPrompt = 'You are a content strategist. Provide specific, data-driven insights. Always return valid JSON array.';
+    const text = await generateText(prompt, systemPrompt);
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     
     if (jsonMatch) {
@@ -760,21 +733,7 @@ Return ONLY valid JSON:
     throw new Error('Failed to parse strategic insights as JSON');
   } catch (error) {
     console.error('Strategic insights generation error:', error);
-    // Return fallback insights
-    return [
-      {
-        title: 'No Video Content Strategy',
-        description: 'Zero presence on YouTube or TikTok while competitors like Jasper post 2x weekly product demos averaging 10k views. Video drives 3x more engagement than text.',
-        impact: 'HIGH IMPACT',
-        effort: 'Medium effort (1 month)'
-      },
-      {
-        title: 'Inconsistent Posting Cadence',
-        description: 'Posting frequency varies from 5x/week to 0x/week. Competitors maintain daily cadence. Algorithm penalizes inconsistency by 40%.',
-        impact: 'MEDIUM IMPACT',
-        effort: 'Quick win (1 week)'
-      }
-    ];
+    return defaultInsights;
   }
 }
 
@@ -790,13 +749,11 @@ async function generateCompetitorIntelligence(validatedContent: any, brandDNA: a
     return { marketShare: null, competitors: [] };
   }
 
-  if (!genAI) {
+  if (!isLLMConfigured()) {
     return { marketShare: null, competitors: [] };
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
     const allPosts = (validatedContent.posts || []).map((p: any) => p.content).join('\n\n');
     const combinedText = allPosts.substring(0, 40000);
 
@@ -847,9 +804,9 @@ Return ONLY valid JSON:
   ]
 }`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const { generateText } = await import('./llmService');
+    const systemPrompt = 'You are a competitive intelligence analyst. Provide specific data on competitors. Always return valid JSON.';
+    const text = await generateText(prompt, systemPrompt);
     
     // Try to parse as object first (new format)
     const jsonObjMatch = text.match(/\{[\s\S]*\}/);
