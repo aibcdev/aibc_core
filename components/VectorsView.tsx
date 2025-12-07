@@ -73,7 +73,7 @@ const VectorsView: React.FC<NavProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div id="vectors-view" className="fixed inset-0 z-[90] bg-[#050505] overflow-y-auto animate-in fade-in duration-500">
+    <div id="vectors-view" className="fixed inset-0 z-[90] bg-[#050505] overflow-y-auto">
       <div className="min-h-screen flex flex-col p-6 md:p-12 relative max-w-5xl mx-auto">
         
         {/* Step Indicator */}
