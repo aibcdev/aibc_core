@@ -120,19 +120,21 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
     }
 
     try {
-      // Use mock password reset (Supabase will be added later)
       const result = await forgotPassword(forgotPasswordEmail);
+      console.log('Password reset result:', result);
       if (result.success) {
         setForgotPasswordSent(true);
+        setError(''); // Clear any previous errors
         // In development, show the token
         if (result.resetToken) {
           setResetToken(result.resetToken);
         }
       } else {
-        setError(result.error || 'Failed to send reset email');
+        setError(result.error || 'Failed to send reset email. Please try again.');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to send reset email');
+      console.error('Password reset error:', err);
+      setError(err.message || 'Failed to send reset email. Please try again.');
     } finally {
       setForgotPasswordLoading(false);
     }
