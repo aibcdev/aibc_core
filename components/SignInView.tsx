@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Loader2, Mail } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
 import { signIn, signInWithGoogle, forgotPassword, storeAuthToken, storeUser } from '../services/authClient';
+import { initializeGoogleSignIn, renderGoogleButton, isGoogleLoaded } from '../services/googleOAuth';
 
 const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
   const [email, setEmail] = useState('');
@@ -233,7 +234,7 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
   }
 
   return (
-    <div id="signin-view" className="fixed inset-0 z-[60] bg-[#050505] overflow-y-auto animate-in fade-in duration-300">
+    <div id="signin-view" className="fixed inset-0 z-[60] bg-[#050505] overflow-y-auto">
       <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 relative">
         <button 
           onClick={() => onNavigate(ViewState.LANDING)}
