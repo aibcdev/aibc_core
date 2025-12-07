@@ -24,7 +24,11 @@ interface VerificationResult {
   error?: string;
 }
 
-const IntegrationsView: React.FC = () => {
+interface IntegrationsProps {
+  onNavigate?: (view: any) => void;
+}
+
+const IntegrationsView: React.FC<IntegrationsProps> = ({ onNavigate }) => {
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
   const [inputHandle, setInputHandle] = useState('');

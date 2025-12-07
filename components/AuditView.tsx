@@ -684,11 +684,6 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username }) => {
                       Rescan
                     </button>
                   </>
-                ) : isRetrying ? (
-                  <div className="flex items-center gap-2 text-white/60 text-xs">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Retrying...
-                  </div>
                 ) : (
                   <div className="flex items-center gap-2 text-white/30 text-xs">
                     <Loader2 className="w-4 h-4 animate-spin" />
