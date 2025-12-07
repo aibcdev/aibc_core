@@ -42,19 +42,17 @@ export function getProviderForTier(tier: ScanTier, forceProvider?: Provider): Pr
       throw new Error('No LLM configured for basic scans. Set GEMINI_API_KEY.');
       
     case 'deep':
-      // Deep scan: Prefer Claude (best quality for competitive analysis)
-      if (ANTHROPIC_API_KEY) return 'claude';
+      // Deep scan: Use Gemini 2.0 Flash (same as basic, but with enhanced prompts)
+      if (GEMINI_API_KEY) return 'gemini-2-flash';
       if (DEEPSEEK_API_KEY) return 'deepseek-r1';
       if (OPENAI_API_KEY) return 'openai';
-      if (GEMINI_API_KEY) return 'gemini-pro';
-      throw new Error('No LLM configured for deep scans. Set ANTHROPIC_API_KEY.');
+      throw new Error('No LLM configured for deep scans. Set GEMINI_API_KEY.');
       
     case 'test':
-      // Test mode: Use best available for comparison
-      if (ANTHROPIC_API_KEY) return 'claude';
+      // Test mode: Use Gemini 2.0 Flash for testing
+      if (GEMINI_API_KEY) return 'gemini-2-flash';
       if (DEEPSEEK_API_KEY) return 'deepseek-r1';
       if (OPENAI_API_KEY) return 'openai';
-      if (GEMINI_API_KEY) return 'gemini-pro';
       throw new Error('No LLM configured for testing.');
       
     default:
@@ -89,11 +87,10 @@ function getActiveProvider(): Provider | null {
 
 // Log available providers on startup
 console.log(`LLM Service initialized. Available providers:`);
-if (GEMINI_API_KEY) console.log('  ✅ Gemini 2.0 Flash - BASIC scans (FREE)');
-if (ANTHROPIC_API_KEY) console.log('  ✅ Claude 3.5 Sonnet - DEEP scans (Premium)');
+if (GEMINI_API_KEY) console.log('  ✅ Gemini 2.0 Flash - BASIC & DEEP scans (FREE)');
 if (DEEPSEEK_API_KEY) console.log('  ✅ DeepSeek (Chat + R1) - Fallback');
 if (OPENAI_API_KEY) console.log('  ✅ OpenAI (GPT-4o) - Fallback');
-if (!GEMINI_API_KEY && !ANTHROPIC_API_KEY && !DEEPSEEK_API_KEY && !OPENAI_API_KEY) {
+if (!GEMINI_API_KEY && !DEEPSEEK_API_KEY && !OPENAI_API_KEY) {
   console.log('  ⚠️ No LLM providers configured!');
 }
 

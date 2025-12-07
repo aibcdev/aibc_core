@@ -163,7 +163,7 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
                       <span className="text-xs font-bold uppercase">Deep Scan</span>
                     </div>
                     <div className="text-[10px] text-white/40 mt-1">
-                      {canUseDeepScan ? 'Premium • Claude 3.5' : 'Pro+ Only'}
+                      {canUseDeepScan ? 'Premium • Enhanced Analysis' : 'Pro+ Only'}
                     </div>
                   </button>
                 </div>
