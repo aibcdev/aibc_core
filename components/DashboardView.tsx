@@ -39,6 +39,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
   const [activeTab, setActiveTab] = useState<'activity' | 'tasks'>('tasks');
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const taskInputRef = useRef<HTMLInputElement>(null);
+  const [userInfo, setUserInfo] = useState<{ name: string; email: string; initials: string } | null>(null);
   
   // Modal State
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -230,11 +231,11 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
          <div className="p-4 border-t border-white/10">
              <div className="flex items-center gap-3 px-2">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 to-purple-600 flex items-center justify-center text-xs font-bold border border-white/20">
-                    JD
+                    {userInfo?.initials || 'U'}
                 </div>
-                <div>
-                    <div className="text-xs font-bold text-white">John Doe</div>
-                    <div className="text-[10px] text-white/40">Pro Plan</div>
+                <div className="min-w-0 flex-1">
+                    <div className="text-xs font-bold text-white truncate">{userInfo?.name || 'User'}</div>
+                    <div className="text-[10px] text-white/40 truncate">{userInfo?.email || 'Pro Plan'}</div>
                 </div>
              </div>
          </div>
@@ -256,6 +257,20 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
           </div>
           
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const lastUsername = localStorage.getItem('lastScannedUsername');
+                if (lastUsername) {
+                  onNavigate(ViewState.AUDIT);
+                } else {
+                  onNavigate(ViewState.INGESTION);
+                }
+              }}
+              className="px-3 py-1.5 bg-gradient-to-r from-orange-500 to-purple-600 border border-white/10 rounded-lg text-xs font-bold text-white hover:from-orange-600 hover:to-purple-700 transition-all flex items-center gap-2"
+            >
+              <Zap className="w-3 h-3" />
+              Rescan Footprint
+            </button>
             <button
               onClick={async () => {
                 console.log('Manual refresh triggered');
