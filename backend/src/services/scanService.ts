@@ -272,54 +272,14 @@ export async function startScan(
     console.error(`Scan ${scanId} failed:`, error);
     addLog(scanId, `[ERROR] Scan failed: ${error.message}`);
     
-    // Even on error, try to return minimal results so scan completes
-    try {
-      const fallbackResults = {
-        extractedContent: {
-          profile: { bio: `Profile for ${username}` },
-          posts: [],
-          content_themes: [],
-          extraction_confidence: 0.1
-        },
-        brandDNA: {
-          archetype: 'The Architect',
-          voice: {
-            style: 'professional',
-            formality: 'casual',
-            tone: 'friendly',
-            vocabulary: [],
-            tones: ['Systematic', 'Transparent', 'Dense']
-          },
-          themes: [],
-          corePillars: ['Automated Content Scale', 'Forensic Brand Analysis', 'Enterprise Reliability']
-        },
-        strategicInsights: [
-          {
-            title: 'Initial Scan Complete',
-            description: 'Digital footprint scan completed. Additional data will be available after full platform analysis.',
-            impact: 'LOW IMPACT',
-            effort: 'Quick win (1 week)'
-          }
-        ],
-        competitorIntelligence: []
-      };
-      
-      storage.updateScan(scanId, {
-        progress: 100,
-        status: 'complete',
-        results: fallbackResults,
-        completedAt: new Date().toISOString(),
-        error: error.message
-      });
-      addLog(scanId, `[WARNING] Scan completed with errors - using fallback data`);
-    } catch (fallbackError) {
-      // Last resort - mark as error but still try to complete
-      storage.updateScan(scanId, {
-        status: 'error',
-        error: error.message,
-        progress: 100
-      });
-    }
+    // NO FALLBACK DATA - Quality validation failed, scan must fail
+    // This is CRITICAL for 95% CEO satisfaction - we cannot ship placeholder data
+    storage.updateScan(scanId, {
+      status: 'error',
+      error: `Quality validation failed: ${error.message}. Scan rejected - insufficient data quality for production.`,
+      progress: 100
+    });
+    addLog(scanId, `[REJECTED] Scan failed quality validation - no fallback data provided`);
   }
 }
 
