@@ -139,7 +139,7 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
 
   if (showForgotPassword) {
     return (
-      <div id="signin-view" className="fixed inset-0 z-[60] bg-[#050505] overflow-y-auto animate-in fade-in duration-300">
+      <div id="signin-view" className="fixed inset-0 z-[60] bg-[#050505] overflow-y-auto">
         <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 relative">
           <button 
             onClick={() => setShowForgotPassword(false)}
