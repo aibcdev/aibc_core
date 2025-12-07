@@ -1236,7 +1236,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
             {/* Integrations */}
             {!loading && currentPage === 'integrations' && (
               <div className="w-full min-h-full">
-                <IntegrationsView />
+                <IntegrationsView onNavigate={onNavigate} />
               </div>
             )}
 
