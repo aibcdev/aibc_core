@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
 
+// Landing page component with navigation buttons
+
 const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
   const [showSampleModal, setShowSampleModal] = useState(false);
 
