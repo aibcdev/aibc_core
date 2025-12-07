@@ -53,8 +53,7 @@ export default function App() {
       ViewState.DASHBOARD,
       ViewState.INGESTION,
       ViewState.AUDIT,
-      ViewState.VECTORS,
-      ViewState.PRODUCTION
+      ViewState.VECTORS
     ];
 
     if (protectedRoutes.includes(newView) && !isAuthenticated()) {

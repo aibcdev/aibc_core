@@ -533,11 +533,14 @@ const IntegrationsView: React.FC<IntegrationsProps> = ({ onNavigate }) => {
         </div>
       )}
 
-      {/* Continue Button - Only show if onNavigate is provided (standalone flow) */}
+      {/* Continue Button - Only show if onNavigate is provided (standalone flow, not inside dashboard) */}
       {onNavigate && (
-        <div className="mt-8 flex justify-end">
+        <div className="mt-8 flex justify-end border-t border-white/10 pt-6">
           <button
-            onClick={() => onNavigate(ViewState.DASHBOARD)}
+            onClick={() => {
+              console.log('IntegrationsView: Navigating to Dashboard');
+              onNavigate(ViewState.DASHBOARD);
+            }}
             className="px-8 py-3 rounded bg-[#10B981] hover:bg-[#059669] text-[#050505] text-xs font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] transition-all flex items-center gap-2"
           >
             Continue <ArrowRight className="w-3 h-3" />
