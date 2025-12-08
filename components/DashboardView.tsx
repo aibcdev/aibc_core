@@ -118,7 +118,13 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
               console.log('Loading cached scan results:', cached);
               if (cached.strategicInsights) setStrategicInsights(cached.strategicInsights);
               if (cached.brandDNA) setBrandDNA(cached.brandDNA);
-              if (cached.competitorIntelligence) setCompetitorIntelligence(cached.competitorIntelligence);
+              // Ensure competitorIntelligence is always an array
+              if (cached.competitorIntelligence) {
+                const competitors = Array.isArray(cached.competitorIntelligence) 
+                  ? cached.competitorIntelligence 
+                  : [];
+                setCompetitorIntelligence(competitors);
+              }
               if (cached.marketShare) setMarketShare(cached.marketShare);
               const username = localStorage.getItem('lastScannedUsername');
               if (username) setScanUsername(username);
@@ -134,9 +140,20 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
               .then(scanResults => {
                 console.log('API scan results:', scanResults);
                 if (scanResults.success && scanResults.data) {
+                  console.log('Loading scan results:', {
+                    hasInsights: !!scanResults.data.strategicInsights,
+                    hasBrandDNA: !!scanResults.data.brandDNA,
+                    competitorCount: scanResults.data.competitorIntelligence?.length || 0,
+                    competitors: scanResults.data.competitorIntelligence,
+                    hasMarketShare: !!scanResults.data.marketShare
+                  });
                   setStrategicInsights(scanResults.data.strategicInsights || []);
                   setBrandDNA(scanResults.data.brandDNA || null);
-                  setCompetitorIntelligence(scanResults.data.competitorIntelligence || []);
+                  // Ensure competitorIntelligence is always an array
+                  const competitors = Array.isArray(scanResults.data.competitorIntelligence) 
+                    ? scanResults.data.competitorIntelligence 
+                    : [];
+                  setCompetitorIntelligence(competitors);
                   setMarketShare(scanResults.data.marketShare || null);
                   setScanUsername(storedUsername);
                   // Update cache
@@ -295,7 +312,12 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                     console.log('Loading from cache:', cached);
                     setStrategicInsights(cached.strategicInsights || []);
                     setBrandDNA(cached.brandDNA || null);
-                    setCompetitorIntelligence(cached.competitorIntelligence || []);
+                    // Ensure competitorIntelligence is always an array
+                    const competitors = Array.isArray(cached.competitorIntelligence) 
+                      ? cached.competitorIntelligence 
+                      : [];
+                    setCompetitorIntelligence(competitors);
+                    setMarketShare(cached.marketShare || null);
                   } catch (e) {
                     console.error('Cache parse error:', e);
                   }
@@ -311,12 +333,14 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                       setStrategicInsights(scanResults.data.strategicInsights || []);
                       setBrandDNA(scanResults.data.brandDNA || null);
                       setCompetitorIntelligence(scanResults.data.competitorIntelligence || []);
+                      setMarketShare(scanResults.data.marketShare || null);
                       setScanUsername(storedUsername);
                       localStorage.setItem('lastScanResults', JSON.stringify(scanResults.data));
                       console.log('Data refreshed:', {
                         insights: scanResults.data.strategicInsights?.length || 0,
                         brandDNA: !!scanResults.data.brandDNA,
-                        competitors: scanResults.data.competitorIntelligence?.length || 0
+                        competitors: scanResults.data.competitorIntelligence?.length || 0,
+                        marketShare: !!scanResults.data.marketShare
                       });
                     }
                   } catch (error) {
@@ -514,13 +538,13 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                         )}
 
                         {/* Forensic Competitor Intelligence - MATCHING SCREENSHOT */}
-                        <div>
+                        <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-6 shadow-xl">
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
                                     <Target className="w-5 h-5 text-red-500" />
                                     <div>
                                         <h2 className="text-xl font-black text-white uppercase tracking-tight">FORENSIC COMPETITOR INTEL</h2>
-                                        <p className="text-xs text-white/40 mt-1">{scanUsername ? 'Updated 12m ago' : 'No scan yet'}</p>
+                                        <p className="text-xs text-white/40 mt-1">{scanUsername ? 'UPDATED 12m AGO' : 'No scan yet'}</p>
                                     </div>
                                 </div>
                                 <button 
@@ -1450,7 +1474,15 @@ const ForensicCompetitorCard = ({ competitor, onRemove }: { competitor: any; onR
             {/* YOUR OPPORTUNITY */}
             <div>
                 <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1">YOUR OPPORTUNITY</div>
-                <p className="text-xs text-purple-400 font-medium leading-relaxed">| {competitor.yourOpportunity || 'Research in progress'}</p>
+                <p className="text-xs text-purple-400 font-medium leading-relaxed">
+                    {competitor.yourOpportunity ? (
+                        competitor.yourOpportunity.startsWith('|') 
+                            ? competitor.yourOpportunity 
+                            : competitor.yourOpportunity.startsWith('Exploit')
+                            ? competitor.yourOpportunity
+                            : `| ${competitor.yourOpportunity}`
+                    ) : '| Research in progress'}
+                </p>
             </div>
         </div>
     );
