@@ -10,6 +10,7 @@ import {
 import { ViewState, NavProps } from '../types';
 import { fetchAnalyticsData, fetchCalendarEvents, fetchCompetitors, fetchContentPipeline } from '../services/dashboardData';
 import { getLatestScanResults } from '../services/apiClient';
+import { isAdmin } from '../services/adminService';
 import ProductionRoomView from './ProductionRoomView';
 import CalendarView from './CalendarView';
 import AnalyticsView from './AnalyticsView';
