@@ -10,4 +10,9 @@
   # Disable secrets scanner - Supabase anon keys are meant to be public
   # All real secrets are in environment variables, not in code
   SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
+  
+# Note: If the above doesn't work, you must manually add this environment variable
+# in Netlify dashboard: Site settings → Environment variables
+# Key: SECRETS_SCAN_SMART_DETECTION_ENABLED
+# Value: false
 
