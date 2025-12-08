@@ -18,6 +18,8 @@ export default function App() {
   const [view, setView] = useState<ViewState>(ViewState.LANDING);
   const [username, setUsername] = useState<string>('');
   const [scanType, setScanType] = useState<'basic' | 'deep'>('basic');
+  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Check for existing session on mount (persist login across refreshes)
   // Only run once on mount, not on every view change
@@ -121,6 +123,7 @@ export default function App() {
         } catch (err) {
           console.error('Error checking session:', err);
           // On error, don't change view - let current view render
+          // Don't set error state - just log it and continue
         }
       }
     };
@@ -236,21 +239,23 @@ export default function App() {
 
   // Always render views immediately - no loading screen blocking
   // Session check happens in background and doesn't block rendering
+  
+  // Ensure we always render something - default to landing if view is invalid
+  const currentView = Object.values(ViewState).includes(view as ViewState) ? view : ViewState.LANDING;
+  
   return (
     <>
-      {view === ViewState.LANDING && <LandingView onNavigate={navigate} />}
-      {view === ViewState.LOGIN && <LoginView onNavigate={navigate} />}
-      {view === ViewState.SIGNIN && <SignInView onNavigate={navigate} />}
-      {view === ViewState.RESET_PASSWORD && <ResetPasswordView onNavigate={navigate} />}
-      {view === ViewState.INGESTION && <IngestionView onNavigate={navigate} setUsername={setUsername} setScanType={setScanType} />}
-      {view === ViewState.AUDIT && <AuditView onNavigate={navigate} username={username} scanType={scanType} />}
-      {view === ViewState.VECTORS && <VectorsView onNavigate={navigate} />}
-      {view === ViewState.DASHBOARD && <DashboardView onNavigate={navigate} />}
-      {view === ViewState.PRICING && <PricingView onNavigate={navigate} />}
-      {view === ViewState.ADMIN && <AdminView onNavigate={navigate} />}
-      {view === ViewState.INBOX && <InboxView onNavigate={navigate} />}
-      {/* Fallback: If view is somehow invalid, show landing */}
-      {!Object.values(ViewState).includes(view as ViewState) && <LandingView onNavigate={navigate} />}
+      {currentView === ViewState.LANDING && <LandingView onNavigate={navigate} />}
+      {currentView === ViewState.LOGIN && <LoginView onNavigate={navigate} />}
+      {currentView === ViewState.SIGNIN && <SignInView onNavigate={navigate} />}
+      {currentView === ViewState.RESET_PASSWORD && <ResetPasswordView onNavigate={navigate} />}
+      {currentView === ViewState.INGESTION && <IngestionView onNavigate={navigate} setUsername={setUsername} setScanType={setScanType} />}
+      {currentView === ViewState.AUDIT && <AuditView onNavigate={navigate} username={username} scanType={scanType} />}
+      {currentView === ViewState.VECTORS && <VectorsView onNavigate={navigate} />}
+      {currentView === ViewState.DASHBOARD && <DashboardView onNavigate={navigate} />}
+      {currentView === ViewState.PRICING && <PricingView onNavigate={navigate} />}
+      {currentView === ViewState.ADMIN && <AdminView onNavigate={navigate} />}
+      {currentView === ViewState.INBOX && <InboxView onNavigate={navigate} />}
     </>
   );
 }
