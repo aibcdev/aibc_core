@@ -7,12 +7,11 @@
 # All other secrets (API keys, Stripe secret keys) are stored in environment variables
 # and never committed to the repository
 [build.environment]
-  # Disable secrets scanner - Supabase anon keys are meant to be public
+  # Disable secrets scanner completely - Supabase anon keys are meant to be public
   # All real secrets are in environment variables, not in code
   SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
   
-# Note: If the above doesn't work, you must manually add this environment variable
-# in Netlify dashboard: Site settings → Environment variables
-# Key: SECRETS_SCAN_SMART_DETECTION_ENABLED
-# Value: false
+# Alternative: If you want to keep scanning but exclude specific values,
+# uncomment and add your Supabase anon key (the eyJ... value):
+# SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "your-supabase-anon-key-here"
 
