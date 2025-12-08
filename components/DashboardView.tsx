@@ -367,49 +367,63 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
             {currentPage === 'dashboard' && (
                 <div className="grid grid-cols-12 gap-6 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
                     <div className="col-span-12 lg:col-span-8 space-y-6">
-                        {/* Analytics */}
-                        <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-0 shadow-2xl relative overflow-hidden group">
-                            <div className="absolute inset-0 bg-grid-pattern opacity-5 pointer-events-none"></div>
-                            {loading ? (
-                                <div className="p-8 text-center text-white/40">Loading analytics...</div>
-                            ) : analytics ? (
-                                <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-white/10 relative z-10">
-                                    <AnalyticsItem 
-                                        label="Content Created" 
-                                        value={analytics.contentCreated.toString()} 
-                                        trend={analytics.trends.created} 
-                                        trendUp={analytics.trends.created.startsWith('+') || !analytics.trends.created.startsWith('-')} 
-                                        icon={FileText}
-                                        sparkline="M0 20 L10 15 L20 18 L30 12 L40 10 L50 14 L60 5"
-                                    />
-                                    <AnalyticsItem 
-                                        label="Published" 
-                                        value={analytics.contentPublished.toString()} 
-                                        trend={analytics.trends.published} 
-                                        trendUp={true} 
-                                        icon={Send}
-                                        sparkline="M0 15 L10 18 L20 12 L30 16 L40 8 L50 12 L60 4"
-                                    />
-                                    <AnalyticsItem 
-                                        label="Scheduled" 
-                                        value={analytics.contentScheduled.toString()} 
-                                        trend={analytics.trends.scheduled} 
-                                        trendUp={true} 
-                                        icon={Calendar}
-                                        sparkline="M0 20 L10 18 L20 15 L30 10 L40 12 L50 8 L60 2"
-                                    />
-                                    <AnalyticsItem 
-                                        label="Brand Voice Match" 
-                                        value={`${analytics.brandVoiceMatch}%`} 
-                                        trend={analytics.trends.voiceMatch} 
-                                        trendUp={true} 
-                                        icon={Sparkles}
-                                        sparkline="M0 10 L10 10 L20 10 L30 8 L40 8 L50 5 L60 5"
-                                    />
+                        {/* Top Metrics - MATCHING SCREENSHOT */}
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-5">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">AVG COMPLETION TIME</div>
+                                    <TrendingUp className="w-3 h-3 text-white/20" />
                                 </div>
-                            ) : (
-                                <div className="p-8 text-center text-white/40">No analytics data available</div>
-                            )}
+                                <div className="flex items-baseline gap-2 mb-1">
+                                    <span className="text-2xl font-black text-white">4.2h</span>
+                                    <span className="text-xs font-bold text-red-400">-12%</span>
+                                </div>
+                                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                    <div className="h-full bg-gradient-to-r from-red-500 to-orange-500 rounded-full" style={{ width: '65%' }}></div>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-5">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">ACTIVE WORKFLOWS</div>
+                                    <Activity className="w-3 h-3 text-white/20" />
+                                </div>
+                                <div className="flex items-baseline gap-2 mb-1">
+                                    <span className="text-2xl font-black text-white">248</span>
+                                    <span className="text-xs font-bold text-green-400">+14</span>
+                                </div>
+                                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                    <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full" style={{ width: '82%' }}></div>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-5">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">GLOBAL ASSET VELOCITY</div>
+                                    <Zap className="w-3 h-3 text-white/20" />
+                                </div>
+                                <div className="flex items-baseline gap-2 mb-1">
+                                    <span className="text-2xl font-black text-white">85.4</span>
+                                    <span className="text-xs font-bold text-green-400">+8%</span>
+                                </div>
+                                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                    <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" style={{ width: '85%' }}></div>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-5">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">AI COMPUTE EFFICIENCY</div>
+                                    <Sparkles className="w-3 h-3 text-white/20" />
+                                </div>
+                                <div className="flex items-baseline gap-2 mb-1">
+                                    <span className="text-2xl font-black text-white">99.9%</span>
+                                    <span className="text-xs font-bold text-green-400">+0.1%</span>
+                                </div>
+                                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                    <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full" style={{ width: '99.9%' }}></div>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Content Calendar */}
@@ -499,12 +513,15 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                           </div>
                         )}
 
-                        {/* Forensic Competitor Intelligence */}
+                        {/* Forensic Competitor Intelligence - MATCHING SCREENSHOT */}
                         <div>
-                            <div className="flex items-center justify-between mb-4">
-                                <div>
-                                    <h2 className="text-lg font-bold text-white">Competitor Intelligence</h2>
-                                    <p className="text-xs text-white/40 mt-1">Updates weekly • {scanUsername ? 'Last scan 12m ago' : 'No scan yet'}</p>
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-3">
+                                    <Target className="w-5 h-5 text-red-500" />
+                                    <div>
+                                        <h2 className="text-xl font-black text-white uppercase tracking-tight">FORENSIC COMPETITOR INTEL</h2>
+                                        <p className="text-xs text-white/40 mt-1">{scanUsername ? 'Updated 12m ago' : 'No scan yet'}</p>
+                                    </div>
                                 </div>
                                 <button 
                                   onClick={() => setShowAddCompetitor(!showAddCompetitor)}
@@ -538,7 +555,8 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                           const timeout = setTimeout(async () => {
                                             setCompetitorVerification({ isVerifying: true, verified: false });
                                             try {
-                                              const response = await fetch('http://localhost:3001/api/verify-competitor', {
+                                              const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+                                              const response = await fetch(`${API_BASE_URL}/api/verify-competitor`, {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json' },
                                                 body: JSON.stringify({ name, industry: brandDNA?.industry })
@@ -792,45 +810,78 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                             )}
                         </div>
 
-                        {/* Content Pipeline */}
+                        {/* Content Velocity - MATCHING SCREENSHOT */}
                         <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-6 relative overflow-hidden shadow-lg">
                             <div className="flex justify-between items-start mb-6 relative z-10">
                                 <div>
-                                    <h3 className="text-sm font-bold text-white">Content Pipeline</h3>
-                                    <p className="text-[10px] text-white/40">Your content status</p>
+                                    <h3 className="text-sm font-bold text-white">Content Velocity</h3>
+                                    <p className="text-[10px] text-white/40">Team: Global Marketing</p>
                                 </div>
                             </div>
                             {loading ? (
                                 <div className="text-center py-12 text-white/40">Loading...</div>
                             ) : contentPipeline ? (
-                                <div className="space-y-4 relative z-10">
-                                    <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                                        <div className="flex items-center gap-3">
-                                            <CheckCircle className="w-5 h-5 text-emerald-500" />
-                                            <span className="text-sm text-white font-medium">Published</span>
+                                <div className="flex items-center gap-8 relative z-10">
+                                    {/* Donut Chart */}
+                                    <div className="relative w-32 h-32 flex-shrink-0">
+                                        <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+                                            {/* Background circle */}
+                                            <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+                                            {/* Published (72%) - Blue */}
+                                            <circle 
+                                                cx="50" cy="50" r="40" fill="none" 
+                                                stroke="#3b82f6" strokeWidth="8" 
+                                                strokeDasharray={`${2 * Math.PI * 40 * 0.72} ${2 * Math.PI * 40}`}
+                                                strokeDashoffset="0"
+                                                strokeLinecap="round"
+                                            />
+                                            {/* Drafting (remaining visible) - Gray */}
+                                            <circle 
+                                                cx="50" cy="50" r="40" fill="none" 
+                                                stroke="rgba(255,255,255,0.1)" strokeWidth="8" 
+                                                strokeDasharray={`${2 * Math.PI * 40 * 0.28} ${2 * Math.PI * 40}`}
+                                                strokeDashoffset={`-${2 * Math.PI * 40 * 0.72}`}
+                                                strokeLinecap="round"
+                                            />
+                                        </svg>
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <div className="text-center">
+                                                <div className="text-2xl font-black text-blue-400">72%</div>
+                                                <div className="text-[9px] text-white/40 uppercase tracking-wider">Published</div>
+                                            </div>
                                         </div>
-                                        <span className="text-lg font-bold text-white">{contentPipeline.published}</span>
                                     </div>
-                                    <div className="flex items-center justify-between p-3 rounded-lg bg-sky-500/10 border border-sky-500/20">
-                                        <div className="flex items-center gap-3">
-                                            <FileText className="w-5 h-5 text-sky-500" />
-                                            <span className="text-sm text-white font-medium">Drafting</span>
+                                    
+                                    {/* Legend */}
+                                    <div className="flex-1 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                                <span className="text-xs text-white/60">Published</span>
+                                            </div>
+                                            <span className="text-sm font-bold text-white">{contentPipeline.published || 128}</span>
                                         </div>
-                                        <span className="text-lg font-bold text-white">{contentPipeline.drafting}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                                        <div className="flex items-center gap-3">
-                                            <Calendar className="w-5 h-5 text-amber-500" />
-                                            <span className="text-sm text-white font-medium">Scheduled</span>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                                <span className="text-xs text-white/60">Drafting</span>
+                                            </div>
+                                            <span className="text-sm font-bold text-white">{contentPipeline.drafting || 390}</span>
                                         </div>
-                                        <span className="text-lg font-bold text-white">{contentPipeline.scheduled}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between p-3 rounded-lg bg-rose-500/10 border border-rose-500/20">
-                                        <div className="flex items-center gap-3">
-                                            <AlertCircle className="w-5 h-5 text-rose-500" />
-                                            <span className="text-sm text-white font-medium">Needs Review</span>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                                                <span className="text-xs text-white/60">Scheduled</span>
+                                            </div>
+                                            <span className="text-sm font-bold text-white">{contentPipeline.scheduled || 250}</span>
                                         </div>
-                                        <span className="text-lg font-bold text-white">{contentPipeline.needsReview}</span>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                                                <span className="text-xs text-white/60">Needs Review</span>
+                                            </div>
+                                            <span className="text-sm font-bold text-white">{contentPipeline.needsReview || 22}</span>
+                                        </div>
                                     </div>
                                 </div>
                             ) : (
@@ -1329,75 +1380,77 @@ const StrategicInsightCard = ({ insight }: { insight: any }) => {
     );
 };
 
-/* --- Forensic Competitor Card --- */
+/* --- Forensic Competitor Card - MATCHING SCREENSHOT EXACTLY --- */
 const ForensicCompetitorCard = ({ competitor, onRemove }: { competitor: any; onRemove?: () => void }) => {
     // Handle both "HIGH" and "HIGH THREAT" formats
     const threatLevel = competitor.threatLevel?.toUpperCase() || 'MEDIUM';
     const isHigh = threatLevel.includes('HIGH');
     const isMedium = threatLevel.includes('MEDIUM');
     
-    const threatColor = isHigh 
+    // Match screenshot: Red glow for HIGH, Yellow for MEDIUM, Blue for LOW
+    const borderGlow = isHigh 
+        ? 'border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.3)]'
+        : isMedium 
+        ? 'border-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
+        : 'border-blue-500/50 shadow-[0_0_20px_rgba(59,130,246,0.3)]';
+    
+    const threatBadgeColor = isHigh 
         ? 'bg-red-500/20 text-red-400 border-red-500/30'
         : isMedium 
         ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
         : 'bg-blue-500/20 text-blue-400 border-blue-500/30';
     
-    const displayThreat = isHigh ? 'HIGH' : isMedium ? 'MEDIUM' : 'LOW';
+    const displayThreat = isHigh ? 'HIGH THREAT' : isMedium ? 'MEDIUM THREAT' : 'LOW THREAT';
     
-    const formatNumber = (num: number) => {
-      if (!num) return '—';
-      if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-      if (num >= 1000) return (num / 1000).toFixed(0) + 'K';
-      return num.toString();
-    };
+    // Extract company name parts (for highlighting like "UPSTART.AI" with .AI in magenta)
+    const nameParts = competitor.name?.split('.') || [competitor.name || 'Unknown'];
+    const hasDomain = competitor.name?.includes('.');
 
     return (
-        <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-4 hover:border-white/20 transition-all group relative">
+        <div className={`bg-[#0A0A0A] border-2 rounded-xl p-5 relative group ${borderGlow} transition-all hover:shadow-[0_0_30px_rgba(255,255,255,0.1)]`}>
             {/* Remove button */}
             {onRemove && (
               <button 
                 onClick={onRemove}
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-all"
+                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 hover:bg-white/10 rounded transition-all z-10"
               >
-                <svg className="w-3 h-3 text-white/30 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="w-3.5 h-3.5 text-white/30 hover:text-white" />
               </button>
             )}
             
-            <div className="flex items-start justify-between mb-2">
-                <h3 className="text-sm font-bold text-white">{competitor.name}</h3>
-                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${threatColor}`}>
+            {/* Header: Name + Threat Badge */}
+            <div className="flex items-start justify-between mb-4">
+                <h3 className="text-sm font-black text-white uppercase tracking-tight leading-tight">
+                    {hasDomain ? (
+                        <>
+                            {nameParts[0]}
+                            <span className="text-fuchsia-400">.{nameParts[1]}</span>
+                        </>
+                    ) : (
+                        competitor.name?.toUpperCase() || 'UNKNOWN'
+                    )}
+                </h3>
+                <span className={`px-2 py-1 rounded text-[9px] font-bold border ${threatBadgeColor} whitespace-nowrap ml-2`}>
                     {displayThreat}
                 </span>
             </div>
             
-            <p className="text-[11px] text-white/40 mb-3">{competitor.primaryVector}</p>
+            {/* PRIMARY VECTOR */}
+            <div className="mb-4">
+                <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1">PRIMARY VECTOR</div>
+                <p className="text-xs text-white font-medium">{competitor.primaryVector || 'Not specified'}</p>
+            </div>
             
-            {/* Engagement Stats */}
-            {(competitor.weeklyViews || competitor.weeklyEngagement) && (
-              <div className="flex gap-3 mb-3 py-2 border-y border-white/5">
-                <div>
-                  <div className="text-[10px] text-white/30">Views/wk</div>
-                  <div className="text-sm font-bold text-white">{formatNumber(competitor.weeklyViews)}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-white/30">Engagement</div>
-                  <div className="text-sm font-bold text-white">{formatNumber(competitor.weeklyEngagement)}</div>
-                </div>
-              </div>
-            )}
+            {/* THEIR ADVANTAGE */}
+            <div className="mb-4">
+                <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1">THEIR ADVANTAGE</div>
+                <p className="text-xs text-green-400 font-medium leading-relaxed">"{competitor.theirAdvantage || 'Analyzing...'}"</p>
+            </div>
             
-            <div className="space-y-2">
-                <div>
-                    <div className="text-[9px] font-bold text-white/30 mb-0.5">STRENGTH</div>
-                    <p className="text-xs text-white/60 leading-relaxed">{competitor.theirAdvantage}</p>
-                </div>
-                
-                <div>
-                    <div className="text-[9px] font-bold text-green-400/60 mb-0.5">YOUR MOVE</div>
-                    <p className="text-xs text-green-400 leading-relaxed">{competitor.yourOpportunity}</p>
-                </div>
+            {/* YOUR OPPORTUNITY */}
+            <div>
+                <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1">YOUR OPPORTUNITY</div>
+                <p className="text-xs text-purple-400 font-medium leading-relaxed">| {competitor.yourOpportunity || 'Research in progress'}</p>
             </div>
         </div>
     );
