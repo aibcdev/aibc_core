@@ -7,7 +7,7 @@ const router = Router();
 // Start a new scan
 router.post('/start', async (req, res) => {
   try {
-    const { username, platforms, scanType = 'standard' } = req.body;
+    const { username, platforms, scanType = 'standard', connectedAccounts } = req.body;
 
     if (!username || !platforms || platforms.length === 0) {
       return res.status(400).json({ 
@@ -34,8 +34,8 @@ router.post('/start', async (req, res) => {
 
     storage.saveScan(scan);
 
-    // Start scan asynchronously
-    startScan(scanId, username, platforms, scanType).catch(err => {
+    // Start scan asynchronously - pass connected accounts if provided
+    startScan(scanId, username, platforms, scanType, connectedAccounts).catch(err => {
       console.error('Scan error:', err);
       storage.updateScan(scanId, {
         status: 'error',

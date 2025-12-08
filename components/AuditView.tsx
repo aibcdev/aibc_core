@@ -96,7 +96,7 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
         const finalScanType = scanType || localStorage.getItem('lastScanType') || 'basic';
         const scanTypeParam = finalScanType === 'deep' ? 'deep' : 'standard';
         
-        addLog(`[SYSTEM] Scan mode: ${finalScanType.toUpperCase()} (Gemini 2.0 Flash${finalScanType === 'deep' ? ' - Enhanced' : ''})`);
+        addLog(`[SYSTEM] Scan mode: ${finalScanType.toUpperCase()}${finalScanType === 'deep' ? ' - Enhanced Analysis' : ''}`);
         
         const scanResponse = await startScan(scanUsername, platforms, scanTypeParam);
         

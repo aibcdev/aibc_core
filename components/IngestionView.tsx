@@ -113,7 +113,22 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
                             value={inputVal}
                             onChange={(e) => setInputVal(e.target.value)}
                             onKeyDown={handleKeyDown}
+                            autoComplete="on"
+                            list="username-suggestions"
                          />
+                         <datalist id="username-suggestions">
+                           <option value="elonmusk">Elon Musk</option>
+                           <option value="mrbeast">MrBeast</option>
+                           <option value="garyvee">Gary Vaynerchuk</option>
+                           <option value="openai">OpenAI</option>
+                           <option value="notion">Notion</option>
+                           <option value="nike">Nike</option>
+                           <option value="lululemon">Lululemon</option>
+                           <option value="goodphats">GoodPhats</option>
+                           <option value="dipsea">Dipsea</option>
+                           <option value="kobobooks">Kobo Books</option>
+                           <option value="lairdsuperfood">Laird Superfood</option>
+                         </datalist>
                          
                          {/* Enter Badge */}
                          <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20">
@@ -136,13 +151,17 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
                       <ScanLine className="w-4 h-4" />
                       <span className="text-xs font-bold uppercase">Basic Scan</span>
                     </div>
-                    <div className="text-[10px] text-white/40 mt-1">Free • Gemini 2.0</div>
+                    <div className="text-[10px] text-white/40 mt-1">Free</div>
                   </button>
                   
                   <button
                     onClick={() => {
                       if (!canUseDeepScan) {
-                        setError('Deep scan requires Pro or Enterprise plan');
+                        setError('Deep scan requires Pro or Enterprise plan. Please upgrade to unlock.');
+                        // Navigate to pricing page
+                        setTimeout(() => {
+                          onNavigate(ViewState.PRICING);
+                        }, 2000);
                         return;
                       }
                       setSelectedScanType('deep');

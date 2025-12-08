@@ -1,15 +1,62 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ArrowRight, Play, Star, Code2, 
   Database, User, Globe, Braces, 
   ShieldCheck, Lock, Server, Mic, Sparkles, Bot, Twitter, 
   Github, Linkedin, Image as ImageIcon, Footprints, Cpu, Sliders, 
   BrainCircuit, FileText, FileCheck, Archive, Video, Mic2, BarChart3,
-  Zap
+  Zap, LogOut
 } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
+import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
 
 const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userInfo, setUserInfo] = useState<{ name: string; email: string; initials: string } | null>(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (isSupabaseConfigured() && supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          setIsLoggedIn(true);
+          const name = session.user.user_metadata?.name || session.user.email || 'User';
+          const email = session.user.email || '';
+          const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
+          setUserInfo({ name, email, initials });
+        } else {
+          setIsLoggedIn(false);
+          setUserInfo(null);
+        }
+
+        // Listen for auth changes
+        supabase.auth.onAuthStateChange((event, session) => {
+          if (session) {
+            setIsLoggedIn(true);
+            const name = session.user.user_metadata?.name || session.user.email || 'User';
+            const email = session.user.email || '';
+            const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
+            setUserInfo({ name, email, initials });
+          } else {
+            setIsLoggedIn(false);
+            setUserInfo(null);
+          }
+        });
+      }
+    };
+    checkAuth();
+  }, []);
+
+  const handleLogout = async () => {
+    if (isSupabaseConfigured() && supabase) {
+      await supabase.auth.signOut();
+      localStorage.removeItem('user');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('refreshToken');
+      setIsLoggedIn(false);
+      setUserInfo(null);
+    }
+  };
   return (
     <div id="landing-view" className="animate-in fade-in duration-500">
       {/* Navigation */}
@@ -56,18 +103,50 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
           </div>
 
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => onNavigate(ViewState.SIGNIN)} 
-              className="hidden md:block text-xs font-medium text-white/60 hover:text-white transition-colors"
-            >
-              Log In
-            </button>
-            <button 
-              onClick={() => onNavigate(ViewState.SIGNIN)} 
-              className="rounded-full border border-white/10 bg-white/5 px-5 py-2 text-xs font-semibold text-white transition-all hover:bg-white/10"
-            >
-              Get Started
-            </button>
+            {isLoggedIn && userInfo ? (
+              <>
+                <div className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-full border border-white/10 bg-white/5">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-orange-500 to-purple-600 flex items-center justify-center text-[10px] font-bold border border-white/20">
+                    {userInfo.initials}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-white truncate">{userInfo.name}</div>
+                    <div className="text-[10px] text-white/40 truncate">{userInfo.email}</div>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => {
+                    const hasCompletedOnboarding = localStorage.getItem('lastScannedUsername');
+                    onNavigate(hasCompletedOnboarding ? ViewState.DASHBOARD : ViewState.INGESTION);
+                  }}
+                  className="rounded-full border border-white/10 bg-white/5 px-5 py-2 text-xs font-semibold text-white transition-all hover:bg-white/10"
+                >
+                  Dashboard
+                </button>
+                <button 
+                  onClick={handleLogout}
+                  className="hidden md:flex items-center gap-2 text-xs font-medium text-white/60 hover:text-white transition-colors"
+                >
+                  <LogOut className="w-3 h-3" />
+                  Log Out
+                </button>
+              </>
+            ) : (
+              <>
+                <button 
+                  onClick={() => onNavigate(ViewState.SIGNIN)} 
+                  className="hidden md:block text-xs font-medium text-white/60 hover:text-white transition-colors"
+                >
+                  Log In
+                </button>
+                <button 
+                  onClick={() => onNavigate(ViewState.SIGNIN)} 
+                  className="rounded-full border border-white/10 bg-white/5 px-5 py-2 text-xs font-semibold text-white transition-all hover:bg-white/10"
+                >
+                  Get Started
+                </button>
+              </>
+            )}
           </div>
         </div>
       </nav>

@@ -48,9 +48,20 @@ export interface ScanResults {
 export async function startScan(
   username: string,
   platforms: string[],
-  scanType: 'standard' | 'deep' = 'standard'
+  scanType: 'standard' | 'deep' = 'standard',
+  connectedAccounts?: Record<string, string>
 ): Promise<ScanResponse> {
   try {
+    // Get connected accounts from localStorage if not provided
+    const accountsToUse = connectedAccounts || (() => {
+      try {
+        const stored = localStorage.getItem('connectedAccounts');
+        return stored ? JSON.parse(stored) : undefined;
+      } catch {
+        return undefined;
+      }
+    })();
+    
     const response = await fetch(`${API_BASE_URL}/api/scan/start`, {
       method: 'POST',
       headers: {
@@ -60,6 +71,7 @@ export async function startScan(
         username,
         platforms,
         scanType,
+        connectedAccounts: accountsToUse,
       }),
     });
 

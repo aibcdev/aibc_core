@@ -32,7 +32,8 @@ const IntegrationsView: React.FC = () => {
   const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  const [integrations, setIntegrations] = useState<Integration[]>([
+  // Load integrations from localStorage on mount
+  const defaultIntegrations: Integration[] = [
     { id: 'ga', name: 'Google Analytics', icon: <BarChart2 className="w-5 h-5 text-amber-400" />, category: 'analytics', connected: false, description: 'Track website traffic and user behavior', placeholder: 'GA Tracking ID (e.g., UA-XXXXXXXX-X)' },
     { id: 'instagram', name: 'Instagram', icon: <Instagram className="w-5 h-5 text-pink-400" />, category: 'social', connected: false, description: 'Post Reels, Stories, and feed content', placeholder: '@username' },
     { id: 'facebook', name: 'Facebook', icon: <span className="text-lg text-blue-500 font-bold">f</span>, category: 'social', connected: false, description: 'Share posts and manage your page', placeholder: 'Page name or URL' },
@@ -45,7 +46,31 @@ const IntegrationsView: React.FC = () => {
     { id: 'threads', name: 'Threads', icon: <span className="text-lg">@</span>, category: 'social', connected: false, comingSoon: true },
     { id: 'pinterest', name: 'Pinterest', icon: <span className="text-red-500 text-lg">P</span>, category: 'social', connected: false, comingSoon: true },
     { id: 'meta-ads', name: 'Meta Ads', icon: <ShoppingBag className="w-5 h-5 text-blue-400" />, category: 'ads', connected: false, comingSoon: true },
-  ]);
+  ];
+
+  const loadStoredIntegrations = (): Integration[] => {
+    try {
+      const stored = localStorage.getItem('integrations');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Merge with defaults to ensure all integrations exist
+        return defaultIntegrations.map(def => {
+          const stored = parsed.find((p: Integration) => p.id === def.id);
+          return stored ? { ...def, ...stored } : def;
+        });
+      }
+    } catch (e) {
+      console.error('Error loading stored integrations:', e);
+    }
+    return defaultIntegrations;
+  };
+
+  const [integrations, setIntegrations] = useState<Integration[]>(loadStoredIntegrations());
+  
+  // Save integrations to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('integrations', JSON.stringify(integrations));
+  }, [integrations]);
 
   const connectedCount = integrations.filter(i => i.connected).length;
   const totalConnectable = integrations.filter(i => !i.comingSoon).length;
@@ -189,7 +214,7 @@ const IntegrationsView: React.FC = () => {
 
   const handleConfirmConnect = () => {
     if (selectedIntegration && verificationResult?.verified) {
-      setIntegrations(integrations.map(i => 
+      const updatedIntegrations = integrations.map(i => 
         i.id === selectedIntegration.id 
           ? { 
               ...i, 
@@ -199,7 +224,30 @@ const IntegrationsView: React.FC = () => {
               verifiedAvatar: verificationResult.avatar
             } 
           : i
-      ));
+      );
+      setIntegrations(updatedIntegrations);
+      
+      // Store connected accounts in localStorage for scanning
+      const connectedAccounts: Record<string, string> = {};
+      updatedIntegrations
+        .filter(i => i.connected && i.handle)
+        .forEach(i => {
+          // Map integration IDs to platform names used by scan
+          const platformMap: Record<string, string> = {
+            'x': 'twitter',
+            'instagram': 'instagram',
+            'linkedin': 'linkedin',
+            'youtube': 'youtube',
+            'tiktok': 'tiktok',
+            'facebook': 'facebook'
+          };
+          const platformName = platformMap[i.id] || i.id;
+          if (platformName) {
+            connectedAccounts[platformName] = i.handle.replace('@', '').trim();
+          }
+        });
+      localStorage.setItem('connectedAccounts', JSON.stringify(connectedAccounts));
+      
       setShowConnectModal(false);
       setSelectedIntegration(null);
       setInputHandle('');

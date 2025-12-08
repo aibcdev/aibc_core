@@ -140,21 +140,26 @@ export async function signIn(email: string, password: string): Promise<AuthRespo
       }
 
       if (data.session) {
-        // Store session token
-        localStorage.setItem('authToken', data.session.access_token);
-        localStorage.setItem('user', JSON.stringify({
+        // Store session token and refresh token for persistence
+        const userData = {
           id: data.user.id,
           email: data.user.email,
           name: data.user.user_metadata?.name || data.user.email,
-        }));
+        };
+        localStorage.setItem('authToken', data.session.access_token);
+        localStorage.setItem('refreshToken', data.session.refresh_token || '');
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        // Also set session in Supabase client to ensure it persists
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token || '',
+        });
+        
         return { 
           success: true, 
           token: data.session.access_token, 
-          user: {
-            id: data.user.id,
-            email: data.user.email,
-            name: data.user.user_metadata?.name || data.user.email,
-          }
+          user: userData
         };
       }
 

@@ -89,8 +89,11 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
 
   // Fetch real data on mount
   useEffect(() => {
+    // Set loading to false immediately so dashboard renders instantly
+    // Data will load in background to prevent blank screen
+    setLoading(false);
+    
     const loadData = async () => {
-      setLoading(true);
       try {
         const [analyticsData, events, competitorData, pipeline] = await Promise.all([
           fetchAnalyticsData(),
@@ -149,9 +152,8 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
         loadScanData();
       } catch (error) {
         console.error('Error loading dashboard data:', error);
-      } finally {
-        setLoading(false);
       }
+      // Note: loading is already false, so we don't need to set it again
     };
 
     loadData();
@@ -196,6 +198,8 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
     }
   };
 
+  // Always render the dashboard structure, even during loading
+  // This prevents blank screens during navigation
   return (
     <div className="flex h-screen bg-[#050505] text-white overflow-hidden font-sans relative">
       

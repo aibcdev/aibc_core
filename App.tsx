@@ -19,6 +19,120 @@ export default function App() {
   const [username, setUsername] = useState<string>('');
   const [scanType, setScanType] = useState<'basic' | 'deep'>('basic');
 
+  // Check for existing session on mount (persist login across refreshes)
+  // Only run once on mount, not on every view change
+  useEffect(() => {
+    let mounted = true;
+    
+    const checkSession = async () => {
+      // Run session check in background - don't block rendering
+      if (isSupabaseConfigured() && supabase) {
+        try {
+          // First, check for existing session
+          const { data: { session }, error } = await supabase.auth.getSession();
+          
+          if (session && !error && mounted) {
+            // User is logged in - restore session
+            const userData = {
+              id: session.user.id,
+              email: session.user.email,
+              name: session.user.user_metadata?.name || session.user.email,
+            };
+            
+            localStorage.setItem('authToken', session.access_token);
+            localStorage.setItem('refreshToken', session.refresh_token || '');
+            localStorage.setItem('user', JSON.stringify(userData));
+            
+            // Only redirect on initial load if on landing page
+            if (view === ViewState.LANDING) {
+              const hasCompletedOnboarding = localStorage.getItem('lastScannedUsername');
+              if (hasCompletedOnboarding) {
+                setView(ViewState.DASHBOARD);
+              } else {
+                setView(ViewState.INGESTION);
+              }
+            }
+          } else if (mounted) {
+            // No active Supabase session - try to restore from localStorage
+            const storedUser = localStorage.getItem('user');
+            const storedToken = localStorage.getItem('authToken');
+            const storedRefreshToken = localStorage.getItem('refreshToken');
+            
+            if (storedUser && storedToken && storedRefreshToken) {
+              // Try to refresh the session using the stored refresh token
+              try {
+                const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession({
+                  refresh_token: storedRefreshToken
+                });
+                
+                if (refreshData.session && !refreshError) {
+                  // Successfully refreshed session
+                  const userData = JSON.parse(storedUser);
+                  localStorage.setItem('authToken', refreshData.session.access_token);
+                  localStorage.setItem('refreshToken', refreshData.session.refresh_token || '');
+                  localStorage.setItem('user', JSON.stringify(userData));
+                  
+                  // Only redirect on initial load if on landing page
+                  if (view === ViewState.LANDING) {
+                    const hasCompletedOnboarding = localStorage.getItem('lastScannedUsername');
+                    if (hasCompletedOnboarding) {
+                      setView(ViewState.DASHBOARD);
+                    } else {
+                      setView(ViewState.INGESTION);
+                    }
+                  }
+                } else {
+                  // Refresh failed - clear stale data
+                  localStorage.removeItem('user');
+                  localStorage.removeItem('authToken');
+                  localStorage.removeItem('refreshToken');
+                }
+              } catch (refreshErr) {
+                console.error('Error refreshing session:', refreshErr);
+                // Keep user data for now - don't log out on refresh error
+              }
+            } else if (storedUser && !storedToken) {
+              // No token but has user data - clear it
+              localStorage.removeItem('user');
+              localStorage.removeItem('authToken');
+              localStorage.removeItem('refreshToken');
+            }
+          }
+          
+          // Set up auth state listener to persist session changes (only once)
+          if (mounted) {
+            supabase.auth.onAuthStateChange((event, session) => {
+              if (session) {
+                const userData = {
+                  id: session.user.id,
+                  email: session.user.email,
+                  name: session.user.user_metadata?.name || session.user.email,
+                };
+                localStorage.setItem('authToken', session.access_token);
+                localStorage.setItem('refreshToken', session.refresh_token || '');
+                localStorage.setItem('user', JSON.stringify(userData));
+              } else if (event === 'SIGNED_OUT') {
+                localStorage.removeItem('user');
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('refreshToken');
+              }
+            });
+          }
+        } catch (err) {
+          console.error('Error checking session:', err);
+          // On error, don't change view - let current view render
+        }
+      }
+    };
+    
+    // Run session check in background without blocking
+    checkSession();
+    
+    return () => {
+      mounted = false;
+    };
+  }, []); // Only run once on mount
+
   // Load username from localStorage on mount
   useEffect(() => {
     const savedUsername = localStorage.getItem('lastScannedUsername');
@@ -120,6 +234,8 @@ export default function App() {
     }
   };
 
+  // Always render views immediately - no loading screen blocking
+  // Session check happens in background and doesn't block rendering
   return (
     <>
       {view === ViewState.LANDING && <LandingView onNavigate={navigate} />}
@@ -133,6 +249,8 @@ export default function App() {
       {view === ViewState.PRICING && <PricingView onNavigate={navigate} />}
       {view === ViewState.ADMIN && <AdminView onNavigate={navigate} />}
       {view === ViewState.INBOX && <InboxView onNavigate={navigate} />}
+      {/* Fallback: If view is somehow invalid, show landing */}
+      {!Object.values(ViewState).includes(view as ViewState) && <LandingView onNavigate={navigate} />}
     </>
   );
 }

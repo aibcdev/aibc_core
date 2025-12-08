@@ -1,8 +1,8 @@
 /**
  * LLM Service - Multi-provider support with scan tiers
  * 
- * BASIC SCAN (Free users): Gemini 2.0 Flash - FREE tier (best free model)
- * DEEP SCAN (Paid users): Claude 3.5 Sonnet - ~$0.10/scan (best quality)
+ * BASIC SCAN (Free users): Gemini 2.0 Flash - FREE tier (stable version)
+ * DEEP SCAN (Paid users): Gemini 1.5 Flash - Same model, enhanced prompts
  * FALLBACK: DeepSeek R1 - ~$0.02/scan (great reasoning, cheap)
  */
 
@@ -15,6 +15,9 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 
+// Key rotation support
+import { getNextKey, markKeyFailed, isRotationEnabled } from './keyRotation';
+
 // Scan types
 export type ScanTier = 'basic' | 'deep' | 'test';
 export type Provider = 'gemini-2-flash' | 'gemini-flash' | 'gemini-pro' | 'deepseek' | 'deepseek-r1' | 'openai' | 'claude';
@@ -22,7 +25,7 @@ export type Provider = 'gemini-2-flash' | 'gemini-flash' | 'gemini-pro' | 'deeps
 // Provider configuration
 export const PROVIDER_CONFIG: Record<Provider, { name: string; model: string; costPer1kTokens: number }> = {
   'gemini-2-flash': { name: 'Gemini 2.0 Flash', model: 'gemini-2.0-flash', costPer1kTokens: 0 },
-  'gemini-flash': { name: 'Gemini 1.5 Flash', model: 'gemini-1.5-flash', costPer1kTokens: 0 },
+  'gemini-flash': { name: 'Gemini 2.5 Flash', model: 'gemini-2.5-flash', costPer1kTokens: 0 },
   'gemini-pro': { name: 'Gemini 1.5 Pro', model: 'gemini-1.5-pro', costPer1kTokens: 0.003 },
   'deepseek': { name: 'DeepSeek Chat', model: 'deepseek-chat', costPer1kTokens: 0.001 },
   'deepseek-r1': { name: 'DeepSeek R1', model: 'deepseek-reasoner', costPer1kTokens: 0.002 },
@@ -36,20 +39,20 @@ export function getProviderForTier(tier: ScanTier, forceProvider?: Provider): Pr
   
   switch (tier) {
     case 'basic':
-      // Basic scan: Use Gemini 2.0 Flash (FREE, best free model)
+      // Basic scan: Use Gemini 2.0 Flash (FREE tier - 250 requests/day, much better than 2.5-flash)
       if (GEMINI_API_KEY) return 'gemini-2-flash';
       if (DEEPSEEK_API_KEY) return 'deepseek';
       throw new Error('No LLM configured for basic scans. Set GEMINI_API_KEY.');
       
     case 'deep':
-      // Deep scan: Use Gemini 2.0 Flash (same as basic, but with enhanced prompts)
+      // Deep scan: Use Gemini 2.0 Flash (250 requests/day free tier)
       if (GEMINI_API_KEY) return 'gemini-2-flash';
       if (DEEPSEEK_API_KEY) return 'deepseek-r1';
       if (OPENAI_API_KEY) return 'openai';
       throw new Error('No LLM configured for deep scans. Set GEMINI_API_KEY.');
       
     case 'test':
-      // Test mode: Use Gemini 2.0 Flash for testing
+      // Test mode: Use Gemini 2.0 Flash for testing (250 requests/day)
       if (GEMINI_API_KEY) return 'gemini-2-flash';
       if (DEEPSEEK_API_KEY) return 'deepseek-r1';
       if (OPENAI_API_KEY) return 'openai';
@@ -79,7 +82,7 @@ export function getAvailableProviders(): Provider[] {
 }
 
 function getActiveProvider(): Provider | null {
-  if (GEMINI_API_KEY) return 'gemini-flash';
+  if (GEMINI_API_KEY) return 'gemini-2-flash'; // Use 2.0-flash (250/day) instead of 2.5-flash (20/day)
   if (DEEPSEEK_API_KEY) return 'deepseek';
   if (OPENAI_API_KEY) return 'openai';
   return null;
@@ -87,7 +90,7 @@ function getActiveProvider(): Provider | null {
 
 // Log available providers on startup
 console.log(`LLM Service initialized. Available providers:`);
-if (GEMINI_API_KEY) console.log('  ✅ Gemini 2.0 Flash - BASIC & DEEP scans (FREE)');
+if (GEMINI_API_KEY) console.log('  ✅ Gemini 2.0 Flash - BASIC & DEEP scans (250 requests/day FREE tier)');
 if (DEEPSEEK_API_KEY) console.log('  ✅ DeepSeek (Chat + R1) - Fallback');
 if (OPENAI_API_KEY) console.log('  ✅ OpenAI (GPT-4o) - Fallback');
 if (!GEMINI_API_KEY && !DEEPSEEK_API_KEY && !OPENAI_API_KEY) {
@@ -155,17 +158,34 @@ async function callOpenAI(prompt: string, systemPrompt?: string, model: string =
 }
 
 /**
- * Call Gemini API
+ * Call Gemini API with key rotation support
  */
-async function callGemini(prompt: string, systemPrompt?: string, model: string = 'gemini-1.5-flash'): Promise<string> {
+async function callGemini(prompt: string, systemPrompt?: string, model: string = 'gemini-2.0-flash'): Promise<string> {
   const { GoogleGenerativeAI } = await import('@google/generative-ai');
-  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+  
+  // Use key rotation if enabled, otherwise use single key
+  const apiKey = isRotationEnabled() ? getNextKey() : GEMINI_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error('No Gemini API key configured');
+  }
+  
+  const genAI = new GoogleGenerativeAI(apiKey);
   const geminiModel = genAI.getGenerativeModel({ model });
 
   const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
-  const result = await geminiModel.generateContent(fullPrompt);
-  const response = await result.response;
-  return response.text();
+  
+  try {
+    const result = await geminiModel.generateContent(fullPrompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error: any) {
+    // Mark key as failed if rotation is enabled
+    if (isRotationEnabled() && error.message?.includes('quota') || error.message?.includes('429')) {
+      markKeyFailed(apiKey, error.message);
+    }
+    throw error;
+  }
 }
 
 /**
@@ -222,7 +242,7 @@ export async function generateText(
     case 'gemini-2-flash':
       return callGemini(prompt, systemPrompt, 'gemini-2.0-flash');
     case 'gemini-flash':
-      return callGemini(prompt, systemPrompt, 'gemini-1.5-flash');
+      return callGemini(prompt, systemPrompt, 'gemini-2.5-flash');
     case 'gemini-pro':
       return callGemini(prompt, systemPrompt, 'gemini-1.5-pro');
     case 'claude':
