@@ -128,7 +128,11 @@ export default function App() {
     };
     
     // Run session check in background without blocking
-    checkSession();
+    checkSession().finally(() => {
+      if (mounted) {
+        setIsInitializing(false);
+      }
+    });
     
     return () => {
       mounted = false;
@@ -241,6 +245,15 @@ export default function App() {
   
   // Ensure we always render something - default to landing if view is invalid
   const currentView = Object.values(ViewState).includes(view as ViewState) ? view : ViewState.LANDING;
+  
+  // Show minimal loading only on very first mount (prevents blank screen)
+  if (isInitializing && view === ViewState.LANDING) {
+    return (
+      <div className="min-h-screen bg-dark-bg flex items-center justify-center">
+        <div className="text-white/60 font-mono text-sm">Loading...</div>
+      </div>
+    );
+  }
   
   return (
     <>
