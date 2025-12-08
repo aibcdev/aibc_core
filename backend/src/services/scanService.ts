@@ -85,7 +85,20 @@ export async function startScan(
       if (scrapedData.length > 0) {
         // Use LLM to extract from REAL scraped content - PRODUCTION APPROACH
         researchData = await extractFromScrapedContent(scrapedData, username, platforms, scanTier);
-        addLog(scanId, `[SUCCESS] Extracted content from ${scrapedData.length} scraped profiles`);
+        
+        // CHECK QUALITY OF EXTRACTED DATA
+        // If scraping returned login pages/garbage, extraction will be poor
+        // Fallback to pure LLM research if extraction failed to get meaningful data
+        const hasGoodBio = researchData.profile?.bio && researchData.profile.bio.length > 30 && !researchData.profile.bio.includes('Digital presence for');
+        const hasPosts = researchData.posts && researchData.posts.length >= 3;
+        
+        if (!hasGoodBio && !hasPosts) {
+            addLog(scanId, `[WARNING] Scraped content extraction yielded poor results (Bio: ${hasGoodBio}, Posts: ${researchData.posts?.length || 0})`);
+            addLog(scanId, `[FALLBACK] Switching to pure LLM research using knowledge base...`);
+            researchData = await researchBrandWithLLM(username, platforms, scanTier);
+        } else {
+            addLog(scanId, `[SUCCESS] Extracted content from ${scrapedData.length} scraped profiles`);
+        }
       } else {
         // Fallback: Use LLM research (but with better prompts)
         addLog(scanId, `[FALLBACK] No scraped content - using LLM research with enhanced prompts`);
