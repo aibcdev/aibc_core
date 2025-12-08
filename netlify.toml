@@ -1,0 +1,21 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Configure secrets scanning to ignore Supabase anon keys (which are meant to be public)
+# Supabase anon keys are client-side keys that are safe to expose
+[build.environment]
+  # Disable smart detection for Supabase anon keys (they start with "eyJ" and are JWT tokens)
+  # These are intentionally public client-side keys
+  SECRETS_SCAN_SMART_DETECTION_ENABLED = "true"
+  
+# Note: To completely disable secrets scanning (not recommended), you would set:
+# SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
+# 
+# However, we want to keep scanning enabled but ignore Supabase anon keys.
+# The anon key pattern is: eyJ... (JWT token format)
+# 
+# Since Netlify doesn't support pattern-based exclusions in netlify.toml,
+# we need to set SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES in Netlify dashboard
+# with the actual Supabase anon key value.
+
