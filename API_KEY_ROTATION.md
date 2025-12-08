@@ -2,7 +2,7 @@
 
 ## Current Key (Key #1)
 ```
-AIzaSyASENxqhs4oAeSXSNJugPPv8FkYKIqE5Kc
+YOUR_API_KEY_HERE
 ```
 
 **Status**: ✅ Configured in `backend/.env` | ⚠️ **Quota: 0** (needs billing/API activation)
@@ -12,14 +12,14 @@ AIzaSyASENxqhs4oAeSXSNJugPPv8FkYKIqE5Kc
 ### 1. Backend Local Development
 **File**: `backend/.env`
 ```bash
-GEMINI_API_KEY=AIzaSyASENxqhs4oAeSXSNJugPPv8FkYKIqE5Kc
+GEMINI_API_KEY=YOUR_API_KEY_HERE
 ```
 
 ### 2. Cloud Run (Production)
 **Method**: GCP Secret Manager
 ```bash
 # Update secret
-gcloud secrets versions add gemini-api-key --data-file=- <<< "AIzaSyASENxqhs4oAeSXSNJugPPv8FkYKIqE5Kc"
+gcloud secrets versions add gemini-api-key --data-file=- <<< "YOUR_API_KEY_HERE"
 
 # Redeploy (if needed)
 gcloud run services update aibc-backend --region us-central1
@@ -28,7 +28,7 @@ gcloud run services update aibc-backend --region us-central1
 ### 3. Netlify (Frontend - if needed)
 **Location**: Site Settings > Environment Variables
 - Variable: `VITE_GEMINI_API_KEY`
-- Value: `AIzaSyASENxqhs4oAeSXSNJugPPv8FkYKIqE5Kc`
+- Value: `YOUR_API_KEY_HERE`
 
 ## Key Rotation Strategy
 

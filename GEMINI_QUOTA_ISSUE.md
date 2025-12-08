@@ -16,7 +16,7 @@ Google has changed their free tier policy. New API keys may need:
 
 ## Current Status
 
-✅ **API Key #1**: `AIzaSyASENxqhs4oAeSXSNJugPPv8FkYKIqE5Kc`
+✅ **API Key #1**: `YOUR_API_KEY_HERE` (configured in environment variables)
 - Status: Configured in `backend/.env`
 - Quota: **0 requests/day (free tier)**
 - Error: "limit: 0" for all 2.0 models
@@ -63,7 +63,7 @@ curl "https://generativelanguage.googleapis.com/v1beta/models?key=YOUR_KEY" | jq
 ## Key Rotation Strategy
 
 Once quota is working:
-- **Key #1**: `AIzaSyASENxqhs4oAeSXSNJugPPv8FkYKIqE5Kc` ✅ Configured
+- **Key #1**: `YOUR_API_KEY_HERE` ✅ Configured (in environment variables)
 - **Key #2**: `_________________` (pending)
 - **Key #3**: `_________________` (pending)
 - **Key #4**: `_________________` (pending)

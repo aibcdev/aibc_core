@@ -2,7 +2,7 @@
 
 ## ✅ Current Status
 
-**Key #1**: `AIzaSyASENxqhs4oAeSXSNJugPPv8FkYKIqE5Kc`
+**Key #1**: `YOUR_API_KEY_HERE` (configured in environment variables)
 - Status: Configured
 - Quota: Waiting for activation (can take 10-30 minutes)
 
@@ -14,7 +14,7 @@
 **Setup**:
 ```bash
 # backend/.env
-GEMINI_API_KEY=AIzaSyASENxqhs4oAeSXSNJugPPv8FkYKIqE5Kc
+GEMINI_API_KEY=YOUR_API_KEY_HERE
 ```
 
 **Pros**:
@@ -40,7 +40,7 @@ GEMINI_API_KEYS=key1,key2,key3,key4,key5
 **Setup Method B: Individual keys**
 ```bash
 # backend/.env
-GEMINI_API_KEY_1=AIzaSyASENxqhs4oAeSXSNJugPPv8FkYKIqE5Kc
+GEMINI_API_KEY_1=YOUR_API_KEY_HERE
 GEMINI_API_KEY_2=your_second_key_here
 GEMINI_API_KEY_3=your_third_key_here
 GEMINI_API_KEY_4=your_fourth_key_here
@@ -101,7 +101,7 @@ GEMINI_API_KEY_5=your_fifth_key_here
 2. **Enable billing & API** for each key (same process as key #1)
 3. **Update `backend/.env`**:
    ```bash
-   GEMINI_API_KEY_1=AIzaSyASENxqhs4oAeSXSNJugPPv8FkYKIqE5Kc
+   GEMINI_API_KEY_1=YOUR_API_KEY_HERE
    GEMINI_API_KEY_2=new_key_2
    GEMINI_API_KEY_3=new_key_3
    GEMINI_API_KEY_4=new_key_4

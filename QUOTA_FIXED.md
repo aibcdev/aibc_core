@@ -24,7 +24,7 @@
 ## Current Configuration
 
 - **Model**: `gemini-2.5-flash`
-- **API Key**: `AIzaSyASENxqhs4oAeSXSNJugPPv8FkYKIqE5Kc` ✅ Working
+- **API Key**: `YOUR_API_KEY_HERE` ✅ Working (configured in environment variables)
 - **Quota**: Active and working
 - **Status**: Ready for production
 
