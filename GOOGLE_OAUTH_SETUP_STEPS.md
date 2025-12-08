@@ -58,7 +58,8 @@ If this is your first time, you'll be asked to configure the consent screen:
    https://aibcmedia.com
    https://www.aibcmedia.com
    http://localhost:5173
-   https://[your-supabase-project].supabase.co/auth/v1/callback
+   https://[your-supabase-project].supabase.co/
+   
    ```
    (The Supabase callback URL is important!)
 

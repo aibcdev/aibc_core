@@ -43,7 +43,9 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
                   
                   // New users go to ingestion (onboarding), existing users go to dashboard
                   if (hasCompletedOnboarding) {
-                    onNavigate(ViewState.DASHBOARD);
+                    // Check if user has completed onboarding (has a scan)
+                    const hasCompletedOnboarding = localStorage.getItem('lastScannedUsername');
+                    onNavigate(hasCompletedOnboarding ? ViewState.DASHBOARD : ViewState.INGESTION);
                   } else {
                     onNavigate(ViewState.INGESTION);
                   }

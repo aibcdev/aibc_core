@@ -126,7 +126,11 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
         }).then(results => {
           if (results.success && results.data) {
             scanResults = results.data;
+            // Store complete scan results
             localStorage.setItem('lastScanResults', JSON.stringify(results.data));
+            // Store username for dashboard loading
+            localStorage.setItem('lastScannedUsername', scanUsername);
+            addLog(`[SUCCESS] Scan results stored for ${scanUsername}`);
           }
         }).catch(err => {
           console.error('Background poll error:', err);
@@ -256,7 +260,9 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
         addLog(`[COMPLETE] Content Suggestions: 14 generated`);
         addLog(`[COMPLETE] ═══════════════════════════════════════`);
 
+        // Ensure username is stored even if scan had issues
         if (mounted) {
+          localStorage.setItem('lastScannedUsername', scanUsername);
           setShowButton(true);
         }
 

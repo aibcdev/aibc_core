@@ -36,10 +36,10 @@ Format: Just the log message text, one per line. Do not include timestamps or br
   } catch (error) {
     console.error("Gemini API Error:", error);
     return [
-      "Connection to Neural Net unstable. Using cached heuristics...",
-      "Resuming local analysis of digital footprint.",
-      "Scraping public repositories for sentiment analysis.",
-      "Compiling user interaction graph."
+       "Connection to Neural Net unstable. Using cached heuristics...",
+       "Resuming local analysis of digital footprint.",
+       "Scraping public repositories for sentiment analysis.",
+       "Compiling user interaction graph."
     ];
   }
 };

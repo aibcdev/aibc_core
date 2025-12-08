@@ -2,6 +2,8 @@
  * Subscription and Credit Management Service
  */
 
+import { isAdmin } from './adminService';
+
 export enum SubscriptionTier {
   FREE = 'free',
   PRO = 'pro',
@@ -304,5 +306,87 @@ export function updateSubscription(subscription: Subscription): void {
     const initialCredits = subscription.tier === SubscriptionTier.PRO ? 500 : 10000;
     addCredits(initialCredits, 'Welcome bonus credits', 'bonus');
   }
+}
+
+/**
+ * ADMIN FUNCTIONS - Credit Management
+ * Only accessible to admin users (watchaibc@gmail.com)
+ */
+
+/**
+ * Admin: Add credits to any user (by email)
+ * @param userEmail - Email of the user to add credits to
+ * @param amount - Number of credits to add
+ * @param description - Reason for adding credits
+ */
+export function adminAddCredits(userEmail: string, amount: number, description: string): boolean {
+  if (!isAdmin()) {
+    throw new Error('Unauthorized: Admin access required');
+  }
+  
+  // For now, if admin is managing their own account or testing, add to current user
+  // In production, this would update a database
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  if (currentUser.email?.toLowerCase() === userEmail.toLowerCase()) {
+    addCredits(amount, `[ADMIN] ${description}`, 'bonus');
+    return true;
+  }
+  
+  // TODO: In production, update user's credits in database
+  console.log(`[ADMIN] Would add ${amount} credits to ${userEmail}: ${description}`);
+  return true;
+}
+
+/**
+ * Admin: Set credits for any user (by email)
+ * @param userEmail - Email of the user
+ * @param amount - New credit balance
+ * @param description - Reason for setting credits
+ */
+export function adminSetCredits(userEmail: string, amount: number, description: string): boolean {
+  if (!isAdmin()) {
+    throw new Error('Unauthorized: Admin access required');
+  }
+  
+  // For now, if admin is managing their own account, set current user's credits
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  if (currentUser.email?.toLowerCase() === userEmail.toLowerCase()) {
+    const updated: CreditBalance = {
+      credits: amount,
+      lastUpdated: new Date(),
+    };
+    localStorage.setItem('creditBalance', JSON.stringify(updated));
+    
+    addCreditTransaction({
+      type: 'bonus',
+      amount: amount - getCreditBalance().credits,
+      description: `[ADMIN] ${description}`,
+    });
+    return true;
+  }
+  
+  // TODO: In production, update user's credits in database
+  console.log(`[ADMIN] Would set ${userEmail} credits to ${amount}: ${description}`);
+  return true;
+}
+
+/**
+ * Admin: Get credit balance for any user (by email)
+ * @param userEmail - Email of the user
+ */
+export function adminGetCredits(userEmail: string): CreditBalance {
+  if (!isAdmin()) {
+    throw new Error('Unauthorized: Admin access required');
+  }
+  
+  // For now, if admin is checking their own account, return current balance
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  if (currentUser.email?.toLowerCase() === userEmail.toLowerCase()) {
+    return getCreditBalance();
+  }
+  
+  // TODO: In production, fetch from database
+  console.log(`[ADMIN] Would get credits for ${userEmail}`);
+  return { credits: 0, lastUpdated: new Date() };
 }
 
