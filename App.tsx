@@ -18,7 +18,7 @@ export default function App() {
   const [view, setView] = useState<ViewState>(ViewState.LANDING);
   const [username, setUsername] = useState<string>('');
   const [scanType, setScanType] = useState<'basic' | 'deep'>('basic');
-  const [error, setError] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   // Check for existing session on mount (persist login across refreshes)
   // Only run once on mount, not on every view change
