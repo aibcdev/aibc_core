@@ -64,6 +64,8 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
   const [marketShare, setMarketShare] = useState<any>(null);
   const [scanUsername, setScanUsername] = useState<string | null>(null);
   const [showAddCompetitor, setShowAddCompetitor] = useState(false);
+  const [showRescanWarning, setShowRescanWarning] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [newCompetitor, setNewCompetitor] = useState({
     name: '',
     xHandle: '',
@@ -469,12 +471,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => {
-                const lastUsername = localStorage.getItem('lastScannedUsername');
-                if (lastUsername) {
-                  onNavigate(ViewState.AUDIT);
-                } else {
-                  onNavigate(ViewState.INGESTION);
-                }
+                setShowRescanWarning(true);
               }}
               className="px-3 py-1.5 bg-gradient-to-r from-orange-500 to-purple-600 border border-white/10 rounded-lg text-xs font-bold text-white hover:from-orange-600 hover:to-purple-700 transition-all flex items-center gap-2"
             >
@@ -483,122 +480,141 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
             </button>
             <button
               onClick={async () => {
-                console.log('Manual refresh triggered');
-                // Try localStorage first
-                const cachedResults = localStorage.getItem('lastScanResults');
-                if (cachedResults) {
-                  try {
-                    const cached = JSON.parse(cachedResults);
-                    console.log('Loading from cache:', cached);
-                    setStrategicInsights(cached.strategicInsights || []);
-                    setBrandDNA(cached.brandDNA || null);
-                    // Ensure competitorIntelligence is always an array
-                    const competitors = Array.isArray(cached.competitorIntelligence) 
-                      ? cached.competitorIntelligence 
-                      : [];
-                    setCompetitorIntelligence(competitors);
-                    setMarketShare(cached.marketShare || null);
-                  } catch (e) {
-                    console.error('Cache parse error:', e);
-                  }
-                }
+                if (isRefreshing) return; // Prevent double-clicks
                 
-                // Then try API
-                const storedUsername = localStorage.getItem('lastScannedUsername');
-                if (storedUsername) {
-                  try {
-                    const scanResults = await getLatestScanResults(storedUsername);
-                    console.log('Refresh results:', scanResults);
-                    
-                    // Handle case where API returns null
-                    if (scanResults.success && scanResults.data === null) {
-                      console.warn('⚠️ Refresh: API returned null - no completed scans found');
-                      // Keep existing cache data, don't overwrite
-                      return;
-                    }
-                    
-                    if (!scanResults.success) {
-                      console.error('❌ Refresh: API returned error:', scanResults);
-                      return;
-                    }
-                    
-                    if (!scanResults.data) {
-                      console.error('❌ Refresh: API returned success but data is null/undefined');
-                      return;
-                    }
-                    
-                    if (scanResults.data) {
-                      setStrategicInsights(scanResults.data.strategicInsights || []);
-                      setBrandDNA(scanResults.data.brandDNA || null);
-                      
-                      // Get scan competitors
-                      const scanCompetitors = Array.isArray(scanResults.data.competitorIntelligence) 
-                        ? scanResults.data.competitorIntelligence 
+                setIsRefreshing(true);
+                console.log('Manual refresh triggered');
+                
+                try {
+                  // Try localStorage first
+                  const cachedResults = localStorage.getItem('lastScanResults');
+                  if (cachedResults) {
+                    try {
+                      const cached = JSON.parse(cachedResults);
+                      console.log('Loading from cache:', cached);
+                      setStrategicInsights(cached.strategicInsights || []);
+                      setBrandDNA(cached.brandDNA || null);
+                      // Ensure competitorIntelligence is always an array
+                      const competitors = Array.isArray(cached.competitorIntelligence) 
+                        ? cached.competitorIntelligence 
                         : [];
+                      setCompetitorIntelligence(competitors);
+                      setMarketShare(cached.marketShare || null);
+                    } catch (e) {
+                      console.error('Cache parse error:', e);
+                    }
+                  }
+                  
+                  // Then try API
+                  const storedUsername = localStorage.getItem('lastScannedUsername');
+                  if (storedUsername) {
+                    try {
+                      const scanResults = await getLatestScanResults(storedUsername);
+                      console.log('Refresh results:', scanResults);
                       
-                      // Get manual competitors from existing cache (before overwriting)
-                      const existingCache = localStorage.getItem('lastScanResults');
-                      let manualCompetitors: any[] = [];
-                      if (existingCache) {
-                        try {
-                          const cached = JSON.parse(existingCache);
-                          manualCompetitors = (cached.competitorIntelligence || []).filter((c: any) => c.isManual);
-                          console.log('Refresh: Found manual competitors:', manualCompetitors.length);
-                        } catch (e) {
-                          console.error('Error loading manual competitors:', e);
-                        }
+                      // Handle case where API returns null
+                      if (scanResults.success && scanResults.data === null) {
+                        console.warn('⚠️ Refresh: API returned null - no completed scans found');
+                        // Keep existing cache data, don't overwrite
+                        setIsRefreshing(false);
+                        return;
                       }
                       
-                      // Merge: scan competitors first, then manual (avoid duplicates by name)
-                      const competitorMap = new Map();
-                      scanCompetitors.forEach((c: any) => {
-                        competitorMap.set(c.name?.toLowerCase(), c);
-                      });
-                      manualCompetitors.forEach((c: any) => {
-                        if (!competitorMap.has(c.name?.toLowerCase())) {
-                          competitorMap.set(c.name?.toLowerCase(), c);
+                      if (!scanResults.success) {
+                        console.error('❌ Refresh: API returned error:', scanResults);
+                        setIsRefreshing(false);
+                        return;
+                      }
+                      
+                      if (!scanResults.data) {
+                        console.error('❌ Refresh: API returned success but data is null/undefined');
+                        setIsRefreshing(false);
+                        return;
+                      }
+                      
+                      if (scanResults.data) {
+                        setStrategicInsights(scanResults.data.strategicInsights || []);
+                        setBrandDNA(scanResults.data.brandDNA || null);
+                        
+                        // Get scan competitors
+                        const scanCompetitors = Array.isArray(scanResults.data.competitorIntelligence) 
+                          ? scanResults.data.competitorIntelligence 
+                          : [];
+                        
+                        // Get manual competitors from existing cache (before overwriting)
+                        const existingCache = localStorage.getItem('lastScanResults');
+                        let manualCompetitors: any[] = [];
+                        if (existingCache) {
+                          try {
+                            const cached = JSON.parse(existingCache);
+                            manualCompetitors = (cached.competitorIntelligence || []).filter((c: any) => c.isManual);
+                            console.log('Refresh: Found manual competitors:', manualCompetitors.length);
+                          } catch (e) {
+                            console.error('Error loading manual competitors:', e);
+                          }
                         }
-                      });
-                      
-                      const mergedCompetitors = Array.from(competitorMap.values());
-                      setCompetitorIntelligence(mergedCompetitors);
-                      setMarketShare(scanResults.data.marketShare || null);
-                      setScanUsername(storedUsername);
-                      
-                      // Update cache with merged data
-                      const updatedCache = {
-                        ...scanResults.data,
-                        competitorIntelligence: mergedCompetitors
-                      };
-                      localStorage.setItem('lastScanResults', JSON.stringify(updatedCache));
-                      
-                      // Recalculate analytics with new scan data
-                      const updatedAnalytics = await fetchAnalyticsData();
-                      setAnalytics(updatedAnalytics);
-                      
-                      console.log('Data refreshed:', {
-                        insights: scanResults.data.strategicInsights?.length || 0,
-                        brandDNA: !!scanResults.data.brandDNA,
-                        competitors: mergedCompetitors.length,
-                        scanCompetitors: scanCompetitors.length,
-                        manualCompetitors: manualCompetitors.length,
-                        marketShare: !!scanResults.data.marketShare,
-                        analytics: updatedAnalytics
-                      });
-                    } else {
-                      console.error('❌ Refresh: API returned success but data is null or undefined');
+                        
+                        // Merge: scan competitors first, then manual (avoid duplicates by name)
+                        const competitorMap = new Map();
+                        scanCompetitors.forEach((c: any) => {
+                          competitorMap.set(c.name?.toLowerCase(), c);
+                        });
+                        manualCompetitors.forEach((c: any) => {
+                          if (!competitorMap.has(c.name?.toLowerCase())) {
+                            competitorMap.set(c.name?.toLowerCase(), c);
+                          }
+                        });
+                        
+                        const mergedCompetitors = Array.from(competitorMap.values());
+                        setCompetitorIntelligence(mergedCompetitors);
+                        setMarketShare(scanResults.data.marketShare || null);
+                        setScanUsername(storedUsername);
+                        
+                        // Update cache with merged data
+                        const updatedCache = {
+                          ...scanResults.data,
+                          competitorIntelligence: mergedCompetitors
+                        };
+                        localStorage.setItem('lastScanResults', JSON.stringify(updatedCache));
+                        
+                        // Recalculate analytics with new scan data
+                        const updatedAnalytics = await fetchAnalyticsData();
+                        setAnalytics(updatedAnalytics);
+                        
+                        console.log('Data refreshed:', {
+                          insights: scanResults.data.strategicInsights?.length || 0,
+                          brandDNA: !!scanResults.data.brandDNA,
+                          competitors: mergedCompetitors.length,
+                          scanCompetitors: scanCompetitors.length,
+                          manualCompetitors: manualCompetitors.length,
+                          marketShare: !!scanResults.data.marketShare,
+                          analytics: updatedAnalytics
+                        });
+                      } else {
+                        console.error('❌ Refresh: API returned success but data is null or undefined');
+                      }
+                    } catch (error) {
+                      console.error('❌ Refresh error:', error);
+                      // Don't clear existing data on error
                     }
-                  } catch (error) {
-                    console.error('❌ Refresh error:', error);
-                    // Don't clear existing data on error
+                  } else {
+                    console.log('No username found in localStorage');
                   }
-                } else {
-                  console.log('No username found in localStorage');
+                } finally {
+                  setIsRefreshing(false);
                 }
               }}
-              className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs font-bold text-white hover:bg-white/10 transition-colors"
+              disabled={isRefreshing}
+              className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs font-bold text-white hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              Refresh Data
+              {isRefreshing ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                'Refresh Data'
+              )}
             </button>
           </div>
 
@@ -1518,6 +1534,53 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
             </div>
           </div>
         )}
+
+      {/* Rescan Warning Modal */}
+      {showRescanWarning && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#0A0A0A] border border-orange-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertCircle className="w-6 h-6 text-orange-500" />
+              <h3 className="text-xl font-bold text-white">Rescan Footprint Warning</h3>
+            </div>
+            <p className="text-sm text-white/70 mb-2 leading-relaxed">
+              <strong className="text-white">Warning:</strong> Rescanning your digital footprint will completely replace all existing data including:
+            </p>
+            <ul className="text-sm text-white/60 mb-6 ml-4 space-y-1 list-disc">
+              <li>Strategic insights</li>
+              <li>Brand DNA analysis</li>
+              <li>Competitor intelligence (auto-generated)</li>
+              <li>Market share estimates</li>
+              <li>Content themes and voice patterns</li>
+            </ul>
+            <p className="text-sm text-white/70 mb-6 leading-relaxed">
+              <strong className="text-orange-400">Note:</strong> Manually added competitors will be preserved, but all other data will be overwritten with new scan results.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowRescanWarning(false)}
+                className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm font-medium text-white hover:bg-white/10 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowRescanWarning(false);
+                  const lastUsername = localStorage.getItem('lastScannedUsername');
+                  if (lastUsername) {
+                    onNavigate(ViewState.AUDIT);
+                  } else {
+                    onNavigate(ViewState.INGESTION);
+                  }
+                }}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-orange-500 to-purple-600 rounded-lg text-sm font-bold text-white hover:from-orange-600 hover:to-purple-700 transition-colors"
+              >
+                Continue with Rescan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
@@ -1834,7 +1897,10 @@ const ForensicCompetitorCard = ({ competitor, onRemove }: { competitor: any; onR
                 </p>
             </div>
         </div>
-    );
+      )}
+
+    </div>
+  );
 };
 
 export default DashboardView;
