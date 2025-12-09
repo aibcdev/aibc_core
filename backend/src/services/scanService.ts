@@ -54,17 +54,49 @@ export async function startScan(
     const scrapedData: Array<{ platform: string; content: { html: string; text: string; url: string; images?: string[]; videos?: string[] } }> = [];
     const verifiedPlatforms: string[] = [];
     
+    // STEP 1: If scanning a website, first extract social media links from the website
+    let discoveredSocialLinks: Record<string, string> = {};
+    const websiteUrl = getProfileUrl(username, 'website');
+    if (websiteUrl && (websiteUrl.includes('http://') || websiteUrl.includes('https://'))) {
+      addLog(scanId, `[DISCOVERY] Scanning website for social media links: ${websiteUrl}`);
+      try {
+        const websiteContent = await scrapeProfile(websiteUrl, 'website', scanId);
+        if (websiteContent.html && websiteContent.html.length > 100) {
+          discoveredSocialLinks = await extractSocialLinksFromWebsite(websiteContent.html, websiteUrl, scanId);
+          if (Object.keys(discoveredSocialLinks).length > 0) {
+            addLog(scanId, `[DISCOVERY] Found ${Object.keys(discoveredSocialLinks).length} social profiles: ${Object.keys(discoveredSocialLinks).join(', ')}`);
+          }
+        }
+      } catch (error: any) {
+        addLog(scanId, `[DISCOVERY] Failed to extract social links from website: ${error.message}`);
+      }
+    }
+    
+    // STEP 2: Scrape all platforms, using discovered links when available
     for (const platform of platforms) {
       try {
-        // Use connected account handle if available, otherwise fall back to username
-        const handleToUse = connectedAccounts?.[platform] || username;
-        const profileUrl = getProfileUrl(handleToUse, platform);
-        if (profileUrl) {
-          // Determine actual platform name for logging (handle domains like script.tv)
-          const actualPlatform = profileUrl.includes('.com') && !profileUrl.includes('twitter.com') && 
-                                 !profileUrl.includes('youtube.com') && !profileUrl.includes('linkedin.com') && 
-                                 !profileUrl.includes('instagram.com') ? 'website' : platform;
+        // Priority: discovered link > connected account > constructed URL
+        let profileUrl: string | null = null;
+        let actualPlatform = platform;
+        
+        // Check if we discovered this platform's link from the website
+        if (discoveredSocialLinks[platform]) {
+          profileUrl = discoveredSocialLinks[platform];
+          addLog(scanId, `[DISCOVERY] Using discovered ${platform} link: ${profileUrl}`);
+        } else {
+          // Use connected account handle if available, otherwise fall back to username
+          const handleToUse = connectedAccounts?.[platform] || username;
+          profileUrl = getProfileUrl(handleToUse, platform);
           
+          // Determine actual platform name for logging (handle domains like script.tv)
+          if (profileUrl && profileUrl.includes('.com') && !profileUrl.includes('twitter.com') && 
+              !profileUrl.includes('youtube.com') && !profileUrl.includes('linkedin.com') && 
+              !profileUrl.includes('instagram.com') && !profileUrl.includes('x.com')) {
+            actualPlatform = 'website';
+          }
+        }
+        
+        if (profileUrl) {
           // Check if profile exists before logging
           addLog(scanId, `[SCRAPE] Checking ${actualPlatform} profile: ${profileUrl}`);
           const content = await scrapeProfile(profileUrl, actualPlatform, scanId);
@@ -493,6 +525,189 @@ function addLog(scanId: string, message: string) {
     scan.logs.push(`[${new Date().toLocaleTimeString()}] ${message}`);
     storage.updateScan(scanId, { logs: scan.logs });
   }
+}
+
+/**
+ * Extract social media links from a website's HTML
+ * This is CRITICAL for finding social profiles that are linked on websites
+ */
+async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, scanId?: string): Promise<Record<string, string>> {
+  const socialLinks: Record<string, string> = {};
+  
+  try {
+    // Use Playwright to parse HTML and extract links
+    const browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    
+    // Set HTML content
+    await page.setContent(html, { waitUntil: 'domcontentloaded' });
+    
+    // Extract all links from the page
+    const allLinks = await page.evaluate(() => {
+      // @ts-ignore
+      const links = Array.from(document.querySelectorAll('a[href]'));
+      return links.map((link: any) => ({
+        href: link.href || link.getAttribute('href'),
+        text: link.innerText || link.textContent || '',
+        ariaLabel: link.getAttribute('aria-label') || '',
+      }));
+    });
+    
+    await browser.close();
+    
+    // Pattern matching for social media platforms
+    const socialPatterns: Record<string, RegExp[]> = {
+      twitter: [
+        /twitter\.com\/([a-zA-Z0-9_]+)/i,
+        /x\.com\/([a-zA-Z0-9_]+)/i,
+      ],
+      instagram: [
+        /instagram\.com\/([a-zA-Z0-9_.]+)/i,
+        /instagr\.am\/([a-zA-Z0-9_.]+)/i,
+      ],
+      youtube: [
+        /youtube\.com\/(?:channel\/|user\/|@)?([a-zA-Z0-9_-]+)/i,
+        /youtu\.be\/([a-zA-Z0-9_-]+)/i,
+      ],
+      linkedin: [
+        /linkedin\.com\/(?:in|company)\/([a-zA-Z0-9-]+)/i,
+      ],
+      tiktok: [
+        /tiktok\.com\/@([a-zA-Z0-9_.]+)/i,
+      ],
+    };
+    
+    // Find social links in all extracted links
+    for (const link of allLinks) {
+      if (!link.href) continue;
+      
+      const href = link.href.toLowerCase();
+      
+      // Check each platform pattern
+      for (const [platform, patterns] of Object.entries(socialPatterns)) {
+        for (const pattern of patterns) {
+          const match = href.match(pattern);
+          if (match && match[1]) {
+            // Construct full URL
+            let fullUrl = link.href;
+            if (!fullUrl.startsWith('http')) {
+              if (platform === 'twitter' && href.includes('x.com')) {
+                fullUrl = `https://x.com/${match[1]}`;
+              } else if (platform === 'twitter') {
+                fullUrl = `https://twitter.com/${match[1]}`;
+              } else if (platform === 'instagram') {
+                fullUrl = `https://instagram.com/${match[1]}`;
+              } else if (platform === 'youtube') {
+                fullUrl = `https://youtube.com/@${match[1]}`;
+              } else if (platform === 'linkedin') {
+                fullUrl = `https://linkedin.com/in/${match[1]}`;
+              } else if (platform === 'tiktok') {
+                fullUrl = `https://tiktok.com/@${match[1]}`;
+              }
+            }
+            
+            // Only add if we don't already have this platform or if this is a better match
+            if (!socialLinks[platform] || fullUrl.length < socialLinks[platform].length) {
+              socialLinks[platform] = fullUrl;
+              if (scanId) {
+                addLog(scanId, `[DISCOVERY] Found ${platform} link: ${fullUrl}`);
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Also use LLM to extract social links from text content (as fallback)
+    if (Object.keys(socialLinks).length === 0) {
+      try {
+        const textContent = await page.evaluate(() => {
+          // @ts-ignore
+          return document.body.innerText || document.body.textContent || '';
+        });
+        
+        if (textContent && textContent.length > 100) {
+          const llmExtracted = await extractSocialLinksWithLLM(textContent, websiteUrl, scanId);
+          Object.assign(socialLinks, llmExtracted);
+        }
+      } catch (e) {
+        console.log('LLM social link extraction failed:', e);
+      }
+    }
+    
+  } catch (error: any) {
+    console.error('Error extracting social links from website:', error);
+    if (scanId) {
+      addLog(scanId, `[DISCOVERY] Error extracting social links: ${error.message}`);
+    }
+  }
+  
+  return socialLinks;
+}
+
+/**
+ * Use LLM to extract social media links from text content
+ */
+async function extractSocialLinksWithLLM(textContent: string, websiteUrl: string, scanId?: string): Promise<Record<string, string>> {
+  const socialLinks: Record<string, string> = {};
+  
+  try {
+    const prompt = `You are analyzing a website's content to find social media profile links.
+
+Website URL: ${websiteUrl}
+
+Website Content (first 5000 chars):
+${textContent.substring(0, 5000)}
+
+Find all social media profile links mentioned in this content. Look for:
+- Twitter/X handles (twitter.com/username or x.com/username)
+- Instagram handles (instagram.com/username)
+- YouTube channels (youtube.com/@channel or youtube.com/channel/ID)
+- LinkedIn profiles (linkedin.com/in/username)
+- TikTok profiles (tiktok.com/@username)
+
+Return ONLY a JSON object with this exact structure:
+{
+  "twitter": "https://twitter.com/username or https://x.com/username",
+  "instagram": "https://instagram.com/username",
+  "youtube": "https://youtube.com/@channel",
+  "linkedin": "https://linkedin.com/in/username",
+  "tiktok": "https://tiktok.com/@username"
+}
+
+Only include platforms that you actually found. If a platform is not found, omit it from the JSON.
+Return ONLY valid JSON, no other text.`;
+
+    const schema = JSON.stringify({
+      type: 'object',
+      properties: {
+        twitter: { type: 'string' },
+        instagram: { type: 'string' },
+        youtube: { type: 'string' },
+        linkedin: { type: 'string' },
+        tiktok: { type: 'string' },
+      },
+    });
+    
+    const result = await generateJSON(prompt, schema, { tier: 'basic' });
+    
+    if (result && typeof result === 'object') {
+      // Validate and clean URLs
+      for (const [platform, url] of Object.entries(result)) {
+        if (url && typeof url === 'string' && url.startsWith('http')) {
+          socialLinks[platform] = url;
+          if (scanId) {
+            addLog(scanId, `[DISCOVERY] LLM found ${platform} link: ${url}`);
+          }
+        }
+      }
+    }
+  } catch (error: any) {
+    console.error('LLM social link extraction error:', error);
+  }
+  
+  return socialLinks;
 }
 
 function getProfileUrl(username: string, platform: string): string | null {

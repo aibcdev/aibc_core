@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { PrivyProvider } from '@privy-io/react-auth';
 import LandingView from './components/LandingView';
 import LoginView from './components/LoginView';
 import SignInView from './components/SignInView';
@@ -12,132 +13,15 @@ import PricingView from './components/PricingView';
 import AdminView from './components/AdminView';
 import InboxView from './components/InboxView';
 import { ViewState } from './types';
-import { supabase, isSupabaseConfigured } from './services/supabaseClient';
 
-export default function App() {
+// Privy App ID - get from https://dashboard.privy.io
+const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID || '';
+
+function AppContent() {
   const [view, setView] = useState<ViewState>(ViewState.LANDING);
   const [username, setUsername] = useState<string>('');
   const [scanType, setScanType] = useState<'basic' | 'deep'>('basic');
-  const [isInitializing, setIsInitializing] = useState(true);
-
-  // Check for existing session on mount (persist login across refreshes)
-  // Only run once on mount, not on every view change
-  useEffect(() => {
-    let mounted = true;
-    
-    const checkSession = async () => {
-      // Run session check in background - don't block rendering
-      if (isSupabaseConfigured() && supabase) {
-        try {
-          // First, check for existing session
-          const { data: { session }, error } = await supabase.auth.getSession();
-          
-          if (session && !error && mounted) {
-            // User is logged in - restore session
-            const userData = {
-              id: session.user.id,
-              email: session.user.email,
-              name: session.user.user_metadata?.name || session.user.email,
-            };
-            
-            localStorage.setItem('authToken', session.access_token);
-            localStorage.setItem('refreshToken', session.refresh_token || '');
-            localStorage.setItem('user', JSON.stringify(userData));
-            
-            // Only redirect on initial load if on landing page
-            if (view === ViewState.LANDING) {
-              const hasCompletedOnboarding = localStorage.getItem('lastScannedUsername');
-              if (hasCompletedOnboarding) {
-                setView(ViewState.DASHBOARD);
-              } else {
-                setView(ViewState.INGESTION);
-              }
-            }
-          } else if (mounted) {
-            // No active Supabase session - try to restore from localStorage
-            const storedUser = localStorage.getItem('user');
-            const storedToken = localStorage.getItem('authToken');
-            const storedRefreshToken = localStorage.getItem('refreshToken');
-            
-            if (storedUser && storedToken && storedRefreshToken) {
-              // Try to refresh the session using the stored refresh token
-              try {
-                const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession({
-                  refresh_token: storedRefreshToken
-                });
-                
-                if (refreshData.session && !refreshError) {
-                  // Successfully refreshed session
-                  const userData = JSON.parse(storedUser);
-                  localStorage.setItem('authToken', refreshData.session.access_token);
-                  localStorage.setItem('refreshToken', refreshData.session.refresh_token || '');
-                  localStorage.setItem('user', JSON.stringify(userData));
-                  
-                  // Only redirect on initial load if on landing page
-                  if (view === ViewState.LANDING) {
-                    const hasCompletedOnboarding = localStorage.getItem('lastScannedUsername');
-                    if (hasCompletedOnboarding) {
-                      setView(ViewState.DASHBOARD);
-                    } else {
-                      setView(ViewState.INGESTION);
-                    }
-                  }
-                } else {
-                  // Refresh failed - clear stale data
-                  localStorage.removeItem('user');
-                  localStorage.removeItem('authToken');
-                  localStorage.removeItem('refreshToken');
-                }
-              } catch (refreshErr) {
-                console.error('Error refreshing session:', refreshErr);
-                // Keep user data for now - don't log out on refresh error
-              }
-            } else if (storedUser && !storedToken) {
-              // No token but has user data - clear it
-              localStorage.removeItem('user');
-              localStorage.removeItem('authToken');
-              localStorage.removeItem('refreshToken');
-            }
-          }
-          
-          // Set up auth state listener to persist session changes (only once)
-          if (mounted) {
-            supabase.auth.onAuthStateChange((event, session) => {
-              if (session) {
-                const userData = {
-                  id: session.user.id,
-                  email: session.user.email,
-                  name: session.user.user_metadata?.name || session.user.email,
-                };
-                localStorage.setItem('authToken', session.access_token);
-                localStorage.setItem('refreshToken', session.refresh_token || '');
-                localStorage.setItem('user', JSON.stringify(userData));
-              } else if (event === 'SIGNED_OUT') {
-                localStorage.removeItem('user');
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('refreshToken');
-              }
-            });
-          }
-        } catch (err) {
-          console.error('Error checking session:', err);
-          // On error, don't change view - let current view render
-          // Don't set error state - just log it and continue
-        }
-      }
-    };
-    
-    // Run session check in background without blocking
-    checkSession().finally(() => {
-      if (mounted) {
-        setIsInitializing(false);
-      }
-    });
-    
-    return () => {
-      mounted = false;
-    };
-  }, []); // Only run once on mount
+  const [isInitializing, setIsInitializing] = useState(false);
 
   // Load username from localStorage on mount
   useEffect(() => {
@@ -147,67 +31,15 @@ export default function App() {
     }
   }, []);
 
-  // Handle hash routing for pricing, password reset, and OAuth callbacks
+  // Handle hash routing for pricing and Stripe callbacks
   useEffect(() => {
     const handleHashChange = () => {
       if (window.location.hash === '#pricing') {
         setView(ViewState.PRICING);
-      } else if (window.location.hash === '#reset-password' || window.location.hash.includes('access_token')) {
-        setView(ViewState.RESET_PASSWORD);
-      }
-    };
-
-    // Check for Supabase OAuth callback
-    const checkSupabaseAuth = async () => {
-      if (isSupabaseConfigured() && supabase) {
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
-        const type = hashParams.get('type');
-        
-        if (accessToken && refreshToken && type === 'recovery') {
-          // Password reset callback - handled by ResetPasswordView
-          return;
-        }
-        
-        if (accessToken && refreshToken) {
-          // Supabase OAuth callback - set session
-          try {
-            const { data, error } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
-            
-            if (!error && data.session) {
-              localStorage.setItem('authToken', data.session.access_token);
-              localStorage.setItem('user', JSON.stringify({
-                id: data.user.id,
-                email: data.user.email,
-                name: data.user.user_metadata?.name || data.user.email,
-              }));
-              
-              // Check if user has completed onboarding (has scanned username)
-              const hasCompletedOnboarding = localStorage.getItem('lastScannedUsername');
-              
-              // New users go to ingestion (onboarding), existing users go to dashboard
-              if (hasCompletedOnboarding) {
-                setView(ViewState.DASHBOARD);
-              } else {
-                setView(ViewState.INGESTION);
-              }
-              
-              // Clean up URL
-              window.history.replaceState(null, '', window.location.pathname);
-            }
-          } catch (err) {
-            console.error('Error setting Supabase session:', err);
-          }
-        }
       }
     };
 
     handleHashChange();
-    checkSupabaseAuth();
     
     // Check for Stripe checkout completion
     const urlParams = new URLSearchParams(window.location.search);
@@ -241,20 +73,8 @@ export default function App() {
   };
 
   // Always render views immediately - no loading screen blocking
-  // Session check happens in background and doesn't block rendering
-  
   // Ensure we always render something - default to landing if view is invalid
   const currentView = Object.values(ViewState).includes(view as ViewState) ? view : ViewState.LANDING;
-  
-  // Show minimal loading only on very first mount AND only for LANDING view
-  // Never block SIGNIN, LOGIN, or other views
-  if (isInitializing && view === ViewState.LANDING && currentView === ViewState.LANDING) {
-    return (
-      <div className="min-h-screen bg-dark-bg flex items-center justify-center">
-        <div className="text-white/60 font-mono text-sm">Loading...</div>
-      </div>
-    );
-  }
   
   return (
     <>
@@ -270,5 +90,38 @@ export default function App() {
       {currentView === ViewState.ADMIN && <AdminView onNavigate={navigate} />}
       {currentView === ViewState.INBOX && <InboxView onNavigate={navigate} />}
     </>
+  );
+}
+
+export default function App() {
+  // Privy configuration
+  const privyConfig = {
+    appId: PRIVY_APP_ID,
+    config: {
+      // Enable both email/password and Web3 wallet authentication
+      loginMethods: ['email', 'wallet', 'sms', 'google', 'apple', 'twitter', 'discord', 'github'],
+      // Enable embedded wallets for Web3 users
+      embeddedWallets: {
+        createOnLogin: 'users-without-wallets',
+        requireUserPasswordOnCreate: false,
+      },
+      // Appearance customization
+      appearance: {
+        theme: 'dark',
+        accentColor: '#FF5E1E', // Brand orange
+        logo: 'https://aibcmedia.com/logo.png', // Update with your logo URL
+      },
+      // Legal and terms
+      legal: {
+        termsAndConditionsUrl: 'https://aibcmedia.com/terms',
+        privacyPolicyUrl: 'https://aibcmedia.com/privacy',
+      },
+    },
+  };
+
+  return (
+    <PrivyProvider appId={privyConfig.appId} config={privyConfig.config}>
+      <AppContent />
+    </PrivyProvider>
   );
 }
