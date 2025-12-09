@@ -8,6 +8,18 @@ export interface AnalyticsData {
   contentPublished: number; // Content published
   contentScheduled: number; // Content scheduled for future
   brandVoiceMatch: number; // Percentage match to brand voice (0-100)
+  // System metrics
+  avgCompletionTime?: string; // Average time to complete workflows (e.g., "4.2h")
+  avgCompletionTimeChange?: number; // Percentage change (e.g., -12)
+  avgCompletionTimePercent?: number; // For progress bar (0-100)
+  activeWorkflows?: number; // Number of active workflows
+  activeWorkflowsChange?: number; // Change in active workflows
+  globalAssetVelocity?: string; // Asset velocity metric (e.g., "85.4")
+  globalAssetVelocityChange?: number; // Percentage change
+  globalAssetVelocityPercent?: number; // For progress bar
+  aiComputeEfficiency?: string; // AI efficiency percentage (e.g., "99.9%")
+  aiComputeEfficiencyChange?: number; // Percentage change
+  aiComputeEfficiencyPercent?: number; // For progress bar
   trends: {
     created: string;
     published: string;
@@ -95,11 +107,125 @@ function calculateBrandVoiceMatch(): number {
 }
 
 /**
+ * Calculate system metrics from user activity
+ */
+function calculateSystemMetrics() {
+  try {
+    // Get user activity from localStorage
+    const userId = localStorage.getItem('userId') || 'default';
+    const activityKey = `user_activity_${userId}`;
+    const activityData = localStorage.getItem(activityKey);
+    
+    if (!activityData) {
+      // Return N/A values if no data
+      return {
+        avgCompletionTime: 'N/A',
+        avgCompletionTimeChange: undefined,
+        avgCompletionTimePercent: 0,
+        activeWorkflows: 0,
+        activeWorkflowsChange: undefined,
+        globalAssetVelocity: 'N/A',
+        globalAssetVelocityChange: undefined,
+        globalAssetVelocityPercent: 0,
+        aiComputeEfficiency: 'N/A',
+        aiComputeEfficiencyChange: undefined,
+        aiComputeEfficiencyPercent: 0,
+      };
+    }
+    
+    const activity = JSON.parse(activityData);
+    const workflows = activity.workflows || [];
+    const completedWorkflows = workflows.filter((w: any) => w.status === 'completed');
+    
+    // Calculate average completion time
+    let avgCompletionTime = 'N/A';
+    let avgCompletionTimeChange: number | undefined = undefined;
+    let avgCompletionTimePercent = 0;
+    
+    if (completedWorkflows.length > 0) {
+      const totalMinutes = completedWorkflows.reduce((sum: number, w: any) => {
+        if (w.startTime && w.endTime) {
+          const start = new Date(w.startTime).getTime();
+          const end = new Date(w.endTime).getTime();
+          return sum + (end - start) / (1000 * 60); // Convert to minutes
+        }
+        return sum;
+      }, 0);
+      
+      const avgMinutes = totalMinutes / completedWorkflows.length;
+      const hours = Math.floor(avgMinutes / 60);
+      const mins = Math.round(avgMinutes % 60);
+      avgCompletionTime = `${hours}.${Math.floor(mins / 6)}h`; // Round to 0.1h
+      
+      // Calculate change (simplified - compare to previous period)
+      const previousAvg = activity.previousAvgCompletionTime || avgMinutes;
+      avgCompletionTimeChange = Math.round(((avgMinutes - previousAvg) / previousAvg) * 100);
+      avgCompletionTimePercent = Math.min((avgMinutes / 480) * 100, 100); // 8h = 100%
+    }
+    
+    // Active workflows
+    const activeWorkflows = workflows.filter((w: any) => w.status === 'active' || w.status === 'in_progress').length;
+    const previousActive = activity.previousActiveWorkflows || 0;
+    const activeWorkflowsChange = activeWorkflows - previousActive;
+    
+    // Global asset velocity (simplified calculation)
+    const assets = activity.assets || [];
+    const velocity = assets.length > 0 ? (assets.length / (completedWorkflows.length || 1)).toFixed(1) : '0';
+    const globalAssetVelocity = velocity;
+    const previousVelocity = parseFloat(activity.previousVelocity || '0');
+    const globalAssetVelocityChange = previousVelocity > 0 
+      ? Math.round(((parseFloat(velocity) - previousVelocity) / previousVelocity) * 100)
+      : undefined;
+    const globalAssetVelocityPercent = Math.min((parseFloat(velocity) / 100) * 100, 100);
+    
+    // AI compute efficiency (simplified - based on successful generations)
+    const aiGenerations = activity.aiGenerations || [];
+    const successful = aiGenerations.filter((g: any) => g.success).length;
+    const total = aiGenerations.length || 1;
+    const efficiency = (successful / total) * 100;
+    const aiComputeEfficiency = `${efficiency.toFixed(1)}%`;
+    const previousEfficiency = activity.previousEfficiency || efficiency;
+    const aiComputeEfficiencyChange = Math.round(efficiency - previousEfficiency);
+    const aiComputeEfficiencyPercent = efficiency;
+    
+    return {
+      avgCompletionTime,
+      avgCompletionTimeChange,
+      avgCompletionTimePercent,
+      activeWorkflows,
+      activeWorkflowsChange,
+      globalAssetVelocity,
+      globalAssetVelocityChange,
+      globalAssetVelocityPercent,
+      aiComputeEfficiency,
+      aiComputeEfficiencyChange,
+      aiComputeEfficiencyPercent,
+    };
+  } catch (e) {
+    console.error('Error calculating system metrics:', e);
+    return {
+      avgCompletionTime: 'N/A',
+      avgCompletionTimeChange: undefined,
+      avgCompletionTimePercent: 0,
+      activeWorkflows: 0,
+      activeWorkflowsChange: undefined,
+      globalAssetVelocity: 'N/A',
+      globalAssetVelocityChange: undefined,
+      globalAssetVelocityPercent: 0,
+      aiComputeEfficiency: 'N/A',
+      aiComputeEfficiencyChange: undefined,
+      aiComputeEfficiencyPercent: 0,
+    };
+  }
+}
+
+/**
  * Fetch real analytics data based on scan results
  */
 export async function fetchAnalyticsData(): Promise<AnalyticsData> {
   const contentCreated = calculateContentSuggestions();
   const brandVoiceMatch = calculateBrandVoiceMatch();
+  const systemMetrics = calculateSystemMetrics();
   
   // Published/Scheduled would come from actual content tracking
   // For now, these start at 0 until user actually publishes content
@@ -111,6 +237,7 @@ export async function fetchAnalyticsData(): Promise<AnalyticsData> {
     contentPublished,
     contentScheduled,
     brandVoiceMatch,
+    ...systemMetrics,
     trends: {
       created: contentCreated > 0 ? `+${contentCreated}` : '0',
       published: '0',

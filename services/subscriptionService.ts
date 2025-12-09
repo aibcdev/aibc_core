@@ -248,6 +248,11 @@ export function getCreditHistory(): CreditTransaction[] {
  * Check if user has access to a feature
  */
 export function hasFeatureAccess(feature: string): boolean {
+  // Admins always have access to all features
+  if (isAdmin()) {
+    return true;
+  }
+  
   const subscription = getUserSubscription();
   const limits = TIER_LIMITS[subscription.tier];
   

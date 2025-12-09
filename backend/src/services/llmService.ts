@@ -220,6 +220,7 @@ async function callClaude(prompt: string, systemPrompt?: string, model: string =
 
 /**
  * Generate text using specified provider or best available
+ * Automatically falls back to DeepSeek if Gemini fails with quota/429 errors
  */
 export async function generateText(
   prompt: string, 
@@ -232,23 +233,46 @@ export async function generateText(
   
   console.log(`[LLM] Using ${config.name} for ${tier} scan`);
 
-  switch (provider) {
-    case 'deepseek':
-      return callDeepSeek(prompt, systemPrompt, 'deepseek-chat');
-    case 'deepseek-r1':
-      return callDeepSeek(prompt, systemPrompt, 'deepseek-reasoner');
-    case 'openai':
-      return callOpenAI(prompt, systemPrompt, 'gpt-4o');
-    case 'gemini-2-flash':
-      return callGemini(prompt, systemPrompt, 'gemini-2.0-flash');
-    case 'gemini-flash':
-      return callGemini(prompt, systemPrompt, 'gemini-2.5-flash');
-    case 'gemini-pro':
-      return callGemini(prompt, systemPrompt, 'gemini-1.5-pro');
-    case 'claude':
-      return callClaude(prompt, systemPrompt, 'claude-3-5-sonnet-20241022');
-    default:
-      throw new Error(`Unknown provider: ${provider}`);
+  try {
+    switch (provider) {
+      case 'deepseek':
+        return await callDeepSeek(prompt, systemPrompt, 'deepseek-chat');
+      case 'deepseek-r1':
+        return await callDeepSeek(prompt, systemPrompt, 'deepseek-reasoner');
+      case 'openai':
+        return await callOpenAI(prompt, systemPrompt, 'gpt-4o');
+      case 'gemini-2-flash':
+        return await callGemini(prompt, systemPrompt, 'gemini-2.0-flash');
+      case 'gemini-flash':
+        return await callGemini(prompt, systemPrompt, 'gemini-2.5-flash');
+      case 'gemini-pro':
+        return await callGemini(prompt, systemPrompt, 'gemini-1.5-pro');
+      case 'claude':
+        return await callClaude(prompt, systemPrompt, 'claude-3-5-sonnet-20241022');
+      default:
+        throw new Error(`Unknown provider: ${provider}`);
+    }
+  } catch (error: any) {
+    // Auto-fallback to DeepSeek if Gemini fails with quota/429 errors
+    const isGeminiError = provider.startsWith('gemini');
+    const isQuotaError = error.message?.includes('quota') || 
+                        error.message?.includes('429') || 
+                        error.message?.includes('Too Many Requests') ||
+                        error.message?.includes('exceeded');
+    
+    if (isGeminiError && isQuotaError && DEEPSEEK_API_KEY) {
+      console.log(`[LLM] ⚠️ Gemini quota exceeded, falling back to DeepSeek...`);
+      try {
+        const fallbackModel = tier === 'deep' ? 'deepseek-reasoner' : 'deepseek-chat';
+        return await callDeepSeek(prompt, systemPrompt, fallbackModel);
+      } catch (fallbackError: any) {
+        console.error(`[LLM] ❌ DeepSeek fallback also failed: ${fallbackError.message}`);
+        throw new Error(`Both Gemini and DeepSeek failed. Gemini: ${error.message}, DeepSeek: ${fallbackError.message}`);
+      }
+    }
+    
+    // Re-throw if not a quota error or no DeepSeek fallback available
+    throw error;
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Video, Image as ImageIcon, FileText, Clock, X, Users, User, Calendar, MessageSquare, Send, Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 interface CalendarEvent {
@@ -22,148 +22,102 @@ interface CalendarEvent {
 }
 
 const CalendarView: React.FC = () => {
-  const [currentMonth] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [newComment, setNewComment] = useState('');
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   
-  const events: CalendarEvent[] = [
-    { 
-      id: '1', 
-      date: 5, 
-      title: 'X Thread: Football Analysis', 
-      description: 'Weekly football breakdown thread covering Premier League highlights and tactical analysis.',
-      type: 'social', 
-      time: '14:00 UTC', 
-      thumbnail: 'blue',
-      team: 'Content',
-      status: 'review',
-      platform: 'X (Twitter)',
-      lead: { name: 'Sarah Chen' },
-      assignee: { name: 'Marcus Thorne' },
-      createdAt: 'Dec 1, 2024 • 10:30 AM',
-      deadline: 'Dec 5, 2024',
-      tasks: [
-        'Write 10-tweet thread',
-        'Add relevant stats and graphics',
-        'Schedule for peak engagement time'
-      ],
-      comments: [
-        { user: 'Marcus Thorne', text: 'Draft ready for review. Added the latest match stats.', time: 'Yesterday 4:20 PM' }
-      ]
-    },
-    { 
-      id: '2', 
-      date: 8, 
-      title: 'YouTube: Match Review', 
-      description: 'Full match breakdown video with tactical analysis, key moments, and player ratings.',
-      type: 'video', 
-      time: '09:00 UTC', 
-      thumbnail: 'red',
-      team: 'Video',
-      status: 'draft',
-      platform: 'YouTube',
-      lead: { name: 'Alex Rivera' },
-      assignee: { name: 'Jordan Kim' },
-      createdAt: 'Dec 2, 2024 • 2:15 PM',
-      deadline: 'Dec 8, 2024',
-      tasks: [
-        'Edit 12-minute video',
-        'Add graphics and overlays',
-        'Create thumbnail',
-        'Write description and tags'
-      ],
-      comments: []
-    },
-    { 
-      id: '3', 
-      date: 12, 
-      title: 'LinkedIn: Industry Insights', 
-      description: 'Professional post about content creation trends and industry insights.',
-      type: 'document', 
-      time: '10:00 UTC',
-      team: 'Strategy',
-      status: 'approved',
-      platform: 'LinkedIn',
-      lead: { name: 'Sarah Chen' },
-      assignee: { name: 'Sarah Chen' },
-      createdAt: 'Dec 3, 2024 • 9:00 AM',
-      deadline: 'Dec 12, 2024',
-      tasks: [
-        'Write thought leadership post',
-        'Add relevant hashtags'
-      ],
-      comments: [
-        { user: 'Sarah Chen', text: 'Approved and scheduled!', time: '2 hours ago' }
-      ]
-    },
-    { 
-      id: '4', 
-      date: 15, 
-      title: 'Instagram Reel: Behind Scenes', 
-      description: 'Casual behind-the-scenes content showing the content creation process.',
-      type: 'video', 
-      time: '16:00 UTC', 
-      thumbnail: 'purple',
-      team: 'Content',
-      status: 'scheduled',
-      platform: 'Instagram',
-      lead: { name: 'Jordan Kim' },
-      assignee: { name: 'Alex Rivera' },
-      createdAt: 'Dec 4, 2024 • 11:00 AM',
-      deadline: 'Dec 15, 2024',
-      tasks: [
-        'Film 60-second Reel',
-        'Add trending audio',
-        'Write caption'
-      ],
-      comments: []
-    },
-    { 
-      id: '5', 
-      date: 19, 
-      title: 'TikTok: Quick Tips', 
-      description: 'Series of quick tips in trending TikTok format.',
-      type: 'video', 
-      time: '12:00 UTC', 
-      thumbnail: 'black',
-      team: 'Social',
-      status: 'draft',
-      platform: 'TikTok',
-      lead: { name: 'Marcus Thorne' },
-      assignee: { name: 'Jordan Kim' },
-      createdAt: 'Dec 5, 2024 • 3:30 PM',
-      deadline: 'Dec 19, 2024',
-      tasks: [
-        'Script 3 TikTok videos',
-        'Film with trending sounds',
-        'Edit with text overlays'
-      ],
-      comments: []
-    },
-    { 
-      id: '6', 
-      date: 22, 
-      title: 'Podcast Episode', 
-      description: 'Weekly podcast discussing current topics and trends.',
-      type: 'video', 
-      time: '08:00 UTC', 
-      thumbnail: 'orange',
-      team: 'Audio',
-      status: 'draft',
-      platform: 'Podcast',
-      lead: { name: 'Alex Rivera' },
-      assignee: { name: 'Marcus Thorne' },
-      createdAt: 'Dec 5, 2024 • 5:00 PM',
-      deadline: 'Dec 22, 2024',
-      tasks: [
-        'Record 20-minute episode',
-        'Edit and master audio',
-        'Write show notes',
-        'Create clips for social'
-      ],
-      comments: []
-    },
-  ];
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCurrentMonth(prev => {
+      const newDate = new Date(prev);
+      if (direction === 'prev') {
+        newDate.setMonth(prev.getMonth() - 1);
+      } else {
+        newDate.setMonth(prev.getMonth() + 1);
+      }
+      return newDate;
+    });
+  };
+  
+  // Load events from Production Room and localStorage
+  useEffect(() => {
+    const loadEvents = () => {
+      try {
+        // Get scheduled content from Production Room (stored in localStorage)
+        const calendarEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+        const productionAssets = JSON.parse(localStorage.getItem('productionAssets') || '[]');
+        
+        // Convert to CalendarEvent format
+        const scheduledEvents: CalendarEvent[] = calendarEvents.map((event: any) => {
+          const eventDate = new Date(event.date);
+          return {
+            id: event.id,
+            date: eventDate.getDate(),
+            title: event.title,
+            description: event.description || '',
+            type: event.type === 'thread' || event.type === 'reel' || event.type === 'carousel' ? 'social' : 
+                  event.type === 'podcast' || event.type === 'audio' ? 'video' : 
+                  event.type === 'document' ? 'document' : 'video',
+            time: event.time || '00:00',
+            thumbnail: event.platform === 'X' ? 'blue' : 
+                       event.platform === 'YouTube' ? 'red' : 
+                       event.platform === 'Instagram' ? 'purple' : 
+                       event.platform === 'LinkedIn' ? 'green' : 'black',
+            platform: event.platform,
+            status: event.status?.toLowerCase() || 'scheduled',
+            createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            deadline: eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            tasks: [],
+            comments: []
+          };
+        });
+        
+        // Also check production assets for scheduled items
+        const scheduledAssets = productionAssets
+          .filter((asset: any) => asset.status === 'scheduled' && asset.scheduledDate)
+          .map((asset: any) => {
+            const eventDate = new Date(asset.scheduledDate);
+            return {
+              id: asset.id,
+              date: eventDate.getDate(),
+              title: asset.title,
+              description: asset.description || '',
+              type: asset.type === 'thread' || asset.type === 'reel' || asset.type === 'carousel' ? 'social' : 
+                    asset.type === 'podcast' || asset.type === 'audio' ? 'video' : 
+                    asset.type === 'document' ? 'document' : 'video',
+              time: asset.scheduledTime || '00:00',
+              thumbnail: asset.platform === 'X' ? 'blue' : 
+                         asset.platform === 'YouTube' ? 'red' : 
+                         asset.platform === 'Instagram' ? 'purple' : 
+                         asset.platform === 'LinkedIn' ? 'green' : 'black',
+              platform: asset.platform,
+              status: 'scheduled',
+              createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              deadline: eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              tasks: [],
+              comments: []
+            };
+          });
+        
+        // Merge and deduplicate by id
+        const allEvents = [...scheduledEvents, ...scheduledAssets];
+        const uniqueEvents = Array.from(
+          new Map(allEvents.map(event => [event.id, event])).values()
+        );
+        
+        setEvents(uniqueEvents);
+      } catch (e) {
+        console.error('Error loading calendar events:', e);
+        setEvents([]);
+      }
+    };
+    
+    loadEvents();
+    
+    // Listen for changes from Production Room
+    const interval = setInterval(loadEvents, 5000); // Check every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   const getEventIcon = (type: string) => {
     switch (type) {
@@ -243,11 +197,17 @@ const CalendarView: React.FC = () => {
               <p className="text-white/40 text-sm uppercase tracking-wider">Content Publication Calendar</p>
             </div>
             <div className="flex items-center gap-4">
-              <button className="p-2 hover:bg-white/5 rounded-lg transition-colors">
+              <button 
+                onClick={() => navigateMonth('prev')}
+                className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+              >
                 <ChevronLeft className="w-5 h-5 text-white/60" />
               </button>
               <span className="text-lg font-bold text-white px-4">{monthName}</span>
-              <button className="p-2 hover:bg-white/5 rounded-lg transition-colors">
+              <button 
+                onClick={() => navigateMonth('next')}
+                className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+              >
                 <ChevronRight className="w-5 h-5 text-white/60" />
               </button>
             </div>
@@ -267,8 +227,26 @@ const CalendarView: React.FC = () => {
             {/* Calendar Days */}
             <div className="grid grid-cols-7 gap-2">
               {calendarDays.map((day, index) => {
-                const dayEvents = events.filter(e => e.date === day);
-                const isToday = day === new Date().getDate();
+                const dayEvents = events.filter(e => {
+                  // Handle both date formats
+                  if (typeof e.date === 'number') {
+                    return e.date === day;
+                  } else {
+                    // If date is stored as string, parse it
+                    try {
+                      const eventDate = new Date(e.date);
+                      return eventDate.getDate() === day && 
+                             eventDate.getMonth() === currentMonth.getMonth() && 
+                             eventDate.getFullYear() === currentMonth.getFullYear();
+                    } catch {
+                      return false;
+                    }
+                  }
+                });
+                const today = new Date();
+                const isToday = day === today.getDate() && 
+                               currentMonth.getMonth() === today.getMonth() && 
+                               currentMonth.getFullYear() === today.getFullYear();
                 
                 return (
                   <div

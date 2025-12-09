@@ -75,47 +75,15 @@ const IntegrationsView: React.FC = () => {
   const connectedCount = integrations.filter(i => i.connected).length;
   const totalConnectable = integrations.filter(i => !i.comingSoon).length;
 
-  // Verify handle using LLM/API
-  const verifyHandle = useCallback(async (handle: string, platform: string) => {
-    if (!handle || handle.length < 2) {
-      setVerificationResult(null);
-      return;
-    }
-
-    setIsVerifying(true);
-    setVerificationResult(null);
-
-    try {
-      // Call backend to verify the handle
-      const response = await fetch(`http://localhost:3001/api/verify-handle`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ handle: handle.replace('@', ''), platform })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setVerificationResult(data);
-      } else {
-        // Fallback: Use LLM to verify
-        await verifyWithLLM(handle, platform);
-      }
-    } catch (error) {
-      // Fallback to LLM verification
-      await verifyWithLLM(handle, platform);
-    }
-
-    setIsVerifying(false);
-  }, []);
-
   // LLM-based verification fallback
-  const verifyWithLLM = async (handle: string, platform: string) => {
+  const verifyWithLLM = useCallback(async (handle: string, platform: string) => {
     try {
       const cleanHandle = handle.replace('@', '').trim();
       
       // Simulate LLM verification with realistic data lookup
       // In production, this would call Gemini/GPT to verify the account
-      const response = await fetch(`http://localhost:3001/api/scan/verify`, {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_BASE_URL}/api/scan/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -148,10 +116,10 @@ const IntegrationsView: React.FC = () => {
     } catch (error) {
       simulateVerification(handle.replace('@', '').trim(), platform);
     }
-  };
+  }, []);
 
   // Simulated verification for demo purposes
-  const simulateVerification = (handle: string, platform: string) => {
+  const simulateVerification = useCallback((handle: string, platform: string) => {
     // Basic format validation
     const isValidFormat = /^[a-zA-Z0-9._-]{2,30}$/.test(handle);
     
@@ -179,7 +147,42 @@ const IntegrationsView: React.FC = () => {
       followers: Math.floor(Math.random() * 50000 + 1000).toLocaleString(),
       bio: `${platformNames[platform] || 'Social'} creator`
     });
-  };
+  }, []);
+
+  // Verify handle using LLM/API
+  const verifyHandle = useCallback(async (handle: string, platform: string) => {
+    if (!handle || handle.length < 2) {
+      setVerificationResult(null);
+      return;
+    }
+
+    setIsVerifying(true);
+    setVerificationResult(null);
+
+    try {
+      // Call backend to verify the handle
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_BASE_URL}/api/verify-handle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ handle: handle.replace('@', ''), platform })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setVerificationResult(data);
+      } else {
+        // Fallback: Use LLM to verify
+        await verifyWithLLM(handle, platform);
+      }
+    } catch (error) {
+      // Fallback to LLM verification
+      await verifyWithLLM(handle, platform);
+    }
+
+    setIsVerifying(false);
+  }, [verifyWithLLM]);
+
 
   // Debounced handle verification
   useEffect(() => {
@@ -199,7 +202,7 @@ const IntegrationsView: React.FC = () => {
     return () => {
       if (searchTimeout) clearTimeout(searchTimeout);
     };
-  }, [inputHandle, selectedIntegration]);
+  }, [inputHandle, selectedIntegration, verifyHandle]);
 
   const handleConnect = (integration: Integration) => {
     if (integration.comingSoon) return;

@@ -3,10 +3,12 @@
  * This runs on Cloud Run/Cloud Functions to avoid CORS issues
  */
 
-import { GoogleGenAI } from "@google/genai";
+// DISABLED: Client-side Gemini calls removed to prevent quota errors
+// This file should not be used in frontend builds
+// import { GoogleGenAI } from "@google/genai";
 import playwright from 'playwright';
 
-const llmApiKey = process.env.GEMINI_API_KEY || '';
+const llmApiKey = ''; // Disabled - no client-side Gemini calls
 
 /**
  * Scrapes a public profile page using Playwright
@@ -59,11 +61,14 @@ export async function extractOutputContentServer(
   username: string,
   platform: string
 ): Promise<any> {
-  if (!llmApiKey) {
-    throw new Error('Gemini API key not configured');
-  }
+  // DISABLED: Client-side Gemini calls removed to prevent quota errors
+  throw new Error('Client-side LLM calls disabled - use backend API instead');
+  
+  // if (!llmApiKey) {
+  //   throw new Error('Gemini API key not configured');
+  // }
 
-  const ai = new GoogleGenAI({ apiKey: llmApiKey });
+  // const ai = new GoogleGenAI({ apiKey: llmApiKey });
 
   const prompt = `You are analyzing a public ${platform} profile page for user: ${username}
 
@@ -144,11 +149,14 @@ Return ONLY valid JSON, no markdown, no code blocks:
 export async function extractBrandDNAServer(
   validatedContent: any
 ): Promise<any> {
-  if (!llmApiKey) {
-    throw new Error('Gemini API key not configured');
-  }
+  // DISABLED: Client-side Gemini calls removed to prevent quota errors
+  throw new Error('Client-side LLM calls disabled - use backend API instead');
+  
+  // if (!llmApiKey) {
+  //   throw new Error('Gemini API key not configured');
+  // }
 
-  const ai = new GoogleGenAI({ apiKey: llmApiKey });
+  // const ai = new GoogleGenAI({ apiKey: llmApiKey });
 
   const allPosts = validatedContent.posts.map((p: any) => p.content).join('\n\n');
   const combinedText = allPosts.substring(0, 50000);

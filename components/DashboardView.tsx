@@ -11,6 +11,10 @@ import { ViewState, NavProps } from '../types';
 import { fetchAnalyticsData, fetchCalendarEvents, fetchCompetitors, fetchContentPipeline } from '../services/dashboardData';
 import { getLatestScanResults } from '../services/apiClient';
 import { isAdmin } from '../services/adminService';
+import { SubscriptionTier } from '../services/subscriptionService';
+import FeatureLock from './FeatureLock';
+import ContentHubView from './ContentHubView';
+import StrategyView from './StrategyView';
 import ProductionRoomView from './ProductionRoomView';
 import CalendarView from './CalendarView';
 import AnalyticsView from './AnalyticsView';
@@ -33,7 +37,7 @@ interface Task {
   notificationEmail?: string;
 }
 
-type DashboardPage = 'dashboard' | 'production' | 'calendar' | 'assets' | 'integrations' | 'competitors' | 'analytics' | 'settings';
+type DashboardPage = 'dashboard' | 'contentHub' | 'strategy' | 'production' | 'calendar' | 'assets' | 'integrations' | 'competitors' | 'analytics' | 'settings';
 
 const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
   const [currentPage, setCurrentPage] = useState<DashboardPage>('dashboard');
@@ -76,17 +80,60 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
     profile?: { name: string; bio?: string; followers?: string };
     error?: string;
   } | null>(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<Array<{
+    id: string;
+    title: string;
+    message: string;
+    time: string;
+    unread: boolean;
+  }>>([]);
   const [competitorSearchTimeout, setCompetitorSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   
   // Debug: Log state changes
   useEffect(() => {
-    console.log('Dashboard state updated:', {
-      strategicInsights: strategicInsights.length,
-      brandDNA: !!brandDNA,
-      competitorIntelligence: competitorIntelligence.length,
-      scanUsername
-    });
-  }, [strategicInsights, brandDNA, competitorIntelligence, scanUsername]);
+    console.log('=== DASHBOARD DATA STATE ===');
+    console.log('Strategic Insights:', strategicInsights?.length || 0, strategicInsights);
+    console.log('Brand DNA:', !!brandDNA, brandDNA);
+    console.log('Competitor Intelligence:', competitorIntelligence?.length || 0, competitorIntelligence);
+    console.log('Market Share:', marketShare);
+    console.log('Scan Username:', scanUsername);
+    console.log('Analytics:', analytics);
+    
+    // Check localStorage
+    const cached = localStorage.getItem('lastScanResults');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        console.log('=== LOCALSTORAGE DATA ===');
+        console.log('Has strategicInsights:', !!parsed.strategicInsights, parsed.strategicInsights?.length);
+        console.log('Has brandDNA:', !!parsed.brandDNA);
+        console.log('Has competitorIntelligence:', !!parsed.competitorIntelligence, parsed.competitorIntelligence?.length);
+        console.log('Has marketShare:', !!parsed.marketShare);
+        console.log('Has extractedContent:', !!parsed.extractedContent);
+        console.log('Full cached data keys:', Object.keys(parsed));
+        
+        // Check if data exists but state is empty
+        if (parsed.strategicInsights && (!strategicInsights || strategicInsights.length === 0)) {
+          console.error('⚠️ DATA MISMATCH: localStorage has insights but state is empty!');
+          console.log('localStorage insights:', parsed.strategicInsights);
+          console.log('State insights:', strategicInsights);
+        }
+        if (parsed.brandDNA && !brandDNA) {
+          console.error('⚠️ DATA MISMATCH: localStorage has brandDNA but state is null!');
+        }
+        if (parsed.competitorIntelligence && (!competitorIntelligence || competitorIntelligence.length === 0)) {
+          console.error('⚠️ DATA MISMATCH: localStorage has competitors but state is empty!');
+          console.log('localStorage competitors:', parsed.competitorIntelligence);
+          console.log('State competitors:', competitorIntelligence);
+        }
+      } catch (e) {
+        console.error('Error parsing cache:', e);
+      }
+    } else {
+      console.log('No cached scan results in localStorage');
+    }
+  }, [strategicInsights, brandDNA, competitorIntelligence, scanUsername, marketShare, analytics]);
 
   // Fetch real data on mount
   useEffect(() => {
@@ -94,7 +141,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
     // Data will load in background to prevent blank screen
     setLoading(false);
     
-    const loadData = async () => {
+        const loadData = async () => {
       try {
         const [analyticsData, events, competitorData, pipeline] = await Promise.all([
           fetchAnalyticsData(),
@@ -108,6 +155,8 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
         setCompetitors(competitorData);
         setContentPipeline(pipeline);
         
+        console.log('Analytics loaded:', analyticsData);
+        
         // Load scan results - try multiple methods
         const loadScanData = () => {
           // Method 1: Try localStorage cache first (fastest)
@@ -115,19 +164,62 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
           if (cachedResults) {
             try {
               const cached = JSON.parse(cachedResults);
-              console.log('Loading cached scan results:', cached);
-              if (cached.strategicInsights) setStrategicInsights(cached.strategicInsights);
-              if (cached.brandDNA) setBrandDNA(cached.brandDNA);
+              console.log('=== LOADING FROM CACHE ===');
+              console.log('Cached data keys:', Object.keys(cached));
+              console.log('Strategic insights:', cached.strategicInsights?.length || 0, cached.strategicInsights);
+              console.log('Brand DNA:', !!cached.brandDNA, cached.brandDNA);
+              console.log('Competitor intelligence:', cached.competitorIntelligence?.length || 0, cached.competitorIntelligence);
+              console.log('Market share:', cached.marketShare);
+              
+              // Set strategic insights - ensure it's an array
+              if (cached.strategicInsights) {
+                const insights = Array.isArray(cached.strategicInsights) ? cached.strategicInsights : [];
+                console.log('Setting strategic insights:', insights.length);
+                setStrategicInsights(insights);
+              } else {
+                console.warn('No strategic insights in cache');
+                setStrategicInsights([]);
+              }
+              
+              // Set brand DNA
+              if (cached.brandDNA) {
+                console.log('Setting brand DNA');
+                setBrandDNA(cached.brandDNA);
+              } else {
+                console.warn('No brand DNA in cache');
+                setBrandDNA(null);
+              }
+              
               // Ensure competitorIntelligence is always an array
               if (cached.competitorIntelligence) {
                 const competitors = Array.isArray(cached.competitorIntelligence) 
                   ? cached.competitorIntelligence 
                   : [];
+                console.log('Setting competitors:', competitors.length, 'manual:', competitors.filter((c: any) => c.isManual).length);
                 setCompetitorIntelligence(competitors);
+              } else {
+                console.warn('No competitor intelligence in cache');
+                setCompetitorIntelligence([]);
               }
-              if (cached.marketShare) setMarketShare(cached.marketShare);
+              
+              if (cached.marketShare) {
+                console.log('Setting market share');
+                setMarketShare(cached.marketShare);
+              }
+              
               const username = localStorage.getItem('lastScannedUsername');
-              if (username) setScanUsername(username);
+              if (username) {
+                console.log('Setting scan username:', username);
+                setScanUsername(username);
+              }
+              
+              // Recalculate analytics with cached scan data
+              fetchAnalyticsData().then(updatedAnalytics => {
+                console.log('Analytics updated from cache:', updatedAnalytics);
+                setAnalytics(updatedAnalytics);
+              }).catch(err => {
+                console.error('Error updating analytics:', err);
+              });
             } catch (e) {
               console.error('Error parsing cached results:', e);
             }
@@ -137,28 +229,96 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
           const storedUsername = localStorage.getItem('lastScannedUsername');
           if (storedUsername) {
             getLatestScanResults(storedUsername)
-              .then(scanResults => {
+              .then(async (scanResults) => {
                 console.log('API scan results:', scanResults);
+                console.log('=== FULL API RESPONSE DEBUG ===');
+                console.log('Full scanResults:', JSON.stringify(scanResults, null, 2));
+                console.log('scanResults.data:', scanResults.data);
+                console.log('competitorIntelligence type:', typeof scanResults.data?.competitorIntelligence);
+                console.log('competitorIntelligence value:', scanResults.data?.competitorIntelligence);
+                console.log('Is array?', Array.isArray(scanResults.data?.competitorIntelligence));
+                console.log('Length:', scanResults.data?.competitorIntelligence?.length);
+                
                 if (scanResults.success && scanResults.data) {
+                  console.log('=== API SCAN RESULTS ===');
+                  console.log('Full data object:', scanResults.data);
+                  console.log('Data keys:', Object.keys(scanResults.data));
                   console.log('Loading scan results:', {
                     hasInsights: !!scanResults.data.strategicInsights,
+                    insightsCount: scanResults.data.strategicInsights?.length || 0,
+                    insightsData: scanResults.data.strategicInsights,
                     hasBrandDNA: !!scanResults.data.brandDNA,
+                    brandDNAKeys: scanResults.data.brandDNA ? Object.keys(scanResults.data.brandDNA) : [],
                     competitorCount: scanResults.data.competitorIntelligence?.length || 0,
                     competitors: scanResults.data.competitorIntelligence,
-                    hasMarketShare: !!scanResults.data.marketShare
+                    hasMarketShare: !!scanResults.data.marketShare,
+                    hasExtractedContent: !!scanResults.data.extractedContent
                   });
-                  setStrategicInsights(scanResults.data.strategicInsights || []);
+                  
+                  // Set strategic insights - ensure it's an array
+                  const insights = Array.isArray(scanResults.data.strategicInsights) 
+                    ? scanResults.data.strategicInsights 
+                    : [];
+                  console.log('Setting strategic insights from API:', insights.length);
+                  setStrategicInsights(insights);
+                  
+                  // Set brand DNA
+                  console.log('Setting brand DNA from API:', !!scanResults.data.brandDNA);
                   setBrandDNA(scanResults.data.brandDNA || null);
-                  // Ensure competitorIntelligence is always an array
-                  const competitors = Array.isArray(scanResults.data.competitorIntelligence) 
+                  
+                  // Get scan competitors
+                  const scanCompetitors = Array.isArray(scanResults.data.competitorIntelligence) 
                     ? scanResults.data.competitorIntelligence 
                     : [];
-                  setCompetitorIntelligence(competitors);
+                  
+                  // Get manual competitors from existing cache (before overwriting)
+                  const existingCache = localStorage.getItem('lastScanResults');
+                  let manualCompetitors: any[] = [];
+                  if (existingCache) {
+                    try {
+                      const cached = JSON.parse(existingCache);
+                      manualCompetitors = (cached.competitorIntelligence || []).filter((c: any) => c.isManual);
+                      console.log('Found manual competitors:', manualCompetitors.length);
+                    } catch (e) {
+                      console.error('Error loading manual competitors:', e);
+                    }
+                  }
+                  
+                  // Merge: scan competitors first, then manual (avoid duplicates by name)
+                  const competitorMap = new Map();
+                  scanCompetitors.forEach((c: any) => {
+                    competitorMap.set(c.name?.toLowerCase(), c);
+                  });
+                  manualCompetitors.forEach((c: any) => {
+                    if (!competitorMap.has(c.name?.toLowerCase())) {
+                      competitorMap.set(c.name?.toLowerCase(), c);
+                    }
+                  });
+                  
+                  const mergedCompetitors = Array.from(competitorMap.values());
+                  console.log('Merged competitors:', mergedCompetitors.length, 'scan:', scanCompetitors.length, 'manual:', manualCompetitors.length);
+                  setCompetitorIntelligence(mergedCompetitors);
                   setMarketShare(scanResults.data.marketShare || null);
                   setScanUsername(storedUsername);
-                  // Update cache
-                  localStorage.setItem('lastScanResults', JSON.stringify(scanResults.data));
+                  
+                  // Update cache with merged data
+                  const updatedCache = {
+                    ...scanResults.data,
+                    competitorIntelligence: mergedCompetitors
+                  };
+                  localStorage.setItem('lastScanResults', JSON.stringify(updatedCache));
+                  
+                  // Recalculate analytics with new scan data
+                  const updatedAnalytics = await fetchAnalyticsData();
+                  setAnalytics(updatedAnalytics);
+                  console.log('Analytics updated after scan load:', updatedAnalytics);
+                } else {
+                  console.error('❌ API returned success but data is null or undefined');
                 }
+              })
+              .catch(error => {
+                console.error('❌ Error fetching scan results from API:', error);
+                // Don't clear existing data on API error
               })
               .catch(error => {
                 console.error('Error loading scan results from API:', error);
@@ -240,6 +400,8 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
          <div className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
              <div className="text-[10px] font-bold text-white/30 uppercase tracking-widest px-4 mb-4 mt-2">Platform</div>
              <SidebarItem label="Dashboard" active={currentPage === 'dashboard'} onClick={() => setCurrentPage('dashboard')} />
+             <SidebarItem label="Content Hub" active={currentPage === 'contentHub'} onClick={() => setCurrentPage('contentHub')} />
+             <SidebarItem label="Strategy" active={currentPage === 'strategy'} onClick={() => setCurrentPage('strategy')} />
              <SidebarItem label="Production Room" active={currentPage === 'production'} onClick={() => setCurrentPage('production')} />
              <SidebarItem label="Inbox" active={false} onClick={() => onNavigate(ViewState.INBOX)} />
              <SidebarItem label="Calendar" active={currentPage === 'calendar'} onClick={() => setCurrentPage('calendar')} />
@@ -329,22 +491,88 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                   try {
                     const scanResults = await getLatestScanResults(storedUsername);
                     console.log('Refresh results:', scanResults);
-                    if (scanResults.success && scanResults.data) {
+                    
+                    // Handle case where API returns null
+                    if (scanResults.success && scanResults.data === null) {
+                      console.warn('⚠️ Refresh: API returned null - no completed scans found');
+                      // Keep existing cache data, don't overwrite
+                      return;
+                    }
+                    
+                    if (!scanResults.success) {
+                      console.error('❌ Refresh: API returned error:', scanResults);
+                      return;
+                    }
+                    
+                    if (!scanResults.data) {
+                      console.error('❌ Refresh: API returned success but data is null/undefined');
+                      return;
+                    }
+                    
+                    if (scanResults.data) {
                       setStrategicInsights(scanResults.data.strategicInsights || []);
                       setBrandDNA(scanResults.data.brandDNA || null);
-                      setCompetitorIntelligence(scanResults.data.competitorIntelligence || []);
+                      
+                      // Get scan competitors
+                      const scanCompetitors = Array.isArray(scanResults.data.competitorIntelligence) 
+                        ? scanResults.data.competitorIntelligence 
+                        : [];
+                      
+                      // Get manual competitors from existing cache (before overwriting)
+                      const existingCache = localStorage.getItem('lastScanResults');
+                      let manualCompetitors: any[] = [];
+                      if (existingCache) {
+                        try {
+                          const cached = JSON.parse(existingCache);
+                          manualCompetitors = (cached.competitorIntelligence || []).filter((c: any) => c.isManual);
+                          console.log('Refresh: Found manual competitors:', manualCompetitors.length);
+                        } catch (e) {
+                          console.error('Error loading manual competitors:', e);
+                        }
+                      }
+                      
+                      // Merge: scan competitors first, then manual (avoid duplicates by name)
+                      const competitorMap = new Map();
+                      scanCompetitors.forEach((c: any) => {
+                        competitorMap.set(c.name?.toLowerCase(), c);
+                      });
+                      manualCompetitors.forEach((c: any) => {
+                        if (!competitorMap.has(c.name?.toLowerCase())) {
+                          competitorMap.set(c.name?.toLowerCase(), c);
+                        }
+                      });
+                      
+                      const mergedCompetitors = Array.from(competitorMap.values());
+                      setCompetitorIntelligence(mergedCompetitors);
                       setMarketShare(scanResults.data.marketShare || null);
                       setScanUsername(storedUsername);
-                      localStorage.setItem('lastScanResults', JSON.stringify(scanResults.data));
+                      
+                      // Update cache with merged data
+                      const updatedCache = {
+                        ...scanResults.data,
+                        competitorIntelligence: mergedCompetitors
+                      };
+                      localStorage.setItem('lastScanResults', JSON.stringify(updatedCache));
+                      
+                      // Recalculate analytics with new scan data
+                      const updatedAnalytics = await fetchAnalyticsData();
+                      setAnalytics(updatedAnalytics);
+                      
                       console.log('Data refreshed:', {
                         insights: scanResults.data.strategicInsights?.length || 0,
                         brandDNA: !!scanResults.data.brandDNA,
-                        competitors: scanResults.data.competitorIntelligence?.length || 0,
-                        marketShare: !!scanResults.data.marketShare
+                        competitors: mergedCompetitors.length,
+                        scanCompetitors: scanCompetitors.length,
+                        manualCompetitors: manualCompetitors.length,
+                        marketShare: !!scanResults.data.marketShare,
+                        analytics: updatedAnalytics
                       });
+                    } else {
+                      console.error('❌ Refresh: API returned success but data is null or undefined');
                     }
                   } catch (error) {
-                    console.error('Refresh error:', error);
+                    console.error('❌ Refresh error:', error);
+                    // Don't clear existing data on error
                   }
                 } else {
                   console.log('No username found in localStorage');
@@ -377,10 +605,54 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                 <span className="text-xs font-medium text-white/40 hover:text-white cursor-pointer">Year</span>
              </div>
              
-             <button className="h-9 w-9 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/5 text-white/60 relative">
-                <Bell className="w-4 h-4" />
-                <span className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-black"></span>
-             </button>
+             <div className="relative">
+                <button 
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="h-9 w-9 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/5 text-white/60 relative"
+                >
+                  <Bell className="w-4 h-4" />
+                  <span className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-black"></span>
+                </button>
+                
+                {/* Notifications Dropdown */}
+                {showNotifications && (
+                  <div className="absolute top-full right-0 mt-2 w-80 bg-[#0A0A0A] border border-white/10 rounded-xl shadow-2xl z-50">
+                    <div className="p-4 border-b border-white/10">
+                      <h3 className="text-sm font-bold text-white">Notifications</h3>
+                    </div>
+                    <div className="max-h-96 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-6 text-center text-white/40 text-sm">No notifications</div>
+                      ) : (
+                        notifications.map((notif) => (
+                          <div key={notif.id} className="p-4 border-b border-white/5 hover:bg-white/5 cursor-pointer">
+                            <div className="flex items-start gap-3">
+                              <div className={`w-2 h-2 rounded-full mt-2 ${notif.unread ? 'bg-green-400' : 'bg-white/20'}`}></div>
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-white mb-1">{notif.title}</p>
+                                <p className="text-xs text-white/60">{notif.message}</p>
+                                <p className="text-[10px] text-white/30 mt-1">{notif.time}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    {notifications.length > 0 && (
+                      <div className="p-3 border-t border-white/10">
+                        <button
+                          onClick={() => {
+                            setNotifications(notifications.map(n => ({ ...n, unread: false })));
+                          }}
+                          className="w-full text-xs text-white/60 hover:text-white text-center"
+                        >
+                          Mark all as read
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+             </div>
           </div>
         </header>
 
@@ -391,7 +663,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
             {currentPage === 'dashboard' && (
                 <div className="grid grid-cols-12 gap-6 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
                     <div className="col-span-12 lg:col-span-8 space-y-6">
-                        {/* Top Metrics - MATCHING SCREENSHOT */}
+                        {/* Top Metrics - SYSTEM METRICS */}
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-5">
                                 <div className="flex items-center justify-between mb-2">
@@ -399,25 +671,33 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                     <TrendingUp className="w-3 h-3 text-white/20" />
                                 </div>
                                 <div className="flex items-baseline gap-2 mb-1">
-                                    <span className="text-2xl font-black text-white">4.2h</span>
-                                    <span className="text-xs font-bold text-red-400">-12%</span>
+                                    <span className="text-2xl font-black text-white">{analytics?.avgCompletionTime || 'N/A'}</span>
+                                    {analytics?.avgCompletionTimeChange && (
+                                        <span className={`text-xs font-bold ${analytics.avgCompletionTimeChange < 0 ? 'text-red-400' : 'text-white/40'}`}>
+                                            {analytics.avgCompletionTimeChange > 0 ? '+' : ''}{analytics.avgCompletionTimeChange}%
+                                        </span>
+                                    )}
                                 </div>
                                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                                    <div className="h-full bg-gradient-to-r from-red-500 to-orange-500 rounded-full" style={{ width: '65%' }}></div>
+                                    <div className="h-full bg-gradient-to-r from-red-500 to-orange-500 rounded-full" style={{ width: `${Math.min(analytics?.avgCompletionTimePercent || 0, 100)}%` }}></div>
                                 </div>
                             </div>
                             
                             <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-5">
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">ACTIVE WORKFLOWS</div>
-                                    <Activity className="w-3 h-3 text-white/20" />
+                                    <Zap className="w-3 h-3 text-white/20" />
                                 </div>
                                 <div className="flex items-baseline gap-2 mb-1">
-                                    <span className="text-2xl font-black text-white">248</span>
-                                    <span className="text-xs font-bold text-green-400">+14</span>
+                                    <span className="text-2xl font-black text-white">{analytics?.activeWorkflows || 0}</span>
+                                    {analytics?.activeWorkflowsChange && (
+                                        <span className={`text-xs font-bold ${analytics.activeWorkflowsChange > 0 ? 'text-green-400' : 'text-white/40'}`}>
+                                            {analytics.activeWorkflowsChange > 0 ? '+' : ''}{analytics.activeWorkflowsChange}
+                                        </span>
+                                    )}
                                 </div>
                                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                                    <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full" style={{ width: '82%' }}></div>
+                                    <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full" style={{ width: `${Math.min((analytics?.activeWorkflows || 0) / 500 * 100, 100)}%` }}></div>
                                 </div>
                             </div>
                             
@@ -427,11 +707,15 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                     <Zap className="w-3 h-3 text-white/20" />
                                 </div>
                                 <div className="flex items-baseline gap-2 mb-1">
-                                    <span className="text-2xl font-black text-white">85.4</span>
-                                    <span className="text-xs font-bold text-green-400">+8%</span>
+                                    <span className="text-2xl font-black text-white">{analytics?.globalAssetVelocity || 'N/A'}</span>
+                                    {analytics?.globalAssetVelocityChange && (
+                                        <span className={`text-xs font-bold ${analytics.globalAssetVelocityChange > 0 ? 'text-green-400' : 'text-white/40'}`}>
+                                            {analytics.globalAssetVelocityChange > 0 ? '+' : ''}{analytics.globalAssetVelocityChange}%
+                                        </span>
+                                    )}
                                 </div>
                                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                                    <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" style={{ width: '85%' }}></div>
+                                    <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" style={{ width: `${Math.min(analytics?.globalAssetVelocityPercent || 0, 100)}%` }}></div>
                                 </div>
                             </div>
                             
@@ -441,11 +725,15 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                     <Sparkles className="w-3 h-3 text-white/20" />
                                 </div>
                                 <div className="flex items-baseline gap-2 mb-1">
-                                    <span className="text-2xl font-black text-white">99.9%</span>
-                                    <span className="text-xs font-bold text-green-400">+0.1%</span>
+                                    <span className="text-2xl font-black text-white">{analytics?.aiComputeEfficiency || 'N/A'}</span>
+                                    {analytics?.aiComputeEfficiencyChange && (
+                                        <span className={`text-xs font-bold ${analytics.aiComputeEfficiencyChange > 0 ? 'text-green-400' : 'text-white/40'}`}>
+                                            {analytics.aiComputeEfficiencyChange > 0 ? '+' : ''}{analytics.aiComputeEfficiencyChange}%
+                                        </span>
+                                    )}
                                 </div>
                                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                                    <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full" style={{ width: '99.9%' }}></div>
+                                    <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full" style={{ width: `${Math.min(analytics?.aiComputeEfficiencyPercent || 0, 100)}%` }}></div>
                                 </div>
                             </div>
                         </div>
@@ -498,17 +786,24 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                 <Sparkles className="w-4 h-4 text-white/60" />
                                 <h2 className="text-lg font-bold text-white">AI Strategic Insights</h2>
                             </div>
-                            {strategicInsights.length === 0 ? (
+                            {!strategicInsights || strategicInsights.length === 0 ? (
                                 <div className="text-center py-12">
                                     <Sparkles className="w-12 h-12 text-white/20 mx-auto mb-4" />
                                     <p className="text-white/40 text-sm mb-2">No insights available yet</p>
                                     <p className="text-white/20 text-xs">Run a digital footprint scan to generate strategic insights</p>
+                                    {process.env.NODE_ENV === 'development' && (
+                                        <p className="text-red-400 text-xs mt-2">Debug: strategicInsights = {JSON.stringify(strategicInsights)}</p>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="space-y-4">
-                                    {strategicInsights.map((insight, index) => (
-                                        <StrategicInsightCard key={`insight-${index}`} insight={insight} />
-                                    ))}
+                                    {strategicInsights.map((insight, index) => {
+                                        if (!insight || !insight.title) {
+                                          console.warn('Invalid insight at index', index, insight);
+                                          return null;
+                                        }
+                                        return <StrategicInsightCard key={`insight-${index}`} insight={insight} />;
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -727,7 +1022,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                         if (newCompetitor.instagramHandle) platforms.push('Instagram');
                                         if (newCompetitor.tiktokHandle) platforms.push('TikTok');
                                         
-                                        setCompetitorIntelligence([...competitorIntelligence, {
+                                        const newCompetitorData = {
                                           name: competitorVerification.profile?.name || newCompetitor.name,
                                           threatLevel: newCompetitor.threatLevel,
                                           primaryVector: platforms.length > 0 ? platforms.join(', ') : 'General',
@@ -739,8 +1034,35 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                             linkedin: newCompetitor.linkedinUrl,
                                             instagram: newCompetitor.instagramHandle,
                                             tiktok: newCompetitor.tiktokHandle
+                                          },
+                                          isManual: true // Flag to identify manually added competitors
+                                        };
+                                        
+                                        // Update state
+                                        const updatedCompetitors = [...competitorIntelligence, newCompetitorData];
+                                        setCompetitorIntelligence(updatedCompetitors);
+                                        
+                                        // CRITICAL: Save to localStorage immediately
+                                        const cachedResults = localStorage.getItem('lastScanResults');
+                                        if (cachedResults) {
+                                          try {
+                                            const cached = JSON.parse(cachedResults);
+                                            cached.competitorIntelligence = updatedCompetitors;
+                                            localStorage.setItem('lastScanResults', JSON.stringify(cached));
+                                          } catch (e) {
+                                            console.error('Error saving competitor to cache:', e);
                                           }
-                                        }]);
+                                        } else {
+                                          // If no cache exists, create one
+                                          const newCache = {
+                                            competitorIntelligence: updatedCompetitors,
+                                            strategicInsights: strategicInsights,
+                                            brandDNA: brandDNA,
+                                            marketShare: marketShare
+                                          };
+                                          localStorage.setItem('lastScanResults', JSON.stringify(newCache));
+                                        }
+                                        
                                         setNewCompetitor({ name: '', xHandle: '', youtubeChannel: '', linkedinUrl: '', instagramHandle: '', tiktokHandle: '', threatLevel: 'MEDIUM', notes: '' });
                                         setCompetitorVerification(null);
                                         setShowAddCompetitor(false);
@@ -755,11 +1077,14 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                               </div>
                             )}
                             
-                            {competitorIntelligence.length === 0 ? (
+                            {!competitorIntelligence || competitorIntelligence.length === 0 ? (
                                 <div className="text-center py-12">
                                     <Target className="w-12 h-12 text-white/20 mx-auto mb-4" />
                                     <p className="text-white/40 text-sm mb-2">No competitors identified yet</p>
                                     <p className="text-white/20 text-xs">Run a digital footprint scan to identify competitors</p>
+                                    {process.env.NODE_ENV === 'development' && (
+                                        <p className="text-red-400 text-xs mt-2">Debug: competitorIntelligence = {competitorIntelligence?.length || 0} items</p>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -787,6 +1112,9 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                     <Sparkles className="w-12 h-12 text-white/20 mx-auto mb-4" />
                                     <p className="text-sm mb-2">No brand DNA extracted yet</p>
                                     <p className="text-xs text-white/20">Run a digital footprint scan</p>
+                                    {process.env.NODE_ENV === 'development' && (
+                                        <p className="text-red-400 text-xs mt-2">Debug: brandDNA = {brandDNA ? 'exists' : 'null'}</p>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="space-y-6">
@@ -1050,6 +1378,12 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                     </div>
                 </div>
             )}
+
+            {/* Content Hub */}
+            {currentPage === 'contentHub' && <ContentHubView />}
+
+            {/* Strategy */}
+            {currentPage === 'strategy' && <StrategyView />}
 
             {/* Production Room */}
             {currentPage === 'production' && (

@@ -1,7 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
-
-// Free LLM API key (Gemini free tier or other free LLM)
-const llmApiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY || '';
+// Client-side LLM calls disabled to avoid quota/API usage in browser
+const llmApiKey = '';
 
 interface ProfileURLs {
   twitter?: string;
@@ -101,97 +99,16 @@ export async function extractOutputContent(
   username: string,
   platform: string
 ): Promise<ExtractedContent> {
-  if (!llmApiKey) {
-    // Fallback mock data if no API key
-    return {
-      profile: {
-        bio: 'Sample bio',
-        verified: false,
-      },
-      posts: [],
-      content_themes: [],
-      extraction_confidence: 0.5,
-    };
-  }
-
-  try {
-    const ai = new GoogleGenAI({ apiKey: llmApiKey });
-
-    const prompt = `You are analyzing a public ${platform} profile page for user: ${username}
-
-IMPORTANT: Extract ONLY content published BY ${username} (OUTPUT only).
-DO NOT extract:
-- Mentions of ${username} by others
-- Retweets or shares
-- Comments from other users
-- Content about ${username}
-- Third-party content
-
-From this page content, extract:
-
-1. Profile Information:
-   - Bio/description
-   - Profile picture URL
-   - Verification status
-   - Follower/following counts (if visible)
-
-2. Posts/Content Published BY ${username}:
-   - Post text/content
-   - Timestamps
-   - Media (images, videos) URLs
-   - Engagement metrics (if visible)
-
-3. Content Analysis:
-   - Topics/themes
-   - Writing style
-   - Posting frequency patterns
-
-Page Content:
-${scrapedContent.text.substring(0, 50000)} // Limit to avoid token limits
-
-Return structured JSON:
-{
-  "profile": {
-    "bio": "...",
-    "verified": true/false,
-    "profile_image": "url"
-  },
-  "posts": [
-    {
-      "content": "...",
-      "timestamp": "...",
-      "media_urls": ["..."],
-      "engagement": {"likes": 0, "shares": 0}
-    }
-  ],
-  "content_themes": ["..."],
-  "extraction_confidence": 0.0-1.0
-}`;
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
-      contents: prompt,
-    });
-
-    const text = response.text || '';
-    
-    // Try to extract JSON from response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-
-    // Fallback if JSON parsing fails
-    return {
-      profile: { bio: 'Extraction in progress' },
-      posts: [],
-      content_themes: [],
-      extraction_confidence: 0.7,
-    };
-  } catch (error) {
-    console.error('LLM extraction error:', error);
-    throw error;
-  }
+  // Client-side LLM disabled: return placeholder to avoid Gemini calls from browser
+  return {
+    profile: {
+      bio: 'Content extraction deferred to backend',
+      verified: false,
+    },
+    posts: [],
+    content_themes: [],
+    extraction_confidence: 0.5,
+  };
 }
 
 /**
@@ -222,79 +139,16 @@ export function validateOutputOnly(
 export async function extractBrandDNA(
   validatedContent: ExtractedContent
 ): Promise<BrandDNA> {
-  if (!llmApiKey) {
-    return {
-      voice: {
-        style: 'professional',
-        formality: 'casual',
-        tone: 'friendly',
-        vocabulary: [],
-      },
-      themes: [],
-    };
-  }
-
-  try {
-    const ai = new GoogleGenAI({ apiKey: llmApiKey });
-
-    // Aggregate all post content
-    const allPosts = validatedContent.posts.map((p) => p.content).join('\n\n');
-    const combinedText = allPosts.substring(0, 50000); // Limit tokens
-
-    const prompt = `Analyze this brand's content to extract their unique DNA:
-
-Content:
-${combinedText}
-
-Extract:
-
-1. Voice & Tone:
-   - Writing style (formal, casual, technical, etc.)
-   - Vocabulary patterns
-   - Sentence structure
-   - Emotional tone
-
-2. Content Themes:
-   - Main topics they discuss
-   - Value propositions
-   - Messaging pillars
-
-3. Visual Identity (from descriptions):
-   - Color preferences
-   - Style (minimalist, bold, etc.)
-
-4. Engagement Patterns:
-   - Posting frequency
-   - Best performing content types
-
-Return structured JSON with brand DNA profile.`;
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
-      contents: prompt,
-    });
-
-    const text = response.text || '';
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-
-    // Fallback
-    return {
-      voice: {
-        style: 'professional',
-        formality: 'casual',
-        tone: 'friendly',
-        vocabulary: [],
-      },
-      themes: validatedContent.content_themes,
-    };
-  } catch (error) {
-    console.error('Brand DNA extraction error:', error);
-    throw error;
-  }
+  // Client-side LLM disabled: return placeholder brand DNA
+  return {
+    voice: {
+      style: 'professional',
+      formality: 'casual',
+      tone: 'friendly',
+      vocabulary: [],
+    },
+    themes: validatedContent.content_themes,
+  };
 }
 
 /**
