@@ -4,27 +4,19 @@
  */
 
 export interface AnalyticsData {
-  contentCreated: number; // Total content suggested/created from footprint
-  contentPublished: number; // Content published
-  contentScheduled: number; // Content scheduled for future
-  brandVoiceMatch: number; // Percentage match to brand voice (0-100)
-  // System metrics
-  avgCompletionTime?: string; // Average time to complete workflows (e.g., "4.2h")
-  avgCompletionTimeChange?: number; // Percentage change (e.g., -12)
-  avgCompletionTimePercent?: number; // For progress bar (0-100)
-  activeWorkflows?: number; // Number of active workflows
-  activeWorkflowsChange?: number; // Change in active workflows
-  globalAssetVelocity?: string; // Asset velocity metric (e.g., "85.4")
-  globalAssetVelocityChange?: number; // Percentage change
-  globalAssetVelocityPercent?: number; // For progress bar
-  aiComputeEfficiency?: string; // AI efficiency percentage (e.g., "99.9%")
-  aiComputeEfficiencyChange?: number; // Percentage change
-  aiComputeEfficiencyPercent?: number; // For progress bar
+  // New dashboard KPIs
+  postsThisWeek: number; // Posts created this week
+  postsThisWeekChange?: number; // Change vs last week (+/-)
+  engagementThisWeek: number; // Engagement metrics this week
+  engagementThisWeekChange?: number; // Change vs last week (+/-)
+  contentPending: number; // Content items pending review/approval
+  newInsights: number; // New insights generated
+  newInsightsChange?: number; // Change vs last week (+/-)
   trends: {
-    created: string;
-    published: string;
-    scheduled: string;
-    voiceMatch: string;
+    posts: string;
+    engagement: string;
+    pending: string;
+    insights: string;
   };
 }
 
@@ -107,114 +99,107 @@ function calculateBrandVoiceMatch(): number {
 }
 
 /**
- * Calculate system metrics from user activity
+ * Calculate dashboard KPIs from user activity and content
  */
-function calculateSystemMetrics() {
+function calculateDashboardKPIs() {
   try {
-    // Get user activity from localStorage
-    const userId = localStorage.getItem('userId') || 'default';
-    const activityKey = `user_activity_${userId}`;
-    const activityData = localStorage.getItem(activityKey);
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+    weekStart.setHours(0, 0, 0, 0);
     
-    if (!activityData) {
-      // Return N/A values if no data
-      return {
-        avgCompletionTime: 'N/A',
-        avgCompletionTimeChange: undefined,
-        avgCompletionTimePercent: 0,
-        activeWorkflows: 0,
-        activeWorkflowsChange: undefined,
-        globalAssetVelocity: 'N/A',
-        globalAssetVelocityChange: undefined,
-        globalAssetVelocityPercent: 0,
-        aiComputeEfficiency: 'N/A',
-        aiComputeEfficiencyChange: undefined,
-        aiComputeEfficiencyPercent: 0,
-      };
-    }
+    const lastWeekStart = new Date(weekStart);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    const lastWeekEnd = new Date(weekStart);
     
-    const activity = JSON.parse(activityData);
-    const workflows = activity.workflows || [];
-    const completedWorkflows = workflows.filter((w: any) => w.status === 'completed');
+    // Get content from localStorage
+    const productionAssets = JSON.parse(localStorage.getItem('productionAssets') || '[]');
+    const calendarEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+    const scanResults = localStorage.getItem('lastScanResults');
     
-    // Calculate average completion time
-    let avgCompletionTime = 'N/A';
-    let avgCompletionTimeChange: number | undefined = undefined;
-    let avgCompletionTimePercent = 0;
+    // Posts this week (content created this week)
+    const postsThisWeek = productionAssets.filter((asset: any) => {
+      if (!asset.createdAt) return false;
+      const created = new Date(asset.createdAt);
+      return created >= weekStart && created <= now;
+    }).length;
     
-    if (completedWorkflows.length > 0) {
-      const totalMinutes = completedWorkflows.reduce((sum: number, w: any) => {
-        if (w.startTime && w.endTime) {
-          const start = new Date(w.startTime).getTime();
-          const end = new Date(w.endTime).getTime();
-          return sum + (end - start) / (1000 * 60); // Convert to minutes
-        }
-        return sum;
-      }, 0);
-      
-      const avgMinutes = totalMinutes / completedWorkflows.length;
-      const hours = Math.floor(avgMinutes / 60);
-      const mins = Math.round(avgMinutes % 60);
-      avgCompletionTime = `${hours}.${Math.floor(mins / 6)}h`; // Round to 0.1h
-      
-      // Calculate change (simplified - compare to previous period)
-      const previousAvg = activity.previousAvgCompletionTime || avgMinutes;
-      avgCompletionTimeChange = Math.round(((avgMinutes - previousAvg) / previousAvg) * 100);
-      avgCompletionTimePercent = Math.min((avgMinutes / 480) * 100, 100); // 8h = 100%
-    }
+    // Posts last week (for comparison)
+    const postsLastWeek = productionAssets.filter((asset: any) => {
+      if (!asset.createdAt) return false;
+      const created = new Date(asset.createdAt);
+      return created >= lastWeekStart && created < lastWeekEnd;
+    }).length;
     
-    // Active workflows
-    const activeWorkflows = workflows.filter((w: any) => w.status === 'active' || w.status === 'in_progress').length;
-    const previousActive = activity.previousActiveWorkflows || 0;
-    const activeWorkflowsChange = activeWorkflows - previousActive;
-    
-    // Global asset velocity (simplified calculation)
-    const assets = activity.assets || [];
-    const velocity = assets.length > 0 ? (assets.length / (completedWorkflows.length || 1)).toFixed(1) : '0';
-    const globalAssetVelocity = velocity;
-    const previousVelocity = parseFloat(activity.previousVelocity || '0');
-    const globalAssetVelocityChange = previousVelocity > 0 
-      ? Math.round(((parseFloat(velocity) - previousVelocity) / previousVelocity) * 100)
+    const postsThisWeekChange = postsLastWeek > 0 
+      ? postsThisWeek - postsLastWeek 
       : undefined;
-    const globalAssetVelocityPercent = Math.min((parseFloat(velocity) / 100) * 100, 100);
     
-    // AI compute efficiency (simplified - based on successful generations)
-    const aiGenerations = activity.aiGenerations || [];
-    const successful = aiGenerations.filter((g: any) => g.success).length;
-    const total = aiGenerations.length || 1;
-    const efficiency = (successful / total) * 100;
-    const aiComputeEfficiency = `${efficiency.toFixed(1)}%`;
-    const previousEfficiency = activity.previousEfficiency || efficiency;
-    const aiComputeEfficiencyChange = Math.round(efficiency - previousEfficiency);
-    const aiComputeEfficiencyPercent = efficiency;
+    // Engagement this week (simplified - based on scheduled/published content)
+    const engagementThisWeek = calendarEvents.filter((event: any) => {
+      if (!event.date) return false;
+      const eventDate = new Date(event.date);
+      return eventDate >= weekStart && eventDate <= now;
+    }).length;
+    
+    const engagementLastWeek = calendarEvents.filter((event: any) => {
+      if (!event.date) return false;
+      const eventDate = new Date(event.date);
+      return eventDate >= lastWeekStart && eventDate < lastWeekEnd;
+    }).length;
+    
+    const engagementThisWeekChange = engagementLastWeek > 0
+      ? engagementThisWeek - engagementLastWeek
+      : undefined;
+    
+    // Content pending (items in inbox or pending review)
+    const inboxItems = JSON.parse(localStorage.getItem('inboxItems') || '[]');
+    const pendingInbox = inboxItems.filter((item: any) => item.status === 'pending').length;
+    const pendingAssets = productionAssets.filter((asset: any) => 
+      asset.status === 'draft' || asset.status === 'pending' || asset.status === 'review'
+    ).length;
+    const contentPending = pendingInbox + pendingAssets;
+    
+    // New insights (from scan results - strategic insights count)
+    let newInsights = 0;
+    let newInsightsChange: number | undefined = undefined;
+    
+    if (scanResults) {
+      try {
+        const data = JSON.parse(scanResults);
+        const insights = data.strategicInsights || [];
+        newInsights = insights.length;
+        
+        // Compare to previous week (simplified - use stored previous count)
+        const previousInsights = parseInt(localStorage.getItem('previousInsightsCount') || '0');
+        if (previousInsights > 0) {
+          newInsightsChange = newInsights - previousInsights;
+        }
+        localStorage.setItem('previousInsightsCount', newInsights.toString());
+      } catch (e) {
+        console.error('Error parsing scan results:', e);
+      }
+    }
     
     return {
-      avgCompletionTime,
-      avgCompletionTimeChange,
-      avgCompletionTimePercent,
-      activeWorkflows,
-      activeWorkflowsChange,
-      globalAssetVelocity,
-      globalAssetVelocityChange,
-      globalAssetVelocityPercent,
-      aiComputeEfficiency,
-      aiComputeEfficiencyChange,
-      aiComputeEfficiencyPercent,
+      postsThisWeek,
+      postsThisWeekChange,
+      engagementThisWeek,
+      engagementThisWeekChange,
+      contentPending,
+      newInsights,
+      newInsightsChange,
     };
   } catch (e) {
-    console.error('Error calculating system metrics:', e);
+    console.error('Error calculating dashboard KPIs:', e);
     return {
-      avgCompletionTime: 'N/A',
-      avgCompletionTimeChange: undefined,
-      avgCompletionTimePercent: 0,
-      activeWorkflows: 0,
-      activeWorkflowsChange: undefined,
-      globalAssetVelocity: 'N/A',
-      globalAssetVelocityChange: undefined,
-      globalAssetVelocityPercent: 0,
-      aiComputeEfficiency: 'N/A',
-      aiComputeEfficiencyChange: undefined,
-      aiComputeEfficiencyPercent: 0,
+      postsThisWeek: 0,
+      postsThisWeekChange: undefined,
+      engagementThisWeek: 0,
+      engagementThisWeekChange: undefined,
+      contentPending: 0,
+      newInsights: 0,
+      newInsightsChange: undefined,
     };
   }
 }
@@ -223,26 +208,21 @@ function calculateSystemMetrics() {
  * Fetch real analytics data based on scan results
  */
 export async function fetchAnalyticsData(): Promise<AnalyticsData> {
-  const contentCreated = calculateContentSuggestions();
-  const brandVoiceMatch = calculateBrandVoiceMatch();
-  const systemMetrics = calculateSystemMetrics();
-  
-  // Published/Scheduled would come from actual content tracking
-  // For now, these start at 0 until user actually publishes content
-  const contentPublished = 0;
-  const contentScheduled = 0;
+  const kpis = calculateDashboardKPIs();
   
   return {
-    contentCreated,
-    contentPublished,
-    contentScheduled,
-    brandVoiceMatch,
-    ...systemMetrics,
+    ...kpis,
     trends: {
-      created: contentCreated > 0 ? `+${contentCreated}` : '0',
-      published: '0',
-      scheduled: '0',
-      voiceMatch: brandVoiceMatch > 0 ? `${brandVoiceMatch}%` : '0%',
+      posts: kpis.postsThisWeekChange !== undefined 
+        ? (kpis.postsThisWeekChange > 0 ? `+${kpis.postsThisWeekChange}` : `${kpis.postsThisWeekChange}`)
+        : '0',
+      engagement: kpis.engagementThisWeekChange !== undefined
+        ? (kpis.engagementThisWeekChange > 0 ? `+${kpis.engagementThisWeekChange}` : `${kpis.engagementThisWeekChange}`)
+        : '0',
+      pending: `${kpis.contentPending}`,
+      insights: kpis.newInsightsChange !== undefined
+        ? (kpis.newInsightsChange > 0 ? `+${kpis.newInsightsChange}` : `${kpis.newInsightsChange}`)
+        : '0',
     },
   };
 }

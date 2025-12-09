@@ -99,6 +99,12 @@ const InboxView: React.FC<NavProps> = ({ onNavigate }) => {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
+              <button
+                onClick={() => onNavigate(ViewState.DASHBOARD)}
+                className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-white/60" />
+              </button>
               <Inbox className="w-8 h-8 text-orange-500" />
               <div>
                 <h1 className="text-3xl font-bold text-white">Inbox</h1>

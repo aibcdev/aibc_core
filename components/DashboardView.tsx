@@ -88,6 +88,24 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
     time: string;
     unread: boolean;
   }>>([]);
+  const notificationRef = useRef<HTMLDivElement>(null);
+  
+  // Close notifications when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+    
+    if (showNotifications) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showNotifications]);
   const [competitorSearchTimeout, setCompetitorSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   
   // Debug: Log state changes
@@ -605,13 +623,15 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                 <span className="text-xs font-medium text-white/40 hover:text-white cursor-pointer">Year</span>
              </div>
              
-             <div className="relative">
+             <div className="relative" ref={notificationRef}>
                 <button 
                   onClick={() => setShowNotifications(!showNotifications)}
                   className="h-9 w-9 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/5 text-white/60 relative"
                 >
                   <Bell className="w-4 h-4" />
-                  <span className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-black"></span>
+                  {notifications.filter(n => n.unread).length > 0 && (
+                    <span className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-black"></span>
+                  )}
                 </button>
                 
                 {/* Notifications Dropdown */}
@@ -663,77 +683,72 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
             {currentPage === 'dashboard' && (
                 <div className="grid grid-cols-12 gap-6 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
                     <div className="col-span-12 lg:col-span-8 space-y-6">
-                        {/* Top Metrics - SYSTEM METRICS */}
+                        {/* Top Metrics - DASHBOARD KPIs */}
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-5">
                                 <div className="flex items-center justify-between mb-2">
-                                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">AVG COMPLETION TIME</div>
+                                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">POSTS THIS WEEK</div>
+                                    <FileText className="w-3 h-3 text-white/20" />
+                                </div>
+                                <div className="flex items-baseline gap-2 mb-1">
+                                    <span className="text-2xl font-black text-white">{analytics?.postsThisWeek || 0}</span>
+                                    {analytics?.postsThisWeekChange !== undefined && (
+                                        <span className={`text-xs font-bold ${analytics.postsThisWeekChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                            {analytics.postsThisWeekChange > 0 ? '+' : ''}{analytics.postsThisWeekChange}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                    <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" style={{ width: `${Math.min(((analytics?.postsThisWeek || 0) / 20) * 100, 100)}%` }}></div>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-5">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">ENGAGEMENT THIS WEEK</div>
                                     <TrendingUp className="w-3 h-3 text-white/20" />
                                 </div>
                                 <div className="flex items-baseline gap-2 mb-1">
-                                    <span className="text-2xl font-black text-white">{analytics?.avgCompletionTime || 'N/A'}</span>
-                                    {analytics?.avgCompletionTimeChange && (
-                                        <span className={`text-xs font-bold ${analytics.avgCompletionTimeChange < 0 ? 'text-red-400' : 'text-white/40'}`}>
-                                            {analytics.avgCompletionTimeChange > 0 ? '+' : ''}{analytics.avgCompletionTimeChange}%
+                                    <span className="text-2xl font-black text-white">{analytics?.engagementThisWeek || 0}</span>
+                                    {analytics?.engagementThisWeekChange !== undefined && (
+                                        <span className={`text-xs font-bold ${analytics.engagementThisWeekChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                            {analytics.engagementThisWeekChange > 0 ? '+' : ''}{analytics.engagementThisWeekChange}
                                         </span>
                                     )}
                                 </div>
                                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                                    <div className="h-full bg-gradient-to-r from-red-500 to-orange-500 rounded-full" style={{ width: `${Math.min(analytics?.avgCompletionTimePercent || 0, 100)}%` }}></div>
+                                    <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full" style={{ width: `${Math.min(((analytics?.engagementThisWeek || 0) / 15) * 100, 100)}%` }}></div>
                                 </div>
                             </div>
                             
                             <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-5">
                                 <div className="flex items-center justify-between mb-2">
-                                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">ACTIVE WORKFLOWS</div>
-                                    <Zap className="w-3 h-3 text-white/20" />
+                                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">CONTENT PENDING</div>
+                                    <Clock className="w-3 h-3 text-white/20" />
                                 </div>
                                 <div className="flex items-baseline gap-2 mb-1">
-                                    <span className="text-2xl font-black text-white">{analytics?.activeWorkflows || 0}</span>
-                                    {analytics?.activeWorkflowsChange && (
-                                        <span className={`text-xs font-bold ${analytics.activeWorkflowsChange > 0 ? 'text-green-400' : 'text-white/40'}`}>
-                                            {analytics.activeWorkflowsChange > 0 ? '+' : ''}{analytics.activeWorkflowsChange}
-                                        </span>
-                                    )}
+                                    <span className="text-2xl font-black text-white">{analytics?.contentPending || 0}</span>
                                 </div>
                                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                                    <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full" style={{ width: `${Math.min((analytics?.activeWorkflows || 0) / 500 * 100, 100)}%` }}></div>
+                                    <div className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full" style={{ width: `${Math.min(((analytics?.contentPending || 0) / 10) * 100, 100)}%` }}></div>
                                 </div>
                             </div>
                             
                             <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-5">
                                 <div className="flex items-center justify-between mb-2">
-                                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">GLOBAL ASSET VELOCITY</div>
-                                    <Zap className="w-3 h-3 text-white/20" />
-                                </div>
-                                <div className="flex items-baseline gap-2 mb-1">
-                                    <span className="text-2xl font-black text-white">{analytics?.globalAssetVelocity || 'N/A'}</span>
-                                    {analytics?.globalAssetVelocityChange && (
-                                        <span className={`text-xs font-bold ${analytics.globalAssetVelocityChange > 0 ? 'text-green-400' : 'text-white/40'}`}>
-                                            {analytics.globalAssetVelocityChange > 0 ? '+' : ''}{analytics.globalAssetVelocityChange}%
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                                    <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" style={{ width: `${Math.min(analytics?.globalAssetVelocityPercent || 0, 100)}%` }}></div>
-                                </div>
-                            </div>
-                            
-                            <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-5">
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">AI COMPUTE EFFICIENCY</div>
+                                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">NEW INSIGHTS</div>
                                     <Sparkles className="w-3 h-3 text-white/20" />
                                 </div>
                                 <div className="flex items-baseline gap-2 mb-1">
-                                    <span className="text-2xl font-black text-white">{analytics?.aiComputeEfficiency || 'N/A'}</span>
-                                    {analytics?.aiComputeEfficiencyChange && (
-                                        <span className={`text-xs font-bold ${analytics.aiComputeEfficiencyChange > 0 ? 'text-green-400' : 'text-white/40'}`}>
-                                            {analytics.aiComputeEfficiencyChange > 0 ? '+' : ''}{analytics.aiComputeEfficiencyChange}%
+                                    <span className="text-2xl font-black text-white">{analytics?.newInsights || 0}</span>
+                                    {analytics?.newInsightsChange !== undefined && (
+                                        <span className={`text-xs font-bold ${analytics.newInsightsChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                            {analytics.newInsightsChange > 0 ? '+' : ''}{analytics.newInsightsChange}
                                         </span>
                                     )}
                                 </div>
                                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                                    <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full" style={{ width: `${Math.min(analytics?.aiComputeEfficiencyPercent || 0, 100)}%` }}></div>
+                                    <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" style={{ width: `${Math.min(((analytics?.newInsights || 0) / 10) * 100, 100)}%` }}></div>
                                 </div>
                             </div>
                         </div>

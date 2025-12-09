@@ -33,39 +33,43 @@ export interface CreditTransaction {
   metadata?: Record<string, any>;
 }
 
-// Credit costs for different actions
+// Credit costs for different actions (matching pricing page)
 export const CREDIT_COSTS = {
-  DIGITAL_FOOTPRINT_SCAN: 10,
-  CONTENT_GENERATION: 5,
-  COMPETITOR_ANALYSIS: 15,
-  BRAND_DNA_EXTRACTION: 8,
-  AUDIO_GENERATION: 8, // Podcast/audio content
-  VIDEO_GENERATION: 15, // Video content
-  SHORT_VIDEO: 10, // Short-form video
-  LONG_VIDEO: 20, // Long-form video
+  DIGITAL_FOOTPRINT_SCAN: 0, // Scans are included in plan, not charged credits
+  CONTENT_GENERATION: 1, // 1 credit = 1 short post
+  COMPETITOR_ANALYSIS: 0, // Included in Business tier
+  BRAND_DNA_EXTRACTION: 0, // Included in scan
+  AUDIO_GENERATION: 5, // 5 credits = 1 podcast/audio script (matching pricing page)
+  VIDEO_GENERATION: 15, // 15 credits = 1 long video package (matching pricing page)
+  SHORT_VIDEO: 10, // 10 credits = 1 short video package (10-30s) (matching pricing page)
+  LONG_VIDEO: 15, // 15 credits = 1 long video package (30-180s) (matching pricing page)
+  LONG_FORM_CONTENT: 3, // 3 credits = 1 long-form asset (blog, newsletter) (matching pricing page)
 } as const;
 
-// Subscription tier limits
+// Subscription tier limits (matching pricing page)
 export const TIER_LIMITS = {
   [SubscriptionTier.FREE]: {
     monthlyScans: 1,
-    monthlyCredits: 10,
+    monthlyCredits: 15, // Matches pricing page: 15 credits/month
+    seats: 1, // 1 seat
     contentGenerations: 0,
     competitorTracking: 0,
     features: ['basic_scan'] as string[],
   },
   [SubscriptionTier.PRO]: {
-    monthlyScans: 50,
-    monthlyCredits: 500,
+    monthlyScans: 1, // Standard tier: 1 full scan/month (refreshed monthly)
+    monthlyCredits: 150, // Matches pricing page: 150 credits/month
+    seats: 1, // 1 seat
     contentGenerations: 100,
-    competitorTracking: 10,
-    features: ['basic_scan', 'content_generation', 'competitor_tracking', 'advanced_analytics'] as string[],
+    competitorTracking: 0,
+    features: ['basic_scan', 'content_generation', 'advanced_analytics'] as string[],
   },
   [SubscriptionTier.ENTERPRISE]: {
     monthlyScans: -1, // Unlimited
-    monthlyCredits: -1, // Unlimited
+    monthlyCredits: 600, // Matches pricing page: 600 credits/month (Business tier)
+    seats: 3, // 3 seats for Business tier
     contentGenerations: -1, // Unlimited
-    competitorTracking: -1, // Unlimited
+    competitorTracking: 5, // Up to 5 brands
     features: ['all'] as string[],
   },
 } as const;
@@ -97,11 +101,45 @@ export function getUserSubscription(): Subscription {
 }
 
 /**
- * Get user credit balance
+ * Get user credit balance with monthly reset logic
  */
 export function getCreditBalance(): CreditBalance {
   try {
+    const subscription = getUserSubscription();
+    const limits = TIER_LIMITS[subscription.tier];
+    
     const stored = localStorage.getItem('creditBalance');
+    const lastReset = localStorage.getItem('creditBalanceReset');
+    const now = new Date();
+    
+    // Check if we need to reset monthly credits
+    if (lastReset) {
+      const lastResetDate = new Date(lastReset);
+      const daysSinceReset = Math.floor((now.getTime() - lastResetDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Reset if it's been 30+ days or if it's a new month
+      if (daysSinceReset >= 30 || lastResetDate.getMonth() !== now.getMonth()) {
+        // Reset credits to monthly allocation
+        const newBalance: CreditBalance = {
+          credits: limits.monthlyCredits,
+          lastUpdated: now,
+        };
+        localStorage.setItem('creditBalance', JSON.stringify(newBalance));
+        localStorage.setItem('creditBalanceReset', now.toISOString());
+        return newBalance;
+      }
+    } else {
+      // First time - set initial credits and reset date
+      const initialBalance: CreditBalance = {
+        credits: limits.monthlyCredits,
+        lastUpdated: now,
+      };
+      localStorage.setItem('creditBalance', JSON.stringify(initialBalance));
+      localStorage.setItem('creditBalanceReset', now.toISOString());
+      return initialBalance;
+    }
+    
+    // Return existing balance
     if (stored) {
       const balance = JSON.parse(stored);
       return {
@@ -113,8 +151,11 @@ export function getCreditBalance(): CreditBalance {
     console.error('Error parsing credit balance:', e);
   }
   
+  // Default: return tier-appropriate credits
+  const subscription = getUserSubscription();
+  const limits = TIER_LIMITS[subscription.tier];
   return {
-    credits: 0,
+    credits: limits.monthlyCredits,
     lastUpdated: new Date(),
   };
 }
@@ -132,16 +173,41 @@ export function hasEnoughCredits(action: keyof typeof CREDIT_COSTS): boolean {
  * Deduct credits for an action
  * @param action - The action to deduct credits for
  * @param metadata - Optional metadata (e.g., contentId for audio/video)
+ * @returns true if deduction was successful, false if insufficient credits
  */
 export function deductCredits(action: keyof typeof CREDIT_COSTS, metadata?: Record<string, unknown>): boolean {
+  const subscription = getUserSubscription();
+  const limits = TIER_LIMITS[subscription.tier];
+  
+  // Enterprise tier has unlimited credits - skip deduction
+  if (limits.monthlyCredits === -1) {
+    // Still log the transaction for tracking
+    addCreditTransaction({
+      type: 'content_generation',
+      amount: -CREDIT_COSTS[action],
+      description: `Used ${CREDIT_COSTS[action]} credits for ${action} (unlimited tier)`,
+      metadata: metadata as Record<string, any> | undefined,
+    });
+    return true;
+  }
+  
   const balance = getCreditBalance();
   const cost = CREDIT_COSTS[action];
   
+  // Prevent overspending - check before deducting
   if (balance.credits < cost) {
+    console.warn(`Insufficient credits: need ${cost}, have ${balance.credits}`);
     return false;
   }
   
   const newBalance = balance.credits - cost;
+  
+  // Double-check we're not going negative (safety check)
+  if (newBalance < 0) {
+    console.error(`Credit deduction would result in negative balance: ${newBalance}`);
+    return false;
+  }
+  
   const updated: CreditBalance = {
     credits: newBalance,
     lastUpdated: new Date(),
@@ -305,12 +371,24 @@ export function canPerformAction(action: 'scan' | 'content_generation' | 'compet
 export function updateSubscription(subscription: Subscription): void {
   localStorage.setItem('userSubscription', JSON.stringify(subscription));
   
-  // Give initial credits based on tier
-  const balance = getCreditBalance();
-  if (balance.credits === 0 && subscription.tier !== SubscriptionTier.FREE) {
-    const initialCredits = subscription.tier === SubscriptionTier.PRO ? 500 : 10000;
-    addCredits(initialCredits, 'Welcome bonus credits', 'bonus');
-  }
+  // Reset credits to tier-appropriate monthly allocation
+  const limits = TIER_LIMITS[subscription.tier];
+  const now = new Date();
+  
+  const newBalance: CreditBalance = {
+    credits: limits.monthlyCredits === -1 ? 10000 : limits.monthlyCredits, // Unlimited gets high number for display
+    lastUpdated: now,
+  };
+  
+  localStorage.setItem('creditBalance', JSON.stringify(newBalance));
+  localStorage.setItem('creditBalanceReset', now.toISOString());
+  
+  // Log the subscription change
+  addCreditTransaction({
+    type: 'bonus',
+    amount: limits.monthlyCredits === -1 ? 10000 : limits.monthlyCredits,
+    description: `Subscription updated to ${subscription.tier} - monthly credits allocated`,
+  });
 }
 
 /**

@@ -29,6 +29,8 @@ const AdminView: React.FC<NavProps> = ({ onNavigate }) => {
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [teamMemberEmail, setTeamMemberEmail] = useState('');
   const [currentUserTier, setCurrentUserTier] = useState<SubscriptionTier>(SubscriptionTier.FREE);
+  const [showAddTeamMember, setShowAddTeamMember] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
 
   useEffect(() => {
     if (!isAdmin()) {
@@ -142,18 +144,48 @@ const AdminView: React.FC<NavProps> = ({ onNavigate }) => {
     return limits[tier] || 1;
   };
 
+  useEffect(() => {
+    // Load team members from localStorage
+    try {
+      const stored = localStorage.getItem('teamMembers');
+      if (stored) {
+        setTeamMembers(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error('Error loading team members:', e);
+    }
+  }, []);
+
   const handleAddTeamMember = () => {
-    const currentSeats = users.filter(u => u.subscription?.tier === currentUserTier).length;
-    const tierLimit = getTierLimit(currentUserTier);
+    if (!teamMemberEmail || !teamMemberEmail.includes('@')) {
+      alert('Please enter a valid email address');
+      return;
+    }
+    
+    const subscription = getUserSubscription();
+    const tierLimit = getTierLimit(subscription.tier);
+    const currentSeats = teamMembers.length + 1; // +1 for current user
     
     if (currentSeats >= tierLimit) {
       setShowBillingModal(true);
       return;
     }
     
-    // Add team member logic here
-    console.log('Adding team member:', teamMemberEmail);
+    // Add team member
+    const newMember = {
+      id: `team_${Date.now()}`,
+      email: teamMemberEmail,
+      addedAt: new Date().toISOString(),
+      status: 'pending',
+    };
+    
+    const updated = [...teamMembers, newMember];
+    setTeamMembers(updated);
+    localStorage.setItem('teamMembers', JSON.stringify(updated));
+    
     setTeamMemberEmail('');
+    setShowAddTeamMember(false);
+    alert(`Team member invitation sent to ${teamMemberEmail}`);
   };
 
   const getTierColor = (tier: string) => {
@@ -326,6 +358,23 @@ const AdminView: React.FC<NavProps> = ({ onNavigate }) => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                       </button>
+                      <button
+                        onClick={() => {
+                          const subscription = getUserSubscription();
+                          const tierLimit = getTierLimit(subscription.tier);
+                          const currentSeats = teamMembers.length + 1;
+                          
+                          if (currentSeats >= tierLimit) {
+                            setShowBillingModal(true);
+                          } else {
+                            setShowAddTeamMember(true);
+                          }
+                        }}
+                        className="px-4 py-2 bg-gradient-to-r from-orange-500 to-purple-600 rounded-lg text-sm font-bold text-white hover:from-orange-600 hover:to-purple-700 transition-colors flex items-center gap-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Team Member
+                      </button>
                     </div>
                   </div>
 
@@ -421,6 +470,56 @@ const AdminView: React.FC<NavProps> = ({ onNavigate }) => {
           )}
         </main>
       </div>
+
+      {/* Add Team Member Modal */}
+      {showAddTeamMember && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-6 max-w-md w-full">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-white">Add Team Member</h3>
+              <button
+                onClick={() => {
+                  setShowAddTeamMember(false);
+                  setTeamMemberEmail('');
+                }}
+                className="p-2 hover:bg-white/5 rounded transition-colors"
+              >
+                <X className="w-5 h-5 text-white/40" />
+              </button>
+            </div>
+            <p className="text-sm text-white/60 mb-4">
+              Invite a team member to join your workspace. They'll receive an email invitation.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-white/80 mb-2">Email Address</label>
+              <input
+                type="email"
+                value={teamMemberEmail}
+                onChange={(e) => setTeamMemberEmail(e.target.value)}
+                placeholder="team@example.com"
+                className="w-full bg-[#050505] border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-orange-500/50"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowAddTeamMember(false);
+                  setTeamMemberEmail('');
+                }}
+                className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm font-medium text-white hover:bg-white/10 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddTeamMember}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-orange-500 to-purple-600 rounded-lg text-sm font-bold text-white hover:from-orange-600 hover:to-purple-700 transition-colors"
+              >
+                Send Invitation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Billing Modal */}
       {showBillingModal && (

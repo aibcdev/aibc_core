@@ -503,7 +503,7 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
         </div>
 
         {/* Credits Explainer */}
-        <div className="max-w-4xl mx-auto mb-16">
+        <div className="max-w-6xl mx-auto mb-16">
           <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-8">
             <h3 className="text-xl font-bold text-white mb-4">How credits work</h3>
             <p className="text-sm text-white/60 mb-6">
@@ -601,7 +601,7 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
         </div>
 
         {/* FAQ Section */}
-        <div className="max-w-3xl mx-auto mb-16">
+        <div className="max-w-6xl mx-auto mb-16">
           <h2 className="text-3xl font-bold text-white mb-4">Frequently asked questions</h2>
           <p className="text-sm text-white/60 mb-8">
             If you're still thinking it through, these might help. If not, hit Talk to Sales and we'll walk you through it.
@@ -635,7 +635,7 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
         </div>
 
         {/* Final CTA Banner */}
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="bg-gradient-to-r from-orange-500/10 to-purple-600/10 border border-white/10 rounded-2xl p-12 text-center">
             <h2 className="text-3xl font-bold text-white mb-4">
               Ready to stop staring at a blank content calendar?

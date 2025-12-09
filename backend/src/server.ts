@@ -46,9 +46,24 @@ app.post('/api/verify-handle', async (req, res) => {
   try {
     const { verifyHandle } = await import('./services/verifyService');
     const result = await verifyHandle(handle, platform);
-    res.json(result);
+    // Return in format expected by frontend
+    res.json({
+      success: result.verified,
+      verified: result.verified,
+      profile: result.profile,
+      error: result.error,
+      name: result.profile?.name,
+      avatar: result.profile?.avatar,
+      followers: result.profile?.followers,
+      bio: result.profile?.bio
+    });
   } catch (error: any) {
-    res.status(500).json({ verified: false, error: error.message });
+    console.error('Verify handle error:', error);
+    res.status(500).json({ 
+      success: false,
+      verified: false, 
+      error: error.message || 'Verification failed' 
+    });
   }
 });
 
