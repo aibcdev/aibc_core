@@ -458,10 +458,33 @@ const CalendarView: React.FC = () => {
           {/* Panel Footer */}
           <div className="flex-shrink-0 p-5 border-t border-white/10">
             <div className="flex gap-3">
-              <button className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-white/60 text-sm font-medium rounded-xl transition-colors">
+              <button 
+                onClick={() => {
+                  // Navigate to Production Room to edit this content
+                  const event = new CustomEvent('navigateToPage', { detail: { page: 'production', assetId: selectedEvent?.id } });
+                  window.dispatchEvent(event);
+                  setSelectedEvent(null);
+                }}
+                className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-white/60 text-sm font-medium rounded-xl transition-colors"
+              >
                 Edit
               </button>
-              <button className="flex-1 py-2.5 bg-green-500 hover:bg-green-400 text-black text-sm font-bold rounded-xl transition-colors">
+              <button 
+                onClick={() => {
+                  // Mark event as complete
+                  if (selectedEvent) {
+                    const updatedEvents = events.map(e => 
+                      e.id === selectedEvent.id 
+                        ? { ...e, status: 'published' as const }
+                        : e
+                    );
+                    setEvents(updatedEvents);
+                    localStorage.setItem('calendarEvents', JSON.stringify(updatedEvents));
+                    setSelectedEvent(null);
+                  }
+                }}
+                className="flex-1 py-2.5 bg-green-500 hover:bg-green-400 text-black text-sm font-bold rounded-xl transition-colors"
+              >
                 Mark Complete
               </button>
             </div>

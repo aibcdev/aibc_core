@@ -803,7 +803,14 @@ const ProductionRoomView: React.FC = () => {
                 <Mic2 className="w-4 h-4" />
                 Generate Podcast
               </button>
-              <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 text-white text-sm hover:bg-white/20 transition-all">
+              <button 
+                onClick={() => {
+                  setSelectedAsset(null);
+                  setIsCreatingContent(false);
+                  setGeneratedContent('');
+                }}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 text-white text-sm hover:bg-white/20 transition-all"
+              >
                 <Plus className="w-4 h-4" />
                 New Asset
               </button>
@@ -896,7 +903,15 @@ const ProductionRoomView: React.FC = () => {
                   </div>
 
                   {/* More Options */}
-                  <button className="absolute top-4 right-4 p-2 text-white/20 hover:text-white/60 opacity-0 group-hover:opacity-100 transition-all">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // For now, just select the asset to show options in side panel
+                      setSelectedAsset(asset);
+                      setIsCreatingContent(true);
+                    }}
+                    className="absolute top-4 right-4 p-2 text-white/20 hover:text-white/60 opacity-0 group-hover:opacity-100 transition-all"
+                  >
                     <MoreHorizontal className="w-5 h-5" />
                   </button>
 
@@ -1152,13 +1167,71 @@ const ProductionRoomView: React.FC = () => {
             {generatedPodcast ? (
               <div className="space-y-4">
                 <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => {
+                        // Play podcast preview - would integrate with audio player
+                        if (generatedPodcast?.audioUrl) {
+                          const audio = new Audio(generatedPodcast.audioUrl);
+                          audio.play().catch(err => console.error('Error playing audio:', err));
+                        } else {
+                          alert('Podcast preview not available');
+                        }
+                      }}
+                      className="flex-1 py-2 bg-purple-500 hover:bg-purple-400 text-black text-xs font-bold rounded-lg flex items-center justify-center gap-2"
+                    >
+                      <Play className="w-4 h-4" /> Play Preview
+                    </button>
+                    <button 
+                      onClick={() => {
+                        // Download podcast
+                        if (generatedPodcast?.audioUrl) {
+                          const link = document.createElement('a');
+                          link.href = generatedPodcast.audioUrl;
+                          link.download = `podcast-${Date.now()}.mp3`;
+                          link.click();
+                        } else {
+                          alert('Podcast not available for download');
+                        }
+                      }}
+                      className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-lg flex items-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="bg-white/5 rounded-xl p-4 border border-white/10">
                   <h3 className="text-sm font-bold text-white mb-2">{podcastTopic}</h3>
                   <p className="text-xs text-white/60 mb-4">{generatedPodcast.script?.substring(0, 200)}...</p>
                   <div className="flex gap-2">
-                    <button className="flex-1 py-2 bg-purple-500 hover:bg-purple-400 text-black text-xs font-bold rounded-lg flex items-center justify-center gap-2">
+                    <button 
+                      onClick={() => {
+                        // Play podcast preview - would integrate with audio player
+                        if (generatedPodcast?.audioUrl) {
+                          const audio = new Audio(generatedPodcast.audioUrl);
+                          audio.play().catch(err => console.error('Error playing audio:', err));
+                        } else {
+                          alert('Podcast preview not available');
+                        }
+                      }}
+                      className="flex-1 py-2 bg-purple-500 hover:bg-purple-400 text-black text-xs font-bold rounded-lg flex items-center justify-center gap-2"
+                    >
                       <Play className="w-4 h-4" /> Play Preview
                     </button>
-                    <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-lg flex items-center gap-2">
+                    <button 
+                      onClick={() => {
+                        // Download podcast
+                        if (generatedPodcast?.audioUrl) {
+                          const link = document.createElement('a');
+                          link.href = generatedPodcast.audioUrl;
+                          link.download = `podcast-${Date.now()}.mp3`;
+                          link.click();
+                        } else {
+                          alert('Podcast not available for download');
+                        }
+                      }}
+                      className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-lg flex items-center gap-2"
+                    >
                       <Download className="w-4 h-4" />
                     </button>
                   </div>

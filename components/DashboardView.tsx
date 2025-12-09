@@ -42,10 +42,68 @@ type DashboardPage = 'dashboard' | 'contentHub' | 'strategy' | 'production' | 'c
 
 const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
   const [currentPage, setCurrentPage] = useState<DashboardPage>('dashboard');
+  
+  // Listen for navigation events from child components
+  useEffect(() => {
+    const handleNavigateToPage = (event: CustomEvent) => {
+      const { page, assetId } = event.detail;
+      if (page === 'production') {
+        setCurrentPage('production');
+        // If assetId is provided, we could select that asset in Production Room
+        // This would require passing a callback or using a shared state
+      }
+    };
+    
+    window.addEventListener('navigateToPage', handleNavigateToPage as EventListener);
+    return () => {
+      window.removeEventListener('navigateToPage', handleNavigateToPage as EventListener);
+    };
+  }, []);
   const [activeTab, setActiveTab] = useState<'activity' | 'tasks'>('tasks');
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const taskInputRef = useRef<HTMLInputElement>(null);
   const [userInfo, setUserInfo] = useState<{ name: string; email: string; initials: string } | null>(null);
+  
+  // Initialize and update userInfo from localStorage
+  useEffect(() => {
+    const loadUserInfo = () => {
+      const userStr = localStorage.getItem('user');
+      const userName = localStorage.getItem('userName');
+      const userEmail = localStorage.getItem('userEmail');
+      
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          const name = userName || user.name || user.email || 'User';
+          const email = userEmail || user.email || '';
+          const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
+          setUserInfo({ name, email, initials });
+        } catch (e) {
+          console.error('Error parsing user:', e);
+        }
+      } else if (userName || userEmail) {
+        const name = userName || 'User';
+        const email = userEmail || '';
+        const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
+        setUserInfo({ name, email, initials });
+      }
+    };
+    
+    loadUserInfo();
+    
+    // Listen for name updates from Settings
+    const handleNameUpdate = (event: CustomEvent) => {
+      const { name, email } = event.detail;
+      const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
+      setUserInfo({ name, email, initials });
+    };
+    
+    window.addEventListener('userNameUpdated', handleNameUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('userNameUpdated', handleNameUpdate as EventListener);
+    };
+  }, []);
   
   // Modal State
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -1972,10 +2030,7 @@ const ForensicCompetitorCard = ({ competitor, onRemove }: { competitor: any; onR
                 </p>
             </div>
         </div>
-      )}
-
-    </div>
-  );
+    );
 };
 
 export default DashboardView;

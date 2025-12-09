@@ -67,6 +67,23 @@ const SettingsView: React.FC<{ onLogout?: () => void; onNavigate?: (view: ViewSt
     setSaveStatus('saving');
     localStorage.setItem('userName', profile.name);
     localStorage.setItem('userEmail', profile.email);
+    
+    // Update user object in localStorage for DashboardView
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        user.name = profile.name;
+        user.email = profile.email;
+        localStorage.setItem('user', JSON.stringify(user));
+      } catch (e) {
+        console.error('Error updating user object:', e);
+      }
+    }
+    
+    // Dispatch custom event to notify DashboardView of name change
+    window.dispatchEvent(new CustomEvent('userNameUpdated', { detail: { name: profile.name, email: profile.email } }));
+    
     setTimeout(() => {
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
@@ -183,7 +200,33 @@ const SettingsView: React.FC<{ onLogout?: () => void; onNavigate?: (view: ViewSt
                     {profile.name ? profile.name.charAt(0).toUpperCase() : 'U'}
                   </div>
                   <div>
-                    <button className="px-4 py-2 bg-white/10 hover:bg-white/15 rounded-lg text-sm text-white transition-colors">
+                    <button 
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/jpeg,image/png';
+                        input.onchange = (e: any) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            if (file.size > 2 * 1024 * 1024) {
+                              alert('File size must be less than 2MB');
+                              return;
+                            }
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              const avatarUrl = event.target?.result as string;
+                              localStorage.setItem('userAvatar', avatarUrl);
+                              // Update profile state
+                              setProfile({...profile, avatar: avatarUrl});
+                              alert('Avatar updated successfully!');
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        };
+                        input.click();
+                      }}
+                      className="px-4 py-2 bg-white/10 hover:bg-white/15 rounded-lg text-sm text-white transition-colors"
+                    >
                       Change Avatar
                     </button>
                     <p className="text-xs text-white/30 mt-2">JPG or PNG. Max 2MB.</p>
@@ -231,7 +274,12 @@ const SettingsView: React.FC<{ onLogout?: () => void; onNavigate?: (view: ViewSt
                     <label className="block text-xs text-white/40 uppercase tracking-wider mb-1.5">Plan</label>
                     <div className="flex items-center gap-2">
                       <span className="px-3 py-2.5 bg-green-500/20 text-green-400 rounded-xl text-sm font-medium">{profile.plan}</span>
-                      <button className="text-xs text-white/40 hover:text-white underline">Upgrade</button>
+                      <button 
+                        onClick={() => onNavigate?.(ViewState.PRICING)}
+                        className="text-xs text-white/40 hover:text-white underline"
+                      >
+                        Upgrade
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -356,7 +404,12 @@ const SettingsView: React.FC<{ onLogout?: () => void; onNavigate?: (view: ViewSt
               <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-6">
                 <h2 className="text-lg font-bold text-white mb-4">Two-Factor Authentication</h2>
                 <p className="text-sm text-white/40 mb-4">Add an extra layer of security to your account</p>
-                <button className="flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/15 text-white text-sm font-medium rounded-xl transition-colors">
+                <button 
+                  onClick={() => {
+                    alert('2FA setup coming soon! This feature will be available in a future update.');
+                  }}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/15 text-white text-sm font-medium rounded-xl transition-colors"
+                >
                   <Smartphone className="w-4 h-4" />
                   Enable 2FA
                 </button>

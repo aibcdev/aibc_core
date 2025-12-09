@@ -215,11 +215,25 @@ const ContentHubView: React.FC = () => {
             <RefreshCw className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`} />
             Regenerate
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-400 text-white rounded-lg text-sm font-bold transition-colors">
+          <button 
+            onClick={() => {
+              // Navigate to Production Room for podcast generation
+              const event = new CustomEvent('navigateToPage', { detail: { page: 'production' } });
+              window.dispatchEvent(event);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-400 text-white rounded-lg text-sm font-bold transition-colors"
+          >
             <Mic2 className="w-4 h-4" />
             Generate Podcast
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm font-medium text-white hover:bg-white/10 transition-colors">
+          <button 
+            onClick={() => {
+              // Navigate to Production Room to create new asset
+              const event = new CustomEvent('navigateToPage', { detail: { page: 'production' } });
+              window.dispatchEvent(event);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm font-medium text-white hover:bg-white/10 transition-colors"
+          >
             <Plus className="w-4 h-4" />
             New Asset
           </button>
@@ -317,7 +331,14 @@ const ContentHubView: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-white/30">{asset.timeAgo}</span>
                 {asset.status === 'suggested' && (
-                  <button className="px-3 py-1.5 bg-purple-500 hover:bg-purple-400 text-white text-xs font-bold rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+                  <button 
+                    onClick={() => {
+                      // Navigate to Production Room with this asset selected
+                      const event = new CustomEvent('navigateToPage', { detail: { page: 'production', assetId: asset.id } });
+                      window.dispatchEvent(event);
+                    }}
+                    className="px-3 py-1.5 bg-purple-500 hover:bg-purple-400 text-white text-xs font-bold rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                  >
                     Start Creating
                   </button>
                 )}
