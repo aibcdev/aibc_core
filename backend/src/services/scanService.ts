@@ -399,12 +399,32 @@ export async function startScan(
       }
     } catch (error: any) {
       addLog(scanId, `[ERROR] CRITICAL: Competitor intelligence generation failed: ${error.message}`);
+      console.error(`[SCAN ${scanId}] Competitor generation error:`, error);
+      
       // Use research competitors as fallback if available
       if (researchCompetitors && researchCompetitors.length > 0) {
         competitorIntelligence = researchCompetitors;
         addLog(scanId, `[FALLBACK] Using ${competitorIntelligence.length} competitors from research data`);
       } else {
-        addLog(scanId, `[ERROR] No competitors available from any source - this is unacceptable`);
+        // Last resort: Generate minimal competitors based on username/industry
+        addLog(scanId, `[FALLBACK] Attempting emergency competitor generation...`);
+        try {
+          const emergencyPrompt = `Identify 3-5 real competitors for "${username}" in their industry/space. Return JSON with competitors array. Each competitor needs: name, threatLevel (HIGH/MEDIUM/LOW), primaryVector, theirAdvantage, yourOpportunity.`;
+          const { generateJSON } = await import('./llmService');
+          const emergencyData = await generateJSON(emergencyPrompt, 'You are a competitive analyst. Always return valid JSON with competitors array.', { tier: scanTier });
+          
+          if (emergencyData && emergencyData.competitors && Array.isArray(emergencyData.competitors) && emergencyData.competitors.length > 0) {
+            competitorIntelligence = emergencyData.competitors.slice(0, 5);
+            addLog(scanId, `[SUCCESS] Emergency generation produced ${competitorIntelligence.length} competitors`);
+          } else {
+            throw new Error('Emergency generation also failed');
+          }
+        } catch (emergencyError: any) {
+          addLog(scanId, `[ERROR] Emergency competitor generation failed: ${emergencyError.message}`);
+          addLog(scanId, `[ERROR] No competitors available from any source - scan will complete but competitors will be empty`);
+          // Don't throw - allow scan to complete, but competitors will be empty
+          competitorIntelligence = [];
+        }
       }
     }
 
@@ -1284,31 +1304,50 @@ Return ONLY valid JSON:
 }
 
 async function generateCompetitorIntelligence(validatedContent: any, brandDNA: any, username?: string, scanTier: ScanTier = 'basic'): Promise<any> {
-  // If no real content was extracted, return empty
+  // Always try to generate competitors - even with minimal data, we can use LLM knowledge
   const hasRealContent = validatedContent.posts && validatedContent.posts.length > 0;
   const hasRealProfile = validatedContent.profile && validatedContent.profile.bio && 
                          validatedContent.profile.bio !== 'Sample bio' && 
                          !validatedContent.profile.bio.includes('Profile for');
+  const hasThemes = validatedContent.content_themes && validatedContent.content_themes.length > 0;
   
-  if (!hasRealContent && !hasRealProfile) {
-    console.log('No real content found - skipping competitor analysis');
-    return { marketShare: null, competitors: [] };
+  // Only skip if we have absolutely nothing to work with
+  if (!hasRealContent && !hasRealProfile && !hasThemes && !username) {
+    console.log('No data available for competitor analysis - using LLM knowledge base');
+    // Still try to generate based on username alone
   }
 
   if (!isLLMConfigured()) {
-    return { marketShare: null, competitors: [] };
+    console.error('LLM not configured - cannot generate competitors');
+    throw new Error('LLM not configured - competitor analysis requires LLM');
   }
 
   try {
     const allPosts = (validatedContent.posts || []).map((p: any) => p.content).join('\n\n');
     const combinedText = allPosts.substring(0, 40000);
+    const bio = validatedContent.profile?.bio || '';
+    const themes = (validatedContent.content_themes || []).join(', ');
 
-    const prompt = `Competitive analysis for this creator. Research their space and give me hard numbers.
+    // Build context - use whatever we have
+    let contentContext = '';
+    if (combinedText && combinedText.length > 50) {
+      contentContext = `Their content: ${combinedText}`;
+    } else if (bio && bio.length > 20) {
+      contentContext = `Their bio: ${bio}`;
+    } else if (themes) {
+      contentContext = `Their topics: ${themes}`;
+    } else {
+      contentContext = `Creator name: ${username || 'Unknown'}`;
+    }
 
-Creator: ${username || 'Unknown'}
-Their content: ${combinedText}
-Brand DNA: ${JSON.stringify(brandDNA, null, 2)}
-Topics: ${(validatedContent.content_themes || []).join(', ')}
+    const prompt = `Competitive analysis for this creator/brand. Research their space and identify real competitors.
+
+Creator/Brand: ${username || 'Unknown'}
+${contentContext}
+${brandDNA ? `Brand DNA: ${JSON.stringify(brandDNA, null, 2)}` : ''}
+${themes ? `Topics: ${themes}` : ''}
+
+CRITICAL: You MUST identify at least 3-5 real competitors by name. Use your knowledge base to find actual competitors in their space.
 
 I need:
 1. Market share estimate (what % of their niche's total attention do they capture?)
@@ -1388,13 +1427,24 @@ Return ONLY valid JSON:
       // New format with marketShare and competitors
       if (competitorData.competitors && Array.isArray(competitorData.competitors)) {
         const competitors = competitorData.competitors
-          .filter((comp: any) => comp && comp.name && comp.threatLevel && comp.name.length > 0)
+          .filter((comp: any) => comp && comp.name && comp.name.length > 0)
+          .map((comp: any) => ({
+            name: comp.name,
+            threatLevel: comp.threatLevel || 'MEDIUM',
+            primaryVector: comp.primaryVector || comp.vector || 'Unknown platform',
+            theirAdvantage: comp.theirAdvantage || comp.advantage || 'Analyzing...',
+            yourOpportunity: comp.yourOpportunity || comp.opportunity || 'Research in progress',
+            weeklyViews: comp.weeklyViews,
+            weeklyEngagement: comp.weeklyEngagement
+          }))
           .slice(0, scanTier === 'deep' ? 8 : 5); // Deep: 8, Basic: 5
         
         if (competitors.length === 0) {
-          throw new Error('No valid competitors found in response');
+          console.error('No valid competitors after filtering:', competitorData.competitors);
+          throw new Error('No valid competitors found in response - all were filtered out');
         }
         
+        console.log(`Generated ${competitors.length} competitors for ${username}`);
         return {
           marketShare: competitorData.marketShare || null,
           competitors: competitors
@@ -1404,13 +1454,24 @@ Return ONLY valid JSON:
       // If it's an array, wrap it
       if (Array.isArray(competitorData)) {
         const competitors = competitorData
-          .filter((comp: any) => comp && comp.name && comp.threatLevel)
+          .filter((comp: any) => comp && comp.name && comp.name.length > 0)
+          .map((comp: any) => ({
+            name: comp.name,
+            threatLevel: comp.threatLevel || 'MEDIUM',
+            primaryVector: comp.primaryVector || comp.vector || 'Unknown platform',
+            theirAdvantage: comp.theirAdvantage || comp.advantage || 'Analyzing...',
+            yourOpportunity: comp.yourOpportunity || comp.opportunity || 'Research in progress',
+            weeklyViews: comp.weeklyViews,
+            weeklyEngagement: comp.weeklyEngagement
+          }))
           .slice(0, scanTier === 'deep' ? 8 : 5);
         
         if (competitors.length === 0) {
-          throw new Error('No valid competitors found in array');
+          console.error('No valid competitors after filtering array:', competitorData);
+          throw new Error('No valid competitors found in array - all were filtered out');
         }
         
+        console.log(`Generated ${competitors.length} competitors from array for ${username}`);
         return {
           marketShare: null,
           competitors: competitors
@@ -1418,9 +1479,17 @@ Return ONLY valid JSON:
       }
     }
 
+    console.error('Invalid competitor data format:', competitorData);
     throw new Error('Failed to parse competitor intelligence - invalid format');
   } catch (error: any) {
     console.error('Competitor intelligence generation error:', error);
+    console.error('Error details:', {
+      username,
+      hasContent: !!validatedContent.posts?.length,
+      hasProfile: !!validatedContent.profile?.bio,
+      hasThemes: !!validatedContent.content_themes?.length,
+      errorMessage: error.message
+    });
     // CRITICAL: Never return empty - this is a required feature
     throw new Error(`Competitor generation failed: ${error.message}. This is a required feature and must be fixed.`);
   }
