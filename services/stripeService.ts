@@ -22,7 +22,7 @@ export interface StripePrice {
 /**
  * Create Stripe checkout session for subscription
  */
-export async function createCheckoutSession(priceId: string, tier: SubscriptionTier): Promise<StripeCheckoutSession> {
+export async function createCheckoutSession(priceId: string, tier: SubscriptionTier | 'lifetime'): Promise<StripeCheckoutSession> {
   try {
     const userStr = localStorage.getItem('user');
     const user = userStr ? JSON.parse(userStr) : null;
@@ -34,8 +34,8 @@ export async function createCheckoutSession(priceId: string, tier: SubscriptionT
         'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
       },
       body: JSON.stringify({
-        priceId,
-        tier,
+        priceId: priceId === 'lifetime_deal' ? null : priceId, // Lifetime deal doesn't use priceId
+        tier: tier === 'lifetime' ? 'lifetime_deal' : tier,
         userId: user?.id,
         userEmail: user?.email,
         successUrl: `${window.location.origin}/dashboard?session_id={CHECKOUT_SESSION_ID}`,

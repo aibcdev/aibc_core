@@ -277,7 +277,7 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
             <div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-white mb-6 leading-tight">
                 Choose a plan. Feed us your links. We handle the content thinking.
-              </h1>
+          </h1>
               <p className="text-lg text-white/70 mb-6 leading-relaxed">
                 AIBC scans your digital footprint — site, socials, interviews, decks — and turns it into on-brand text, audio, and video you can copy–paste straight into your channels. No posting integrations. No content marketer hire.
               </p>
@@ -285,7 +285,7 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
                 Start free in under 2 minutes. No credit card required.
               </p>
               <div className="flex items-center gap-4">
-                <button
+          <button
                   onClick={() => {
                     const authToken = localStorage.getItem('authToken');
                     if (authToken) {
@@ -297,13 +297,13 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
                   className="px-6 py-3 bg-white text-black rounded-lg font-semibold hover:bg-gray-100 transition-colors"
                 >
                   Start Free
-                </button>
-                <button
+          </button>
+            <button
                   onClick={() => onNavigate(ViewState.LANDING)}
                   className="px-6 py-3 border border-white/20 rounded-lg font-semibold hover:bg-white/5 transition-colors"
                 >
                   Talk to Sales
-                </button>
+            </button>
               </div>
             </div>
             <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-8">
@@ -330,17 +330,17 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
         <div className="max-w-7xl mx-auto mb-16">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             {plans.slice(0, 4).map((plan) => (
-              <div
-                key={plan.name}
+            <div
+              key={plan.name}
                 className={`relative bg-[#0A0A0A] border rounded-2xl p-6 flex flex-col ${
-                  plan.popular
+                plan.popular
                     ? 'border-orange-500/50 shadow-[0_0_30px_rgba(249,115,22,0.2)]'
                     : plan.limitedOffer
                     ? 'border-orange-500/50 shadow-[0_0_30px_rgba(249,115,22,0.2)]'
-                    : 'border-white/10 hover:border-white/20'
-                } transition-all`}
-              >
-                {plan.popular && (
+                  : 'border-white/10 hover:border-white/20'
+              } transition-all`}
+            >
+              {plan.popular && (
                   <div className="absolute -top-3 left-6 bg-gradient-to-r from-orange-500 to-purple-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                     Most Popular
                   </div>
@@ -348,10 +348,10 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
                 {plan.limitedOffer && (
                   <div className="absolute -top-3 left-6 bg-orange-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                     Limited 30-Day Offer
-                  </div>
-                )}
+                </div>
+              )}
 
-                <div className="mb-6">
+              <div className="mb-6">
                   <h3 className="text-2xl font-bold text-white mb-1">{plan.name}</h3>
                   {plan.subtitle && (
                     <div className="text-sm text-white/60 mb-2">{plan.subtitle}</div>
@@ -365,8 +365,8 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
                         {plan.priceType === 'one-time' ? (
                           <span className="text-sm text-white/40"> one-time</span>
                         ) : (
-                          <span className="text-sm text-white/40">/mo</span>
-                        )}
+                    <span className="text-sm text-white/40">/mo</span>
+                  )}
                       </>
                     ) : (
                       <span className="text-2xl font-bold text-white">{plan.price}</span>
@@ -377,74 +377,102 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
                     <div>{plan.seats} {typeof plan.seats === 'number' ? 'seat' + (plan.seats > 1 ? 's' : '') : plan.seats}</div>
                     <div>{plan.credits} {typeof plan.credits === 'number' ? 'credits / month' : 'credits'}</div>
                   </div>
-                </div>
+              </div>
 
                 <ul className="flex-1 space-y-3 mb-6 text-sm text-white/80">
-                  {plan.features.map((feature, i) => (
+                {plan.features.map((feature, i) => (
                     <li key={i} className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
                       <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+                  </li>
+                ))}
+              </ul>
 
-                <button
-                  onClick={async () => {
+              <button
+                onClick={async () => {
                     if (plan.name === 'Free' || plan.current) return;
                     if (plan.name === 'Enterprise' || plan.name === 'Lifetime Deal') {
                       // Handle custom pricing or lifetime deal
                       return;
                     }
                     
-                    const authToken = localStorage.getItem('authToken');
-                    if (!authToken) {
-                      onNavigate(ViewState.LOGIN);
+                  const authToken = localStorage.getItem('authToken');
+                  if (!authToken) {
+                    onNavigate(ViewState.LOGIN);
+                    return;
+                  }
+
+                  setLoading(plan.name);
+                    try {
+                      // Handle different plan types
+                      if (plan.name === 'Lifetime Deal') {
+                        // Lifetime Deal: one-time payment
+                        const session = await createCheckoutSession(
+                          'lifetime_deal', // Special identifier
+                          'lifetime' as any
+                        );
+                        window.location.href = session.url;
+                      } else if (plan.name === 'Enterprise') {
+                        // Enterprise: contact sales
+                        alert('Please contact sales for Enterprise pricing.');
+                        setLoading(null);
+                      } else if (plan.name === 'Free') {
+                        // Free plan: just navigate to dashboard
+                        onNavigate(ViewState.DASHBOARD);
+                        setLoading(null);
+                      } else {
+                        // Standard or Business: find Stripe price
+                        const tierMap: Record<string, string> = {
+                          'Standard': 'standard',
+                          'Business': 'business',
+                        };
+                        const tierKey = tierMap[plan.name] || plan.name.toLowerCase();
+                        
+                    const price = stripePrices.find(p => 
+                          (p.tier === tierKey || p.tier === (plan.tier || plan.name.toLowerCase())) && 
+                          p.interval === 'month'
+                    );
+
+                    if (!price) {
+                          // Fallback: create price on the fly if not found
+                          console.warn('Price not found in Stripe, using fallback');
+                          // For now, show error - in production, create price via API
+                      alert('Pricing not available. Please contact support.');
+                      setLoading(null);
                       return;
                     }
 
-                    setLoading(plan.name);
-                    try {
-                      const price = stripePrices.find(p => 
-                        p.tier === (plan.tier || plan.name.toLowerCase()) && 
-                        p.interval === 'month'
-                      );
+                    const session = await createCheckoutSession(
+                      price.id,
+                          (plan.tier || SubscriptionTier.PRO) as SubscriptionTier
+                    );
 
-                      if (!price) {
-                        alert('Pricing not available. Please contact support.');
-                        setLoading(null);
-                        return;
+                    window.location.href = session.url;
                       }
-
-                      const session = await createCheckoutSession(
-                        price.id,
-                        plan.tier || SubscriptionTier.PRO
-                      );
-
-                      window.location.href = session.url;
-                    } catch (error: any) {
-                      console.error('Checkout error:', error);
-                      alert(error.message || 'Failed to start checkout. Please try again.');
-                      setLoading(null);
-                    }
-                  }}
-                  className={`w-full py-3 rounded-lg font-semibold text-sm transition-all ${plan.buttonStyle} ${
+                  } catch (error: any) {
+                    console.error('Checkout error:', error);
+                    alert(error.message || 'Failed to start checkout. Please try again.');
+                    setLoading(null);
+                  }
+                }}
+                className={`w-full py-3 rounded-lg font-semibold text-sm transition-all ${plan.buttonStyle} ${
                     plan.current ? 'cursor-default opacity-50' : 'hover:scale-105'
-                  }`}
-                  disabled={plan.current || loading === plan.name}
-                >
-                  {loading === plan.name ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Loading...
-                    </span>
-                  ) : (
-                    plan.buttonText
-                  )}
-                </button>
-              </div>
-            ))}
-          </div>
-          
+                }`}
+                disabled={plan.current || loading === plan.name}
+              >
+                {loading === plan.name ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading...
+                  </span>
+                ) : (
+                  plan.buttonText
+                )}
+              </button>
+            </div>
+          ))}
+        </div>
+
           {/* Enterprise Card - Full Width */}
           <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-6">
             <div className="max-w-4xl mx-auto">
@@ -534,8 +562,8 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
             <p className="text-sm text-white/60 mt-6 text-center">
               You generate content inside AIBC, then copy/paste it into your channels. No social logins, no posting automations.
             </p>
+            </div>
           </div>
-        </div>
 
         {/* Dynamic Pricing Calculator */}
         <div className="max-w-6xl mx-auto mb-16">

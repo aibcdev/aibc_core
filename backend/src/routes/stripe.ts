@@ -2,6 +2,13 @@ import express from 'express';
 
 const router = express.Router();
 
+// SubscriptionTier enum (matching frontend)
+enum SubscriptionTier {
+  FREE = 'free',
+  PRO = 'pro',
+  ENTERPRISE = 'enterprise'
+}
+
 // Stripe will be initialized when STRIPE_SECRET_KEY is set
 // For now, routes return appropriate errors if not configured
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
@@ -31,27 +38,57 @@ router.post('/create-checkout-session', async (req, res) => {
 
     const { priceId, tier, userId, userEmail, successUrl, cancelUrl } = req.body;
 
-    if (!priceId || !tier || !userEmail) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    if (!tier || !userEmail) {
+      return res.status(400).json({ error: 'Missing required fields (tier, userEmail)' });
     }
 
-    const session = await stripe.checkout.sessions.create({
+    // Lifetime deal doesn't need priceId
+    if (tier !== 'lifetime_deal' && !priceId) {
+      return res.status(400).json({ error: 'priceId required for subscription plans' });
+    }
+
+    // Handle Lifetime Deal (one-time payment) vs subscriptions
+    const isLifetimeDeal = tier === 'lifetime' || tier === 'lifetime_deal';
+    
+    const sessionConfig: any = {
       payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      mode: 'subscription',
       customer_email: userEmail,
       metadata: {
-        userId,
+        userId: userId || 'unknown',
         tier,
       },
       success_url: successUrl,
       cancel_url: cancelUrl,
-    });
+    };
+
+    if (isLifetimeDeal) {
+      // Lifetime Deal: one-time payment of $149
+      sessionConfig.mode = 'payment';
+      sessionConfig.line_items = [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'AIBC Lifetime Deal - Founders Year',
+              description: '12 months of Business-level features',
+            },
+            unit_amount: 14900, // $149.00
+          },
+          quantity: 1,
+        },
+      ];
+    } else {
+      // Regular subscription
+      sessionConfig.mode = 'subscription';
+      sessionConfig.line_items = [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ];
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionConfig);
 
     res.json({
       sessionId: session.id,
@@ -118,17 +155,50 @@ router.post('/verify-session', async (req, res) => {
       return res.status(400).json({ error: 'Payment not completed' });
     }
 
+    const tier = session.metadata?.tier || 'pro';
+    const isLifetimeDeal = tier === 'lifetime' || tier === 'lifetime_deal';
+
+    let subscriptionData: any;
+
+    if (isLifetimeDeal) {
+      // Lifetime Deal: one-time payment, set 12-month access
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() + 12); // 12 months from now
+      
+      subscriptionData = {
+        tier: SubscriptionTier.ENTERPRISE, // Business-level features
+        status: 'active',
+        currentPeriodEnd: endDate,
+        cancelAtPeriodEnd: false,
+        stripeCustomerId: session.customer as string,
+        stripeSubscriptionId: null, // No subscription for one-time payment
+        isLifetimeDeal: true,
+      };
+    } else {
+      // Regular subscription - only retrieve if subscription exists
+      if (!session.subscription) {
+        return res.status(400).json({ error: 'No subscription found for this session' });
+    }
+
     const subscription = await stripe.subscriptions.retrieve(session.subscription as string) as any;
 
-    // Map Stripe subscription to our subscription format
-    const subscriptionData = {
-      tier: session.metadata?.tier || 'pro',
+      // Map tier names to our SubscriptionTier enum
+      let mappedTier = SubscriptionTier.PRO;
+      if (tier === 'standard' || tier === 'pro') {
+        mappedTier = SubscriptionTier.PRO;
+      } else if (tier === 'business' || tier === 'enterprise') {
+        mappedTier = SubscriptionTier.ENTERPRISE;
+      }
+
+      subscriptionData = {
+        tier: mappedTier,
       status: subscription.status === 'active' ? 'active' : 'cancelled',
       currentPeriodEnd: new Date(subscription.current_period_end * 1000),
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
       stripeCustomerId: subscription.customer as string,
       stripeSubscriptionId: subscription.id,
     };
+    }
 
     res.json({ subscription: subscriptionData });
   } catch (error: any) {

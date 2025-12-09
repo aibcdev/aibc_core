@@ -280,13 +280,36 @@ export async function fetchContentPipeline(): Promise<{
   needsReview: number;
   total: number;
 }> {
-  const suggestions = calculateContentSuggestions();
-  
-  return {
-    published: 0,
-    drafting: 0,
-    scheduled: 0,
-    needsReview: suggestions, // All suggested content needs review
-    total: suggestions,
-  };
+  try {
+    // Get actual content from production room
+    const productionAssets = JSON.parse(localStorage.getItem('productionAssets') || '[]');
+    const calendarEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+    const inboxItems = JSON.parse(localStorage.getItem('inboxItems') || '[]');
+    
+    // Count by status
+    const published = productionAssets.filter((a: any) => a.status === 'published' || a.status === 'accepted').length;
+    const drafting = productionAssets.filter((a: any) => a.status === 'draft' || a.status === 'drafting').length;
+    const scheduled = calendarEvents.length;
+    const needsReview = inboxItems.filter((item: any) => item.status === 'pending').length + 
+                       productionAssets.filter((a: any) => a.status === 'pending' || a.status === 'review').length;
+    
+    const total = published + drafting + scheduled + needsReview;
+    
+    return {
+      published,
+      drafting,
+      scheduled,
+      needsReview,
+      total: total || 0,
+    };
+  } catch (e) {
+    const suggestions = calculateContentSuggestions();
+    return {
+      published: 0,
+      drafting: 0,
+      scheduled: 0,
+      needsReview: suggestions,
+      total: suggestions,
+    };
+  }
 }

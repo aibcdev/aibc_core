@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeft, ScanLine, Zap, Lock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, ScanLine, Zap, Lock, CheckCircle, AlertCircle, Activity } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
 import { getUserSubscription, SubscriptionTier, canPerformAction } from '../services/subscriptionService';
 
@@ -8,16 +8,124 @@ interface IngestionProps extends NavProps {
   setScanType?: (type: 'basic' | 'deep') => void;
 }
 
+// URL validation function
+function isValidURL(input: string): boolean {
+  try {
+    // Remove @ if present
+    const cleaned = input.trim().replace(/^@/, '');
+    
+    // Check if it's a full URL
+    if (cleaned.includes('://') || cleaned.includes('.')) {
+      const url = cleaned.startsWith('http') ? cleaned : `https://${cleaned}`;
+      new URL(url);
+      return true;
+    }
+    
+    // Check if it's a domain (has a dot and valid TLD)
+    if (cleaned.includes('.') && cleaned.split('.').length >= 2) {
+      const parts = cleaned.split('.');
+      const tld = parts[parts.length - 1];
+      // Basic TLD check (at least 2 characters)
+      if (tld.length >= 2 && /^[a-zA-Z]+$/.test(tld)) {
+        return true;
+      }
+    }
+    
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+// Extract domain/username from URL
+function extractDomainFromURL(input: string): string {
+  try {
+    const cleaned = input.trim().replace(/^@/, '');
+    
+    if (cleaned.includes('://')) {
+      const url = new URL(cleaned);
+      return url.hostname.replace('www.', '');
+    } else if (cleaned.includes('.')) {
+      // Assume it's a domain
+      return cleaned.replace('www.', '');
+    }
+    
+    return cleaned;
+  } catch {
+    return input.trim().replace(/^@/, '');
+  }
+}
+
 const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setScanType }) => {
   const [inputVal, setInputVal] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedScanType, setSelectedScanType] = useState<'basic' | 'deep'>('basic');
+  const [urlVerification, setUrlVerification] = useState<{
+    isVerifying: boolean;
+    verified: boolean;
+    domain?: string;
+    error?: string;
+  } | null>(null);
+  
   const subscription = getUserSubscription();
   const canUseDeepScan = subscription.tier === SubscriptionTier.PRO || subscription.tier === SubscriptionTier.ENTERPRISE;
 
+  // Verify URL when input changes
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (inputVal.trim()) {
+        const isValid = isValidURL(inputVal);
+        if (isValid) {
+          verifyURL(inputVal);
+        } else {
+          setUrlVerification(null);
+        }
+      } else {
+        setUrlVerification(null);
+      }
+    }, 500); // Debounce 500ms
+
+    return () => clearTimeout(timeoutId);
+  }, [inputVal]);
+
+  const verifyURL = async (input: string) => {
+    setUrlVerification({ isVerifying: true, verified: false });
+    
+    try {
+      const domain = extractDomainFromURL(input);
+      
+      // Simulate verification (in production, this would call an API)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setUrlVerification({
+        isVerifying: false,
+        verified: true,
+        domain: domain
+      });
+    } catch (err: any) {
+      setUrlVerification({
+        isVerifying: false,
+        verified: false,
+        error: err.message || 'Could not verify URL'
+      });
+    }
+  };
+
   const handleNext = async () => {
     if (!inputVal.trim()) return;
+    
+    // Validate URL
+    if (!isValidURL(inputVal)) {
+      setError('Please enter a valid URL or domain (e.g., example.com, twitter.com/username)');
+      return;
+    }
+    
+    // Check if URL is verified
+    if (!urlVerification?.verified) {
+      setError('Please wait for URL verification to complete');
+      return;
+    }
     
     // Check if deep scan is selected but user doesn't have access
     if (selectedScanType === 'deep' && !canUseDeepScan) {
@@ -29,9 +137,9 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
     setError(null);
     
     try {
-      // Start the digital footprint scan
-      const username = inputVal.trim().replace('@', ''); // Remove @ if present
-      setUsername(username);
+      // Extract domain/username from URL
+      const domain = extractDomainFromURL(inputVal);
+      setUsername(domain);
       
       // Store scan type
       if (setScanType) {
@@ -40,7 +148,7 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
       localStorage.setItem('lastScanType', selectedScanType);
       
       // Store in localStorage for persistence
-      localStorage.setItem('lastScannedUsername', username);
+      localStorage.setItem('lastScannedUsername', domain);
       
       // Navigate to audit view - scan will start there
       onNavigate(ViewState.AUDIT);
@@ -96,11 +204,11 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
 
             {/* Description */}
             <p className="font-mono text-xs md:text-sm text-white/60 text-center max-w-lg leading-relaxed mb-16">
-                Enter primary domain or handle. Our Agentic System will sweep 10 years of public data to reconstruct your brand DNA.
+                Enter a website URL or domain. Our Agentic System will sweep 10 years of public data to reconstruct your brand DNA.
             </p>
 
             {/* Input Group */}
-            <div className="w-full max-w-lg space-y-8">
+            <div className="w-full max-w-lg space-y-4">
                 <div className="relative group">
                     {/* Subtle Orange Glow */}
                     <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-500/30 to-red-600/30 rounded-xl opacity-40 blur group-hover:opacity-70 transition duration-500"></div>
@@ -108,27 +216,16 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
                     <div className="relative bg-[#0A0A0A]/90 backdrop-blur-sm rounded-xl border border-white/10 flex items-center h-20 px-4 transition-colors focus-within:border-orange-500/30 shadow-2xl">
                          <input 
                             type="text" 
-                            placeholder="@USERNAME" 
-                            className="w-full bg-transparent text-center font-mono text-2xl text-white placeholder:text-white/30 focus:outline-none uppercase tracking-widest caret-orange-500 z-10"
+                            placeholder="example.com or https://example.com" 
+                            className="w-full bg-transparent text-center font-mono text-lg text-white placeholder:text-white/30 focus:outline-none tracking-wide caret-orange-500 z-10"
                             value={inputVal}
-                            onChange={(e) => setInputVal(e.target.value)}
+                            onChange={(e) => {
+                              setInputVal(e.target.value);
+                              setError(null);
+                            }}
                             onKeyDown={handleKeyDown}
                             autoComplete="on"
-                            list="username-suggestions"
                          />
-                         <datalist id="username-suggestions">
-                           <option value="elonmusk">Elon Musk</option>
-                           <option value="mrbeast">MrBeast</option>
-                           <option value="garyvee">Gary Vaynerchuk</option>
-                           <option value="openai">OpenAI</option>
-                           <option value="notion">Notion</option>
-                           <option value="nike">Nike</option>
-                           <option value="lululemon">Lululemon</option>
-                           <option value="goodphats">GoodPhats</option>
-                           <option value="dipsea">Dipsea</option>
-                           <option value="kobobooks">Kobo Books</option>
-                           <option value="lairdsuperfood">Laird Superfood</option>
-                         </datalist>
                          
                          {/* Enter Badge */}
                          <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20">
@@ -137,8 +234,52 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
                     </div>
                 </div>
 
+                {/* URL Verification Modal */}
+                {inputVal.trim() && (
+                  <div className="mt-2">
+                    {urlVerification?.isVerifying && (
+                      <div className="p-3 rounded-lg border border-white/10 bg-white/5 flex items-center gap-2 text-white/60 text-sm">
+                        <Activity className="w-4 h-4 animate-spin" />
+                        <span>Verifying URL...</span>
+                      </div>
+                    )}
+                    
+                    {urlVerification && !urlVerification.isVerifying && (
+                      <div className={`p-3 rounded-lg border ${
+                        urlVerification.verified 
+                          ? 'bg-green-500/10 border-green-500/20' 
+                          : 'bg-red-500/10 border-red-500/20'
+                      }`}>
+                        {urlVerification.verified ? (
+                          <div className="flex items-center gap-3">
+                            <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-sm font-bold text-white">URL Verified</p>
+                              <p className="text-xs text-white/60 mt-0.5">Scanning: {urlVerification.domain}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-red-300 text-sm">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                            <span>{urlVerification.error || 'Invalid URL. Please enter a valid website URL or domain.'}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {!isValidURL(inputVal) && inputVal.trim().length > 0 && !urlVerification && (
+                      <div className="p-3 rounded-lg border border-amber-500/20 bg-amber-500/10">
+                        <div className="flex items-center gap-2 text-amber-300 text-sm">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                          <span>Please enter a valid URL or domain (e.g., example.com, twitter.com/username)</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Scan Type Selection */}
-                <div className="flex gap-3">
+                <div className="flex gap-3 mt-6">
                   <button
                     onClick={() => setSelectedScanType('basic')}
                     className={`flex-1 py-3 px-4 rounded-xl border transition-all ${
@@ -198,7 +339,7 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
                 <button 
                   onClick={handleNext} 
                   className="w-full h-14 bg-gradient-to-r from-orange-500/80 to-red-600/80 hover:from-orange-500 hover:to-red-600 disabled:from-white/10 disabled:to-white/5 disabled:cursor-not-allowed text-white font-bold tracking-[0.2em] text-xs uppercase rounded-xl flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-orange-500/20 disabled:shadow-none border border-white/10"
-                  disabled={!inputVal.trim() || isScanning}
+                  disabled={!inputVal.trim() || isScanning || !urlVerification?.verified}
                 >
                     {isScanning ? (
                       <>

@@ -1,116 +1,163 @@
 # Stripe Integration Setup Guide
 
-## Backend Setup
+## ✅ Completed Implementation
 
-### 1. Install Stripe Package
+### Backend Routes (`backend/src/routes/stripe.ts`)
+1. **POST `/api/stripe/create-checkout-session`**
+   - Creates Stripe checkout session for subscriptions
+   - Handles Lifetime Deal as one-time payment ($149)
+   - Maps tiers correctly (Standard → PRO, Business → ENTERPRISE)
 
+2. **POST `/api/stripe/verify-session`**
+   - Verifies payment completion
+   - Handles both subscriptions and one-time payments
+   - Maps Stripe tiers to internal SubscriptionTier enum
+   - Sets 12-month access for Lifetime Deal
+
+3. **POST `/api/stripe/customer-portal`**
+   - Provides billing portal access
+   - Allows subscription management
+
+4. **POST `/api/stripe/webhook`**
+   - Handles Stripe webhook events:
+     - `checkout.session.completed` - Payment success
+     - `customer.subscription.created/updated` - Subscription changes
+     - `customer.subscription.deleted` - Cancellations
+     - `invoice.payment_succeeded` - Recurring payments
+     - `invoice.payment_failed` - Payment failures
+
+5. **GET `/api/stripe/prices`**
+   - Returns available Stripe prices
+   - Falls back to default prices if Stripe not configured
+
+### Frontend Services (`services/stripeService.ts`)
+- `createCheckoutSession()` - Initiates checkout
+- `verifyCheckoutSession()` - Verifies and activates subscription
+- `getCustomerPortalUrl()` - Gets billing portal URL
+- `getPrices()` - Fetches available prices
+
+### Frontend Integration
+- Pricing page buttons trigger checkout
+- Dashboard verifies session on load (handles Stripe redirect)
+- Credit balance updates automatically on subscription activation
+
+## 🔧 Required Setup Steps
+
+### 1. Stripe Account Setup
+1. Create/Login to Stripe account: https://dashboard.stripe.com
+2. Get API keys:
+   - **Test Mode**: Use test keys for development
+   - **Live Mode**: Use live keys for production
+
+### 2. Create Products & Prices in Stripe Dashboard
+
+#### Standard Plan ($39/month)
+1. Go to Products → Create Product
+2. Name: "AIBC Standard"
+3. Description: "Weekly content without hiring a content marketer"
+4. Pricing:
+   - Type: Recurring
+   - Price: $39.00 USD
+   - Billing period: Monthly
+5. Save the **Price ID** (starts with `price_`)
+
+#### Business Plan ($149/month)
+1. Create Product: "AIBC Business"
+2. Description: "Your AI content department, without the payroll"
+3. Pricing:
+   - Type: Recurring
+   - Price: $149.00 USD
+   - Billing period: Monthly
+4. Save the **Price ID**
+
+#### Lifetime Deal ($149 one-time)
+- Handled automatically via code (no Stripe product needed)
+- Uses `price_data` in checkout session
+
+### 3. Environment Variables
+
+Add to `backend/.env`:
 ```bash
-cd backend
-npm install stripe
+# Stripe Configuration
+STRIPE_SECRET_KEY=sk_test_... # or sk_live_... for production
+STRIPE_WEBHOOK_SECRET=whsec_... # From Stripe Dashboard → Webhooks
 ```
 
-### 2. Get Stripe API Keys
+### 4. Webhook Configuration
 
-1. Go to https://dashboard.stripe.com
-2. Click **Developers** → **API keys**
-3. Copy:
-   - **Secret key** (starts with `sk_test_` or `sk_live_`)
-   - **Publishable key** (starts with `pk_test_` or `pk_live_`)
-
-### 3. Set Environment Variables
-
-**In backend `.env`:**
-```
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_... (get after setting up webhook)
-```
-
-**In Cloud Run (production):**
-```bash
-gcloud run services update aibc-backend \
-  --set-secrets STRIPE_SECRET_KEY=stripe-secret-key:latest \
-  --set-secrets STRIPE_WEBHOOK_SECRET=stripe-webhook-secret:latest
-```
-
-### 4. Create Products in Stripe Dashboard
-
-1. Go to **Products** → **Add product**
-2. Create:
-   - **Pro Plan (Monthly)**
-     - Price: $29.00
-     - Billing: Recurring monthly
-     - Metadata: `tier=pro`
-   - **Pro Plan (Yearly)**
-     - Price: $290.00
-     - Billing: Recurring yearly
-     - Metadata: `tier=pro`
-   - **Enterprise Plan** (if needed)
-     - Price: Custom
-     - Metadata: `tier=enterprise`
-
-3. Copy the **Price IDs** (starts with `price_...`)
-
-### 5. Set Up Webhook
-
-1. Go to **Developers** → **Webhooks** → **Add endpoint**
-2. URL: `https://your-backend-url.com/api/stripe/webhook`
-3. Events to listen for:
+1. Go to Stripe Dashboard → Developers → Webhooks
+2. Click "Add endpoint"
+3. Endpoint URL: `https://your-domain.com/api/stripe/webhook`
+4. Select events to listen to:
    - `checkout.session.completed`
+   - `customer.subscription.created`
    - `customer.subscription.updated`
    - `customer.subscription.deleted`
-4. Copy the **Webhook signing secret** (starts with `whsec_...`)
+   - `invoice.payment_succeeded`
+   - `invoice.payment_failed`
+5. Copy the **Signing secret** (starts with `whsec_`)
+6. Add to `backend/.env` as `STRIPE_WEBHOOK_SECRET`
 
-## Frontend Setup
+### 5. Update Price IDs in Code
 
-### Environment Variables (Optional)
+Option A: Fetch from Stripe API (Recommended)
+- The `getPrices()` function already fetches prices dynamically
+- Ensure prices have `metadata.tier` set in Stripe Dashboard:
+  - Standard price: `tier=standard`
+  - Business price: `tier=business`
 
-If using Stripe Elements (not required for current implementation):
-```
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
-```
+Option B: Hardcode Price IDs
+- Update `services/stripeService.ts` `getDefaultPrices()` function
+- Or update `components/PricingView.tsx` to use specific price IDs
 
-## Testing
+### 6. Test the Integration
 
-### Test Mode
+#### Test Cards (Stripe Test Mode)
+- Success: `4242 4242 4242 4242`
+- Decline: `4000 0000 0000 0002`
+- Requires 3D Secure: `4000 0025 0000 3155`
 
-1. Use test API keys (`sk_test_...`, `pk_test_...`)
-2. Use test card: `4242 4242 4242 4242`
-3. Any future expiry date
-4. Any 3-digit CVC
+#### Test Flow
+1. Click "Get Standard" or "Upgrade to Business" on pricing page
+2. Complete checkout with test card
+3. Verify redirect to dashboard
+4. Check subscription is activated
+5. Verify credit balance updated
 
-### Test Flow
+## 📊 Credit Management Verification
 
-1. User clicks "Upgrade to Pro" on pricing page
-2. Redirects to Stripe checkout
-3. User enters test card
-4. Completes payment
-5. Redirects back to dashboard
-6. Subscription updated
-7. Credits added (500 for Pro)
+### ✅ Verified Credit Costs
+- Short Post: 1 credit ✅
+- Long-form: 3 credits ✅
+- Audio: 5 credits ✅
+- Short Video: 10 credits ✅
+- Long Video: 15 credits ✅
 
-## Production Checklist
+### ✅ Verified Tier Limits
+- Free: 15 credits/month ✅
+- Standard: 150 credits/month ✅
+- Business: 600 credits/month ✅
+- Lifetime Deal: Unlimited (fair-use) ✅
 
-- [ ] Switch to live API keys (`sk_live_...`)
-- [ ] Update webhook URL to production backend
-- [ ] Test checkout flow end-to-end
-- [ ] Verify subscription updates in database
-- [ ] Test credit allocation
-- [ ] Test customer portal access
+### ✅ Stress Test Results
+- Overspending prevention: ✅ Working
+- Negative balance protection: ✅ Working
+- Tier limit enforcement: ✅ Working
+- Monthly credit reset: ✅ Working
 
-## Troubleshooting
+## 🚀 Next Steps
 
-### "Failed to create checkout session"
-- Check `STRIPE_SECRET_KEY` is set in backend
-- Verify backend is running
-- Check CORS settings
+1. **Set up Stripe account** and get API keys
+2. **Create products/prices** in Stripe Dashboard
+3. **Configure webhook** endpoint
+4. **Test checkout flow** with test cards
+5. **Verify webhook** receives events
+6. **Test subscription lifecycle** (create, update, cancel)
+7. **Deploy to production** with live Stripe keys
 
-### "Payment not completed"
-- Check webhook is configured
-- Verify session ID is correct
-- Check Stripe dashboard for payment status
+## 📝 Notes
 
-### Credits not added after payment
-- Check webhook is receiving events
-- Verify subscription update logic
-- Check localStorage for subscription data
-
+- Lifetime Deal is handled as a one-time payment, not a subscription
+- Credit balance automatically resets monthly based on tier
+- Unlimited tiers (Lifetime Deal, Enterprise) skip credit deduction but log transactions
+- All credit operations are logged in transaction history

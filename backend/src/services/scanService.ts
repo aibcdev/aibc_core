@@ -50,8 +50,9 @@ export async function startScan(
     
     storage.updateScan(scanId, { progress: 20 });
     
-    // Scrape profiles first
-    const scrapedData: Array<{ platform: string; content: { html: string; text: string; url: string } }> = [];
+    // Scrape profiles first - ONLY log platforms that actually exist
+    const scrapedData: Array<{ platform: string; content: { html: string; text: string; url: string; images?: string[]; videos?: string[] } }> = [];
+    const verifiedPlatforms: string[] = [];
     
     for (const platform of platforms) {
       try {
@@ -59,18 +60,38 @@ export async function startScan(
         const handleToUse = connectedAccounts?.[platform] || username;
         const profileUrl = getProfileUrl(handleToUse, platform);
         if (profileUrl) {
-          addLog(scanId, `[SCRAPE] Scraping ${platform} (@${handleToUse}): ${profileUrl}`);
-          const content = await scrapeProfile(profileUrl, platform);
-          if (content.text && content.text.length > 100) {
-            scrapedData.push({ platform, content });
-            addLog(scanId, `[SUCCESS] Scraped ${platform}: ${content.text.length} chars`);
+          // Determine actual platform name for logging (handle domains like script.tv)
+          const actualPlatform = profileUrl.includes('.com') && !profileUrl.includes('twitter.com') && 
+                                 !profileUrl.includes('youtube.com') && !profileUrl.includes('linkedin.com') && 
+                                 !profileUrl.includes('instagram.com') ? 'website' : platform;
+          
+          // Check if profile exists before logging
+          addLog(scanId, `[SCRAPE] Checking ${actualPlatform} profile: ${profileUrl}`);
+          const content = await scrapeProfile(profileUrl, actualPlatform, scanId);
+          
+          // Verify profile actually exists (not 404, not login page, has actual content)
+          const profileExists = await verifyProfileExists(content, actualPlatform);
+          
+          if (profileExists && content.text && content.text.length > 100) {
+            verifiedPlatforms.push(actualPlatform);
+            scrapedData.push({ platform: actualPlatform, content });
+            const visualCount = (content.images?.length || 0) + (content.videos?.length || 0);
+            addLog(scanId, `[SUCCESS] ${actualPlatform} profile found - ${content.text.length} chars, ${visualCount} visual assets`);
+          } else if (!profileExists) {
+            addLog(scanId, `[SKIP] ${actualPlatform} profile not found or not accessible - skipping`);
           } else {
-            addLog(scanId, `[WARNING] ${platform} scraping returned minimal content`);
+            addLog(scanId, `[WARNING] ${actualPlatform} scraping returned minimal content - skipping`);
           }
         }
       } catch (error: any) {
-        addLog(scanId, `[WARNING] Failed to scrape ${platform}: ${error.message}`);
+        addLog(scanId, `[SKIP] ${platform} profile not accessible: ${error.message}`);
       }
+    }
+    
+    // Update platforms list to only include verified ones
+    const actualPlatforms = verifiedPlatforms.length > 0 ? verifiedPlatforms : platforms;
+    if (verifiedPlatforms.length !== platforms.length) {
+      addLog(scanId, `[INFO] Scanning ${verifiedPlatforms.length} of ${platforms.length} platforms (${platforms.length - verifiedPlatforms.length} not found)`);
     }
     
     storage.updateScan(scanId, { progress: 40 });
@@ -84,7 +105,8 @@ export async function startScan(
       
       if (scrapedData.length > 0) {
         // Use LLM to extract from REAL scraped content - PRODUCTION APPROACH
-        researchData = await extractFromScrapedContent(scrapedData, username, platforms, scanTier);
+        // Use actual platforms that were verified, not all requested platforms
+        researchData = await extractFromScrapedContent(scrapedData, username, actualPlatforms, scanTier);
         
         // CHECK QUALITY OF EXTRACTED DATA
         // If scraping returned login pages/garbage, extraction will be poor
@@ -474,7 +496,20 @@ function addLog(scanId: string, message: string) {
 }
 
 function getProfileUrl(username: string, platform: string): string | null {
-  const cleanUsername = username.replace('@', '');
+  const cleanUsername = username.replace('@', '').replace(/^https?:\/\//, '').replace(/^www\./, '');
+  
+  // If it's already a URL/domain (like script.tv), return it directly for website scraping
+  if (cleanUsername.includes('.') && !cleanUsername.includes('/') && 
+      (cleanUsername.includes('.com') || cleanUsername.includes('.tv') || 
+       cleanUsername.includes('.io') || cleanUsername.includes('.co'))) {
+    // It's a domain - return as website URL
+    return `https://${cleanUsername}`;
+  }
+  
+  // If it's a full URL, return as-is
+  if (cleanUsername.startsWith('http://') || cleanUsername.startsWith('https://')) {
+    return cleanUsername;
+  }
   
   switch (platform.toLowerCase()) {
     case 'twitter':
@@ -487,11 +522,72 @@ function getProfileUrl(username: string, platform: string): string | null {
     case 'instagram':
       return `https://instagram.com/${cleanUsername}`;
     default:
+      // If it looks like a domain, treat as website
+      if (cleanUsername.includes('.')) {
+        return `https://${cleanUsername}`;
+      }
       return null;
   }
 }
 
-async function scrapeProfile(url: string, platform: string): Promise<{ html: string; text: string; url: string }> {
+// Verify if profile actually exists (not 404, not login page)
+async function verifyProfileExists(content: { html: string; text: string; url: string }, platform: string): Promise<boolean> {
+  if (!content.text || content.text.length < 50) return false;
+  
+  // Check for common "not found" indicators
+  const notFoundIndicators = [
+    'this page doesn\'t exist',
+    'page not found',
+    '404',
+    'doesn\'t exist',
+    'couldn\'t find',
+    'user not found',
+    'account not found',
+    'profile not found'
+  ];
+  
+  const lowerText = content.text.toLowerCase();
+  if (notFoundIndicators.some(indicator => lowerText.includes(indicator))) {
+    return false;
+  }
+  
+  // Check for login page indicators
+  const loginIndicators = [
+    'sign in',
+    'log in',
+    'login to',
+    'create account',
+    'join now'
+  ];
+  
+  // If it's mostly login prompts, it's not a valid profile
+  const loginCount = loginIndicators.filter(indicator => lowerText.includes(indicator)).length;
+  if (loginCount >= 2 && content.text.length < 500) {
+    return false;
+  }
+  
+  // Platform-specific checks
+  if (platform === 'twitter' || platform === 'x') {
+    // Twitter should have tweet-related content
+    if (!lowerText.includes('tweet') && !lowerText.includes('follow') && content.text.length < 200) {
+      return false;
+    }
+  } else if (platform === 'instagram') {
+    // Instagram should have post/media related content
+    if (!lowerText.includes('post') && !lowerText.includes('followers') && content.text.length < 200) {
+      return false;
+    }
+  } else if (platform === 'linkedin') {
+    // LinkedIn should have profile or post content
+    if (!lowerText.includes('linkedin') && !lowerText.includes('experience') && content.text.length < 200) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+async function scrapeProfile(url: string, platform: string, scanId?: string): Promise<{ html: string; text: string; url: string; images?: string[]; videos?: string[] }> {
   // CRITICAL: Enable scraping for production quality
   // LLM-only approach produces placeholders - unacceptable for CEO satisfaction
   
@@ -524,9 +620,11 @@ async function scrapeProfile(url: string, platform: string): Promise<{ html: str
       // Wait for dynamic content to load
       await page.waitForTimeout(8000); // Increased wait time
       
-      // Platform-specific scraping strategies
+      // Platform-specific scraping strategies with visual content extraction
       let scrapedText = '';
       let scrapedHtml = '';
+      let images: string[] = [];
+      let videos: string[] = [];
       
       if (platform.toLowerCase() === 'twitter' || platform.toLowerCase() === 'x') {
         // Twitter/X specific: Scroll multiple times to load posts
@@ -538,19 +636,53 @@ async function scrapeProfile(url: string, platform: string): Promise<{ html: str
           await page.waitForTimeout(3000); // Wait for posts to load
         }
         
-        // Try to extract tweet text using common selectors
+        // Try to extract tweet text, images, and videos
         try {
-          const tweets = await page.evaluate(() => {
+          const tweetData = await page.evaluate(() => {
             // @ts-ignore
-            const tweetElements = Array.from(document.querySelectorAll('[data-testid="tweetText"], [data-testid="tweet"], article[data-testid="tweet"]'));
-            return tweetElements.map((el: any) => {
+            const tweetElements = Array.from(document.querySelectorAll('[data-testid="tweet"], article[data-testid="tweet"]'));
+            const tweets: any[] = [];
+            const tweetImages: string[] = [];
+            const tweetVideos: string[] = [];
+            
+            tweetElements.forEach((el: any) => {
               const textEl = el.querySelector('[data-testid="tweetText"]') || el;
-              return textEl?.innerText || textEl?.textContent || '';
-            }).filter((text: string) => text.length > 10);
+              const text = textEl?.innerText || textEl?.textContent || '';
+              
+              if (text.length > 10) {
+                tweets.push(text);
+              }
+              
+              // Extract images
+              const imgElements = el.querySelectorAll('img[src*="pbs.twimg.com"], img[src*="media"]');
+              imgElements.forEach((img: any) => {
+                const src = img.src || img.getAttribute('src');
+                if (src && !tweetImages.includes(src)) {
+                  tweetImages.push(src);
+                }
+              });
+              
+              // Extract videos
+              const videoElements = el.querySelectorAll('video, [data-testid="video"]');
+              videoElements.forEach((video: any) => {
+                const src = video.src || video.getAttribute('src') || video.querySelector('source')?.src;
+                if (src && !tweetVideos.includes(src)) {
+                  tweetVideos.push(src);
+                }
+              });
+            });
+            
+            return { tweets, images: tweetImages, videos: tweetVideos };
           });
           
-          if (tweets.length > 0) {
-            scrapedText = `Profile: ${url}\n\nPosts:\n${tweets.slice(0, 20).join('\n\n---\n\n')}`;
+          if (tweetData.tweets.length > 0) {
+            scrapedText = `Profile: ${url}\n\nPosts:\n${tweetData.tweets.slice(0, 20).join('\n\n---\n\n')}`;
+            images = tweetData.images.slice(0, 10);
+            videos = tweetData.videos.slice(0, 10);
+            
+            if (scanId && (images.length > 0 || videos.length > 0)) {
+              addLog(scanId, `[VISUAL] Extracted ${images.length} images and ${videos.length} videos from Twitter`);
+            }
           }
         } catch (e) {
           console.log('Twitter selector extraction failed, using fallback');
@@ -565,19 +697,53 @@ async function scrapeProfile(url: string, platform: string): Promise<{ html: str
           await page.waitForTimeout(3000);
         }
         
-        // Try to extract post text
+        // Try to extract post text, images, and videos
         try {
-          const posts = await page.evaluate(() => {
+          const postData = await page.evaluate(() => {
             // @ts-ignore
             const postElements = Array.from(document.querySelectorAll('article, [role="article"]'));
-            return postElements.map((el: any) => {
-              const textEl = el.querySelector('span') || el;
-              return textEl?.innerText || textEl?.textContent || '';
-            }).filter((text: string) => text.length > 10);
+            const posts: any[] = [];
+            const postImages: string[] = [];
+            const postVideos: string[] = [];
+            
+            postElements.forEach((el: any) => {
+              const textEl = el.querySelector('span, h1') || el;
+              const text = textEl?.innerText || textEl?.textContent || '';
+              
+              if (text.length > 10) {
+                posts.push(text);
+              }
+              
+              // Extract images
+              const imgElements = el.querySelectorAll('img[src*="instagram"], img[src*="cdninstagram"]');
+              imgElements.forEach((img: any) => {
+                const src = img.src || img.getAttribute('src');
+                if (src && !postImages.includes(src)) {
+                  postImages.push(src);
+                }
+              });
+              
+              // Extract videos
+              const videoElements = el.querySelectorAll('video, [type="video"]');
+              videoElements.forEach((video: any) => {
+                const src = video.src || video.getAttribute('src') || video.querySelector('source')?.src;
+                if (src && !postVideos.includes(src)) {
+                  postVideos.push(src);
+                }
+              });
+            });
+            
+            return { posts, images: postImages, videos: postVideos };
           });
           
-          if (posts.length > 0) {
-            scrapedText = `Profile: ${url}\n\nPosts:\n${posts.slice(0, 20).join('\n\n---\n\n')}`;
+          if (postData.posts.length > 0) {
+            scrapedText = `Profile: ${url}\n\nPosts:\n${postData.posts.slice(0, 20).join('\n\n---\n\n')}`;
+            images = postData.images.slice(0, 10);
+            videos = postData.videos.slice(0, 10);
+            
+            if (scanId && (images.length > 0 || videos.length > 0)) {
+              addLog(scanId, `[VISUAL] Extracted ${images.length} images and ${videos.length} videos from Instagram`);
+            }
           }
         } catch (e) {
           console.log('Instagram selector extraction failed, using fallback');
@@ -609,6 +775,69 @@ async function scrapeProfile(url: string, platform: string): Promise<{ html: str
         } catch (e) {
           console.log('LinkedIn selector extraction failed, using fallback');
         }
+      } else {
+        // Generic website scraping (for domains like script.tv)
+        // Scroll to load dynamic content
+        for (let i = 0; i < 3; i++) {
+          await page.evaluate(() => {
+            // @ts-ignore
+            window.scrollTo(0, document.body.scrollHeight);
+          });
+          await page.waitForTimeout(2000);
+        }
+        
+        // Extract main content from website
+        try {
+          const websiteContent = await page.evaluate(() => {
+            // @ts-ignore - document is available in browser context
+            // Remove script and style elements
+            const scripts = document.querySelectorAll('script, style, nav, footer, header');
+            scripts.forEach((el: any) => el.remove());
+            
+            // Get main content areas
+            // @ts-ignore - document is available in browser context
+            const mainContent = document.querySelector('main, article, .content, #content, .main-content') || document.body;
+            return mainContent.innerText || mainContent.textContent || '';
+          });
+          
+          if (websiteContent && websiteContent.length > 100) {
+            scrapedText = `Website: ${url}\n\nContent:\n${websiteContent.substring(0, 50000)}`;
+            
+            // Extract images and videos from website
+            const websiteMedia = await page.evaluate(() => {
+              // @ts-ignore - document is available in browser context
+              const images: string[] = [];
+              const videos: string[] = [];
+              
+              // @ts-ignore - document is available in browser context
+              document.querySelectorAll('img[src]').forEach((img: any) => {
+                const src = img.src || img.getAttribute('src');
+                if (src && !src.includes('data:') && !images.includes(src)) {
+                  images.push(src);
+                }
+              });
+              
+              // @ts-ignore - document is available in browser context
+              document.querySelectorAll('video[src], video source[src]').forEach((video: any) => {
+                const src = video.src || video.getAttribute('src') || video.querySelector('source')?.src;
+                if (src && !videos.includes(src)) {
+                  videos.push(src);
+                }
+              });
+              
+              return { images, videos };
+            });
+            
+            images = websiteMedia.images.slice(0, 20);
+            videos = websiteMedia.videos.slice(0, 10);
+            
+            if (scanId && (images.length > 0 || videos.length > 0)) {
+              addLog(scanId, `[VISUAL] Extracted ${images.length} images and ${videos.length} videos from website`);
+            }
+          }
+        } catch (e) {
+          console.log('Website content extraction failed, using fallback');
+        }
       }
       
       // Fallback: Get all text if platform-specific extraction didn't work
@@ -621,14 +850,14 @@ async function scrapeProfile(url: string, platform: string): Promise<{ html: str
       await browser.close();
       
       if (scrapedText && scrapedText.length > 100) {
-        return { html: scrapedHtml, text: scrapedText, url };
+        return { html: scrapedHtml, text: scrapedText, url, images, videos };
       } else {
         console.log(`Scraped content too short for ${url}: ${scrapedText.length} chars`);
         // Even if minimal, return what we got - LLM can work with it
         if (scrapedText && scrapedText.length > 50) {
-          return { html: scrapedHtml, text: scrapedText, url };
+          return { html: scrapedHtml, text: scrapedText, url, images, videos };
         }
-        return { html: scrapedHtml, text: scrapedText || '', url };
+        return { html: scrapedHtml, text: scrapedText || '', url, images, videos };
       }
     } catch (error: any) {
       await browser.close();
@@ -808,7 +1037,7 @@ CRITICAL:
  * This is the PRODUCTION approach - analyzing REAL scraped content
  */
 async function extractFromScrapedContent(
-  scrapedData: Array<{ platform: string; content: { html: string; text: string; url: string } }>,
+  scrapedData: Array<{ platform: string; content: { html: string; text: string; url: string; images?: string[]; videos?: string[] } }>,
   username: string,
   platforms: string[],
   scanTier: ScanTier
@@ -817,14 +1046,30 @@ async function extractFromScrapedContent(
     throw new Error('No LLM API configured');
   }
 
-  // Combine all scraped content (limit to avoid token limits)
+  // Combine all scraped content including visual assets
   const combinedText = scrapedData
-    .map(sd => `=== ${sd.platform.toUpperCase()} PROFILE ===\n${sd.content.text.substring(0, 30000)}`)
+    .map(sd => {
+      let platformText = `=== ${sd.platform.toUpperCase()} PROFILE ===\n${sd.content.text.substring(0, 30000)}`;
+      
+      // Add visual content info
+      if (sd.content.images && sd.content.images.length > 0) {
+        platformText += `\n\nVISUAL CONTENT: ${sd.content.images.length} images found`;
+      }
+      if (sd.content.videos && sd.content.videos.length > 0) {
+        platformText += `\n\nVIDEO CONTENT: ${sd.content.videos.length} videos found`;
+      }
+      
+      return platformText;
+    })
     .join('\n\n');
 
-  const systemPrompt = `You are an expert content analyst. Extract REAL content from scraped social media profiles.
-CRITICAL: You are analyzing ACTUAL scraped content, not generating placeholders.
-Extract posts, bio, themes from the REAL text provided. Empty arrays are UNACCEPTABLE.`;
+  const systemPrompt = `You are an expert content analyst with visual content analysis capabilities. Extract REAL content from scraped social media profiles.
+CRITICAL: 
+- You are analyzing ACTUAL scraped content, not generating placeholders
+- Analyze VISUAL content (images/videos) to understand posting style, not just text
+- Extract posts, bio, themes from the REAL text provided
+- Analyze visual patterns: color schemes, image styles, video formats, posting aesthetics
+- Empty arrays are UNACCEPTABLE`;
 
   const contentCount = scanTier === 'deep' ? '15-20' : '5-8';
   const themeCount = scanTier === 'deep' ? '8-12' : '3-5';
@@ -847,6 +1092,11 @@ REQUIREMENTS - STRICTLY ENFORCED:
    - DO NOT generate placeholder posts - extract the actual posts from the scraped text
    - If the scraped text shows "Posts:\n[post1]\n\n---\n\n[post2]", extract each as a separate post
    - Include engagement numbers if visible (likes, shares, comments, views)
+   - VISUAL ANALYSIS: If images/videos are mentioned, analyze the posting style:
+     * Image-heavy accounts = visual-first content strategy
+     * Video content = video-first strategy
+     * Mix of both = balanced content mix
+     * Note visual patterns in post_type field
 
 3. THEMES: Identify ${themeCount} specific content themes based on the actual content
    - Analyze what topics they actually post about
@@ -1303,6 +1553,46 @@ Return ONLY valid JSON:
   }
 }
 
+// Extract niche indicators from content to improve competitor matching
+function extractNicheIndicators(content: string, bio: string, themes: string, brandDNA: any): string {
+  const indicators: string[] = [];
+  
+  // Check for sport-specific terms
+  const lowerContent = (content + ' ' + bio + ' ' + themes).toLowerCase();
+  
+  // Football/Soccer indicators
+  if (lowerContent.includes('soccer') || lowerContent.includes('premier league') || 
+      lowerContent.includes('champions league') || lowerContent.includes('la liga') ||
+      lowerContent.includes('bundesliga') || lowerContent.includes('serie a') ||
+      lowerContent.includes('world cup') || lowerContent.includes('euro') ||
+      lowerContent.includes('football') && (lowerContent.includes('uk') || lowerContent.includes('europe') || 
+      lowerContent.includes('england') || lowerContent.includes('spain') || lowerContent.includes('germany'))) {
+    indicators.push('Soccer/Football (European/Global)');
+  }
+  
+  // American Football indicators
+  if (lowerContent.includes('nfl') || lowerContent.includes('super bowl') ||
+      lowerContent.includes('touchdown') || lowerContent.includes('quarterback') ||
+      lowerContent.includes('gridiron') || (lowerContent.includes('football') && 
+      (lowerContent.includes('nfl') || lowerContent.includes('american')))) {
+    indicators.push('American Football/NFL');
+  }
+  
+  // Tech indicators
+  if (lowerContent.includes('tech') || lowerContent.includes('software') || 
+      lowerContent.includes('ai') || lowerContent.includes('startup')) {
+    indicators.push('Technology');
+  }
+  
+  // Gaming indicators
+  if (lowerContent.includes('gaming') || lowerContent.includes('stream') ||
+      lowerContent.includes('twitch') || lowerContent.includes('esports')) {
+    indicators.push('Gaming');
+  }
+  
+  return indicators.join(', ') || 'General';
+}
+
 async function generateCompetitorIntelligence(validatedContent: any, brandDNA: any, username?: string, scanTier: ScanTier = 'basic'): Promise<any> {
   // Always try to generate competitors - even with minimal data, we can use LLM knowledge
   const hasRealContent = validatedContent.posts && validatedContent.posts.length > 0;
@@ -1340,18 +1630,51 @@ async function generateCompetitorIntelligence(validatedContent: any, brandDNA: a
       contentContext = `Creator name: ${username || 'Unknown'}`;
     }
 
-    const prompt = `Competitive analysis for this creator/brand. Research their space and identify real competitors.
+    // Deep research approach - analyze niche first, then find competitors
+    // This is like ChatGPT's deep research - understand the context deeply before matching
+    
+    // Extract niche indicators from content
+    const nicheIndicators = extractNicheIndicators(combinedText, bio, themes, brandDNA);
+    
+    const prompt = `You are conducting DEEP competitive intelligence research. This requires multi-step analysis:
+
+STEP 1: NICHE IDENTIFICATION
+Analyze the creator/brand to identify their EXACT niche and industry.
 
 Creator/Brand: ${username || 'Unknown'}
 ${contentContext}
 ${brandDNA ? `Brand DNA: ${JSON.stringify(brandDNA, null, 2)}` : ''}
 ${themes ? `Topics: ${themes}` : ''}
+${nicheIndicators ? `Niche Indicators: ${nicheIndicators}` : ''}
 
-CRITICAL: You MUST identify at least 3-5 real competitors by name. Use your knowledge base to find actual competitors in their space.
+CRITICAL NICHE ANALYSIS:
+- What is their EXACT niche? (e.g., "Football/Soccer content creators" NOT "American football/NFL")
+- What sport/industry/vertical? Be SPECIFIC
+- What type of content? (e.g., "Soccer highlights and analysis" vs "NFL game breakdowns")
+- What audience? (e.g., "European football fans" vs "American football fans")
+
+IMPORTANT DISTINCTIONS:
+- "Football" in UK/Europe = Soccer (the sport with 11 players, round ball, goals)
+- "Football" in US = American Football (NFL, gridiron, touchdowns)
+- "Soccer" = Association Football (the global sport)
+- These are DIFFERENT sports with DIFFERENT competitors
+
+STEP 2: COMPETITOR IDENTIFICATION
+Based on the EXACT niche identified, find REAL competitors who:
+- Create content in the SAME niche (not a different sport/industry)
+- Target the SAME audience
+- Use similar content formats
+- Are in the same market space
+
+CRITICAL: Match competitors to the EXACT niche:
+- If niche is "Soccer/Football (European)" → Find soccer creators, NOT NFL creators
+- If niche is "American Football/NFL" → Find NFL creators, NOT soccer creators
+- If niche is "Tech reviews" → Find tech reviewers, NOT gaming streamers
+- Be PRECISE - wrong niche matching is unacceptable
 
 I need:
 1. Market share estimate (what % of their niche's total attention do they capture?)
-2. Top 3 competitors with engagement data
+2. Top 3-5 competitors with engagement data - MUST be in the SAME niche
 
 MARKET SHARE:
 - Look at their niche/industry (e.g., "football content creators", "tech reviewers")

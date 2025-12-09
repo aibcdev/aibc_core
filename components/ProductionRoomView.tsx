@@ -64,7 +64,9 @@ const ProductionRoomView: React.FC = () => {
           setUsername(lastUsername);
           
           if (parsed.brandDNA || parsed.extractedContent) {
-            generateContentSuggestions(parsed, lastUsername);
+            generateContentSuggestions(parsed, lastUsername).catch(err => {
+              console.error('Error generating suggestions:', err);
+            });
           }
         } catch (e) {
           console.error('Error parsing scan results:', e);
@@ -75,22 +77,56 @@ const ProductionRoomView: React.FC = () => {
     loadScanData();
   }, []);
 
-  // Generate personalized content suggestions - SOCIAL FIRST
-  const generateContentSuggestions = (data: ScanData, user: string | null) => {
+  // Generate personalized content suggestions - SOCIAL FIRST - USING REAL BRAND DATA
+  const generateContentSuggestions = async (data: ScanData, user: string | null) => {
     const suggestions: ContentAsset[] = [];
-    const themes = data.extractedContent?.content_themes || [];
-    const corePillars = data.brandDNA?.corePillars || [];
-    const insights = data.strategicInsights || [];
     
-    const mainTheme = themes[0] || 'your niche';
-    const secondTheme = themes[1] || mainTheme;
-    const thirdTheme = themes[2] || secondTheme;
+    // Get REAL brand data - no fallbacks to generic placeholders
+    const themes = data.extractedContent?.content_themes || [];
+    const posts = data.extractedContent?.posts || [];
+    const brandDNA = data.brandDNA || {};
+    const insights = data.strategicInsights || [];
+    const corePillars = brandDNA.corePillars || [];
+    const voice = brandDNA.voice || {};
+    
+    // If we have NO real data, don't generate generic suggestions - show message instead
+    if (themes.length === 0 && posts.length === 0 && !brandDNA.voice) {
+      console.warn('No real brand data available - cannot generate suggestions');
+      setAssets([]);
+      return;
+    }
+    
+    // Use REAL themes from scan - if empty, extract from posts
+    let realThemes = themes;
+    if (realThemes.length === 0 && posts.length > 0) {
+      // Extract themes from actual post content
+      const postText = posts.slice(0, 10).map((p: any) => p.content || '').join(' ');
+      // Simple keyword extraction (in production, use LLM)
+      const keywords = postText.toLowerCase().match(/\b\w{4,}\b/g) || [];
+      const commonWords = keywords.filter((w: string) => !['this', 'that', 'with', 'from', 'your', 'they', 'have', 'been', 'will', 'would'].includes(w));
+      realThemes = [...new Set(commonWords.slice(0, 5))];
+    }
+    
+    // Use actual brand name/username instead of generic
+    const brandName = user || brandDNA.brandName || 'your brand';
+    const mainTheme = realThemes[0] || (posts[0]?.content?.substring(0, 30) || 'your expertise');
+    const secondTheme = realThemes[1] || (posts[1]?.content?.substring(0, 30) || mainTheme);
+    const thirdTheme = realThemes[2] || (posts[2]?.content?.substring(0, 30) || secondTheme);
+    
+    // Use actual brand voice/tone for descriptions
+    const tone = voice.tone || voice.style || 'professional';
+    const style = voice.style || 'authentic';
     
     // === X (TWITTER) ===
+    // Use actual post content as inspiration if available
+    const xPostInspiration = posts.find((p: any) => p.platform === 'twitter' || p.platform === 'x')?.content?.substring(0, 100) || '';
+    
     suggestions.push({
       id: 'x_thread_1',
-      title: `Thread: Why ${mainTheme} matters now`,
-      description: `10-tweet thread breaking down ${mainTheme.toLowerCase()} with your hot takes`,
+      title: xPostInspiration ? `Thread: ${xPostInspiration.substring(0, 50)}...` : `Thread: ${mainTheme} - Deep Dive`,
+      description: posts.length > 0 
+        ? `Expand on your ${tone} take about ${mainTheme} into a thread`
+        : `10-tweet thread on ${mainTheme} in your ${tone} voice`,
       platform: 'X',
       status: 'suggested',
       type: 'thread',
@@ -100,8 +136,10 @@ const ProductionRoomView: React.FC = () => {
     
     suggestions.push({
       id: 'x_post_1',
-      title: `Hot take on ${secondTheme}`,
-      description: `Single tweet with a bold opinion - drives replies`,
+      title: posts[0]?.content?.substring(0, 60) || `Hot take: ${secondTheme}`,
+      description: posts[0] 
+        ? `Refine this ${tone} post for maximum engagement`
+        : `${tone} single tweet about ${secondTheme}`,
       platform: 'X',
       status: 'suggested',
       type: 'document',
@@ -110,10 +148,16 @@ const ProductionRoomView: React.FC = () => {
     });
     
     // === LINKEDIN ===
+    const linkedinPost = posts.find((p: any) => p.platform === 'linkedin')?.content || '';
+    
     suggestions.push({
       id: 'linkedin_post_1',
-      title: `${mainTheme}: What I've learned`,
-      description: `Personal story + lesson format - high engagement`,
+      title: linkedinPost 
+        ? `${linkedinPost.substring(0, 50)}...`
+        : `${mainTheme}: Insights from ${brandName}`,
+      description: linkedinPost
+        ? `Refine this ${tone} LinkedIn post for professional audience`
+        : `${tone} professional post about ${mainTheme} - personal story format`,
       platform: 'LINKEDIN',
       status: 'suggested',
       type: 'document',
@@ -121,16 +165,18 @@ const ProductionRoomView: React.FC = () => {
       basedOn: mainTheme
     });
     
-    suggestions.push({
-      id: 'linkedin_post_2',
-      title: `Unpopular opinion: ${secondTheme}`,
-      description: `Contrarian take that sparks comments`,
-      platform: 'LINKEDIN',
-      status: 'suggested',
-      type: 'document',
-      timeAgo: 'AI suggested',
-      basedOn: secondTheme
-    });
+    if (insights.length > 0) {
+      suggestions.push({
+        id: 'linkedin_post_2',
+        title: insights[0].title || `Strategic insight: ${secondTheme}`,
+        description: insights[0].description?.substring(0, 80) || `Share your ${tone} perspective on ${secondTheme}`,
+        platform: 'LINKEDIN',
+        status: 'suggested',
+        type: 'document',
+        timeAgo: 'Strategic',
+        basedOn: insights[0].title || secondTheme
+      });
+    }
     
     // === INSTAGRAM ===
     suggestions.push({
@@ -238,49 +284,136 @@ const ProductionRoomView: React.FC = () => {
     }
     
     // === STRATEGIC (from insights) ===
-    if (insights.length > 0 && insights[0].title) {
-      suggestions.push({
-        id: 'strategic_post_1',
-        title: `${insights[0].title}`,
-        description: insights[0].description?.substring(0, 50) || 'Based on your strategic insight',
-        platform: 'X',
-        status: 'suggested',
-        type: 'thread',
-        timeAgo: 'Strategic',
-        basedOn: 'AI Insight'
+    if (insights.length > 0) {
+      insights.slice(0, 2).forEach((insight: any, idx: number) => {
+        if (insight.title) {
+          suggestions.push({
+            id: `strategic_post_${idx + 1}`,
+            title: insight.title,
+            description: insight.description?.substring(0, 80) || `Strategic content based on ${brandName}'s insights`,
+            platform: idx % 2 === 0 ? 'X' : 'LINKEDIN',
+            status: 'suggested',
+            type: idx % 2 === 0 ? 'thread' : 'document',
+            timeAgo: 'Strategic',
+            basedOn: insight.title
+          });
+        }
       });
     }
     
-    setAssets(suggestions);
+    // Only set if we have real suggestions (not generic)
+    if (suggestions.length > 0) {
+      setAssets(suggestions);
+    } else {
+      console.warn('No valid content suggestions generated - insufficient brand data');
+      setAssets([]);
+    }
   };
 
-  const regenerateSuggestions = () => {
+  const regenerateSuggestions = async () => {
     setIsGenerating(true);
-    setTimeout(() => {
+    try {
       if (scanData) {
-        generateContentSuggestions(scanData, username);
+        await generateContentSuggestions(scanData, username);
       }
+    } catch (error) {
+      console.error('Error regenerating suggestions:', error);
+    } finally {
       setIsGenerating(false);
-    }, 1000);
+    }
   };
 
   // Open content creation panel
-  const handleStartCreating = (asset: ContentAsset) => {
-    setSelectedAsset(asset);
-    setGeneratedContent('');
-    setContentNotes('');
-    generateContentForPlatform(asset);
+  const handleStartCreating = async (asset: ContentAsset) => {
+    console.log('Start Creating clicked for asset:', asset);
+    try {
+      // Set selected asset immediately so panel shows
+      setSelectedAsset(asset);
+      setGeneratedContent('');
+      setContentNotes('');
+      
+      // Generate content asynchronously
+      generateContentForPlatform(asset).catch(error => {
+        console.error('Error generating content:', error);
+        setGeneratedContent('Error generating content. Please try again or use the template below.');
+      });
+    } catch (error) {
+      console.error('Error starting content creation:', error);
+      // Still show the panel even if generation fails
+      setGeneratedContent('Error generating content. Please try again or use the template below.');
+    }
   };
 
-  // Generate platform-specific content
+  // Generate platform-specific content - USING REAL BRAND DATA
   const generateContentForPlatform = async (asset: ContentAsset) => {
     setIsCreatingContent(true);
     
-    // Simulate AI content generation with platform-specific templates
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const brandVoice = scanData?.brandDNA?.voice?.tone || 'professional yet approachable';
-    const theme = asset.basedOn || 'your expertise';
+    try {
+      // Use REAL brand data
+      const brandDNA = scanData?.brandDNA || {};
+      const voice = brandDNA.voice || {};
+      const posts = scanData?.extractedContent?.posts || [];
+      const theme = asset.basedOn || 'your expertise';
+      const tone = voice.tone || voice.style || 'professional';
+      const style = voice.style || 'authentic';
+      const vocabulary = voice.vocabulary || [];
+      
+      // Get actual post examples for this theme/platform
+      const relevantPosts = posts.filter((p: any) => 
+        p.content?.toLowerCase().includes(theme.toLowerCase()) || 
+        p.platform === asset.platform.toLowerCase()
+      ).slice(0, 3);
+      
+      // Call backend API to generate brand-specific content
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_BASE_URL}/api/generate/content`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          asset: {
+            title: asset.title,
+            platform: asset.platform,
+            type: asset.type,
+            theme: theme
+          },
+          brandDNA: brandDNA,
+          examplePosts: relevantPosts.slice(0, 2).map((p: any) => p.content),
+          username: username
+        })
+      });
+      
+      let content = '';
+      
+      if (response.ok) {
+        const data = await response.json();
+        content = data.content || '';
+      } else {
+        // Fallback to template but with REAL brand data
+        console.warn('Backend generation failed, using template with real data');
+        content = generateTemplateContent(asset, theme, tone, style, relevantPosts, username);
+      }
+      
+      setGeneratedContent(content);
+    } catch (error) {
+      console.error('Error generating content:', error);
+      // Fallback to template
+      const brandVoice = scanData?.brandDNA?.voice?.tone || 'professional yet approachable';
+      const theme = asset.basedOn || 'your expertise';
+      setGeneratedContent(generateTemplateContent(asset, theme, brandVoice, 'authentic', [], username));
+    } finally {
+      setIsCreatingContent(false);
+    }
+  };
+  
+  // Generate template content using REAL brand data (fallback)
+  const generateTemplateContent = (
+    asset: ContentAsset,
+    theme: string,
+    tone: string,
+    style: string,
+    examplePosts: any[],
+    username: string | null
+  ): string => {
     
     let content = '';
     
@@ -451,8 +584,7 @@ const ProductionRoomView: React.FC = () => {
         content = `Content for ${asset.title}\n\n[Your content here]`;
     }
     
-    setGeneratedContent(content);
-    setIsCreatingContent(false);
+    return content;
   };
 
   const handleSaveAsDraft = () => {
@@ -643,7 +775,7 @@ const ProductionRoomView: React.FC = () => {
   const platformOrder = ['X', 'LINKEDIN', 'INSTAGRAM', 'TIKTOK', 'PODCAST', 'AUDIO', 'YOUTUBE'];
 
   return (
-    <div className="h-full flex">
+    <div className="w-full h-full flex relative">
       {/* Main Content Area */}
       <div className={`flex-1 overflow-y-auto p-8 transition-all duration-300 ${selectedAsset ? 'mr-[480px]' : ''}`}>
         <div className="max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -823,7 +955,7 @@ const ProductionRoomView: React.FC = () => {
 
       {/* Content Creation Side Panel */}
       {selectedAsset && (
-        <div className="fixed top-0 right-0 w-[480px] h-full bg-[#0A0A0A] border-l border-white/10 flex flex-col animate-in slide-in-from-right duration-300 z-50">
+        <div className="fixed top-0 right-0 w-[480px] h-screen bg-[#0A0A0A] border-l border-white/10 flex flex-col animate-in slide-in-from-right duration-300 z-[100]">
           {/* Panel Header */}
           <div className="flex-shrink-0 p-6 border-b border-white/10">
             <div className="flex items-center justify-between mb-4">
@@ -867,20 +999,37 @@ const ProductionRoomView: React.FC = () => {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-xs font-bold text-white/60 uppercase tracking-wider">Generated Content</label>
-                    <button 
-                      onClick={handleCopyContent}
-                      className="flex items-center gap-1 text-xs text-white/40 hover:text-white transition-colors"
-                    >
-                      <Copy className="w-3 h-3" />
-                      Copy
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {!generatedContent && (
+                        <button
+                          onClick={() => generateContentForPlatform(selectedAsset)}
+                          className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          Generate
+                        </button>
+                      )}
+                      {generatedContent && (
+                        <button 
+                          onClick={handleCopyContent}
+                          className="flex items-center gap-1 text-xs text-white/40 hover:text-white transition-colors"
+                        >
+                          <Copy className="w-3 h-3" />
+                          Copy
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <textarea
-                    value={generatedContent}
+                    value={generatedContent || ''}
                     onChange={(e) => setGeneratedContent(e.target.value)}
                     rows={16}
+                    placeholder={generatedContent ? '' : 'Click "Generate" to create content, or start typing...'}
                     className="w-full bg-[#050505] border border-white/10 rounded-xl p-4 text-sm text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none resize-none font-mono leading-relaxed"
                   />
+                  {!generatedContent && (
+                    <p className="text-xs text-white/40 mt-2">Content will be generated based on your brand voice and the selected asset.</p>
+                  )}
                 </div>
 
                 {/* Notes */}

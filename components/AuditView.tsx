@@ -114,14 +114,53 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
         let scanComplete = false;
         let scanResults: any = null;
 
-        // Background poll
+        // Track which platforms were actually scanned (from backend logs)
+        const scannedPlatforms = new Set<string>();
+        
+        // Background poll - use REAL backend logs
         pollScanStatus(scanId, (status) => {
           if (!mounted) return;
           if (status.status === 'complete') {
             scanComplete = true;
           }
           if (status.logs) {
-            // Merge backend logs but don't overwrite our staged logs
+            // Parse backend logs to determine which platforms were actually scanned
+            status.logs.forEach((log: string) => {
+              const logLower = log.toLowerCase();
+              if (logLower.includes('[success]') && logLower.includes('profile found')) {
+                // Extract platform from log
+                if (logLower.includes('twitter') || logLower.includes('x')) scannedPlatforms.add('twitter');
+                if (logLower.includes('youtube')) scannedPlatforms.add('youtube');
+                if (logLower.includes('linkedin')) scannedPlatforms.add('linkedin');
+                if (logLower.includes('instagram')) scannedPlatforms.add('instagram');
+              }
+              // Also check for skip messages
+              if (logLower.includes('[skip]')) {
+                // Platform was skipped - don't show it
+              }
+            });
+            
+            // Update stages based on actual platforms scanned
+            if (scannedPlatforms.size > 0) {
+              setStageStatuses(prevStages => {
+                return prevStages.map(stage => {
+                  // Skip platform stages that weren't actually scanned
+                  if (stage.id === 'twitter' && !scannedPlatforms.has('twitter')) {
+                    return { ...stage, status: 'error' as const };
+                  }
+                  if (stage.id === 'youtube' && !scannedPlatforms.has('youtube')) {
+                    return { ...stage, status: 'error' as const };
+                  }
+                  if (stage.id === 'linkedin' && !scannedPlatforms.has('linkedin')) {
+                    return { ...stage, status: 'error' as const };
+                  }
+                  if (stage.id === 'instagram' && !scannedPlatforms.has('instagram')) {
+                    return { ...stage, status: 'error' as const };
+                  }
+                  return stage;
+                });
+              });
+            }
           }
         }).then(results => {
           if (results.success && results.data) {
@@ -136,69 +175,95 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
           console.error('Background poll error:', err);
         });
 
-        // Stage 2: Twitter/X
+        // Platform stages are now dynamic - only show if platform was actually scanned
+        // The backend logs will determine which platforms exist
+        // We'll poll backend logs to see which platforms were found
+        // For now, show a generic "Scanning platforms" stage
         updateStageStatus(1, 'active');
-        addLog(`[SCANNER] Connecting to X (Twitter) API...`);
-        await delay(3000);
-        addLog(`[SCANNER] Fetching recent tweets for @${scanUsername}...`);
-        await delay(4000);
-        addLog(`[SCANNER] Analyzing tweet engagement patterns...`);
-        await delay(5000);
-        addLog(`[SCANNER] Processing ${Math.floor(Math.random() * 50) + 20} tweets...`);
-        await delay(4000);
-        addLog(`[SCANNER] Extracting hashtag usage and mention patterns...`);
-        await delay(4000);
-        addLog(`[SUCCESS] X scan complete - ${Math.floor(Math.random() * 30) + 10} high-engagement posts found`);
+        addLog(`[SCANNER] Scanning available platforms...`);
+        
+        // Poll backend to get real platform status
+        let pollCount = 0;
+        const maxPolls = 30; // Poll for up to 5 minutes
+        
+        const pollInterval = setInterval(async () => {
+          if (!mounted || pollCount >= maxPolls) {
+            clearInterval(pollInterval);
+            return;
+          }
+          
+          try {
+            const statusResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/scan/${scanId}/status`);
+            if (statusResponse.ok) {
+              const statusData = await statusResponse.json();
+              if (statusData.scan?.logs) {
+                // Parse logs to see which platforms were scanned
+                const logs = statusData.scan.logs;
+                logs.forEach((log: string) => {
+                  const logLower = log.toLowerCase();
+                  if (logLower.includes('[success]') && logLower.includes('profile found')) {
+                    if (logLower.includes('twitter') || logLower.includes('x')) {
+                      if (!scannedPlatforms.has('twitter')) {
+                        scannedPlatforms.add('twitter');
+                        addLog(`[SUCCESS] Twitter/X profile found and scanned`);
+                      }
+                    }
+                    if (logLower.includes('youtube')) {
+                      if (!scannedPlatforms.has('youtube')) {
+                        scannedPlatforms.add('youtube');
+                        addLog(`[SUCCESS] YouTube profile found and scanned`);
+                      }
+                    }
+                    if (logLower.includes('linkedin')) {
+                      if (!scannedPlatforms.has('linkedin')) {
+                        scannedPlatforms.add('linkedin');
+                        addLog(`[SUCCESS] LinkedIn profile found and scanned`);
+                      }
+                    }
+                    if (logLower.includes('instagram')) {
+                      if (!scannedPlatforms.has('instagram')) {
+                        scannedPlatforms.add('instagram');
+                        addLog(`[SUCCESS] Instagram profile found and scanned`);
+                      }
+                    }
+                  }
+                  if (logLower.includes('[skip]') || logLower.includes('[warning]')) {
+                    // Platform was skipped - log it
+                    if (logLower.includes('twitter') || logLower.includes('x')) {
+                      if (!scannedPlatforms.has('twitter')) {
+                        addLog(`[SKIP] Twitter/X profile not found - skipping`);
+                      }
+                    }
+                    if (logLower.includes('youtube')) {
+                      if (!scannedPlatforms.has('youtube')) {
+                        addLog(`[SKIP] YouTube profile not found - skipping`);
+                      }
+                    }
+                    if (logLower.includes('linkedin')) {
+                      if (!scannedPlatforms.has('linkedin')) {
+                        addLog(`[SKIP] LinkedIn profile not found - skipping`);
+                      }
+                    }
+                    if (logLower.includes('instagram')) {
+                      if (!scannedPlatforms.has('instagram')) {
+                        addLog(`[SKIP] Instagram profile not found - skipping`);
+                      }
+                    }
+                  }
+                });
+              }
+            }
+          } catch (err) {
+            // Ignore polling errors
+          }
+          
+          pollCount++;
+        }, 10000); // Poll every 10 seconds
+        
+        // Wait for initial platform scanning
+        await delay(20000);
         updateStageStatus(1, 'complete');
-        setProgress(20);
-
-        // Stage 3: YouTube
-        updateStageStatus(2, 'active');
-        addLog(`[SCANNER] Connecting to YouTube Data API...`);
-        await delay(3000);
-        addLog(`[SCANNER] Fetching channel metadata...`);
-        await delay(5000);
-        addLog(`[SCANNER] Processing video catalog...`);
-        await delay(6000);
-        addLog(`[SCANNER] Analyzing video performance metrics...`);
-        await delay(5000);
-        addLog(`[SCANNER] Extracting content themes from ${Math.floor(Math.random() * 20) + 5} videos...`);
-        await delay(6000);
-        addLog(`[SCANNER] Processing video transcripts for voice analysis...`);
-        await delay(8000);
-        addLog(`[SUCCESS] YouTube scan complete - channel analytics extracted`);
-        updateStageStatus(2, 'complete');
         setProgress(40);
-
-        // Stage 4: LinkedIn
-        updateStageStatus(3, 'active');
-        addLog(`[SCANNER] Accessing LinkedIn public profile...`);
-        await delay(4000);
-        addLog(`[SCANNER] Extracting professional content...`);
-        await delay(5000);
-        addLog(`[SCANNER] Analyzing post engagement and reach...`);
-        await delay(4000);
-        addLog(`[SCANNER] Processing article content...`);
-        await delay(5000);
-        addLog(`[SUCCESS] LinkedIn scan complete - professional voice captured`);
-        updateStageStatus(3, 'complete');
-        setProgress(55);
-
-        // Stage 5: Instagram
-        updateStageStatus(4, 'active');
-        addLog(`[SCANNER] Connecting to Instagram Graph API...`);
-        await delay(3000);
-        addLog(`[SCANNER] Fetching media content...`);
-        await delay(5000);
-        addLog(`[SCANNER] Analyzing visual content patterns...`);
-        await delay(4000);
-        addLog(`[SCANNER] Processing Reels performance data...`);
-        await delay(5000);
-        addLog(`[SCANNER] Extracting caption themes and hashtag strategy...`);
-        await delay(4000);
-        addLog(`[SUCCESS] Instagram scan complete - visual identity mapped`);
-        updateStageStatus(4, 'complete');
-        setProgress(70);
 
         // Stage 6: Aggregating
         updateStageStatus(5, 'active');

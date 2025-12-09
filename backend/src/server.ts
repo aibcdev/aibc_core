@@ -53,7 +53,6 @@ app.post('/api/verify-handle', async (req, res) => {
       profile: result.profile,
       error: result.error,
       name: result.profile?.name,
-      avatar: result.profile?.avatar,
       followers: result.profile?.followers,
       bio: result.profile?.bio
     });
@@ -81,6 +80,61 @@ app.post('/api/verify-competitor', async (req, res) => {
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ verified: false, error: error.message });
+  }
+});
+
+// Content generation endpoint
+app.post('/api/generate/content', async (req, res) => {
+  try {
+    const { asset, brandDNA, examplePosts, username } = req.body;
+    
+    if (!asset || !brandDNA) {
+      return res.status(400).json({ error: 'Asset and brandDNA required' });
+    }
+    
+    const { generateJSON, isLLMConfigured } = await import('./services/llmService');
+    
+    if (!isLLMConfigured()) {
+      return res.status(503).json({ error: 'LLM service not configured' });
+    }
+    
+    // Build prompt for brand-specific content generation
+    const voice = brandDNA.voice || {};
+    const tone = voice.tone || voice.style || 'professional';
+    const style = voice.style || 'authentic';
+    const vocabulary = voice.vocabulary || [];
+    const themes = brandDNA.themes || [];
+    
+    const prompt = `You are a content creator for ${username || 'this brand'}. Generate ${asset.type} content for ${asset.platform} about "${asset.theme || asset.title}".
+
+BRAND VOICE:
+- Tone: ${tone}
+- Style: ${style}
+${vocabulary.length > 0 ? `- Key vocabulary: ${vocabulary.join(', ')}` : ''}
+${themes.length > 0 ? `- Brand themes: ${themes.join(', ')}` : ''}
+
+${examplePosts.length > 0 ? `EXAMPLE POSTS (match this style):\n${examplePosts.map((p: string, i: number) => `${i + 1}. ${p}`).join('\n')}\n\n` : ''}
+
+REQUIREMENTS:
+- Match the brand's ${tone} tone exactly
+- Use ${style} style
+- Platform: ${asset.platform}
+- Type: ${asset.type}
+- Topic: ${asset.theme || asset.title}
+
+Generate the complete content now (not a template, actual content):`;
+
+    const result = await generateJSON(prompt, {
+      content: 'string'
+    }, 'basic');
+    
+    res.json({
+      success: true,
+      content: result.content || 'Content generation failed'
+    });
+  } catch (error: any) {
+    console.error('Content generation error:', error);
+    res.status(500).json({ error: error.message || 'Failed to generate content' });
   }
 });
 

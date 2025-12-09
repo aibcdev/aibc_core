@@ -11,7 +11,7 @@ import { ViewState, NavProps } from '../types';
 import { fetchAnalyticsData, fetchCalendarEvents, fetchCompetitors, fetchContentPipeline } from '../services/dashboardData';
 import { getLatestScanResults } from '../services/apiClient';
 import { isAdmin } from '../services/adminService';
-import { SubscriptionTier } from '../services/subscriptionService';
+import { SubscriptionTier, getCreditBalance, getUserSubscription, TIER_LIMITS } from '../services/subscriptionService';
 import FeatureLock from './FeatureLock';
 import ContentHubView from './ContentHubView';
 import StrategyView from './StrategyView';
@@ -21,6 +21,7 @@ import AnalyticsView from './AnalyticsView';
 import BrandAssetsView from './BrandAssetsView';
 import IntegrationsView from './IntegrationsView';
 import SettingsView from './SettingsView';
+import InboxView from './InboxView';
 
 // Task Interface
 interface Task {
@@ -37,7 +38,7 @@ interface Task {
   notificationEmail?: string;
 }
 
-type DashboardPage = 'dashboard' | 'contentHub' | 'strategy' | 'production' | 'calendar' | 'assets' | 'integrations' | 'competitors' | 'analytics' | 'settings';
+type DashboardPage = 'dashboard' | 'contentHub' | 'strategy' | 'production' | 'calendar' | 'assets' | 'integrations' | 'competitors' | 'analytics' | 'settings' | 'inbox';
 
 const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
   const [currentPage, setCurrentPage] = useState<DashboardPage>('dashboard');
@@ -83,6 +84,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
     error?: string;
   } | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [creditInfo, setCreditInfo] = useState<{ used: number; total: number }>({ used: 0, total: 0 });
   const [notifications, setNotifications] = useState<Array<{
     id: string;
     title: string;
@@ -154,6 +156,53 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
       console.log('No cached scan results in localStorage');
     }
   }, [strategicInsights, brandDNA, competitorIntelligence, scanUsername, marketShare, analytics]);
+
+  // Update credit info
+  useEffect(() => {
+    const updateCreditInfo = () => {
+      const subscription = getUserSubscription();
+      const limits = TIER_LIMITS[subscription.tier];
+      const balance = getCreditBalance();
+      const total = limits.monthlyCredits;
+      const used = total === -1 ? 0 : Math.max(0, total - balance.credits); // For unlimited, show 0 used
+      
+      setCreditInfo({ used, total: total === -1 ? Infinity : total });
+    };
+    
+    updateCreditInfo();
+    // Update every 30 seconds to keep it fresh
+    const interval = setInterval(updateCreditInfo, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Verify Stripe checkout session on mount (if redirected from Stripe)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    
+    if (sessionId) {
+      // Verify and activate subscription
+      import('../services/stripeService').then(({ verifyCheckoutSession }) => {
+        verifyCheckoutSession(sessionId)
+          .then(subscription => {
+            console.log('Subscription activated:', subscription);
+            // Update credit balance to match new tier
+            const limits = TIER_LIMITS[subscription.tier];
+            if (limits.monthlyCredits > 0) {
+              localStorage.setItem('creditBalance', JSON.stringify({
+                credits: limits.monthlyCredits,
+                lastUpdated: new Date()
+              }));
+            }
+            // Remove session_id from URL
+            window.history.replaceState({}, '', '/dashboard');
+          })
+          .catch(err => {
+            console.error('Failed to verify session:', err);
+          });
+      });
+    }
+  }, []);
 
   // Fetch real data on mount
   useEffect(() => {
@@ -423,7 +472,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
              <SidebarItem label="Content Hub" active={currentPage === 'contentHub'} onClick={() => setCurrentPage('contentHub')} />
              <SidebarItem label="Strategy" active={currentPage === 'strategy'} onClick={() => setCurrentPage('strategy')} />
              <SidebarItem label="Production Room" active={currentPage === 'production'} onClick={() => setCurrentPage('production')} />
-             <SidebarItem label="Inbox" active={false} onClick={() => onNavigate(ViewState.INBOX)} />
+             <SidebarItem label="Inbox" active={currentPage === 'inbox'} onClick={() => setCurrentPage('inbox')} />
              <SidebarItem label="Calendar" active={currentPage === 'calendar'} onClick={() => setCurrentPage('calendar')} />
              <SidebarItem label="Brand Assets" active={currentPage === 'assets'} onClick={() => setCurrentPage('assets')} />
              <SidebarItem label="Integrations" active={currentPage === 'integrations'} onClick={() => setCurrentPage('integrations')} />
@@ -468,15 +517,24 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            {/* Credit Display */}
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#0A0A0A] border border-white/10 rounded-lg">
+              <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Credits</span>
+              <span className="text-sm font-bold text-white">
+                {creditInfo.total === Infinity ? '∞' : `${creditInfo.used}/${creditInfo.total}`}
+              </span>
+            </div>
+            
             <button
               onClick={() => {
-                setShowRescanWarning(true);
+                // Navigate to IngestionView to start a new scan
+                onNavigate(ViewState.INGESTION);
               }}
               className="px-3 py-1.5 bg-gradient-to-r from-orange-500 to-purple-600 border border-white/10 rounded-lg text-xs font-bold text-white hover:from-orange-600 hover:to-purple-700 transition-all flex items-center gap-2"
             >
               <Zap className="w-3 h-3" />
-              Rescan Footprint
+              Run Footprint Scan
             </button>
             <button
               onClick={async () => {
@@ -1206,34 +1264,48 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                             ) : contentPipeline ? (
                                 <div className="flex items-center gap-8 relative z-10">
                                     {/* Donut Chart */}
-                                    <div className="relative w-32 h-32 flex-shrink-0">
-                                        <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
-                                            {/* Background circle */}
-                                            <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
-                                            {/* Published (72%) - Blue */}
-                                            <circle 
-                                                cx="50" cy="50" r="40" fill="none" 
-                                                stroke="#3b82f6" strokeWidth="8" 
-                                                strokeDasharray={`${2 * Math.PI * 40 * 0.72} ${2 * Math.PI * 40}`}
-                                                strokeDashoffset="0"
-                                                strokeLinecap="round"
-                                            />
-                                            {/* Drafting (remaining visible) - Gray */}
-                                            <circle 
-                                                cx="50" cy="50" r="40" fill="none" 
-                                                stroke="rgba(255,255,255,0.1)" strokeWidth="8" 
-                                                strokeDasharray={`${2 * Math.PI * 40 * 0.28} ${2 * Math.PI * 40}`}
-                                                strokeDashoffset={`-${2 * Math.PI * 40 * 0.72}`}
-                                                strokeLinecap="round"
-                                            />
-                                        </svg>
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <div className="text-center">
-                                                <div className="text-2xl font-black text-blue-400">72%</div>
-                                                <div className="text-[9px] text-white/40 uppercase tracking-wider">Published</div>
+                                    {(() => {
+                                        const total = (contentPipeline?.published || 0) + (contentPipeline?.drafting || 0) + (contentPipeline?.scheduled || 0) + (contentPipeline?.needsReview || 0);
+                                        const publishedPercent = total > 0 ? ((contentPipeline?.published || 0) / total) * 100 : 0;
+                                        const circumference = 2 * Math.PI * 40;
+                                        const publishedDash = (publishedPercent / 100) * circumference;
+                                        const remainingDash = circumference - publishedDash;
+                                        
+                                        return (
+                                            <div className="relative w-32 h-32 flex-shrink-0">
+                                                <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+                                                    {/* Background circle */}
+                                                    <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+                                                    {/* Published - Blue */}
+                                                    {publishedPercent > 0 && (
+                                                        <circle 
+                                                            cx="50" cy="50" r="40" fill="none" 
+                                                            stroke="#3b82f6" strokeWidth="8" 
+                                                            strokeDasharray={`${publishedDash} ${circumference}`}
+                                                            strokeDashoffset="0"
+                                                            strokeLinecap="round"
+                                                        />
+                                                    )}
+                                                    {/* Remaining - Gray */}
+                                                    {remainingDash > 0 && (
+                                                        <circle 
+                                                            cx="50" cy="50" r="40" fill="none" 
+                                                            stroke="rgba(255,255,255,0.1)" strokeWidth="8" 
+                                                            strokeDasharray={`${remainingDash} ${circumference}`}
+                                                            strokeDashoffset={`-${publishedDash}`}
+                                                            strokeLinecap="round"
+                                                        />
+                                                    )}
+                                                </svg>
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <div className="text-center">
+                                                        <div className="text-2xl font-black text-blue-400">{Math.round(publishedPercent)}%</div>
+                                                        <div className="text-[9px] text-white/40 uppercase tracking-wider">Published</div>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </div>
+                                        );
+                                    })()}
                                     
                                     {/* Legend */}
                                     <div className="flex-1 space-y-3">
@@ -1242,28 +1314,28 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                                 <div className="w-2 h-2 rounded-full bg-green-500"></div>
                                                 <span className="text-xs text-white/60">Published</span>
                                             </div>
-                                            <span className="text-sm font-bold text-white">{contentPipeline.published || 128}</span>
+                                            <span className="text-sm font-bold text-white">{contentPipeline?.published || 0}</span>
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                                                 <span className="text-xs text-white/60">Drafting</span>
                                             </div>
-                                            <span className="text-sm font-bold text-white">{contentPipeline.drafting || 390}</span>
+                                            <span className="text-sm font-bold text-white">{contentPipeline?.drafting || 0}</span>
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-2 h-2 rounded-full bg-orange-500"></div>
                                                 <span className="text-xs text-white/60">Scheduled</span>
                                             </div>
-                                            <span className="text-sm font-bold text-white">{contentPipeline.scheduled || 250}</span>
+                                            <span className="text-sm font-bold text-white">{contentPipeline?.scheduled || 0}</span>
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-2 h-2 rounded-full bg-red-500"></div>
                                                 <span className="text-xs text-white/60">Needs Review</span>
                                             </div>
-                                            <span className="text-sm font-bold text-white">{contentPipeline.needsReview || 22}</span>
+                                            <span className="text-sm font-bold text-white">{contentPipeline?.needsReview || 0}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1438,6 +1510,9 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
 
             {/* Integrations */}
             {currentPage === 'integrations' && <IntegrationsView />}
+
+            {/* Inbox */}
+            {currentPage === 'inbox' && <InboxView onNavigate={onNavigate} />}
 
             {/* Settings */}
             {currentPage === 'settings' && <SettingsView onLogout={() => onNavigate(ViewState.LANDING)} onNavigate={onNavigate} />}
