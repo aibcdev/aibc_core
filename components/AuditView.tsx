@@ -92,13 +92,46 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
         
         addLog(`[SYSTEM] Connecting to backend services...`);
         
+        // Check backend health first
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        try {
+          const healthCheck = await fetch(`${API_BASE_URL}/health`, { 
+            method: 'GET',
+            signal: AbortSignal.timeout(5000) // 5 second timeout
+          });
+          if (!healthCheck.ok) {
+            throw new Error('Backend health check failed');
+          }
+          addLog(`[SYSTEM] Backend connection verified`);
+        } catch (healthError: any) {
+          addLog(`[ERROR] Cannot connect to backend server`);
+          addLog(`[INFO] Backend URL: ${API_BASE_URL}`);
+          addLog(`[INFO] Please ensure the backend server is running`);
+          addLog(`[INFO] You can proceed anyway - some features may be limited`);
+          setTimeout(() => { if (mounted) setShowButton(true); }, 3000);
+          return;
+        }
+        
         // Get scan type from localStorage or prop
         const finalScanType = scanType || localStorage.getItem('lastScanType') || 'basic';
         const scanTypeParam = finalScanType === 'deep' ? 'deep' : 'standard';
         
         addLog(`[SYSTEM] Scan mode: ${finalScanType.toUpperCase()}${finalScanType === 'deep' ? ' - Enhanced Analysis' : ''}`);
         
-        const scanResponse = await startScan(scanUsername, platforms, scanTypeParam);
+        let scanResponse;
+        try {
+          scanResponse = await startScan(scanUsername, platforms, scanTypeParam);
+        } catch (fetchError: any) {
+          // Handle network errors specifically
+          if (fetchError.message?.includes('fetch') || fetchError.message?.includes('network') || fetchError.message?.includes('Failed to fetch') || fetchError.message?.includes('Load failed')) {
+            addLog(`[ERROR] Cannot connect to backend server`);
+            addLog(`[INFO] Please ensure the backend server is running on ${API_BASE_URL}`);
+            addLog(`[INFO] You can proceed anyway - some features may be limited`);
+            setTimeout(() => { if (mounted) setShowButton(true); }, 3000);
+            return;
+          }
+          throw fetchError;
+        }
         
         if (!scanResponse.success || !scanResponse.scanId) {
           throw new Error(scanResponse.error || 'Failed to start scan');

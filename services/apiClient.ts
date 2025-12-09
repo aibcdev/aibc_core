@@ -76,13 +76,23 @@ export async function startScan(
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to start scan');
+      let errorMessage = 'Failed to start scan';
+      try {
+        const error = await response.json();
+        errorMessage = error.error || errorMessage;
+      } catch {
+        errorMessage = `Server error: ${response.status} ${response.statusText}`;
+      }
+      throw new Error(errorMessage);
     }
 
     return await response.json();
   } catch (error: any) {
     console.error('Start scan error:', error);
+    // Provide more specific error messages
+    if (error.message?.includes('fetch') || error.message?.includes('network') || error.name === 'TypeError') {
+      throw new Error('Load failed - Cannot connect to backend server. Please check if the server is running.');
+    }
     throw error;
   }
 }
