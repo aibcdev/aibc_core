@@ -60,14 +60,27 @@ async function testCompany(company, index) {
         throw new Error(`Failed to get status: ${statusResponse.status}`);
       }
 
-      const status = await statusResponse.json();
-      console.log(`[${company.name}] Progress: ${status.progress}% - Status: ${status.status}`);
+      const statusData = await statusResponse.json();
+      const scan = statusData.scan || statusData;
+      console.log(`[${company.name}] Progress: ${scan.progress}% - Status: ${scan.status}`);
 
-      if (status.status === 'completed') {
-        results = status.results;
+      if (scan.status === 'complete' || scan.status === 'completed') {
+        // Get results from the scan object or fetch separately
+        if (scan.results) {
+          results = scan.results;
+        } else {
+          // Try to get results from results endpoint
+          const resultsResponse = await fetch(`${API_BASE_URL}/api/scan/${scanId}/results`);
+          if (resultsResponse.ok) {
+            const resultsData = await resultsResponse.json();
+            results = resultsData.data || resultsData;
+          } else {
+            results = scan.results || null;
+          }
+        }
         break;
-      } else if (status.status === 'error') {
-        throw new Error(`Scan failed: ${status.error}`);
+      } else if (scan.status === 'error') {
+        throw new Error(`Scan failed: ${scan.error || 'Unknown error'}`);
       }
 
       attempts++;
