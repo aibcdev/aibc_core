@@ -2,7 +2,33 @@ import { chromium, Browser } from 'playwright';
 import { storage } from './storage';
 import { generateJSON, generateText, isLLMConfigured, getActiveProvider, ScanTier } from './llmService';
 import dotenv from 'dotenv';
+// URL validation functions
+function isValidUrl(urlString: string): boolean {
+  try {
+      const url = new URL(urlString);
+      return !!url.protocol && !!url.hostname;
+  } catch (e) {
+      return false;
+  }
+}
 
+async function isUrlReachable(url: string): Promise<boolean> {
+  try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch(url, {
+          method: 'HEAD',
+          redirect: 'follow',
+          signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      return response.status < 400;
+  } catch (error) {
+      return false;
+  }
+}
 // Load environment variables
 dotenv.config();
 
@@ -34,6 +60,39 @@ export async function startScan(
     addLog(scanId, `[SYSTEM] Target: ${username}`);
     addLog(scanId, `[SYSTEM] Platforms: ${platforms.join(', ')}`);
     addLog(scanId, `[SYSTEM] Scan Type: ${scanType}`);
+    
+    // URL VALIDATION - Reject invalid/unreachable URLs early
+    const isWebsiteInput = username.includes('.') && 
+      (username.includes('.com') || username.includes('.tv') || 
+       username.includes('.io') || username.includes('.co') || 
+       username.includes('.net') || username.includes('.org'));
+    
+    if (isWebsiteInput) {
+      const urlToValidate = username.startsWith('http') ? username : `https://${username.replace(/^www\./, '')}`;
+      
+      if (!isValidUrl(urlToValidate)) {
+        addLog(scanId, `[ERROR] Invalid URL format: ${username}`);
+        storage.updateScan(scanId, {
+          status: 'error',
+          error: `Invalid URL format: ${username}. Please enter a valid website URL.`,
+          progress: 100
+        });
+        return;
+      }
+      
+      addLog(scanId, `[VALIDATION] Checking if URL is reachable: ${urlToValidate}`);
+      const reachable = await isUrlReachable(urlToValidate);
+      if (!reachable) {
+        addLog(scanId, `[ERROR] URL is not reachable: ${urlToValidate}`);
+        storage.updateScan(scanId, {
+          status: 'error',
+          error: `Website not reachable: ${username}. Please check the URL and try again.`,
+          progress: 100
+        });
+        return;
+      }
+      addLog(scanId, `[VALIDATION] URL is valid and reachable`);
+    }
     
     if (connectedAccounts && Object.keys(connectedAccounts).length > 0) {
       addLog(scanId, `[SYSTEM] Using connected accounts: ${JSON.stringify(connectedAccounts)}`);
@@ -754,7 +813,7 @@ async function extractSocialLinksFromProfile(html: string, text: string, profile
     
     await browser.close();
     
-    // Pattern matching for social media platforms
+    // Pattern matching for social media platforms - COMPREHENSIVE LIST
     const socialPatterns: Record<string, RegExp[]> = {
       twitter: [
         /twitter\.com\/([a-zA-Z0-9_]+)/i,
@@ -765,7 +824,7 @@ async function extractSocialLinksFromProfile(html: string, text: string, profile
         /instagr\.am\/([a-zA-Z0-9_.]+)/i,
       ],
       youtube: [
-        /youtube\.com\/(?:channel\/|user\/|@)?([a-zA-Z0-9_-]+)/i,
+        /youtube\.com\/(?:channel\/|user\/|@|c\/)?([a-zA-Z0-9_-]+)/i,
         /youtu\.be\/([a-zA-Z0-9_-]+)/i,
       ],
       linkedin: [
@@ -773,6 +832,31 @@ async function extractSocialLinksFromProfile(html: string, text: string, profile
       ],
       tiktok: [
         /tiktok\.com\/@([a-zA-Z0-9_.]+)/i,
+      ],
+      facebook: [
+        /facebook\.com\/([a-zA-Z0-9_.]+)/i,
+        /fb\.com\/([a-zA-Z0-9_.]+)/i,
+      ],
+      pinterest: [
+        /pinterest\.com\/([a-zA-Z0-9_]+)/i,
+      ],
+      github: [
+        /github\.com\/([a-zA-Z0-9_-]+)/i,
+      ],
+      reddit: [
+        /reddit\.com\/(?:r|u|user)\/([a-zA-Z0-9_-]+)/i,
+      ],
+      discord: [
+        /discord\.(?:gg|com\/invite)\/([a-zA-Z0-9_-]+)/i,
+      ],
+      snapchat: [
+        /snapchat\.com\/add\/([a-zA-Z0-9_.]+)/i,
+      ],
+      threads: [
+        /threads\.net\/@([a-zA-Z0-9_.]+)/i,
+      ],
+      twitch: [
+        /twitch\.tv\/([a-zA-Z0-9_]+)/i,
       ],
     };
     
@@ -917,9 +1001,10 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
     
     // Extract all links from the page - check multiple sources
     const allLinks = await page.evaluate(() => {
-      // @ts-ignore
+      // @ts-ignore - document is available in browser context
       const links = Array.from(document.querySelectorAll('a[href]'));
       // Also check for social links in meta tags, JSON-LD, and text content
+      // @ts-ignore - document is available in browser context
       const metaTags = Array.from(document.querySelectorAll('meta[property], meta[name]'));
       const metaLinks: any[] = [];
       metaTags.forEach((meta: any) => {
@@ -947,7 +1032,7 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
       return document.body?.innerText || document.body?.textContent || '';
     });
     
-    // Pattern matching for social media platforms
+    // Pattern matching for social media platforms - COMPREHENSIVE LIST
     const socialPatterns: Record<string, RegExp[]> = {
       twitter: [
         /twitter\.com\/([a-zA-Z0-9_]+)/i,
@@ -958,7 +1043,7 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
         /instagr\.am\/([a-zA-Z0-9_.]+)/i,
       ],
       youtube: [
-        /youtube\.com\/(?:channel\/|user\/|@)?([a-zA-Z0-9_-]+)/i,
+        /youtube\.com\/(?:channel\/|user\/|@|c\/)?([a-zA-Z0-9_-]+)/i,
         /youtu\.be\/([a-zA-Z0-9_-]+)/i,
       ],
       linkedin: [
@@ -966,6 +1051,32 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
       ],
       tiktok: [
         /tiktok\.com\/@([a-zA-Z0-9_.]+)/i,
+      ],
+      facebook: [
+        /facebook\.com\/([a-zA-Z0-9_.]+)/i,
+        /fb\.com\/([a-zA-Z0-9_.]+)/i,
+      ],
+      pinterest: [
+        /pinterest\.com\/([a-zA-Z0-9_]+)/i,
+        /pin\.it\/([a-zA-Z0-9_]+)/i,
+      ],
+      github: [
+        /github\.com\/([a-zA-Z0-9_-]+)/i,
+      ],
+      reddit: [
+        /reddit\.com\/(?:r|u|user)\/([a-zA-Z0-9_-]+)/i,
+      ],
+      discord: [
+        /discord\.(?:gg|com\/invite)\/([a-zA-Z0-9_-]+)/i,
+      ],
+      snapchat: [
+        /snapchat\.com\/add\/([a-zA-Z0-9_.]+)/i,
+      ],
+      threads: [
+        /threads\.net\/@([a-zA-Z0-9_.]+)/i,
+      ],
+      twitch: [
+        /twitch\.tv\/([a-zA-Z0-9_]+)/i,
       ],
     };
     
@@ -2474,10 +2585,27 @@ Return ONLY valid JSON:
     
     // Validate and format the response
     if (competitorData) {
+      // Extract the base domain/brand name for self-filtering
+      const brandName = username?.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || '';
+      const brandDomain = username?.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0] || '';
+      
+      // Helper function to check if competitor is self
+      const isSelfCompetitor = (compName: string): boolean => {
+        const compLower = compName.toLowerCase();
+        // Check if competitor name matches brand name or domain
+        if (compLower === brandName || compLower === brandDomain) return true;
+        if (compLower.includes(brandName) && brandName.length > 3) return true;
+        if (brandName.includes(compLower) && compLower.length > 3) return true;
+        // Check for common variations
+        if (compLower.replace(/[^a-z0-9]/g, '') === brandName.replace(/[^a-z0-9]/g, '')) return true;
+        return false;
+      };
+      
       // New format with marketShare and competitors
       if (competitorData.competitors && Array.isArray(competitorData.competitors)) {
         const competitors = competitorData.competitors
           .filter((comp: any) => comp && comp.name && comp.name.length > 0)
+          .filter((comp: any) => !isSelfCompetitor(comp.name)) // FILTER OUT SELF
           .map((comp: any) => ({
             name: comp.name,
             threatLevel: comp.threatLevel || 'MEDIUM',
@@ -2505,6 +2633,7 @@ Return ONLY valid JSON:
       if (Array.isArray(competitorData)) {
         const competitors = competitorData
           .filter((comp: any) => comp && comp.name && comp.name.length > 0)
+          .filter((comp: any) => !isSelfCompetitor(comp.name)) // FILTER OUT SELF
           .map((comp: any) => ({
             name: comp.name,
             threatLevel: comp.threatLevel || 'MEDIUM',
