@@ -1035,7 +1035,7 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
     await page.setContent(html, { waitUntil: 'domcontentloaded' });
     
     // Extract all links from the page - check multiple sources including icons
-    const allLinks = await page.evaluate(() => {
+    const linkData = await page.evaluate(() => {
       // @ts-ignore - document is available in browser context
       const links = Array.from(document.querySelectorAll('a[href]'));
       
@@ -1064,22 +1064,39 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
       // Combine all link sources
       const allLinkElements = [...new Set([...links, ...footerLinks, ...headerLinks, ...socialIconLinks])];
       
-      return [
-        ...allLinkElements.map((link: any) => ({
-          href: link.href || link.getAttribute('href'),
-          text: link.innerText || link.textContent || '',
-          ariaLabel: link.getAttribute('aria-label') || '',
-          title: link.getAttribute('title') || '',
-          className: link.className || '',
-          source: 'html'
-        })),
-        ...metaLinks
-      ];
+      return {
+        links: [
+          ...allLinkElements.map((link: any) => ({
+            href: link.href || link.getAttribute('href'),
+            text: link.innerText || link.textContent || '',
+            ariaLabel: link.getAttribute('aria-label') || '',
+            title: link.getAttribute('title') || '',
+            className: link.className || '',
+            source: 'html'
+          })),
+          ...metaLinks
+        ],
+        // Also get raw HTML for regex fallback
+        // @ts-ignore - document is available in browser context
+        rawHtml: document.documentElement.outerHTML
+      };
     });
+    
+    const allLinks = linkData.links;
+    const rawHtml = linkData.rawHtml;
+    
+    if (scanId) {
+      addLog(scanId, `[EXTRACT] Found ${allLinks.length} total links to check`);
+      // Log first 5 links for debugging
+      const sampleLinks = allLinks.slice(0, 5).map((l: any) => l.href).filter(Boolean);
+      if (sampleLinks.length > 0) {
+        addLog(scanId, `[EXTRACT] Sample links found: ${sampleLinks.slice(0, 3).join(', ')}...`);
+      }
+    }
     
     // Also extract text content to search for social URLs in plain text
     const pageText = await page.evaluate(() => {
-      // @ts-ignore
+      // @ts-ignore - document is available in browser context
       return document.body?.innerText || document.body?.textContent || '';
     });
     
@@ -1222,6 +1239,67 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
       Object.assign(socialLinks, textUrls);
       if (scanId && Object.keys(textUrls).length > 0) {
         addLog(scanId, `[DISCOVERY] Found ${Object.keys(textUrls).length} social links in page text: ${Object.keys(textUrls).join(', ')}`);
+      }
+    }
+    
+    // CRITICAL FALLBACK: If no links found via DOM, search raw HTML with regex
+    // Many sites load social links via JavaScript or use data attributes
+    if (Object.keys(socialLinks).length === 0 && rawHtml) {
+      if (scanId) {
+        addLog(scanId, `[EXTRACT] No links found via DOM - trying regex fallback on raw HTML...`);
+      }
+      
+      // Search raw HTML for social URLs (more aggressive patterns)
+      const htmlRegexPatterns: Record<string, RegExp> = {
+        twitter: /(?:https?:\/\/)?(?:www\.)?(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)/gi,
+        instagram: /(?:https?:\/\/)?(?:www\.)?instagram\.com\/([a-zA-Z0-9_.]+)/gi,
+        youtube: /(?:https?:\/\/)?(?:www\.)?youtube\.com\/(?:channel\/|user\/|@|c\/)?([a-zA-Z0-9_-]+)/gi,
+        linkedin: /(?:https?:\/\/)?(?:www\.)?linkedin\.com\/(?:in|company)\/([a-zA-Z0-9-]+)/gi,
+        tiktok: /(?:https?:\/\/)?(?:www\.)?tiktok\.com\/@([a-zA-Z0-9_.]+)/gi,
+        facebook: /(?:https?:\/\/)?(?:www\.)?facebook\.com\/([a-zA-Z0-9_.]+)/gi,
+        pinterest: /(?:https?:\/\/)?(?:www\.)?pinterest\.com\/([a-zA-Z0-9_]+)/gi,
+      };
+      
+      for (const [platform, pattern] of Object.entries(htmlRegexPatterns)) {
+        const matches = [...rawHtml.matchAll(pattern)];
+        if (matches.length > 0) {
+          // Get the first unique match
+          const firstMatch = matches[0];
+          const username = firstMatch[1];
+          let fullUrl = firstMatch[0];
+          
+          // Ensure it's a full URL
+          if (!fullUrl.startsWith('http')) {
+            if (platform === 'twitter' && fullUrl.includes('x.com')) {
+              fullUrl = `https://x.com/${username}`;
+            } else if (platform === 'twitter') {
+              fullUrl = `https://twitter.com/${username}`;
+            } else if (platform === 'instagram') {
+              fullUrl = `https://instagram.com/${username}`;
+            } else if (platform === 'youtube') {
+              fullUrl = `https://youtube.com/@${username}`;
+            } else if (platform === 'linkedin') {
+              fullUrl = fullUrl.includes('/company/') 
+                ? `https://linkedin.com/company/${username}`
+                : `https://linkedin.com/in/${username}`;
+            } else if (platform === 'tiktok') {
+              fullUrl = `https://tiktok.com/@${username}`;
+            } else if (platform === 'facebook') {
+              fullUrl = `https://facebook.com/${username}`;
+            } else if (platform === 'pinterest') {
+              fullUrl = `https://pinterest.com/${username}`;
+            }
+          }
+          
+          socialLinks[platform] = fullUrl;
+          if (scanId) {
+            addLog(scanId, `[EXTRACT] Regex found ${platform} in HTML: ${fullUrl}`);
+          }
+        }
+      }
+      
+      if (Object.keys(socialLinks).length > 0 && scanId) {
+        addLog(scanId, `[EXTRACT] Regex fallback found ${Object.keys(socialLinks).length} social links: ${Object.keys(socialLinks).join(', ')}`);
       }
     }
     
