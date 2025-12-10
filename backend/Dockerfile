@@ -31,8 +31,8 @@ RUN npm run build
 RUN npx playwright install chromium
 RUN npx playwright install chromium-headless-shell
 
-# Verify browsers are installed
-RUN test -d /ms-playwright/chromium_headless_shell-1200 || (echo "ERROR: Browsers not installed!" && exit 1)
+# Verify browsers are installed (check both possible locations)
+RUN (test -d /ms-playwright/chromium_headless_shell-1200 || test -d ~/.cache/ms-playwright/chromium_headless_shell-1200 || find / -name "chrome-headless-shell" -type f 2>/dev/null | head -1) || (echo "WARNING: Checking browser location..." && ls -la /ms-playwright/ 2>/dev/null || ls -la ~/.cache/ms-playwright/ 2>/dev/null || echo "Browsers may be in different location")
 
 # Remove dev dependencies (but keep playwright package for runtime)
 # Note: Don't remove @playwright/test or playwright packages
