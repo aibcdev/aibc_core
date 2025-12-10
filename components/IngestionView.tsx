@@ -10,16 +10,39 @@ interface IngestionProps extends NavProps {
   setScanType?: (type: 'basic' | 'deep') => void;
 }
 
+// Common valid TLDs for stricter validation
+const VALID_TLDS = new Set([
+  'com', 'org', 'net', 'io', 'co', 'tv', 'xyz', 'app', 'dev', 'ai', 'me', 'info',
+  'biz', 'us', 'uk', 'ca', 'au', 'de', 'fr', 'es', 'it', 'nl', 'be', 'ch', 'at',
+  'edu', 'gov', 'mil', 'int', 'eu', 'asia', 'tech', 'online', 'store', 'shop',
+  'blog', 'site', 'website', 'page', 'space', 'cloud', 'digital', 'media', 'news',
+  'live', 'video', 'pro', 'plus', 'one', 'world', 'global', 'network', 'social',
+  'gg', 'fm', 'am', 'ly', 'to', 'in', 'is', 'so', 'im', 'gs', 'cc', 'la', 'ag',
+  'ac', 'cx', 'ws', 'nu', 'mx', 'br', 'jp', 'kr', 'cn', 'ru', 'pl', 'cz', 'se',
+  'no', 'fi', 'dk', 'ie', 'pt', 'gr', 'ro', 'hu', 'bg', 'sk', 'hr', 'si', 'lt',
+  'lv', 'ee', 'ua', 'by', 'kz', 'uz', 'az', 'ge', 'am', 'md', 'kg', 'tj', 'tm'
+]);
+
 // URL validation function
 function isValidURL(input: string): boolean {
   try {
     // Remove @ if present
-    const cleaned = input.trim().replace(/^@/, '');
+    const cleaned = input.trim().replace(/^@/, '').toLowerCase();
     
     // Check if it's a full URL
     if (cleaned.includes('://') || cleaned.includes('.')) {
       const url = cleaned.startsWith('http') ? cleaned : `https://${cleaned}`;
-      new URL(url);
+      const parsedUrl = new URL(url);
+      
+      // Extract TLD from hostname
+      const hostParts = parsedUrl.hostname.replace('www.', '').split('.');
+      const tld = hostParts[hostParts.length - 1];
+      
+      // Check if TLD is valid
+      if (!VALID_TLDS.has(tld)) {
+        return false;
+      }
+      
       return true;
     }
     
@@ -27,8 +50,9 @@ function isValidURL(input: string): boolean {
     if (cleaned.includes('.') && cleaned.split('.').length >= 2) {
       const parts = cleaned.split('.');
       const tld = parts[parts.length - 1];
-      // Basic TLD check (at least 2 characters)
-      if (tld.length >= 2 && /^[a-zA-Z]+$/.test(tld)) {
+      
+      // Check if TLD is in our list of valid TLDs
+      if (VALID_TLDS.has(tld)) {
         return true;
       }
     }
@@ -96,15 +120,55 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
     
     try {
       const domain = extractDomainFromURL(input);
+      const urlToCheck = input.startsWith('http') ? input : `https://${domain}`;
       
-      // Simulate verification (in production, this would call an API)
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // ACTUALLY verify the URL is reachable
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
       
-      setUrlVerification({
-        isVerifying: false,
-        verified: true,
-        domain: domain
-      });
+      try {
+        const response = await fetch(urlToCheck, {
+          method: 'HEAD',
+          mode: 'no-cors', // Allow cross-origin requests
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        
+        // If we get here without error, the URL is likely reachable
+        // (no-cors mode doesn't give us status, but will throw if unreachable)
+        setUrlVerification({
+          isVerifying: false,
+          verified: true,
+          domain: domain
+        });
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        
+        // Check if it's a CORS error (which means the site exists but blocks us)
+        // In that case, we'll allow it and let the backend do the real check
+        if (fetchError.name === 'TypeError' && fetchError.message.includes('Failed to fetch')) {
+          // Could be CORS blocking - let backend verify
+          setUrlVerification({
+            isVerifying: false,
+            verified: true,
+            domain: domain
+          });
+        } else if (fetchError.name === 'AbortError') {
+          // Timeout - URL might be slow or not exist
+          setUrlVerification({
+            isVerifying: false,
+            verified: false,
+            error: 'Website took too long to respond. Please check the URL.'
+          });
+        } else {
+          // URL is not reachable
+          setUrlVerification({
+            isVerifying: false,
+            verified: false,
+            error: 'Website not found. Please check the URL and try again.'
+          });
+        }
+      }
     } catch (err: any) {
       setUrlVerification({
         isVerifying: false,

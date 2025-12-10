@@ -15,17 +15,52 @@ function isValidUrl(urlString: string): boolean {
 async function isUrlReachable(url: string): Promise<boolean> {
   try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
       
-      const response = await fetch(url, {
-          method: 'HEAD',
-          redirect: 'follow',
-          signal: controller.signal
-      });
+      // Try HEAD first
+      let response;
+      try {
+        response = await fetch(url, {
+            method: 'HEAD',
+            redirect: 'follow',
+            signal: controller.signal
+        });
+      } catch (headError) {
+        // HEAD might be blocked, try GET
+        response = await fetch(url, {
+            method: 'GET',
+            redirect: 'follow',
+            signal: controller.signal
+        });
+      }
       
       clearTimeout(timeoutId);
-      return response.status < 400;
-  } catch (error) {
+      
+      // Check for valid response
+      if (response.status >= 400) {
+        console.log(`URL ${url} returned status ${response.status}`);
+        return false;
+      }
+      
+      // Additional check: try to read some content to ensure it's a real page
+      if (response.ok) {
+        try {
+          const text = await response.text();
+          // Must have some content (at least basic HTML)
+          if (text.length < 50) {
+            console.log(`URL ${url} returned minimal content (${text.length} chars)`);
+            return false;
+          }
+          return true;
+        } catch (e) {
+          // Could not read content
+          return false;
+        }
+      }
+      
+      return false;
+  } catch (error: any) {
+      console.log(`URL ${url} is not reachable: ${error.message}`);
       return false;
   }
 }
@@ -62,10 +97,11 @@ export async function startScan(
     addLog(scanId, `[SYSTEM] Scan Type: ${scanType}`);
     
     // URL VALIDATION - Reject invalid/unreachable URLs early
+    // Check if input looks like a website (has a dot and TLD-like ending)
     const isWebsiteInput = username.includes('.') && 
-      (username.includes('.com') || username.includes('.tv') || 
-       username.includes('.io') || username.includes('.co') || 
-       username.includes('.net') || username.includes('.org'));
+      !username.includes('twitter.com') && !username.includes('instagram.com') &&
+      !username.includes('youtube.com') && !username.includes('linkedin.com') &&
+      !username.includes('x.com') && !username.includes('tiktok.com');
     
     if (isWebsiteInput) {
       const urlToValidate = username.startsWith('http') ? username : `https://${username.replace(/^www\./, '')}`;
@@ -86,7 +122,7 @@ export async function startScan(
         addLog(scanId, `[ERROR] URL is not reachable: ${urlToValidate}`);
         storage.updateScan(scanId, {
           status: 'error',
-          error: `Website not reachable: ${username}. Please check the URL and try again.`,
+          error: `Website not reachable: ${username}. The website does not exist or is not accessible. Please check the URL and try again.`,
           progress: 100
         });
         return;
@@ -183,13 +219,12 @@ export async function startScan(
     // If not a social media URL, check if it's a website/domain
     // ALWAYS try to scrape website first if it looks like a domain
     if (!detectedSocialPlatform) {
+    // Check if input looks like a website (has a dot and is not a known social platform)
     const isWebsite = username.includes('.') && 
-                      (username.includes('.com') || username.includes('.tv') || 
-                       username.includes('.io') || username.includes('.co') || 
-                       username.includes('.net') || username.includes('.org')) &&
                       !username.includes('twitter.com') && !username.includes('instagram.com') &&
                       !username.includes('youtube.com') && !username.includes('linkedin.com') &&
-                      !username.includes('x.com') && !username.includes('tiktok.com');
+                      !username.includes('x.com') && !username.includes('tiktok.com') &&
+                      !username.includes('facebook.com') && !username.includes('pinterest.com');
     
     const websiteUrl = isWebsite 
       ? (username.startsWith('http') ? username : `https://${username.replace(/^www\./, '')}`)
@@ -999,11 +1034,20 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
     // Set HTML content
     await page.setContent(html, { waitUntil: 'domcontentloaded' });
     
-    // Extract all links from the page - check multiple sources
+    // Extract all links from the page - check multiple sources including icons
     const allLinks = await page.evaluate(() => {
       // @ts-ignore - document is available in browser context
       const links = Array.from(document.querySelectorAll('a[href]'));
-      // Also check for social links in meta tags, JSON-LD, and text content
+      
+      // Also check footer, header, and sidebar specifically for social links
+      // @ts-ignore - document is available in browser context
+      const footerLinks = Array.from(document.querySelectorAll('footer a[href], .footer a[href], #footer a[href]'));
+      // @ts-ignore - document is available in browser context
+      const headerLinks = Array.from(document.querySelectorAll('header a[href], .header a[href], #header a[href], nav a[href]'));
+      // @ts-ignore - document is available in browser context
+      const socialIconLinks = Array.from(document.querySelectorAll('[class*="social"] a[href], [class*="Social"] a[href], [id*="social"] a[href], a[class*="social"], a[class*="facebook"], a[class*="twitter"], a[class*="instagram"], a[class*="youtube"], a[class*="linkedin"], a[class*="tiktok"]'));
+      
+      // Check for social links in meta tags
       // @ts-ignore - document is available in browser context
       const metaTags = Array.from(document.querySelectorAll('meta[property], meta[name]'));
       const metaLinks: any[] = [];
@@ -1011,16 +1055,23 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
         const content = meta.getAttribute('content') || meta.getAttribute('property') || '';
         if (content && (content.includes('twitter.com') || content.includes('instagram.com') || 
             content.includes('youtube.com') || content.includes('linkedin.com') || 
-            content.includes('x.com') || content.includes('tiktok.com'))) {
-          metaLinks.push({ href: content, text: '', ariaLabel: '' });
+            content.includes('x.com') || content.includes('tiktok.com') ||
+            content.includes('facebook.com') || content.includes('pinterest.com'))) {
+          metaLinks.push({ href: content, text: '', ariaLabel: '', source: 'meta' });
         }
       });
       
+      // Combine all link sources
+      const allLinkElements = [...new Set([...links, ...footerLinks, ...headerLinks, ...socialIconLinks])];
+      
       return [
-        ...links.map((link: any) => ({
-        href: link.href || link.getAttribute('href'),
-        text: link.innerText || link.textContent || '',
-        ariaLabel: link.getAttribute('aria-label') || '',
+        ...allLinkElements.map((link: any) => ({
+          href: link.href || link.getAttribute('href'),
+          text: link.innerText || link.textContent || '',
+          ariaLabel: link.getAttribute('aria-label') || '',
+          title: link.getAttribute('title') || '',
+          className: link.className || '',
+          source: 'html'
         })),
         ...metaLinks
       ];
