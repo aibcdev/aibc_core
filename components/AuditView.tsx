@@ -428,7 +428,7 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
               <div className="w-48 flex justify-end">
                 {showButton ? (
                   <button 
-                    onClick={() => onNavigate(ViewState.VECTORS)} 
+                    onClick={() => onNavigate(ViewState.ONBOARDING)} 
                     className="animate-in fade-in slide-in-from-right-4 duration-500 px-6 py-2.5 rounded-full bg-green-500 hover:bg-green-400 text-black text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.4)]"
                   >
                     Proceed <ArrowRight className="w-4 h-4" />

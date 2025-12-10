@@ -150,11 +150,12 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
             </div>
           )}
 
-          {/* Google Sign-In Button */}
-          <div className="mb-4">
-            <div id="google-signin-button" ref={googleButtonRef} className="w-full flex items-center justify-center min-h-[40px]">
-              {/* Fallback button - shows while Google loads or if not configured */}
-              <button
+          {/* Google Sign-In Button - Only show if configured */}
+          {getGoogleClientId() && (
+            <div className="mb-4">
+              <div id="google-signin-button" ref={googleButtonRef} className="w-full flex items-center justify-center min-h-[40px]">
+                {/* Fallback button - shows while Google loads or if not configured */}
+                <button
                 onClick={async () => {
                   // Check if Supabase is configured - use Supabase OAuth
                   const { isSupabaseConfigured, supabase } = await import('../services/supabaseClient');
@@ -178,7 +179,9 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
                   // Fallback: Use Google Identity Services if configured
                   const clientId = getGoogleClientId();
                   if (!clientId) {
-                    setError('Google sign-in is not configured. Please set VITE_GOOGLE_CLIENT_ID in Netlify environment variables.');
+                    // Don't show error - just hide the button or allow email sign-up
+                    console.warn('Google sign-in not configured');
+                    // Don't show error message, just return silently
                     return;
                   }
                   
@@ -204,8 +207,9 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
                 </svg>
                 Continue with Google
               </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Divider */}
           <div className="relative my-8">

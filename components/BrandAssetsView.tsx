@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Palette, Type, Image as ImageIcon, FileText, Video, Music, X, Plus, Check, Globe, Trash2, Edit3, Link2, Sparkles, RefreshCw, Save } from 'lucide-react';
+import { Upload, Palette, Type, Image as ImageIcon, FileText, Video, Music, X, Plus, Check, Globe, Trash2, Edit3, Link2, Sparkles, RefreshCw, Save, Clock, Megaphone, Target, Compass, Info, Lock, ChevronDown, Cloud } from 'lucide-react';
 
 interface BrandAsset {
   id: string;
@@ -27,7 +27,8 @@ interface BrandFont {
 }
 
 const BrandAssetsView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'materials' | 'profile' | 'styles' | 'voice'>('materials');
+  const [activeTab, setActiveTab] = useState<'materials' | 'profile' | 'styles' | 'voice' | 'preferences'>('materials');
+  const [preferencesCategory, setPreferencesCategory] = useState<'video' | 'image' | 'social' | 'blog' | 'general'>('video');
   const [showAddContextModal, setShowAddContextModal] = useState(false);
   const [showAddColorModal, setShowAddColorModal] = useState(false);
   const [showAddFontModal, setShowAddFontModal] = useState(false);
@@ -83,6 +84,38 @@ const BrandAssetsView: React.FC = () => {
     newTrait: '',
     newDo: '',
     newDont: ''
+  });
+
+  // Content Preferences
+  const [contentPreferences, setContentPreferences] = useState({
+    video: {
+      includeInPosts: true,
+      includeNarrations: false,
+      includeMusic: true,
+      brandKitPriority: 'brandKitFirst' as 'brandKitOnly' | 'brandKitFirst' | 'stockOnly',
+      reusingVideo: '2weeks' as 'never' | '2weeks' | '1month' | '3months',
+      videoCount: 13
+    },
+    image: {
+      includeInPosts: true,
+      brandKitPriority: 'brandKitFirst' as 'brandKitOnly' | 'brandKitFirst' | 'stockOnly',
+      reusingImages: '2weeks' as 'never' | '2weeks' | '1month' | '3months',
+      imageCount: 0
+    },
+    social: {
+      platformSpecific: true,
+      includeHashtags: true,
+      includeMentions: false
+    },
+    blog: {
+      includeImages: true,
+      includeVideos: false,
+      wordCount: 'medium' as 'short' | 'medium' | 'long'
+    },
+    general: {
+      autoSave: true,
+      notifications: true
+    }
   });
 
   const getAssetIcon = (type: string) => {
@@ -253,6 +286,7 @@ const BrandAssetsView: React.FC = () => {
       {/* Tab Navigation */}
       <div className="flex gap-1 p-1 bg-white/5 rounded-xl mb-6 w-fit">
         {[
+          { id: 'preferences', label: 'Content Preferences' },
           { id: 'materials', label: 'Source Materials' },
           { id: 'profile', label: 'Brand Profile' },
           { id: 'styles', label: 'Styles & Colors' },
@@ -273,6 +307,608 @@ const BrandAssetsView: React.FC = () => {
       </div>
 
       {/* Tab Content */}
+      {activeTab === 'preferences' && (
+        <div className="flex gap-6">
+          {/* Left Sidebar */}
+          <div className="w-64 flex-shrink-0">
+            <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-2">
+              {[
+                { id: 'video', label: 'Video', icon: Video },
+                { id: 'image', label: 'Image', icon: ImageIcon },
+                { id: 'social', label: 'Social Media', icon: Megaphone },
+                { id: 'blog', label: 'Blog & Email', icon: FileText },
+                { id: 'general', label: 'General', icon: Globe },
+              ].map((cat) => {
+                const Icon = cat.icon;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setPreferencesCategory(cat.id as any)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all mb-1 ${
+                      preferencesCategory === cat.id
+                        ? 'bg-white/10 text-white border-l-2 border-white'
+                        : 'text-white/60 hover:text-white/80 hover:bg-white/5'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {cat.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="flex-1">
+            {preferencesCategory === 'video' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-white">Video</h2>
+                  <button className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/15 rounded-lg text-sm text-white transition-colors">
+                    <Cloud className="w-4 h-4" />
+                    Add More Videos
+                  </button>
+                </div>
+
+                {/* Include video in posts */}
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-white">Include video in posts</label>
+                    <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          video: { ...contentPreferences.video, includeInPosts: true }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          contentPreferences.video.includeInPosts
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        On
+                      </button>
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          video: { ...contentPreferences.video, includeInPosts: false }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          !contentPreferences.video.includeInPosts
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        Off
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Include narrations */}
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-white">Include narrations</label>
+                    <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+                      <button
+                        disabled
+                        className="px-4 py-2 rounded-md text-xs font-medium text-white/40 cursor-not-allowed flex items-center gap-1"
+                      >
+                        On
+                        <Lock className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          video: { ...contentPreferences.video, includeNarrations: false }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          !contentPreferences.video.includeNarrations
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        Off
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Include music */}
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-white">Include music</label>
+                    <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          video: { ...contentPreferences.video, includeMusic: true }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          contentPreferences.video.includeMusic
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        On
+                      </button>
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          video: { ...contentPreferences.video, includeMusic: false }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          !contentPreferences.video.includeMusic
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        Off
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Brand Kit video priority */}
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="text-sm font-medium text-white">Brand Kit video priority</label>
+                    <Info className="w-4 h-4 text-white/40" />
+                  </div>
+                  <p className="text-xs text-white/40 mb-4">Choose between Brand Kit and stock media in content</p>
+                  <div className="flex gap-2">
+                    {[
+                      { value: 'brandKitOnly', label: 'Brand Kit only' },
+                      { value: 'brandKitFirst', label: 'Brand Kit first' },
+                      { value: 'stockOnly', label: 'Only stock' },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          video: { ...contentPreferences.video, brandKitPriority: option.value as any }
+                        })}
+                        className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+                          contentPreferences.video.brandKitPriority === option.value
+                            ? 'bg-white text-black'
+                            : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Reusing video */}
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="text-sm font-medium text-white">Reusing video</label>
+                    <Info className="w-4 h-4 text-white/40" />
+                  </div>
+                  <p className="text-xs text-white/40 mb-4">Set video re-use frequency ({contentPreferences.video.videoCount} videos)</p>
+                  <div className="flex gap-2">
+                    {[
+                      { value: 'never', label: 'Never re-use' },
+                      { value: '2weeks', label: 'Re-use after 2 weeks' },
+                      { value: '1month', label: 'Re-use after 1 month' },
+                      { value: '3months', label: 'Re-use after 3 months' },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          video: { ...contentPreferences.video, reusingVideo: option.value as any }
+                        })}
+                        className={`px-4 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+                          contentPreferences.video.reusingVideo === option.value
+                            ? 'bg-white text-black'
+                            : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        {option.label}
+                        {contentPreferences.video.reusingVideo === option.value && (
+                          <ChevronDown className="w-3 h-3" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {preferencesCategory === 'image' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-white">Image</h2>
+                  <button className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/15 rounded-lg text-sm text-white transition-colors">
+                    <Cloud className="w-4 h-4" />
+                    Add More Images
+                  </button>
+                </div>
+                
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-white">Include image in posts</label>
+                    <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          image: { ...contentPreferences.image, includeInPosts: true }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          contentPreferences.image.includeInPosts
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        On
+                      </button>
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          image: { ...contentPreferences.image, includeInPosts: false }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          !contentPreferences.image.includeInPosts
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        Off
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="text-sm font-medium text-white">Brand Kit image priority</label>
+                    <Info className="w-4 h-4 text-white/40" />
+                  </div>
+                  <p className="text-xs text-white/40 mb-4">Choose between Brand Kit and stock media in content</p>
+                  <div className="flex gap-2">
+                    {[
+                      { value: 'brandKitOnly', label: 'Brand Kit only' },
+                      { value: 'brandKitFirst', label: 'Brand Kit first' },
+                      { value: 'stockOnly', label: 'Only stock' },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          image: { ...contentPreferences.image, brandKitPriority: option.value as any }
+                        })}
+                        className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+                          contentPreferences.image.brandKitPriority === option.value
+                            ? 'bg-white text-black'
+                            : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="text-sm font-medium text-white">Reusing images</label>
+                    <Info className="w-4 h-4 text-white/40" />
+                  </div>
+                  <p className="text-xs text-white/40 mb-4">Set image re-use frequency ({contentPreferences.image.imageCount} images)</p>
+                  <div className="flex gap-2">
+                    {[
+                      { value: 'never', label: 'Never re-use' },
+                      { value: '2weeks', label: 'Re-use after 2 weeks' },
+                      { value: '1month', label: 'Re-use after 1 month' },
+                      { value: '3months', label: 'Re-use after 3 months' },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          image: { ...contentPreferences.image, reusingImages: option.value as any }
+                        })}
+                        className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+                          contentPreferences.image.reusingImages === option.value
+                            ? 'bg-white text-black'
+                            : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {preferencesCategory === 'social' && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold text-white mb-6">Social Media</h2>
+                
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-white">Platform-specific content</label>
+                    <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          social: { ...contentPreferences.social, platformSpecific: true }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          contentPreferences.social.platformSpecific
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        On
+                      </button>
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          social: { ...contentPreferences.social, platformSpecific: false }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          !contentPreferences.social.platformSpecific
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        Off
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-white">Include hashtags</label>
+                    <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          social: { ...contentPreferences.social, includeHashtags: true }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          contentPreferences.social.includeHashtags
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        On
+                      </button>
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          social: { ...contentPreferences.social, includeHashtags: false }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          !contentPreferences.social.includeHashtags
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        Off
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-white">Include mentions</label>
+                    <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          social: { ...contentPreferences.social, includeMentions: true }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          contentPreferences.social.includeMentions
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        On
+                      </button>
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          social: { ...contentPreferences.social, includeMentions: false }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          !contentPreferences.social.includeMentions
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        Off
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {preferencesCategory === 'blog' && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold text-white mb-6">Blog & Email</h2>
+                
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-white">Include images</label>
+                    <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          blog: { ...contentPreferences.blog, includeImages: true }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          contentPreferences.blog.includeImages
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        On
+                      </button>
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          blog: { ...contentPreferences.blog, includeImages: false }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          !contentPreferences.blog.includeImages
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        Off
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-white">Include videos</label>
+                    <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          blog: { ...contentPreferences.blog, includeVideos: true }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          contentPreferences.blog.includeVideos
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        On
+                      </button>
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          blog: { ...contentPreferences.blog, includeVideos: false }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          !contentPreferences.blog.includeVideos
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        Off
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+                  <label className="block text-sm font-medium text-white mb-4">Word count preference</label>
+                  <div className="flex gap-2">
+                    {[
+                      { value: 'short', label: 'Short (300-500 words)' },
+                      { value: 'medium', label: 'Medium (500-1000 words)' },
+                      { value: 'long', label: 'Long (1000+ words)' },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          blog: { ...contentPreferences.blog, wordCount: option.value as any }
+                        })}
+                        className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+                          contentPreferences.blog.wordCount === option.value
+                            ? 'bg-white text-black'
+                            : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {preferencesCategory === 'general' && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold text-white mb-6">General</h2>
+                
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-white">Auto-save</label>
+                    <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          general: { ...contentPreferences.general, autoSave: true }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          contentPreferences.general.autoSave
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        On
+                      </button>
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          general: { ...contentPreferences.general, autoSave: false }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          !contentPreferences.general.autoSave
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        Off
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-white">Notifications</label>
+                    <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          general: { ...contentPreferences.general, notifications: true }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          contentPreferences.general.notifications
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        On
+                      </button>
+                      <button
+                        onClick={() => setContentPreferences({
+                          ...contentPreferences,
+                          general: { ...contentPreferences.general, notifications: false }
+                        })}
+                        className={`px-4 py-2 rounded-md text-xs font-medium transition-all ${
+                          !contentPreferences.general.notifications
+                            ? 'bg-white text-black'
+                            : 'text-white/60 hover:text-white'
+                        }`}
+                      >
+                        Off
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {activeTab === 'materials' && (
         <div className="space-y-6">
           {/* Materials Table */}

@@ -3,6 +3,8 @@ import { Check, ChevronDown, ArrowLeft, Loader2, Sparkles, FileText, Copy, Folde
 import { ViewState, NavProps } from '../types';
 import { getUserSubscription, SubscriptionTier } from '../services/subscriptionService';
 import { createCheckoutSession, getPrices } from '../services/stripeService';
+import Navigation from './shared/Navigation';
+import Footer from './shared/Footer';
 
 const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
@@ -247,30 +249,8 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
 
   return (
     <div id="pricing-view" className="min-h-screen bg-[#050505] text-white">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#050505]/80 backdrop-blur-xl border-b border-white/5">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => onNavigate(ViewState.LANDING)}>
-            <div className="h-8 w-8 flex items-center justify-center text-white">
-              <svg viewBox="0 0 100 100" className="w-full h-full text-white" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="50" cy="50" r="48" stroke="currentColor" strokeWidth="4" />
-                <circle cx="50" cy="50" r="34" stroke="currentColor" strokeWidth="4" />
-                <circle cx="50" cy="50" r="20" stroke="currentColor" strokeWidth="4" />
-                <circle cx="50" cy="50" r="6" fill="currentColor" />
-              </svg>
-            </div>
-            <span className="text-2xl font-black tracking-tighter text-white">AIBC</span>
-          </div>
-          <button 
-            onClick={() => onNavigate(ViewState.LANDING)}
-            className="flex items-center gap-2 text-xs font-medium text-white/60 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back
-          </button>
-        </div>
-      </nav>
-
-      <main className="pt-24 px-4 sm:px-6 lg:px-8 pb-20">
+      <Navigation onNavigate={onNavigate} />
+      <main className="pt-16 px-4 sm:px-6 lg:px-8 pb-20">
         {/* Hero Section */}
         <div className="max-w-6xl mx-auto mb-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -456,9 +436,9 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
                   }
                 }}
                 className={`w-full py-3 rounded-lg font-semibold text-sm transition-all ${plan.buttonStyle} ${
-                    plan.current ? 'cursor-default opacity-50' : 'hover:scale-105'
+                    plan.current && plan.name !== 'Free' ? 'cursor-default opacity-50' : 'hover:scale-105'
                 }`}
-                disabled={plan.current || loading === plan.name}
+                disabled={(plan.current && plan.name !== 'Free') || loading === plan.name}
               >
                 {loading === plan.name ? (
                   <span className="flex items-center justify-center gap-2">
@@ -692,6 +672,7 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 };

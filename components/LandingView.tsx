@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { 
   ArrowRight, Play, TrendingUp, Clock, Sparkles, Zap, Globe, Shield, MessageSquare,
   BarChart3, Video, FileText, Target, Brain
@@ -8,6 +8,48 @@ import Navigation from './shared/Navigation';
 import Footer from './shared/Footer';
 
 const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    // Ensure video plays and handle errors
+    if (videoRef.current) {
+      const video = videoRef.current;
+      
+      const handleCanPlay = () => {
+        video.play().catch(err => {
+          console.log('Video autoplay prevented:', err);
+        });
+      };
+      
+      const handleError = (e: any) => {
+        console.error('Video error:', e);
+        console.error('Video error details:', {
+          error: video.error,
+          networkState: video.networkState,
+          readyState: video.readyState
+        });
+      };
+      
+      const handleLoadStart = () => {
+        console.log('Video load started');
+      };
+      
+      video.addEventListener('canplay', handleCanPlay);
+      video.addEventListener('error', handleError);
+      video.addEventListener('loadstart', handleLoadStart);
+      
+      // Try to play immediately
+      video.play().catch(err => {
+        console.log('Initial video play failed:', err);
+      });
+      
+      return () => {
+        video.removeEventListener('canplay', handleCanPlay);
+        video.removeEventListener('error', handleError);
+        video.removeEventListener('loadstart', handleLoadStart);
+      };
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#050505] text-white">
@@ -19,20 +61,23 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
           {/* Video Background with Overlay */}
           <div className="absolute inset-0 z-0">
             <video
+              ref={videoRef}
               autoPlay
               loop
               muted
               playsInline
-              className="absolute inset-0 w-full h-full object-cover"
+              preload="auto"
+              className="absolute inset-0 w-full h-full object-cover opacity-100"
+              style={{ zIndex: 1, minHeight: '100%', minWidth: '100%' }}
             >
               <source src="/hero-video.mov" type="video/quicktime" />
               <source src="/hero-video.mp4" type="video/mp4" />
               <source src="/hero-video.webm" type="video/webm" />
-              {/* Fallback if video doesn't load */}
+              Your browser does not support the video tag.
             </video>
-            <div className="absolute inset-0 bg-black/50 z-10"></div>
+            <div className="absolute inset-0 bg-black/50 z-10" style={{ zIndex: 2 }}></div>
             {/* Fallback background image if video doesn't load */}
-            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920&h=1080&fit=crop')] bg-cover bg-center opacity-20 blur-3xl z-0"></div>
+            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920&h=1080&fit=crop')] bg-cover bg-center opacity-20 blur-3xl" style={{ zIndex: 0 }}></div>
           </div>
 
           <div className="relative z-20 mx-auto max-w-[1400px] px-6 lg:px-12 py-32">
@@ -63,27 +108,27 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
         {/* Metrics Section */}
         <section className="py-24 bg-[#050505] border-t border-white/5">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
-            <h2 className="text-5xl sm:text-6xl font-medium mb-12">
+            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-medium mb-16 text-center">
               <span className="text-white">Grow faster with content</span>
               <br />
               <span className="text-white/60">that actually converts.</span>
             </h2>
 
-            <div className="grid md:grid-cols-3 gap-16">
-              <div>
-                <div className="text-7xl sm:text-8xl font-medium text-white mb-4">2.5x</div>
+            <div className="grid md:grid-cols-3 gap-12">
+              <div className="text-center">
+                <div className="text-6xl sm:text-7xl font-medium text-white mb-4">2.5x</div>
                 <h3 className="text-xl font-bold text-white mb-3">ROI Increase</h3>
-                <p className="text-white/60 text-lg">Average return on ad spend for brands using AIBC creative assets vs traditional stock.</p>
+                <p className="text-white/60">Average return on ad spend for brands using AIBC creative assets vs traditional stock.</p>
               </div>
-              <div>
-                <div className="text-7xl sm:text-8xl font-medium text-white mb-4">10x</div>
+              <div className="text-center">
+                <div className="text-6xl sm:text-7xl font-medium text-white mb-4">10x</div>
                 <h3 className="text-xl font-bold text-white mb-3">Faster Production</h3>
-                <p className="text-white/60 text-lg">Go from ideation to published campaign in minutes, not weeks.</p>
+                <p className="text-white/60">Go from ideation to published campaign in minutes, not weeks.</p>
               </div>
-              <div>
-                <div className="text-7xl sm:text-8xl font-medium text-orange-500 mb-4">#1</div>
+              <div className="text-center">
+                <div className="text-6xl sm:text-7xl font-medium text-orange-500 mb-4">#1</div>
                 <h3 className="text-xl font-bold text-white mb-3">Rated Platform</h3>
-                <p className="text-white/60 text-lg">Voted the most intuitive enterprise AI solution by G2 and Capterra in 2024.</p>
+                <p className="text-white/60">Voted the most intuitive enterprise AI solution by G2 and Capterra in 2024.</p>
               </div>
             </div>
           </div>
@@ -93,10 +138,10 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
         <section className="py-24 bg-[#050505]">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <div className="mb-16">
-              <h2 className="text-5xl sm:text-6xl font-medium text-white mb-4">
+              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-medium text-white mb-4">
                 Everything you need to grow.
               </h2>
-              <p className="text-xl text-white/60">
+              <p className="text-lg sm:text-xl text-white/60">
                 A complete toolkit for modern creators and businesses. No technical skills required.
               </p>
             </div>
@@ -459,8 +504,28 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
         </section>
 
         {/* Powering the Next Generation Section */}
-        <section className="relative py-32 bg-[#050505] border-t border-white/5">
-          <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <section className="relative py-32 bg-[#050505] border-t border-white/5 overflow-hidden">
+          {/* Background Photo Grid */}
+          <div className="absolute inset-0 z-0">
+            <div className="grid grid-cols-5 grid-rows-3 h-full w-full gap-0">
+              {Array.from({ length: 15 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="relative overflow-hidden grayscale"
+                  style={{
+                    backgroundImage: `url('https://images.unsplash.com/photo-${1522071820 + i}?w=400&h=400&fit=crop&q=80&bw=1')`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  }}
+                />
+              ))}
+            </div>
+            {/* Dark overlay for text readability */}
+            <div className="absolute inset-0 bg-black/60 z-10"></div>
+          </div>
+
+          {/* Content */}
+          <div className="relative z-20 mx-auto max-w-7xl px-6 lg:px-8">
             <div className="text-center">
               <h2 className="text-5xl sm:text-6xl lg:text-7xl font-medium text-white tracking-tight">
                 Powering the next generation of creators and businesses.

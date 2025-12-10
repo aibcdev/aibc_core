@@ -7,6 +7,7 @@ import SignInView from './components/SignInView';
 import ResetPasswordView from './components/ResetPasswordView';
 import IngestionView from './components/IngestionView';
 import AuditView from './components/AuditView';
+import OnboardingView from './components/OnboardingView';
 import VectorsView from './components/VectorsView';
 import DashboardView from './components/DashboardView';
 import PricingView from './components/PricingView';
@@ -84,6 +85,7 @@ function AppContent() {
       {currentView === ViewState.RESET_PASSWORD && <ResetPasswordView onNavigate={navigate} />}
       {currentView === ViewState.INGESTION && <IngestionView onNavigate={navigate} setUsername={setUsername} setScanType={setScanType} />}
       {currentView === ViewState.AUDIT && <AuditView onNavigate={navigate} username={username} scanType={scanType} />}
+      {currentView === ViewState.ONBOARDING && <OnboardingView onNavigate={navigate} />}
       {currentView === ViewState.VECTORS && <VectorsView onNavigate={navigate} />}
       {currentView === ViewState.DASHBOARD && <DashboardView onNavigate={navigate} />}
       {currentView === ViewState.PRICING && <PricingView onNavigate={navigate} />}
@@ -94,8 +96,8 @@ function AppContent() {
 }
 
 export default function App() {
-  // Privy configuration
-  const privyConfig = {
+  // Privy configuration - only use if app ID is configured
+  const privyConfig = PRIVY_APP_ID ? {
     appId: PRIVY_APP_ID,
     config: {
       // Enable both email/password and Web3 wallet authentication
@@ -117,7 +119,12 @@ export default function App() {
         privacyPolicyUrl: 'https://aibcmedia.com/privacy',
       },
     },
-  };
+  } : null;
+
+  // If Privy is not configured, render without it
+  if (!PRIVY_APP_ID || !privyConfig) {
+    return <AppContent />;
+  }
 
   return (
     <PrivyProvider appId={privyConfig.appId} config={privyConfig.config}>
