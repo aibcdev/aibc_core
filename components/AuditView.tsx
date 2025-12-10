@@ -95,21 +95,44 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
         // Check backend health first
         const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
         try {
+          addLog(`[SYSTEM] Connecting to backend: ${API_BASE_URL}`);
           const healthCheck = await fetch(`${API_BASE_URL}/health`, { 
             method: 'GET',
-            signal: AbortSignal.timeout(5000) // 5 second timeout
+            signal: AbortSignal.timeout(10000), // 10 second timeout (increased for Cloud Run cold starts)
+            headers: {
+              'Content-Type': 'application/json',
+            }
           });
           if (!healthCheck.ok) {
-            throw new Error('Backend health check failed');
+            throw new Error(`Backend health check failed: ${healthCheck.status} ${healthCheck.statusText}`);
           }
-          addLog(`[SYSTEM] Backend connection verified`);
+          const healthData = await healthCheck.json();
+          addLog(`[SYSTEM] Backend connection verified: ${healthData.status || 'ok'}`);
         } catch (healthError: any) {
-          addLog(`[ERROR] Cannot connect to backend server`);
+          console.error('Health check error:', healthError);
+          addLog(`[ERROR] Cannot connect to backend server: ${healthError.message || 'Network error'}`);
           addLog(`[INFO] Backend URL: ${API_BASE_URL}`);
-          addLog(`[INFO] Please ensure the backend server is running`);
-          addLog(`[INFO] You can proceed anyway - some features may be limited`);
-          setTimeout(() => { if (mounted) setShowButton(true); }, 3000);
-          return;
+          addLog(`[INFO] This might be a temporary network issue. Retrying...`);
+          
+          // Retry once after 2 seconds
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          try {
+            const retryCheck = await fetch(`${API_BASE_URL}/health`, { 
+              method: 'GET',
+              signal: AbortSignal.timeout(10000),
+            });
+            if (retryCheck.ok) {
+              addLog(`[SUCCESS] Backend connection verified on retry`);
+            } else {
+              throw new Error('Retry also failed');
+            }
+          } catch (retryError: any) {
+            addLog(`[ERROR] Backend still not reachable after retry`);
+            addLog(`[INFO] Please ensure the backend server is running`);
+            addLog(`[INFO] You can proceed anyway - some features may be limited`);
+            setTimeout(() => { if (mounted) setShowButton(true); }, 3000);
+            return;
+          }
         }
         
         // Get scan type from localStorage or prop
