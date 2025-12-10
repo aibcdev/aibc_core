@@ -80,14 +80,12 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
               onClick={() => onNavigate(ViewState.LANDING)}
               className="flex items-center gap-2"
             >
-              <div className="relative w-8 h-8 flex items-center justify-center">
-                {/* Outer white circle */}
-                <div className="absolute w-8 h-8 rounded-full border-2 border-white"></div>
-                {/* Inner white circle */}
-                <div className="absolute w-5 h-5 rounded-full border border-white"></div>
-                {/* Orange center dot */}
-                <div className="absolute w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-              </div>
+              <svg viewBox="0 0 100 100" className="w-8 h-8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="48" stroke="white" strokeWidth="4" />
+                <circle cx="50" cy="50" r="34" stroke="white" strokeWidth="4" />
+                <circle cx="50" cy="50" r="20" stroke="white" strokeWidth="4" />
+                <circle cx="50" cy="50" r="6" fill="#FF5E1E" />
+              </svg>
               <span className="text-xl font-black text-white uppercase">AIBC</span>
             </button>
           </div>
@@ -302,7 +300,7 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
                 </button>
                 <button 
                   onClick={() => onNavigate(ViewState.INGESTION)}
-                  className="px-4 py-2 bg-gray-800 border border-white/20 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+                  className="text-sm text-white hover:text-orange-500 transition-colors"
                 >
                   Get Started
                 </button>
