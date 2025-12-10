@@ -185,12 +185,14 @@ export async function startScan(
     
     // STEP 2: Scrape all platforms, using discovered links when available
     addLog(scanId, `[DISCOVERY] Available discovered links: ${JSON.stringify(Object.keys(discoveredSocialLinks))}`);
+    addLog(scanId, `[DISCOVERY] Discovered links details: ${JSON.stringify(discoveredSocialLinks)}`);
     
     for (const platform of platforms) {
       try {
         // Priority: discovered link > connected account > constructed URL
         let profileUrl: string | null = null;
         let actualPlatform = platform;
+        let isDiscovered = false;
         
         // Check if we discovered this platform's link from the website
         // Normalize platform name for matching (twitter/x, instagram, youtube, linkedin, tiktok)
@@ -208,6 +210,7 @@ export async function startScan(
         
         if (discoveredUrl) {
           profileUrl = discoveredUrl;
+          isDiscovered = true;
           addLog(scanId, `[DISCOVERY] ✓ Using discovered ${platform} link: ${profileUrl}`);
         } else {
           // Use connected account handle if available
@@ -247,21 +250,10 @@ export async function startScan(
         }
         
         if (profileUrl) {
-          // Check if this is a discovered link from website scraping
-          // Try multiple variations to match discovered links
-          const platformLower = platform.toLowerCase();
-          const normalizedPlatform = platformLower.replace('x', 'twitter');
-          const platformKey = (normalizedPlatform === 'twitter' || platformLower === 'x') ? 'twitter' : normalizedPlatform;
-          
-          const isDiscoveredLink = discoveredSocialLinks[platformKey] || 
-                                   discoveredSocialLinks[platformLower] || 
-                                   discoveredSocialLinks[platform] ||
-                                   discoveredSocialLinks[normalizedPlatform];
-          
-          if (isDiscoveredLink) {
+          if (isDiscovered) {
             // If we discovered this link from the website, ALWAYS try to scrape it
             // Don't verify - just scrape and let LLM handle extraction
-            addLog(scanId, `[SCRAPE] Scraping discovered ${actualPlatform} profile: ${profileUrl}`);
+            addLog(scanId, `[SCRAPE] Scraping discovered ${actualPlatform} profile (NO VERIFICATION): ${profileUrl}`);
             try {
               const content = await scrapeProfile(profileUrl, actualPlatform, scanId);
               // Always add discovered links - even if content is minimal, LLM can extract
@@ -270,37 +262,53 @@ export async function startScan(
               const visualCount = (content.images?.length || 0) + (content.videos?.length || 0);
               addLog(scanId, `[SUCCESS] ${actualPlatform} scraped - ${content.text?.length || 0} chars, ${visualCount} visual assets`);
             } catch (scrapeError: any) {
-              addLog(scanId, `[WARNING] Failed to scrape discovered ${actualPlatform} link: ${scrapeError.message} - will skip`);
+              addLog(scanId, `[ERROR] Failed to scrape discovered ${actualPlatform} link: ${scrapeError.message}`);
+              // Even on error, try to add minimal content so scan doesn't fail completely
+              verifiedPlatforms.push(actualPlatform);
+              scrapedData.push({ 
+                platform: actualPlatform, 
+                content: { 
+                  html: '', 
+                  text: `Error scraping ${profileUrl}: ${scrapeError.message}`, 
+                  url: profileUrl 
+                } 
+              });
             }
           } else {
             // For non-discovered links (constructed URLs), verify before scraping
-          addLog(scanId, `[SCRAPE] Checking ${actualPlatform} profile: ${profileUrl}`);
-          const content = await scrapeProfile(profileUrl, actualPlatform, scanId);
-          
-          // Verify profile actually exists (not 404, not login page, has actual content)
-          const profileExists = await verifyProfileExists(content, actualPlatform);
-          
-            // Be more lenient with content length - accept profiles with at least 20 chars
-            const minContentLength = 20;
-            const hasMinimalContent = content.text && content.text.length >= minContentLength;
-            
-            if (profileExists && hasMinimalContent) {
-            verifiedPlatforms.push(actualPlatform);
-            scrapedData.push({ platform: actualPlatform, content });
-            const visualCount = (content.images?.length || 0) + (content.videos?.length || 0);
-            addLog(scanId, `[SUCCESS] ${actualPlatform} profile found - ${content.text.length} chars, ${visualCount} visual assets`);
-          } else if (!profileExists) {
-            addLog(scanId, `[SKIP] ${actualPlatform} profile not found or not accessible - skipping`);
-            } else if (!hasMinimalContent) {
-              // Even if verification passed, if content is too short, log but still try to use it
-              addLog(scanId, `[WARNING] ${actualPlatform} scraping returned minimal content (${content.text?.length || 0} chars) - will attempt LLM extraction anyway`);
-              // Still add it - LLM might be able to extract something useful
-              verifiedPlatforms.push(actualPlatform);
-              scrapedData.push({ platform: actualPlatform, content });
-          } else {
-              addLog(scanId, `[SKIP] ${actualPlatform} profile verification failed`);
+            addLog(scanId, `[SCRAPE] Checking ${actualPlatform} profile: ${profileUrl}`);
+            try {
+              const content = await scrapeProfile(profileUrl, actualPlatform, scanId);
+              
+              // Verify profile actually exists (not 404, not login page, has actual content)
+              const profileExists = await verifyProfileExists(content, actualPlatform);
+              
+              // Be more lenient with content length - accept profiles with at least 20 chars
+              const minContentLength = 20;
+              const hasMinimalContent = content.text && content.text.length >= minContentLength;
+              
+              if (profileExists && hasMinimalContent) {
+                verifiedPlatforms.push(actualPlatform);
+                scrapedData.push({ platform: actualPlatform, content });
+                const visualCount = (content.images?.length || 0) + (content.videos?.length || 0);
+                addLog(scanId, `[SUCCESS] ${actualPlatform} profile found - ${content.text.length} chars, ${visualCount} visual assets`);
+              } else if (!profileExists) {
+                addLog(scanId, `[SKIP] ${actualPlatform} profile not found or not accessible - skipping`);
+              } else if (!hasMinimalContent) {
+                // Even if verification passed, if content is too short, log but still try to use it
+                addLog(scanId, `[WARNING] ${actualPlatform} scraping returned minimal content (${content.text?.length || 0} chars) - will attempt LLM extraction anyway`);
+                // Still add it - LLM might be able to extract something useful
+                verifiedPlatforms.push(actualPlatform);
+                scrapedData.push({ platform: actualPlatform, content });
+              } else {
+                addLog(scanId, `[SKIP] ${actualPlatform} profile verification failed`);
+              }
+            } catch (scrapeError: any) {
+              addLog(scanId, `[SKIP] ${actualPlatform} profile not accessible: ${scrapeError.message}`);
             }
           }
+        } else {
+          addLog(scanId, `[SKIP] ${platform} - no profile URL could be determined`);
         }
       } catch (error: any) {
         addLog(scanId, `[SKIP] ${platform} profile not accessible: ${error.message}`);
