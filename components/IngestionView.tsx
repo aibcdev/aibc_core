@@ -207,16 +207,25 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
       const domain = extractDomainFromURL(inputVal);
       setUsername(domain);
       
-      // CRITICAL: Clear ALL cache when starting a new scan
+      // CRITICAL: HARD RESET - Clear ALL cache IMMEDIATELY when starting a new scan
       // This ensures fresh data for each scan, even on same browser/login
-      console.log('🧹 Clearing all scan cache for new scan:', domain);
+      console.log('🧹 HARD RESET: Clearing ALL cache for new scan:', domain);
+      
+      // Clear ALL scan-related cache
       localStorage.removeItem('lastScanResults');
       localStorage.removeItem('lastScanId');
+      localStorage.removeItem('lastScanTimestamp');
       
-      // Clear component-specific caches
+      // Clear ALL component-specific caches
       localStorage.removeItem('productionAssets');
       localStorage.removeItem('strategyPlans');
       localStorage.removeItem('activeContentStrategy');
+      localStorage.removeItem('brandMaterials');
+      localStorage.removeItem('brandProfile');
+      localStorage.removeItem('brandVoice');
+      localStorage.removeItem('brandColors');
+      localStorage.removeItem('brandFonts');
+      localStorage.removeItem('contentPreferences');
       
       // Store scan type
       if (setScanType) {
@@ -224,13 +233,16 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
       }
       localStorage.setItem('lastScanType', selectedScanType);
       
-      // Store NEW username - this will trigger cache validation
+      // Store NEW username with timestamp - this will trigger cache validation
       localStorage.setItem('lastScannedUsername', domain);
+      localStorage.setItem('lastScanTimestamp', Date.now().toString());
       
-      // Dispatch event to clear all component state
+      // Dispatch event to notify all components to clear state IMMEDIATELY
       window.dispatchEvent(new CustomEvent('newScanStarted', {
-        detail: { username: domain }
+        detail: { username: domain, timestamp: Date.now() }
       }));
+      
+      console.log('✅ Cache cleared and event dispatched for:', domain);
       
       // Navigate to audit view - scan will start there
       onNavigate(ViewState.AUDIT);

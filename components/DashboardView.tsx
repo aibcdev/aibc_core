@@ -381,21 +381,27 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
         const loadScanData = () => {
           const currentUsername = localStorage.getItem('lastScannedUsername');
           const currentScanId = localStorage.getItem('lastScanId');
+          const currentTimestamp = localStorage.getItem('lastScanTimestamp');
           
-          // Method 1: Try localStorage cache first (fastest) - BUT validate username matches
+          // Method 1: Try localStorage cache first (fastest) - BUT validate username AND timestamp matches
           const cachedResults = localStorage.getItem('lastScanResults');
           if (cachedResults) {
             try {
               const cached = JSON.parse(cachedResults);
               const cachedUsername = cached.scanUsername || cached.username;
+              const cachedTimestamp = cached.timestamp || cached.scanTimestamp;
               
-              // CRITICAL: Only use cached data if username matches current scan
+              // CRITICAL: Only use cached data if username matches AND timestamp is recent (within 1 hour)
+              const timestampValid = currentTimestamp && cachedTimestamp && 
+                (parseInt(currentTimestamp) - parseInt(cachedTimestamp)) < 3600000; // 1 hour
+              
               if (currentUsername && cachedUsername && currentUsername.toLowerCase() !== cachedUsername.toLowerCase()) {
                 console.log('⚠️ Username mismatch - clearing old cache');
                 console.log('Current username:', currentUsername);
                 console.log('Cached username:', cachedUsername);
                 // Clear old cache for different company
                 localStorage.removeItem('lastScanResults');
+                localStorage.removeItem('lastScanTimestamp');
                 // Clear state
                 setStrategicInsights([]);
                 setBrandDNA(null);
@@ -403,7 +409,16 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                 setMarketShare(null);
                 setScanUsername(null);
                 // Don't use cached data - will fetch fresh from API
-              } else if (currentUsername && cachedUsername && currentUsername.toLowerCase() === cachedUsername.toLowerCase()) {
+              } else if (!timestampValid) {
+                console.log('⚠️ Cache timestamp invalid or expired - clearing cache');
+                localStorage.removeItem('lastScanResults');
+                localStorage.removeItem('lastScanTimestamp');
+                setStrategicInsights([]);
+                setBrandDNA(null);
+                setCompetitorIntelligence([]);
+                setMarketShare(null);
+                setScanUsername(null);
+              } else if (currentUsername && cachedUsername && currentUsername.toLowerCase() === cachedUsername.toLowerCase() && timestampValid) {
                 // Username matches - safe to use cache
                 console.log('=== LOADING FROM CACHE (username matches) ===');
                 console.log('Cached data keys:', Object.keys(cached));

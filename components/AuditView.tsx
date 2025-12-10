@@ -73,29 +73,36 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
         return;
       }
       
-      // CRITICAL: Clear ALL existing scan cache when starting new scan
-      // This ensures we start fresh even if user is scanning same company again
-      console.log('🧹 Clearing all scan cache before starting new scan for:', scanUsername);
-      const previousUsername = localStorage.getItem('lastScannedUsername');
-      if (previousUsername && previousUsername.toLowerCase() !== scanUsername.toLowerCase()) {
-        // Different company - clear everything
-        localStorage.removeItem('lastScanResults');
-        localStorage.removeItem('lastScanId');
-        localStorage.removeItem('productionAssets');
-        localStorage.removeItem('strategyPlans');
-        localStorage.removeItem('activeContentStrategy');
-        console.log('✅ Cleared cache for different company');
-      } else {
-        // Same company but new scan - still clear to ensure fresh data
-        localStorage.removeItem('lastScanResults');
-        localStorage.removeItem('lastScanId');
-        console.log('✅ Cleared cache for fresh scan of same company');
-      }
+      // CRITICAL: HARD RESET - Clear ALL cache IMMEDIATELY when starting new scan
+      // ALWAYS clear cache - even for same company, we want fresh data
+      console.log('🧹 HARD RESET: Clearing ALL cache before starting new scan for:', scanUsername);
       
-      // Dispatch event to notify all components to clear state
+      // Clear ALL scan-related cache (ALWAYS, regardless of previous username)
+      localStorage.removeItem('lastScanResults');
+      localStorage.removeItem('lastScanId');
+      localStorage.removeItem('lastScanTimestamp');
+      
+      // Clear ALL component-specific caches
+      localStorage.removeItem('productionAssets');
+      localStorage.removeItem('strategyPlans');
+      localStorage.removeItem('activeContentStrategy');
+      localStorage.removeItem('brandMaterials');
+      localStorage.removeItem('brandProfile');
+      localStorage.removeItem('brandVoice');
+      localStorage.removeItem('brandColors');
+      localStorage.removeItem('brandFonts');
+      localStorage.removeItem('contentPreferences');
+      
+      // Update username and timestamp
+      localStorage.setItem('lastScannedUsername', scanUsername);
+      localStorage.setItem('lastScanTimestamp', Date.now().toString());
+      
+      // Dispatch event to notify all components to clear state IMMEDIATELY
       window.dispatchEvent(new CustomEvent('newScanStarted', {
-        detail: { username: scanUsername }
+        detail: { username: scanUsername, timestamp: Date.now() }
       }));
+      
+      console.log('✅ HARD RESET complete - all cache cleared for:', scanUsername);
 
       // Calculate estimated time (5-10 minutes)
       const totalEstimate = stages.reduce((sum, s) => sum + s.duration, 0);
@@ -246,15 +253,19 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
           if (results.success && results.data) {
             scanResults = results.data;
             // Store complete scan results with username for validation
+            // Store results with timestamp for cache validation
             const scanResultsWithUsername = {
               ...results.data,
               scanUsername: scanUsername,
               username: scanUsername,
+              timestamp: Date.now(),
+              scanTimestamp: Date.now(),
               lastUpdated: new Date().toISOString()
             };
             localStorage.setItem('lastScanResults', JSON.stringify(scanResultsWithUsername));
-            // Store username and scan ID for dashboard loading
+            // Store username, scan ID, and timestamp for dashboard loading
             localStorage.setItem('lastScannedUsername', scanUsername);
+            localStorage.setItem('lastScanTimestamp', Date.now().toString());
             if (scanId) {
               localStorage.setItem('lastScanId', scanId);
             }
