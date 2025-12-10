@@ -253,15 +253,12 @@ export async function generateText(
         throw new Error(`Unknown provider: ${provider}`);
     }
   } catch (error: any) {
-    // Auto-fallback to DeepSeek if Gemini fails with quota/429 errors
+    // Auto-fallback to DeepSeek if Gemini fails for ANY reason (quota, API key, network, etc.)
+    // This ensures scans continue working even if Gemini is down/disabled
     const isGeminiError = provider.startsWith('gemini');
-    const isQuotaError = error.message?.includes('quota') || 
-                        error.message?.includes('429') || 
-                        error.message?.includes('Too Many Requests') ||
-                        error.message?.includes('exceeded');
     
-    if (isGeminiError && isQuotaError && DEEPSEEK_API_KEY) {
-      console.log(`[LLM] ⚠️ Gemini quota exceeded, falling back to DeepSeek...`);
+    if (isGeminiError && DEEPSEEK_API_KEY) {
+      console.log(`[LLM] ⚠️ Gemini failed (${error.message?.substring(0, 100) || 'unknown error'}), falling back to DeepSeek...`);
       try {
         const fallbackModel = tier === 'deep' ? 'deepseek-reasoner' : 'deepseek-chat';
         return await callDeepSeek(prompt, systemPrompt, fallbackModel);
@@ -271,7 +268,7 @@ export async function generateText(
       }
     }
     
-    // Re-throw if not a quota error or no DeepSeek fallback available
+    // Re-throw if not a Gemini error or no DeepSeek fallback available
     throw error;
   }
 }
