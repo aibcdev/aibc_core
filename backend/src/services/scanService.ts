@@ -434,7 +434,6 @@ export async function startScan(
               }
             }
           }
-        }
       } catch (error: any) {
         addLog(scanId, `[DISCOVERY] ERROR: Failed to extract social links from website: ${error.message}`);
         addLog(scanId, `[DISCOVERY] Website scraping failed, but will try constructed URLs for each platform independently`);
@@ -1611,10 +1610,11 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
       
       // Use pageText if available, otherwise use HTML (LLM can extract from HTML too)
       const contentForLLM = pageText && pageText.length > 100 ? pageText : rawHtml?.substring(0, 10000) || '';
+      const urlForLLM = websiteUrl || 'unknown';
       
-      if (contentForLLM.length > 50 && websiteUrl) {
+      if (contentForLLM.length > 50 && urlForLLM) {
         addLog(scanId, `[DISCOVERY] Running LLM extraction (PRIMARY METHOD) on ${contentForLLM.length} chars...`);
-        const llmExtracted = await extractSocialLinksWithLLM(contentForLLM, websiteUrl || '', scanId);
+        const llmExtracted = await extractSocialLinksWithLLM(contentForLLM, urlForLLM, scanId);
         // LLM results take absolute priority - they're the most accurate
         if (Object.keys(llmExtracted).length > 0) {
           socialLinks = { ...llmExtracted, ...socialLinks };
