@@ -3556,11 +3556,46 @@ Return ONLY valid JSON:
     if (jsonMatch) {
       const insights = JSON.parse(jsonMatch[0]);
       
-      // Filter and validate insights
+      // Filter and validate insights - CRITICAL: Must be brand-specific
+      const brandNameLower = brandName.toLowerCase();
       return insights
         .filter((insight: any) => {
           // Ensure required fields
-          return insight.title && insight.description && insight.impact && insight.effort;
+          if (!insight.title || !insight.description || !insight.impact || !insight.effort) {
+            return false;
+          }
+          
+          // CRITICAL: Reject generic insights that don't mention brand name or industry
+          const titleLower = insight.title.toLowerCase();
+          const descLower = insight.description.toLowerCase();
+          
+          // Generic patterns to reject
+          const genericPatterns = [
+            'increase posting frequency',
+            'leverage short-form video',
+            'engage with your audience',
+            'post more content',
+            'be consistent'
+          ];
+          
+          const isGeneric = genericPatterns.some(pattern => 
+            titleLower.includes(pattern) && 
+            !descLower.includes(brandNameLower) &&
+            !descLower.includes(scanUsername?.toLowerCase() || '')
+          );
+          
+          if (isGeneric) {
+            console.warn(`[FILTERED] Generic insight rejected: ${insight.title}`);
+            return false;
+          }
+          
+          // Prefer insights that mention brand name
+          const hasBrandName = titleLower.includes(brandNameLower) || descLower.includes(brandNameLower);
+          const hasSpecificNumbers = /\d+/.test(descLower); // Has numbers
+          const hasCompetitorName = descLower.length > 50; // Longer descriptions usually have competitor names
+          
+          // Accept if has brand name OR (has numbers AND competitor context)
+          return hasBrandName || (hasSpecificNumbers && hasCompetitorName);
         })
         .slice(0, 4); // Max 4 insights
     }
