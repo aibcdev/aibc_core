@@ -1025,8 +1025,15 @@ function extractSocialLinksFromText(text: string): Record<string, string> {
 async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, scanId?: string): Promise<Record<string, string>> {
   const socialLinks: Record<string, string> = {};
   
+  if (scanId) {
+    addLog(scanId, `[EXTRACT] Starting social link extraction from ${html.length} chars of HTML`);
+  }
+  
   try {
     // Use Playwright to parse HTML and extract links
+    if (scanId) {
+      addLog(scanId, `[EXTRACT] Launching browser for HTML parsing...`);
+    }
     const browser = await chromium.launch({ headless: true });
     const context = await browser.newContext();
     const page = await context.newPage();
@@ -1239,16 +1246,50 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
     }
     
   } catch (error: any) {
-    console.error('Error extracting social links from website:', error);
+    console.error('Error extracting social links from website with Playwright:', error);
     if (scanId) {
-      addLog(scanId, `[DISCOVERY] Error extracting social links: ${error.message}`);
+      addLog(scanId, `[EXTRACT] Playwright extraction failed: ${error.message}`);
+      addLog(scanId, `[EXTRACT] Trying regex-based fallback extraction...`);
     }
-    // Ensure browser is closed on error
+    
+    // FALLBACK: Use regex to extract social links directly from HTML
+    // This works even if Playwright fails (e.g., in serverless environments)
     try {
-      const browser = await chromium.launch({ headless: true });
-      await browser.close();
-    } catch (e) {
-      // Ignore cleanup errors
+      const regexPatterns: Record<string, RegExp> = {
+        twitter: /href=["']?(https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/[a-zA-Z0-9_]+)["']?/gi,
+        instagram: /href=["']?(https?:\/\/(?:www\.)?instagram\.com\/[a-zA-Z0-9_.]+)["']?/gi,
+        facebook: /href=["']?(https?:\/\/(?:www\.)?facebook\.com\/[a-zA-Z0-9_.]+)["']?/gi,
+        youtube: /href=["']?(https?:\/\/(?:www\.)?youtube\.com\/(?:channel\/|user\/|@|c\/)?[a-zA-Z0-9_-]+)["']?/gi,
+        linkedin: /href=["']?(https?:\/\/(?:www\.)?linkedin\.com\/(?:in|company)\/[a-zA-Z0-9_-]+)["']?/gi,
+        tiktok: /href=["']?(https?:\/\/(?:www\.)?tiktok\.com\/@[a-zA-Z0-9_.]+)["']?/gi,
+        pinterest: /href=["']?(https?:\/\/(?:www\.)?pinterest\.com\/[a-zA-Z0-9_]+)["']?/gi,
+        github: /href=["']?(https?:\/\/(?:www\.)?github\.com\/[a-zA-Z0-9_-]+)["']?/gi,
+        discord: /href=["']?(https?:\/\/(?:www\.)?discord\.(?:gg|com\/invite)\/[a-zA-Z0-9_-]+)["']?/gi,
+        twitch: /href=["']?(https?:\/\/(?:www\.)?twitch\.tv\/[a-zA-Z0-9_]+)["']?/gi,
+      };
+      
+      for (const [platform, pattern] of Object.entries(regexPatterns)) {
+        const matches = html.match(pattern);
+        if (matches && matches.length > 0) {
+          // Extract the URL from the first match
+          const urlMatch = matches[0].match(/https?:\/\/[^\s"']+/);
+          if (urlMatch) {
+            socialLinks[platform] = urlMatch[0].replace(/["']$/, '');
+            if (scanId) {
+              addLog(scanId, `[EXTRACT] Regex found ${platform}: ${socialLinks[platform]}`);
+            }
+          }
+        }
+      }
+      
+      if (Object.keys(socialLinks).length > 0 && scanId) {
+        addLog(scanId, `[EXTRACT] Regex fallback found ${Object.keys(socialLinks).length} social links`);
+      }
+    } catch (regexError: any) {
+      console.error('Regex fallback also failed:', regexError);
+      if (scanId) {
+        addLog(scanId, `[EXTRACT] Regex fallback also failed: ${regexError.message}`);
+      }
     }
   }
   
@@ -1455,11 +1496,21 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
   // CRITICAL: Enable scraping for production quality
   // LLM-only approach produces placeholders - unacceptable for CEO satisfaction
   
+  if (scanId) {
+    addLog(scanId, `[SCRAPE] Starting scrape of ${url} (platform: ${platform})`);
+  }
+  
   try {
+    if (scanId) {
+      addLog(scanId, `[SCRAPE] Launching browser...`);
+    }
     const browser = await chromium.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled'],
     });
+    if (scanId) {
+      addLog(scanId, `[SCRAPE] Browser launched successfully`);
+    }
 
     const context = await browser.newContext({
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -1656,6 +1707,9 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
       } else {
         // Generic website scraping (for domains like script.tv)
         // Scroll to load dynamic content
+        if (scanId) {
+          addLog(scanId, `[SCRAPE] Scrolling to load dynamic content...`);
+        }
         for (let i = 0; i < 3; i++) {
           await page.evaluate(() => {
             // @ts-ignore
@@ -1664,17 +1718,27 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
           await page.waitForTimeout(2000);
         }
         
-        // Extract main content from website
+        // FIRST: Get the FULL HTML including footer/header (for social link extraction)
+        // This is CRITICAL - social links are usually in the footer!
+        scrapedHtml = await page.content();
+        if (scanId) {
+          addLog(scanId, `[SCRAPE] Full HTML captured: ${scrapedHtml.length} chars`);
+        }
+        
+        // Extract main content from website (but don't modify the original HTML)
         try {
           const websiteContent = await page.evaluate(() => {
             // @ts-ignore - document is available in browser context
-            // Remove script and style elements
-            const scripts = document.querySelectorAll('script, style, nav, footer, header');
+            // Clone the body to avoid modifying the actual page
+            const clone = document.body.cloneNode(true) as HTMLElement;
+            
+            // Remove script and style elements from the clone (NOT footer/header)
+            const scripts = clone.querySelectorAll('script, style, noscript');
             scripts.forEach((el: any) => el.remove());
             
-            // Get main content areas
+            // Get main content areas from clone
             // @ts-ignore - document is available in browser context
-            const mainContent = document.querySelector('main, article, .content, #content, .main-content') || document.body;
+            const mainContent = clone.querySelector('main, article, .content, #content, .main-content') || clone;
             return mainContent.innerText || mainContent.textContent || '';
           });
           
@@ -1755,6 +1819,52 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
     }
   } catch (error: any) {
     console.log(`Browser launch failed: ${error.message}`);
+    if (scanId) {
+      addLog(scanId, `[SCRAPE] Playwright failed: ${error.message}`);
+      addLog(scanId, `[SCRAPE] Trying fetch-based fallback...`);
+    }
+    
+    // FALLBACK: Use simple fetch to get HTML when Playwright fails
+    // This works in serverless environments where Playwright might not be available
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        const html = await response.text();
+        // Extract text from HTML using regex (simple approach)
+        const textContent = html
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        if (scanId) {
+          addLog(scanId, `[SCRAPE] Fetch fallback successful: ${html.length} chars HTML, ${textContent.length} chars text`);
+        }
+        
+        return { html, text: textContent, url };
+      }
+    } catch (fetchError: any) {
+      console.log(`Fetch fallback also failed: ${fetchError.message}`);
+      if (scanId) {
+        addLog(scanId, `[SCRAPE] Fetch fallback failed: ${fetchError.message}`);
+      }
+    }
+    
     return { html: '', text: '', url };
   }
 }
