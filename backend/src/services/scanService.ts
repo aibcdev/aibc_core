@@ -3450,7 +3450,12 @@ async function generateStrategicInsights(validatedContent: any, brandDNA: any, s
       ? avgEngagement.reduce((a: number, b: number) => a + b, 0) / avgEngagement.length 
       : 0;
 
-    const prompt = `You're a straight-talking content strategist. Research this creator's competitors and give 2-3 specific, data-driven insights.
+    const brandName = scanUsername?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || scanUsername || 'this brand';
+    
+    const prompt = `You're a straight-talking content strategist for ${brandName}. Research ${brandName}'s actual competitors and give 2-3 SPECIFIC, BRAND-SPECIFIC, data-driven insights that are UNIQUE to ${brandName} and cannot be applied to other brands.
+
+Company/Brand: ${brandName}
+${scanUsername ? `Website: ${scanUsername}` : ''}
 
 Creator content (${validatedContent.posts.length} posts):
 ${combinedText}
@@ -3465,25 +3470,26 @@ Stats:
 - Topics: ${(validatedContent.content_themes || []).join(', ')}
 
 CRITICAL RULES:
-1. Research their actual competitors and compare SPECIFIC metrics
+1. Research ${brandName}'s ACTUAL competitors in their EXACT industry/niche
 2. Include NUMBERS - video lengths, posting frequency, engagement rates
-3. Tell them exactly what to do differently based on competitor data
-4. No generic advice like "post more" or "be consistent"
-5. Every insight must reference what competitors are doing
+3. Tell ${brandName} exactly what to do differently based on competitor data
+4. NO generic advice like "post more" or "be consistent" - must be specific to ${brandName}
+5. Every insight must reference what ${brandName}'s competitors are doing
+6. Insights must be so specific to ${brandName} that they would NOT work for a different brand
 
 BAD examples (too generic, don't say these):
 - "Keep posting and you'll grow"
 - "Try short-form video"
 - "Engage with your audience more"
 
-GOOD examples (specific with data):
-- "Your videos average 4 mins. Top creators in your space do 8-12 mins - longer videos rank better."
-- "You post 2x/week. Chunkz posts daily and gets 3x your views. Try 4x/week minimum."
-- "Your thumbnails are text-heavy. MKBHD uses faces + 3 words max - his CTR is 2x higher."
+GOOD examples (specific with data, brand-specific):
+- For Nike: "Nike posts 2x/week. Adidas posts daily and gets 3x your views. Nike should post 4x/week minimum to compete."
+- For Tesla: "Tesla's videos average 4 mins. Rivian does 8-12 mins and gets 2x watch time. Tesla should create longer videos."
+- For HubSpot: "HubSpot's thumbnails are text-heavy. Salesforce uses faces + 3 words max - their CTR is 2x higher."
 
-Generate 2-3 insights with SPECIFIC data:
-- Title: 4-6 words, action-focused
-- Description: Include specific numbers/comparisons. What competitors do vs what you do.
+Generate 2-3 insights SPECIFIC to ${brandName}:
+- Title: 4-6 words, action-focused, mention ${brandName} or their industry
+- Description: Include specific numbers/comparisons. What ${brandName}'s competitors do vs what ${brandName} does. MUST reference ${brandName} by name or their specific industry.
 - Impact: "HIGH IMPACT" or "MEDIUM IMPACT"
 - Effort: "Quick win" or "Takes time"
 
