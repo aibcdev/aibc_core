@@ -357,6 +357,25 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
 
   // Fetch real data on mount
   useEffect(() => {
+    // CRITICAL: On page load, check if we need to clear stale cache
+    // If lastScanTimestamp is old (> 1 hour) or doesn't exist, clear cache
+    const lastTimestamp = localStorage.getItem('lastScanTimestamp');
+    const currentUsername = localStorage.getItem('lastScannedUsername');
+    
+    if (lastTimestamp) {
+      const age = Date.now() - parseInt(lastTimestamp);
+      if (age > 3600000) { // Older than 1 hour
+        console.log('🧹 Cache is stale (>1 hour old) - clearing on page load');
+        localStorage.removeItem('lastScanResults');
+        localStorage.removeItem('lastScanTimestamp');
+        setStrategicInsights([]);
+        setBrandDNA(null);
+        setCompetitorIntelligence([]);
+        setMarketShare(null);
+        setScanUsername(null);
+      }
+    }
+    
     // Set loading to false immediately so dashboard renders instantly
     // Data will load in background to prevent blank screen
     setLoading(false);

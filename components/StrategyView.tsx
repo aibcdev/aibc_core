@@ -119,14 +119,20 @@ const StrategyView: React.FC = () => {
       // Try localStorage first
       const cachedResults = localStorage.getItem('lastScanResults');
       const currentUsername = localStorage.getItem('lastScannedUsername');
+      const currentTimestamp = localStorage.getItem('lastScanTimestamp');
       
       if (cachedResults && currentUsername) {
         try {
           const cached = JSON.parse(cachedResults);
           const cachedUsername = cached.scanUsername || cached.username;
+          const cachedTimestamp = cached.timestamp || cached.scanTimestamp;
           
-          // Only use cache if username matches
-          if (cachedUsername && cachedUsername.toLowerCase() === currentUsername.toLowerCase()) {
+          // Validate timestamp (must be within 1 hour)
+          const timestampValid = currentTimestamp && cachedTimestamp && 
+            (parseInt(currentTimestamp) - parseInt(cachedTimestamp)) < 3600000;
+          
+          // Only use cache if username matches AND timestamp is valid
+          if (cachedUsername && cachedUsername.toLowerCase() === currentUsername.toLowerCase() && timestampValid) {
             setBrandDNA(cached.brandDNA || null);
             setCompetitorIntelligence(Array.isArray(cached.competitorIntelligence) ? cached.competitorIntelligence : []);
             setScanUsername(currentUsername);

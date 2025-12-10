@@ -91,9 +91,26 @@ const ContentHubView: React.FC = () => {
   const enhanceContentIdeas = async () => {
     try {
       const cachedScanResults = localStorage.getItem('lastScanResults');
+      const currentUsername = localStorage.getItem('lastScannedUsername');
+      const currentTimestamp = localStorage.getItem('lastScanTimestamp');
+      
       if (!cachedScanResults) return;
       
       const parsed = JSON.parse(cachedScanResults);
+      const cachedUsername = parsed.scanUsername || parsed.username;
+      const cachedTimestamp = parsed.timestamp || parsed.scanTimestamp;
+      
+      // Validate username and timestamp
+      const usernameValid = currentUsername && cachedUsername && 
+        currentUsername.toLowerCase() === cachedUsername.toLowerCase();
+      const timestampValid = currentTimestamp && cachedTimestamp && 
+        (parseInt(currentTimestamp) - parseInt(cachedTimestamp)) < 3600000;
+      
+      if (!usernameValid || !timestampValid) {
+        console.log('⚠️ Content Hub: Cache invalid - skipping enhancement');
+        return;
+      }
+      
       let contentIdeas = parsed.contentIdeas || [];
       
       if (contentIdeas.length === 0) return;
@@ -250,14 +267,28 @@ const ContentHubView: React.FC = () => {
         }
       }
       
-      // Fallback to localStorage scan results
+      // Fallback to localStorage scan results - WITH VALIDATION
       if (contentIdeasFromScan.length === 0) {
         const lastScanResults = localStorage.getItem('lastScanResults');
+        const currentUsername = localStorage.getItem('lastScannedUsername');
+        const currentTimestamp = localStorage.getItem('lastScanTimestamp');
+        
         if (lastScanResults) {
           try {
             const parsed = JSON.parse(lastScanResults);
-            if (parsed.contentIdeas && Array.isArray(parsed.contentIdeas)) {
+            const cachedUsername = parsed.scanUsername || parsed.username;
+            const cachedTimestamp = parsed.timestamp || parsed.scanTimestamp;
+            
+            // Validate username and timestamp
+            const usernameValid = currentUsername && cachedUsername && 
+              currentUsername.toLowerCase() === cachedUsername.toLowerCase();
+            const timestampValid = currentTimestamp && cachedTimestamp && 
+              (parseInt(currentTimestamp) - parseInt(cachedTimestamp)) < 3600000;
+            
+            if (usernameValid && timestampValid && parsed.contentIdeas && Array.isArray(parsed.contentIdeas)) {
               contentIdeasFromScan = parsed.contentIdeas;
+            } else {
+              console.log('⚠️ Content Hub: Cache invalid - not loading content ideas');
             }
           } catch (e) {
             console.error('Error parsing scan results:', e);
@@ -265,11 +296,33 @@ const ContentHubView: React.FC = () => {
         }
       }
       
-      // Load additional context for enhancement
+      // Load additional context for enhancement - WITH VALIDATION
       const activeStrategy = JSON.parse(localStorage.getItem('activeContentStrategy') || 'null');
       const cachedResults = localStorage.getItem('lastScanResults');
+      const currentUsername = localStorage.getItem('lastScannedUsername');
+      const currentTimestamp = localStorage.getItem('lastScanTimestamp');
+      
       let competitorIntelligence: any[] = [];
       let brandDNA: any = null;
+      
+      // Validate cache before using
+      if (cachedResults && currentUsername && currentTimestamp) {
+        try {
+          const parsed = JSON.parse(cachedResults);
+          const cachedUsername = parsed.scanUsername || parsed.username;
+          const cachedTimestamp = parsed.timestamp || parsed.scanTimestamp;
+          
+          const usernameValid = cachedUsername && cachedUsername.toLowerCase() === currentUsername.toLowerCase();
+          const timestampValid = cachedTimestamp && (parseInt(currentTimestamp) - parseInt(cachedTimestamp)) < 3600000;
+          
+          if (usernameValid && timestampValid) {
+            competitorIntelligence = parsed.competitorIntelligence || [];
+            brandDNA = parsed.brandDNA || null;
+          }
+        } catch (e) {
+          console.error('Error validating cache:', e);
+        }
+      }
       
       if (cachedResults) {
         try {

@@ -67,6 +67,31 @@ const AnalyticsView: React.FC = () => {
       // Get scan data
       const lastScanResults = localStorage.getItem('lastScanResults');
       const lastUsername = localStorage.getItem('lastScannedUsername');
+      const lastTimestamp = localStorage.getItem('lastScanTimestamp');
+      
+      // Validate cache
+      if (lastScanResults && lastUsername && lastTimestamp) {
+        try {
+          const parsed = JSON.parse(lastScanResults);
+          const cachedUsername = parsed.scanUsername || parsed.username;
+          const cachedTimestamp = parsed.timestamp || parsed.scanTimestamp;
+          
+          const usernameValid = cachedUsername && cachedUsername.toLowerCase() === lastUsername.toLowerCase();
+          const timestampValid = cachedTimestamp && (parseInt(lastTimestamp) - parseInt(cachedTimestamp)) < 3600000;
+          
+          if (!usernameValid || !timestampValid) {
+            console.log('⚠️ Analytics: Cache invalid - clearing');
+            setAnalytics({ 
+              platforms: [],
+              isLoading: false, 
+              error: 'Cache expired. Run a new scan.' 
+            });
+            return;
+          }
+        } catch (e) {
+          console.error('Error validating cache:', e);
+        }
+      }
       
       if (!lastScanResults || !lastUsername) {
         // Try to generate insights from any available scan data

@@ -984,14 +984,29 @@ export async function startScan(
     try {
       const { generateJSON } = await import('./llmService');
       
-      // Extract industry/niche context for better tailoring
+      // Extract industry/niche context for better tailoring - PRIORITIZE website content
       const allPosts = (validatedContent.posts || []).map((p: any) => p.content).join('\n\n');
       const bio = validatedContent.profile?.bio || '';
       const themes = (validatedContent.content_themes || []).join(', ');
-      const nicheIndicators = extractNicheIndicators(allPosts.substring(0, 10000), bio, themes, brandDNA);
+      const nicheIndicators = extractNicheIndicators(allPosts.substring(0, 10000), bio, themes, brandDNA, websiteTextContent);
       
       // Extract brand name from username
       const brandName = username?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || username || 'this brand';
+      
+      // Build context - PRIORITIZE website content
+      let brandContext = '';
+      if (websiteTextContent && websiteTextContent.length > 100) {
+        brandContext = `WEBSITE CONTENT (PRIMARY SOURCE - most accurate for understanding what this business does):\n${websiteTextContent.substring(0, 10000)}\n\n`;
+      }
+      if (bio && bio.length > 20) {
+        brandContext += `Profile Bio: ${bio}\n\n`;
+      }
+      if (themes) {
+        brandContext += `Content Themes: ${themes}\n\n`;
+      }
+      if (allPosts.length > 50) {
+        brandContext += `Recent Posts Sample:\n${validatedContent.posts.slice(0, 5).map((p: any) => p.content).join('\n\n')}\n\n`;
+      }
       
       const contentPrompt = `You are a content strategist for ${brandName}. Generate 5-8 SPECIFIC, BRAND-SPECIFIC content ideas that are UNIQUE to this brand and cannot be applied to other brands in different industries.
 
@@ -1001,20 +1016,15 @@ CRITICAL REQUIREMENTS:
 - NO generic ideas like "behind-the-scenes content" or "educational content" without brand context
 - Ideas must be actionable and specific to their audience
 - Each idea should be so specific that it would NOT work for a different brand in a different industry
+- If website content is provided, use it as the PRIMARY source to understand what the business actually does
 
 Brand Name: ${brandName}
 Industry/Niche: ${nicheIndicators || 'Based on content analysis'}
 
+${brandContext}
+
 Brand DNA:
 ${JSON.stringify(brandDNA, null, 2)}
-
-Content Themes: ${themes || 'None identified'}
-
-Recent Posts Sample:
-${validatedContent.posts.slice(0, 5).map((p: any) => p.content).join('\n\n') || 'No posts available'}
-
-Profile Bio:
-${bio || 'No bio available'}
 
 Generate content ideas that:
 1. Are SPECIFIC to ${brandName} (e.g., "Nike Athlete Story: [Athlete Name]" NOT "Behind-the-scenes")
@@ -1109,7 +1119,7 @@ Return JSON array of content ideas, each with:
       const allPosts = (validatedContent.posts || []).map((p: any) => p.content).join('\n\n');
       const bio = validatedContent.profile?.bio || '';
       const themes = (validatedContent.content_themes || []).join(', ');
-      const nicheIndicators = extractNicheIndicators(allPosts.substring(0, 10000), bio, themes, brandDNA);
+      const nicheIndicators = extractNicheIndicators(allPosts.substring(0, 10000), bio, themes, brandDNA, websiteTextContent);
       contentIdeas = generateIndustrySpecificFallback(brandName, nicheIndicators, primaryTheme, brandDNA);
     }
 
@@ -3501,11 +3511,15 @@ Return ONLY valid JSON:
 }
 
 // Extract niche indicators from content to improve competitor matching
-function extractNicheIndicators(content: string, bio: string, themes: string, brandDNA: any): string {
+function extractNicheIndicators(content: string, bio: string, themes: string, brandDNA: any, websiteContent?: string): string {
   const indicators: string[] = [];
   
-  // Check for sport-specific terms
-  const lowerContent = (content + ' ' + bio + ' ' + themes).toLowerCase();
+  // PRIORITIZE website content - it's the most accurate source
+  const websiteText = websiteContent ? websiteContent.toLowerCase() : '';
+  const socialText = (content + ' ' + bio + ' ' + themes).toLowerCase();
+  
+  // Combine with website content taking priority
+  const lowerContent = websiteText ? (websiteText + ' ' + socialText) : socialText;
   
   // Football/Soccer indicators
   if (lowerContent.includes('soccer') || lowerContent.includes('premier league') || 
@@ -3814,8 +3828,8 @@ async function generateCompetitorIntelligence(validatedContent: any, brandDNA: a
     // Deep research approach - analyze niche first, then find competitors
     // This is like ChatGPT's deep research - understand the context deeply before matching
     
-    // Extract niche indicators from content
-    const nicheIndicators = extractNicheIndicators(combinedText, bio, themes, brandDNA);
+    // Extract niche indicators from content - PRIORITIZE website content
+    const nicheIndicators = extractNicheIndicators(combinedText, bio, themes, brandDNA, websiteContent);
     
     const prompt = `You are conducting DEEP competitive intelligence research. This requires multi-step analysis:
 
