@@ -907,15 +907,36 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
     // Set HTML content
     await page.setContent(html, { waitUntil: 'domcontentloaded' });
     
-    // Extract all links from the page
+    // Extract all links from the page - check multiple sources
     const allLinks = await page.evaluate(() => {
       // @ts-ignore
       const links = Array.from(document.querySelectorAll('a[href]'));
-      return links.map((link: any) => ({
-        href: link.href || link.getAttribute('href'),
-        text: link.innerText || link.textContent || '',
-        ariaLabel: link.getAttribute('aria-label') || '',
-      }));
+      // Also check for social links in meta tags, JSON-LD, and text content
+      const metaTags = Array.from(document.querySelectorAll('meta[property], meta[name]'));
+      const metaLinks: any[] = [];
+      metaTags.forEach((meta: any) => {
+        const content = meta.getAttribute('content') || meta.getAttribute('property') || '';
+        if (content && (content.includes('twitter.com') || content.includes('instagram.com') || 
+            content.includes('youtube.com') || content.includes('linkedin.com') || 
+            content.includes('x.com') || content.includes('tiktok.com'))) {
+          metaLinks.push({ href: content, text: '', ariaLabel: '' });
+        }
+      });
+      
+      return [
+        ...links.map((link: any) => ({
+          href: link.href || link.getAttribute('href'),
+          text: link.innerText || link.textContent || '',
+          ariaLabel: link.getAttribute('aria-label') || '',
+        })),
+        ...metaLinks
+      ];
+    });
+    
+    // Also extract text content to search for social URLs in plain text
+    const pageText = await page.evaluate(() => {
+      // @ts-ignore
+      return document.body?.innerText || document.body?.textContent || '';
     });
     
     await browser.close();
