@@ -309,43 +309,65 @@ export async function startScan(
         addLog(scanId, `[DISCOVERY] CRITICAL: Scanning website for social media links: ${websiteUrl}`);
       try {
         storage.updateScan(scanId, { progress: 22 });
-        // Add timeout wrapper for website scraping (max 60 seconds)
+        
+        // Use fetch FIRST for social link discovery (faster, no browser needed)
+        // Browser scraping is slow and can hang - we only need HTML for social links
         let websiteContent;
         try {
-          websiteContent = await Promise.race([
-            scrapeProfile(websiteUrl, 'website', scanId),
-            new Promise<never>((_, reject) => 
-              setTimeout(() => reject(new Error('Website scraping timeout after 60 seconds')), 60000)
-            )
-          ]);
-        } catch (scrapeError: any) {
-          addLog(scanId, `[DISCOVERY] Browser scraping failed: ${scrapeError.message} - trying fetch fallback...`);
-          // Fallback: Use fetch to get HTML directly (faster, no browser)
+          addLog(scanId, `[DISCOVERY] Fetching HTML directly (fast method)...`);
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+          
           const response = await fetch(websiteUrl, {
             headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
             },
-            signal: AbortSignal.timeout(15000) // 15s timeout
+            signal: controller.signal
           });
+          
+          clearTimeout(timeoutId);
           const html = await response.text();
           websiteContent = { html, text: '', url: websiteUrl };
-          addLog(scanId, `[DISCOVERY] Fetch fallback successful (${html.length} chars HTML)`);
+          addLog(scanId, `[DISCOVERY] Fetch successful (${html.length} chars HTML)`);
+        } catch (fetchError: any) {
+          addLog(scanId, `[DISCOVERY] Fetch failed: ${fetchError.message} - trying browser scraping...`);
+          // Fallback to browser scraping only if fetch fails
+          try {
+            websiteContent = await Promise.race([
+              scrapeProfile(websiteUrl, 'website', scanId),
+              new Promise<never>((_, reject) => 
+                setTimeout(() => reject(new Error('Browser scraping timeout after 30 seconds')), 30000)
+              )
+            ]);
+          } catch (scrapeError: any) {
+            addLog(scanId, `[DISCOVERY] Browser scraping also failed: ${scrapeError.message}`);
+            throw new Error(`Both fetch and browser scraping failed: ${scrapeError.message}`);
+          }
         }
           if (websiteContent.html && websiteContent.html.length > 50) {
             addLog(scanId, `[DISCOVERY] Website scraped successfully (${websiteContent.html.length} chars HTML, ${websiteContent.text?.length || 0} chars text)`);
             
-            // Extract social links from HTML (with timeout)
+            // Extract social links from HTML - use direct regex (fast, no browser)
             storage.updateScan(scanId, { progress: 25 });
-            const htmlLinks = await Promise.race([
-              extractSocialLinksFromWebsite(websiteContent.html, websiteUrl, scanId),
-              new Promise<Record<string, string>>((_, reject) => 
-                setTimeout(() => reject(new Error('Social link extraction timeout after 60 seconds')), 60000)
-              )
-            ]).catch(async (error) => {
-              addLog(scanId, `[EXTRACT] Browser-based extraction failed: ${error.message} - trying regex fallback...`);
-              // Fallback: Direct regex on HTML without browser
-              return extractSocialLinksFromHTMLDirect(websiteContent.html, websiteUrl, scanId);
-            });
+            addLog(scanId, `[EXTRACT] Extracting social links using direct regex (fast method)...`);
+            let htmlLinks = extractSocialLinksFromHTMLDirect(websiteContent.html, websiteUrl, scanId);
+            
+            // If regex found nothing, try browser-based extraction as fallback
+            if (Object.keys(htmlLinks).length === 0) {
+              addLog(scanId, `[EXTRACT] Regex found no links - trying browser-based extraction...`);
+              try {
+                htmlLinks = await Promise.race([
+                  extractSocialLinksFromWebsite(websiteContent.html, websiteUrl, scanId),
+                  new Promise<Record<string, string>>((_, reject) => 
+                    setTimeout(() => reject(new Error('Browser extraction timeout after 30 seconds')), 30000)
+                  )
+                ]);
+              } catch (browserError: any) {
+                addLog(scanId, `[EXTRACT] Browser extraction failed: ${browserError.message} - using regex results`);
+                // Keep regex results (even if empty)
+              }
+            }
             if (Object.keys(htmlLinks).length > 0) {
               discoveredSocialLinks = { ...discoveredSocialLinks, ...htmlLinks };
               addLog(scanId, `[DISCOVERY] Found ${Object.keys(htmlLinks).length} social profiles from HTML: ${Object.keys(htmlLinks).join(', ')}`);
