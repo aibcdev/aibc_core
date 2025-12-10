@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "dev:backend": "cd backend && npm run dev",
-    "dev:all": "concurrently \"npm run dev\" \"npm run dev:backend\""
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:backend\"",
+    "sync-secrets": "./scripts/sync-secrets.sh"
   },
   "dependencies": {
     "@privy-io/react-auth": "^3.8.1",

@@ -1,0 +1,167 @@
+[
+  {
+    "company": "Nike",
+    "scores": {
+      "profile": 100,
+      "posts": 100,
+      "themes": 100,
+      "brandDNA": 100,
+      "competitors": 100,
+      "insights": 100
+    },
+    "issues": [],
+    "socialLinksFound": [
+      "twitter",
+      "instagram",
+      "youtube"
+    ],
+    "competitorsFound": [
+      "Adidas",
+      "Under Armour",
+      "Puma",
+      "New Balance",
+      "Lululemon"
+    ],
+    "contentThemes": [
+      "Athlete empowerment",
+      "Product innovation",
+      "Sports achievements",
+      "Inspirational motivation",
+      "Running and training"
+    ],
+    "overallScore": 100,
+    "scanId": "scan_1765378412367_3261zyko6",
+    "logs": [
+      "[2:55:00 PM] [SUCCESS] youtube scraped - 11152 chars, 16 visual assets",
+      "[2:55:00 PM] [SCANNER] Step 2: Extracting content from 3 scraped profiles...",
+      "[2:55:10 PM] [SUCCESS] Extracted content from 3 scraped profiles",
+      "[2:55:10 PM] [SUCCESS] Quality check passed: 9 posts, 255 char bio, 5 themes",
+      "[2:55:10 PM] [SUCCESS] Extracted 9 posts and 5 themes",
+      "[2:55:10 PM] [ANALYSIS] Processing extracted content...",
+      "[2:55:10 PM] [ANALYSIS] Successfully scanned 3/3 platforms",
+      "[2:55:10 PM] [ANALYSIS] Extracting voice & tone patterns...",
+      "[2:55:10 PM] [ANALYSIS] Identifying content themes...",
+      "[2:55:13 PM] [SUCCESS] Brand DNA extracted",
+      "[2:55:16 PM] [SUCCESS] Strategic insights generated: 3 insights",
+      "[2:55:21 PM] [SUCCESS] Merged 5 competitors from research with 4 generated",
+      "[2:55:21 PM] [SUCCESS] Competitor intelligence analyzed - 5 competitors identified",
+      "[2:55:21 PM] [SUCCESS] Market share estimated at 10% of Sports Apparel and Athletic Footwear",
+      "[2:55:21 PM] [SUCCESS] Brand DNA extracted successfully",
+      "[2:55:21 PM] [SUCCESS] Strategic insights generated",
+      "[2:55:21 PM] [SUCCESS] Competitor intelligence analyzed",
+      "[2:55:21 PM] [METRICS] Content Posts: 6",
+      "[2:55:21 PM] [METRICS] Content Themes: 5",
+      "[2:55:21 PM] [METRICS] Extraction Confidence: 90%"
+    ]
+  },
+  {
+    "company": "Spotify",
+    "scores": {
+      "profile": 100,
+      "posts": 80,
+      "themes": 100,
+      "brandDNA": 100,
+      "competitors": 100,
+      "insights": 100
+    },
+    "issues": [
+      "⚠️ Only 4 posts (expected 5+)"
+    ],
+    "socialLinksFound": [
+      "twitter",
+      "instagram"
+    ],
+    "competitorsFound": [
+      "Apple Music",
+      "Amazon Music",
+      "YouTube Music",
+      "Pandora"
+    ],
+    "contentThemes": [
+      "Year-End Music and Podcast Recap (Wrapped)",
+      "Creator Focused Content",
+      "Community Engagement",
+      "Music Discovery",
+      "Podcast Promotion"
+    ],
+    "overallScore": 97,
+    "scanId": "scan_1765378528931_8g0vogu3e",
+    "logs": [
+      "[2:56:40 PM] [INFO] Scanning 2 of 3 platforms (1 not found)",
+      "[2:56:40 PM] [SCANNER] Step 2: Extracting content from 2 scraped profiles...",
+      "[2:56:47 PM] [SUCCESS] Extracted content from 2 scraped profiles",
+      "[2:56:47 PM] [SUCCESS] Quality check passed: 7 posts, 149 char bio, 5 themes",
+      "[2:56:47 PM] [SUCCESS] Extracted 7 posts and 5 themes",
+      "[2:56:47 PM] [ANALYSIS] Processing extracted content...",
+      "[2:56:47 PM] [ANALYSIS] Successfully scanned 3/3 platforms",
+      "[2:56:47 PM] [ANALYSIS] Extracting voice & tone patterns...",
+      "[2:56:47 PM] [ANALYSIS] Identifying content themes...",
+      "[2:56:49 PM] [SUCCESS] Brand DNA extracted",
+      "[2:56:53 PM] [SUCCESS] Strategic insights generated: 3 insights",
+      "[2:56:57 PM] [SUCCESS] Merged 3 competitors from research with 4 generated",
+      "[2:56:57 PM] [SUCCESS] Competitor intelligence analyzed - 4 competitors identified",
+      "[2:56:57 PM] [SUCCESS] Market share estimated at 35% of Music and Podcast Streaming Platforms",
+      "[2:56:57 PM] [SUCCESS] Brand DNA extracted successfully",
+      "[2:56:57 PM] [SUCCESS] Strategic insights generated",
+      "[2:56:57 PM] [SUCCESS] Competitor intelligence analyzed",
+      "[2:56:57 PM] [METRICS] Content Posts: 4",
+      "[2:56:57 PM] [METRICS] Content Themes: 5",
+      "[2:56:57 PM] [METRICS] Extraction Confidence: 80%"
+    ]
+  },
+  {
+    "company": "Airbnb",
+    "scores": {
+      "profile": 100,
+      "posts": 100,
+      "themes": 100,
+      "brandDNA": 100,
+      "competitors": 100,
+      "insights": 100
+    },
+    "issues": [],
+    "socialLinksFound": [
+      "twitter",
+      "instagram"
+    ],
+    "competitorsFound": [
+      "Booking.com",
+      "VRBO (Vacation Rentals by Owner)",
+      "Expedia",
+      "TripAdvisor",
+      "Marriott Bonvoy Homes & Villas",
+      "VRBO"
+    ],
+    "contentThemes": [
+      "Unique travel experiences",
+      "Global partnerships in live music",
+      "Community support and disaster relief",
+      "Highlighting breathtaking views from Airbnb locations",
+      "Promoting new programs and initiatives"
+    ],
+    "overallScore": 100,
+    "scanId": "scan_1765378624106_yn829zh1i",
+    "logs": [
+      "[2:58:14 PM] [SCANNER] Step 2: Extracting content from 2 scraped profiles...",
+      "[2:58:22 PM] [SUCCESS] Extracted content from 2 scraped profiles",
+      "[2:58:22 PM] [SUCCESS] Quality check passed: 8 posts, 150 char bio, 5 themes",
+      "[2:58:22 PM] [SUCCESS] Extracted 8 posts and 5 themes",
+      "[2:58:22 PM] [ANALYSIS] Processing extracted content...",
+      "[2:58:22 PM] [ANALYSIS] Successfully scanned 3/3 platforms",
+      "[2:58:22 PM] [ANALYSIS] Extracting voice & tone patterns...",
+      "[2:58:22 PM] [ANALYSIS] Identifying content themes...",
+      "[2:58:25 PM] [SUCCESS] Brand DNA extracted",
+      "[2:58:27 PM] [WARNING] Only 2 insights generated - adding fallback insights",
+      "[2:58:27 PM] [SUCCESS] Strategic insights generated: 5 insights",
+      "[2:58:32 PM] [SUCCESS] Merged 3 competitors from research with 5 generated",
+      "[2:58:32 PM] [SUCCESS] Competitor intelligence analyzed - 6 competitors identified",
+      "[2:58:32 PM] [SUCCESS] Market share estimated at 15% of Vacation Rental & Unique Travel Experiences",
+      "[2:58:32 PM] [SUCCESS] Brand DNA extracted successfully",
+      "[2:58:32 PM] [SUCCESS] Strategic insights generated",
+      "[2:58:32 PM] [SUCCESS] Competitor intelligence analyzed",
+      "[2:58:32 PM] [METRICS] Content Posts: 7",
+      "[2:58:32 PM] [METRICS] Content Themes: 5",
+      "[2:58:32 PM] [METRICS] Extraction Confidence: 80%"
+    ]
+  }
+]
