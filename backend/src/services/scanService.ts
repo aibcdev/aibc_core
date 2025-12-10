@@ -2,6 +2,43 @@ import { chromium, Browser } from 'playwright';
 import { storage } from './storage';
 import { generateJSON, generateText, isLLMConfigured, getActiveProvider, ScanTier } from './llmService';
 import dotenv from 'dotenv';
+
+/**
+ * Launch chromium with fallback to system chromium if Playwright browsers aren't available
+ * This handles Cloud Run deployments where Playwright browsers may not install correctly
+ */
+async function launchChromiumWithFallback(options: { headless?: boolean; args?: string[] } = {}): Promise<Browser> {
+  const defaultArgs = [
+    '--no-sandbox', 
+    '--disable-setuid-sandbox', 
+    '--disable-blink-features=AutomationControlled',
+    '--disable-dev-shm-usage',
+    '--disable-gpu'
+  ];
+  
+  try {
+    return await chromium.launch({
+      headless: options.headless !== false,
+      args: options.args || defaultArgs,
+    });
+  } catch (playwrightError: any) {
+    // Fallback: Use system chromium if Playwright browsers aren't available
+    if (playwrightError.message?.includes('Executable doesn\'t exist') || 
+        playwrightError.message?.includes('ENOENT') ||
+        playwrightError.message?.includes('spawn')) {
+      console.log('Playwright browsers not found, falling back to system chromium...');
+      return await chromium.launch({
+        headless: options.headless !== false,
+        executablePath: '/usr/bin/chromium-browser', // System chromium from alpine
+        args: [
+          ...(options.args || defaultArgs),
+          '--single-process' // Required for Cloud Run
+        ],
+      });
+    }
+    throw playwrightError;
+  }
+}
 // URL validation functions
 function isValidUrl(urlString: string): boolean {
   try {
@@ -818,7 +855,7 @@ async function extractSocialLinksFromProfile(html: string, text: string, profile
   
   try {
     // Use Playwright to parse HTML and extract links from bio/links sections
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchChromiumWithFallback({ headless: true });
     const context = await browser.newContext();
     const page = await context.newPage();
     
@@ -1027,7 +1064,7 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
     if (scanId) {
       addLog(scanId, `[EXTRACT] Launching browser for HTML parsing...`);
     }
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchChromiumWithFallback({ headless: true });
     const context = await browser.newContext();
     const page = await context.newPage();
     
@@ -1575,7 +1612,7 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
     if (scanId) {
       addLog(scanId, `[SCRAPE] Launching browser...`);
     }
-    const browser = await chromium.launch({
+    const browser = await launchChromiumWithFallback({ 
       headless: true,
       args: [
         '--no-sandbox', 
@@ -1583,7 +1620,7 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
         '--disable-blink-features=AutomationControlled',
         '--disable-dev-shm-usage',
         '--disable-gpu'
-      ],
+      ]
     });
     if (scanId) {
       addLog(scanId, `[SCRAPE] Browser launched successfully`);
