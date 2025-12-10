@@ -939,8 +939,6 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
       return document.body?.innerText || document.body?.textContent || '';
     });
     
-    await browser.close();
-    
     // Pattern matching for social media platforms
     const socialPatterns: Record<string, RegExp[]> = {
       twitter: [
