@@ -15,7 +15,11 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
   const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
   
   // Privy hooks
-  const { ready, authenticated, user, loginWithEmail, loginWithGoogle } = usePrivy();
+  const privy = usePrivy();
+  const { ready, authenticated, user } = privy;
+  const loginWithEmail = privy.loginWithEmail;
+  const loginWithGoogle = privy.loginWithGoogle;
+  const sendPasswordResetEmail = privy.sendPasswordResetEmail;
   
   // Handle successful authentication
   useEffect(() => {
@@ -60,6 +64,9 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
 
     try {
       // Use Privy for email/password login
+      if (!loginWithEmail) {
+        throw new Error('Sign in is not available. Please check your Privy configuration.');
+      }
       await loginWithEmail({ email, password });
       // Navigation will be handled by useEffect when authenticated
     } catch (err: any) {
@@ -82,22 +89,27 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
 
     try {
       console.log('🔐 Forgot password form submitted for:', forgotPasswordEmail);
-      const result = await forgotPassword(forgotPasswordEmail);
-      console.log('🔐 Forgot password result:', result);
       
-      if (result.success) {
+      // Use Privy's password reset email
+      if (sendPasswordResetEmail) {
+        await sendPasswordResetEmail(forgotPasswordEmail);
         setForgotPasswordSent(true);
         setError(''); // Clear any previous errors
       } else {
-        // Show the actual error from Supabase
-        const errorMsg = result.error || 'Failed to send reset email. Please try again.';
-        setError(errorMsg);
-        console.error('❌ Password reset failed:', errorMsg);
+        // Fallback to old method if Privy method not available
+        const result = await forgotPassword(forgotPasswordEmail);
+        if (result.success) {
+          setForgotPasswordSent(true);
+          setError('');
+        } else {
+          const errorMsg = result.error || 'Failed to send reset email. Please try again.';
+          setError(errorMsg);
+        }
       }
     } catch (err: any) {
+      console.error('❌ Password reset exception:', err);
       const errorMsg = err.message || 'Failed to send reset email. Please try again.';
       setError(errorMsg);
-      console.error('❌ Password reset exception:', err);
     } finally {
       setForgotPasswordLoading(false);
     }
@@ -235,6 +247,9 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
                   setLoading(true);
                   setError('');
                   try {
+                    if (!loginWithGoogle) {
+                      throw new Error('Google sign-in is not available. Please check your Privy configuration.');
+                    }
                     await loginWithGoogle();
                     // Navigation will be handled by useEffect when authenticated
                   } catch (err: any) {

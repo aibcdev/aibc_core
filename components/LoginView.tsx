@@ -13,7 +13,10 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
   const [error, setError] = useState('');
   
   // Privy hooks
-  const { ready, authenticated, user, signupWithEmail, loginWithGoogle } = usePrivy();
+  const privy = usePrivy();
+  const { ready, authenticated, user } = privy;
+  const signupWithEmail = privy.signupWithEmail;
+  const loginWithGoogle = privy.loginWithGoogle;
   
   // Handle successful authentication
   useEffect(() => {
@@ -50,6 +53,9 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
 
     try {
       // Use Privy for email signup
+      if (!signupWithEmail) {
+        throw new Error('Sign up is not available. Please check your Privy configuration.');
+      }
       await signupWithEmail({ email, password });
       // Navigation will be handled by useEffect when authenticated
     } catch (err: any) {
@@ -108,6 +114,9 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
                   setLoading(true);
                   setError('');
                   try {
+                    if (!loginWithGoogle) {
+                      throw new Error('Google sign-in is not available. Please check your Privy configuration.');
+                    }
                     await loginWithGoogle();
                     // Navigation will be handled by useEffect when authenticated
                   } catch (err: any) {
