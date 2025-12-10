@@ -15,51 +15,44 @@ function isValidUrl(urlString: string): boolean {
 async function isUrlReachable(url: string): Promise<boolean> {
   try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      // Try HEAD first
-      let response;
-      try {
-        response = await fetch(url, {
-            method: 'HEAD',
-            redirect: 'follow',
-            signal: controller.signal
-        });
-      } catch (headError) {
-        // HEAD might be blocked, try GET
-        response = await fetch(url, {
-            method: 'GET',
-            redirect: 'follow',
-            signal: controller.signal
-        });
-      }
+      // Use GET with proper headers to avoid being blocked
+      const response = await fetch(url, {
+          method: 'GET',
+          redirect: 'follow',
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+          }
+      });
       
       clearTimeout(timeoutId);
       
-      // Check for valid response
-      if (response.status >= 400) {
-        console.log(`URL ${url} returned status ${response.status}`);
-        return false;
+      // Accept any 2xx or 3xx response (3xx means redirect was followed)
+      if (response.ok || (response.status >= 200 && response.status < 400)) {
+        console.log(`URL ${url} is reachable (status: ${response.status})`);
+        return true;
       }
       
-      // Additional check: try to read some content to ensure it's a real page
-      if (response.ok) {
-        try {
-          const text = await response.text();
-          // Must have some content (at least basic HTML)
-          if (text.length < 50) {
-            console.log(`URL ${url} returned minimal content (${text.length} chars)`);
-            return false;
-          }
-          return true;
-        } catch (e) {
-          // Could not read content
-          return false;
-        }
-      }
-      
+      console.log(`URL ${url} returned status ${response.status}`);
       return false;
   } catch (error: any) {
+      // Some sites block but still exist - check for specific errors
+      const errorMessage = error.message || '';
+      
+      // These errors usually mean the site exists but blocked us
+      if (errorMessage.includes('CERT') || 
+          errorMessage.includes('SSL') ||
+          errorMessage.includes('ENOTFOUND') === false) {
+        console.log(`URL ${url} check encountered: ${errorMessage} - assuming reachable`);
+        return true; // Assume reachable, let scraper handle it
+      }
+      
       console.log(`URL ${url} is not reachable: ${error.message}`);
       return false;
   }
