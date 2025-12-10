@@ -401,7 +401,8 @@ export async function startScan(
         }
       } catch (error: any) {
           addLog(scanId, `[DISCOVERY] ERROR: Failed to extract social links from website: ${error.message}`);
-          addLog(scanId, `[DISCOVERY] Will skip all platforms since website scraping failed`);
+          addLog(scanId, `[DISCOVERY] Website scraping failed, but will try fallback username construction for platforms`);
+          // Don't skip all platforms - try fallback username construction instead
         }
       }
     }
@@ -448,15 +449,69 @@ export async function startScan(
                              username.includes('.net') || username.includes('.org'));
             
             if (isDomain) {
-              // For domains, we MUST have found social links from the website
-              // If we didn't find any, skip this platform - don't try to construct URLs
+              // For domains, try discovered links first, then fallback to username construction
               if (Object.keys(discoveredSocialLinks).length === 0) {
-                addLog(scanId, `[SKIP] ${platform} - domain detected but NO social links found on website. Website scraping must find links first.`);
-                continue; // Skip this platform - we need website scraping to work first
+                // No discovered links - try fallback username construction from domain
+                addLog(scanId, `[FALLBACK] Domain detected but NO social links found on website. Trying username construction from domain...`);
+                
+                // Extract potential username from domain (e.g., "example.com" -> "example")
+                const domainName = username.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0];
+                
+                // Try common variations
+                const usernameVariations = [
+                  domainName,
+                  domainName.replace(/-/g, ''),
+                  domainName.replace(/_/g, ''),
+                  domainName + 'tv', // For .tv domains
+                  domainName.replace(/tv$/, ''), // Remove 'tv' suffix if present
+                ];
+                
+                // Try each variation for this platform
+                let foundUrl = false;
+                for (const variation of usernameVariations) {
+                  const testUrl = getProfileUrl(variation, platform);
+                  if (testUrl) {
+                    addLog(scanId, `[FALLBACK] Trying ${platform} with username variation: ${variation} -> ${testUrl}`);
+                    // Don't verify here - let the scraping attempt verify
+                    profileUrl = testUrl;
+                    foundUrl = true;
+                    break;
+                  }
+                }
+                
+                if (!foundUrl) {
+                  addLog(scanId, `[SKIP] ${platform} - domain detected, no discovered links, and username construction failed`);
+                  continue;
+                }
               } else {
-                // We found some links, but not for this platform - that's okay, skip it
-                addLog(scanId, `[SKIP] ${platform} - domain detected but this platform's link not found on website. Found: ${Object.keys(discoveredSocialLinks).join(', ')}`);
-                continue; // Skip this platform
+                // We found some links, but not for this platform - try fallback username construction
+                addLog(scanId, `[FALLBACK] Domain detected, found links for other platforms (${Object.keys(discoveredSocialLinks).join(', ')}), trying username construction for ${platform}...`);
+                
+                // Extract potential username from domain
+                const domainName = username.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0];
+                const usernameVariations = [
+                  domainName,
+                  domainName.replace(/-/g, ''),
+                  domainName.replace(/_/g, ''),
+                  domainName + 'tv',
+                  domainName.replace(/tv$/, ''),
+                ];
+                
+                let foundUrl = false;
+                for (const variation of usernameVariations) {
+                  const testUrl = getProfileUrl(variation, platform);
+                  if (testUrl) {
+                    addLog(scanId, `[FALLBACK] Trying ${platform} with username variation: ${variation} -> ${testUrl}`);
+                    profileUrl = testUrl;
+                    foundUrl = true;
+                    break;
+                  }
+                }
+                
+                if (!foundUrl) {
+                  addLog(scanId, `[SKIP] ${platform} - domain detected, link not found on website, and username construction failed`);
+                  continue;
+                }
               }
             } else {
               // Regular username - use it directly
@@ -478,7 +533,31 @@ export async function startScan(
             // Don't verify - just scrape and let LLM handle extraction
             addLog(scanId, `[SCRAPE] Scraping discovered ${actualPlatform} profile (NO VERIFICATION): ${profileUrl}`);
             try {
-              const content = await scrapeProfile(profileUrl, actualPlatform, scanId);
+              // Add timeout wrapper (30s max for platform scraping)
+              const content = await Promise.race([
+                scrapeProfile(profileUrl, actualPlatform, scanId),
+                new Promise<never>((_, reject) => 
+                  setTimeout(() => reject(new Error('Platform scraping timeout after 30 seconds')), 30000)
+                )
+              ]).catch(async (scrapeError: any) => {
+                addLog(scanId, `[SCRAPE] Browser scraping failed: ${scrapeError.message} - trying fetch fallback...`);
+                // Fallback: Use fetch to get HTML
+                try {
+                  const controller = new AbortController();
+                  const timeoutId = setTimeout(() => controller.abort(), 10000);
+                  const response = await fetch(profileUrl, {
+                    headers: {
+                      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    },
+                    signal: controller.signal
+                  });
+                  clearTimeout(timeoutId);
+                  const html = await response.text();
+                  return { html, text: '', url: profileUrl, images: [], videos: [] };
+                } catch (fetchError: any) {
+                  throw new Error(`Both browser and fetch failed: ${fetchError.message}`);
+                }
+              });
               // Always add discovered links - even if content is minimal, LLM can extract
               verifiedPlatforms.push(actualPlatform);
               scrapedData.push({ platform: actualPlatform, content });
@@ -506,8 +585,8 @@ export async function startScan(
               // Verify profile actually exists (not 404, not login page, has actual content)
               const profileExists = await verifyProfileExists(content, actualPlatform);
               
-              // Be more lenient with content length - accept profiles with at least 20 chars
-              const minContentLength = 20;
+              // Be more lenient with content length - accept profiles with at least 10 chars (lowered from 20)
+              const minContentLength = 10;
               const hasMinimalContent = content.text && content.text.length >= minContentLength;
               
               if (profileExists && hasMinimalContent) {
@@ -1778,8 +1857,8 @@ function getProfileUrl(username: string, platform: string): string | null {
 
 // Verify if profile actually exists (not 404, not login page)
 async function verifyProfileExists(content: { html: string; text: string; url: string }, platform: string): Promise<boolean> {
-  // Be very lenient - only reject if we have almost no content at all
-  if (!content.text || content.text.length < 20) return false;
+  // Be very lenient - only reject if we have almost no content at all (lowered threshold from 20 to 10)
+  if (!content.text || content.text.length < 10) return false;
   
   // Check for common "not found" indicators (more specific to avoid false positives)
   const notFoundIndicators = [
@@ -1827,6 +1906,33 @@ async function verifyProfileExists(content: { html: string; text: string; url: s
   // If we have any reasonable content and no strong "not found" indicators, assume it exists
   // This is intentionally very permissive - we'd rather try to extract from a profile than skip it
   return true;
+}
+
+// Scrape profile with retry logic
+async function scrapeProfileWithRetry(
+  url: string, 
+  platform: string, 
+  scanId?: string, 
+  maxRetries: number = 3
+): Promise<{ html: string; text: string; url: string; images?: string[]; videos?: string[] }> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await scrapeProfile(url, platform, scanId);
+    } catch (error: any) {
+      if (attempt === maxRetries) {
+        if (scanId) {
+          addLog(scanId, `[SCRAPE] Failed after ${maxRetries} attempts: ${error.message}`);
+        }
+        throw error;
+      }
+      const waitTime = 2000 * attempt; // Exponential backoff: 2s, 4s, 6s
+      if (scanId) {
+        addLog(scanId, `[SCRAPE] Attempt ${attempt} failed, retrying in ${waitTime}ms...`);
+      }
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+  }
+  throw new Error('Scraping failed after all retries');
 }
 
 async function scrapeProfile(url: string, platform: string, scanId?: string): Promise<{ html: string; text: string; url: string; images?: string[]; videos?: string[] }> {
@@ -1886,10 +1992,15 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
       throw new Error(`Browser context/page creation failed: ${browserError.message}`);
     }
     
-    // Set additional headers to avoid detection
+    // Set additional headers to avoid detection (improved anti-bot measures)
     await page.setExtraHTTPHeaders({
       'Accept-Language': 'en-US,en;q=0.9',
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Referer': 'https://www.google.com/', // Make it look like coming from Google
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Upgrade-Insecure-Requests': '1',
     });
 
     try {
@@ -1902,11 +2013,12 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
         timeout: 20000, // Reduced from 30s
       });
       
-      // Wait for dynamic content to load (reduced from 8s to 5s for faster scans)
+      // Wait for dynamic content to load (randomized to avoid detection)
       if (scanId) {
         addLog(scanId, `[SCRAPE] Waiting for dynamic content...`);
       }
-      await page.waitForTimeout(5000);
+      const waitTime = 5000 + Math.random() * 2000; // Randomize between 5-7s
+      await page.waitForTimeout(waitTime);
       
       // Platform-specific scraping strategies with visual content extraction
       let scrapedText = '';
