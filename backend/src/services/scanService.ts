@@ -386,7 +386,7 @@ export async function startScan(
         }
         
         // Process the HTML we got (even if empty)
-        if (websiteContent.html && websiteContent.html.length > 50) {
+          if (websiteContent.html && websiteContent.html.length > 50) {
             addLog(scanId, `[DISCOVERY] Website scraped successfully (${websiteContent.html.length} chars HTML, ${websiteContent.text?.length || 0} chars text)`);
             
             // Extract social links from HTML - use direct regex (fast, no browser)
@@ -416,7 +416,7 @@ export async function startScan(
                 const contentType = textContent ? 'text' : 'HTML';
                 addLog(scanId, `[DISCOVERY] Running LLM extraction (PRIMARY METHOD) on ${contentForLLM.length} chars of ${contentType}...`);
                 const llmExtracted = await extractSocialLinksWithLLM(contentForLLM, websiteUrl, scanId);
-                if (Object.keys(llmExtracted).length > 0) {
+              if (Object.keys(llmExtracted).length > 0) {
                   // LLM results take absolute priority - they're the most accurate
                   discoveredSocialLinks = { ...llmExtracted, ...discoveredSocialLinks };
                   addLog(scanId, `[DISCOVERY] ✅ LLM found ${Object.keys(llmExtracted).length} social profiles: ${Object.keys(llmExtracted).join(', ')}`);
@@ -473,14 +473,14 @@ export async function startScan(
                   addLog(scanId, `[DISCOVERY] LLM extraction failed: ${llmError.message}`);
                 }
               }
-            }
           }
+        }
       } catch (error: any) {
-        addLog(scanId, `[DISCOVERY] ERROR: Failed to extract social links from website: ${error.message}`);
+          addLog(scanId, `[DISCOVERY] ERROR: Failed to extract social links from website: ${error.message}`);
         addLog(scanId, `[DISCOVERY] Website scraping failed, but will try constructed URLs for each platform independently`);
         // Don't skip all platforms - try constructed URLs instead
+        }
       }
-    }
     }
     
     // STEP 2: Scrape all platforms, using discovered links when available
@@ -516,19 +516,19 @@ export async function startScan(
           addLog(scanId, `[${platform.toUpperCase()}] ✓ Using discovered link: ${profileUrl}`);
         } else if (connectedAccounts?.[platform]) {
           // Use connected account handle if available
-          profileUrl = getProfileUrl(connectedAccounts[platform], platform);
+            profileUrl = getProfileUrl(connectedAccounts[platform], platform);
           addLog(scanId, `[${platform.toUpperCase()}] Using connected account: ${connectedAccounts[platform]}`);
-        } else {
+          } else {
           // Always try to construct URL - works for both usernames and domains
           // For domains, extract the domain name and try it as a username
           let usernameToTry = username;
           
-          const isDomain = username.includes('.') && 
-                          (username.includes('.com') || username.includes('.tv') || 
-                           username.includes('.io') || username.includes('.co') ||
-                           username.includes('.net') || username.includes('.org'));
-          
-          if (isDomain) {
+            const isDomain = username.includes('.') && 
+                            (username.includes('.com') || username.includes('.tv') || 
+                             username.includes('.io') || username.includes('.co') ||
+                             username.includes('.net') || username.includes('.org'));
+            
+            if (isDomain) {
             // Extract domain name and try variations
             const domainName = username.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0];
             const usernameVariations = [
@@ -553,13 +553,13 @@ export async function startScan(
           }
           
           addLog(scanId, `[${platform.toUpperCase()}] Trying constructed URL: ${profileUrl}`);
-        }
-        
-        // Determine actual platform name for logging (handle domains like script.tv)
-        if (profileUrl && profileUrl.includes('.com') && !profileUrl.includes('twitter.com') && 
-            !profileUrl.includes('youtube.com') && !profileUrl.includes('linkedin.com') && 
-            !profileUrl.includes('instagram.com') && !profileUrl.includes('x.com')) {
-          actualPlatform = 'website';
+          }
+          
+          // Determine actual platform name for logging (handle domains like script.tv)
+          if (profileUrl && profileUrl.includes('.com') && !profileUrl.includes('twitter.com') && 
+              !profileUrl.includes('youtube.com') && !profileUrl.includes('linkedin.com') && 
+              !profileUrl.includes('instagram.com') && !profileUrl.includes('x.com')) {
+            actualPlatform = 'website';
         }
         
         if (profileUrl) {
@@ -1120,12 +1120,41 @@ Return JSON array of content ideas, each with:
         addLog(scanId, `[SUCCESS] Generated ${contentIdeas.length} brand-specific content ideas`);
       }
       
-      // ENSURE we always have at least 5 content ideas
+      // ENSURE we always have at least 5 content ideas - CRITICAL
       if (contentIdeas.length === 0) {
         addLog(scanId, `[ERROR] No content ideas generated - using emergency fallback`);
         const primaryTheme = validatedContent.content_themes[0] || 'brand content';
         contentIdeas = generateIndustrySpecificFallback(brandName, nicheIndicators || 'General', primaryTheme, brandDNA);
         addLog(scanId, `[SUCCESS] Emergency fallback generated ${contentIdeas.length} content ideas`);
+      }
+      
+      // FINAL CHECK: If still empty, generate absolute minimum fallback
+      if (contentIdeas.length === 0) {
+        addLog(scanId, `[CRITICAL] Still no content ideas - generating absolute minimum`);
+      contentIdeas = [
+          {
+            title: `${brandName} Brand Story`,
+            description: `Share ${brandName}'s unique story and mission in the ${nicheIndicators || 'industry'} space`,
+            platform: 'linkedin',
+            theme: primaryTheme || 'brand building',
+            format: 'post'
+          },
+          {
+            title: `${brandName} Product Showcase`,
+            description: `Highlight ${brandName}'s key products and services`,
+            platform: 'instagram',
+            theme: primaryTheme || 'product',
+            format: 'carousel'
+          },
+          {
+            title: `${brandName} Industry Insights`,
+            description: `Share insights about ${nicheIndicators || 'the industry'} from ${brandName}'s perspective`,
+            platform: 'twitter',
+            theme: primaryTheme || 'thought leadership',
+            format: 'thread'
+          }
+        ];
+        addLog(scanId, `[SUCCESS] Absolute minimum fallback: ${contentIdeas.length} content ideas`);
       }
     } catch (error: any) {
       addLog(scanId, `[WARNING] Content ideas generation failed: ${error.message} - generating industry-specific fallback`);
@@ -1705,8 +1734,8 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
     
     // CRITICAL: ALWAYS run LLM extraction - it's the most reliable method
     // LLM can find social links even when they're in JavaScript, images, or mentioned in text
-    try {
-      await browser.close(); // Close browser before LLM call
+      try {
+        await browser.close(); // Close browser before LLM call
       
       // Use pageText if available, otherwise use HTML (LLM can extract from HTML too)
       const contentForLLM = pageText && pageText.length > 100 ? pageText : (rawHtml ? rawHtml.substring(0, 10000) : '');
@@ -1734,8 +1763,8 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
           addLog(scanId, `[DISCOVERY] ⚠️ Not enough content for LLM extraction (${contentForLLM.length} chars)`);
         }
       }
-    } catch (e) {
-      console.log('LLM social link extraction failed:', e);
+      } catch (e) {
+        console.log('LLM social link extraction failed:', e);
       if (scanId) {
         addLog(scanId, `[DISCOVERY] ⚠️ LLM extraction failed: ${e instanceof Error ? e.message : 'Unknown error'}, using HTML parsing results only`);
       }
@@ -1819,9 +1848,9 @@ function extractSocialLinksFromHTMLDirect(html: string, websiteUrl: string, scan
       // Try each pattern for this platform
       for (const pattern of patterns) {
         const matches = Array.from(html.matchAll(pattern));
-        if (matches.length > 0) {
-          // Get first unique match
-          const firstMatch = matches[0];
+      if (matches.length > 0) {
+        // Get first unique match
+        const firstMatch = matches[0];
           let username = firstMatch[1];
           
           // If no capture group, extract from full match
@@ -1850,20 +1879,20 @@ function extractSocialLinksFromHTMLDirect(html: string, websiteUrl: string, scan
           let fullUrl: string;
           if (platform === 'twitter') {
             fullUrl = firstMatch[0].includes('x.com') ? `https://x.com/${username}` : `https://twitter.com/${username}`;
-          } else if (platform === 'instagram') {
-            fullUrl = `https://instagram.com/${username}`;
-          } else if (platform === 'youtube') {
+        } else if (platform === 'instagram') {
+          fullUrl = `https://instagram.com/${username}`;
+        } else if (platform === 'youtube') {
             if (firstMatch[0].includes('/channel/') || firstMatch[0].includes('/user/') || firstMatch[0].includes('/c/')) {
               fullUrl = firstMatch[0].startsWith('http') ? firstMatch[0] : `https://${firstMatch[0]}`;
-            } else {
-              fullUrl = `https://youtube.com/@${username}`;
-            }
-          } else if (platform === 'linkedin') {
+          } else {
+            fullUrl = `https://youtube.com/@${username}`;
+          }
+        } else if (platform === 'linkedin') {
             fullUrl = firstMatch[0].includes('/company/') 
-              ? `https://linkedin.com/company/${username}`
-              : `https://linkedin.com/in/${username}`;
-          } else if (platform === 'tiktok') {
-            fullUrl = `https://tiktok.com/@${username}`;
+            ? `https://linkedin.com/company/${username}`
+            : `https://linkedin.com/in/${username}`;
+        } else if (platform === 'tiktok') {
+          fullUrl = `https://tiktok.com/@${username}`;
           } else if (platform === 'facebook') {
             fullUrl = `https://facebook.com/${username}`;
           } else if (platform === 'pinterest') {
@@ -1876,10 +1905,10 @@ function extractSocialLinksFromHTMLDirect(html: string, websiteUrl: string, scan
           
           // Clean up URL
           fullUrl = fullUrl.split('?')[0].split('#')[0];
-          
-          socialLinks[platform] = fullUrl;
-          if (scanId) {
-            addLog(scanId, `[EXTRACT] Regex found ${platform}: ${fullUrl}`);
+        
+        socialLinks[platform] = fullUrl;
+        if (scanId) {
+          addLog(scanId, `[EXTRACT] Regex found ${platform}: ${fullUrl}`);
           }
           break; // Found this platform, move to next
         }
@@ -2004,7 +2033,7 @@ Return ONLY valid JSON with the structure specified in the prompt.`;
           
           if (fullUrl.startsWith('http')) {
             socialLinks[platform] = fullUrl;
-            if (scanId) {
+          if (scanId) {
               addLog(scanId, `[LLM] Found ${platform}: ${fullUrl}`);
             }
           }
@@ -2368,11 +2397,11 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
               
               imgSelectors.forEach(selector => {
                 const imgElements = el.querySelectorAll(selector);
-                imgElements.forEach((img: any) => {
-                  const src = img.src || img.getAttribute('src');
+              imgElements.forEach((img: any) => {
+                const src = img.src || img.getAttribute('src');
                   if (src && !src.includes('data:') && !tweetImages.includes(src)) {
-                    tweetImages.push(src);
-                  }
+                  tweetImages.push(src);
+                }
                 });
               });
               
@@ -2386,11 +2415,11 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
               
               videoSelectors.forEach(selector => {
                 const videoElements = el.querySelectorAll(selector);
-                videoElements.forEach((video: any) => {
-                  const src = video.src || video.getAttribute('src') || video.querySelector('source')?.src;
-                  if (src && !tweetVideos.includes(src)) {
-                    tweetVideos.push(src);
-                  }
+              videoElements.forEach((video: any) => {
+                const src = video.src || video.getAttribute('src') || video.querySelector('source')?.src;
+                if (src && !tweetVideos.includes(src)) {
+                  tweetVideos.push(src);
+                }
                 });
               });
             });
@@ -2480,11 +2509,11 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
               
               imgSelectors.forEach(selector => {
                 const imgElements = el.querySelectorAll(selector);
-                imgElements.forEach((img: any) => {
-                  const src = img.src || img.getAttribute('src');
+              imgElements.forEach((img: any) => {
+                const src = img.src || img.getAttribute('src');
                   if (src && !src.includes('data:') && !postImages.includes(src)) {
-                    postImages.push(src);
-                  }
+                  postImages.push(src);
+                }
                 });
               });
               
@@ -2498,11 +2527,11 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
               
               videoSelectors.forEach(selector => {
                 const videoElements = el.querySelectorAll(selector);
-                videoElements.forEach((video: any) => {
-                  const src = video.src || video.getAttribute('src') || video.querySelector('source')?.src;
-                  if (src && !postVideos.includes(src)) {
-                    postVideos.push(src);
-                  }
+              videoElements.forEach((video: any) => {
+                const src = video.src || video.getAttribute('src') || video.querySelector('source')?.src;
+                if (src && !postVideos.includes(src)) {
+                  postVideos.push(src);
+                }
                 });
               });
             });
@@ -3477,19 +3506,33 @@ CRITICAL RULES:
 5. Every insight must reference what ${brandName}'s competitors are doing
 6. Insights must be so specific to ${brandName} that they would NOT work for a different brand
 
-BAD examples (too generic, don't say these):
-- "Keep posting and you'll grow"
-- "Try short-form video"
-- "Engage with your audience more"
+BAD examples (too generic, don't say these - these apply to ANY brand):
+- "Keep posting and you'll grow" (too generic)
+- "Try short-form video" (too generic - doesn't mention ${brandName})
+- "Engage with your audience more" (too generic)
+- "Increase Posting Frequency" (too generic - must specify ${brandName}'s current frequency vs competitors)
+- "Leverage Short-Form Video" (too generic - must be specific to ${brandName}'s industry)
 
-GOOD examples (specific with data, brand-specific):
-- For Nike: "Nike posts 2x/week. Adidas posts daily and gets 3x your views. Nike should post 4x/week minimum to compete."
-- For Tesla: "Tesla's videos average 4 mins. Rivian does 8-12 mins and gets 2x watch time. Tesla should create longer videos."
-- For HubSpot: "HubSpot's thumbnails are text-heavy. Salesforce uses faces + 3 words max - their CTR is 2x higher."
+CRITICAL: If you generate "Increase Posting Frequency" or "Leverage Short-Form Video", you MUST:
+- Specify ${brandName}'s current posting frequency
+- Name specific competitors and their frequencies
+- Make it so specific that it ONLY applies to ${brandName}
+
+GOOD examples (specific with data, brand-specific - MUST mention brand name):
+- For Nike: "Nike posts 2x/week. Adidas posts daily and gets 3x Nike's views. Nike should post 4x/week minimum to compete with Adidas."
+- For Tesla: "Tesla's videos average 4 mins. Rivian does 8-12 mins and gets 2x watch time. Tesla should create longer videos like Rivian."
+- For HubSpot: "HubSpot's thumbnails are text-heavy. Salesforce uses faces + 3 words max - their CTR is 2x higher than HubSpot's."
+
+CRITICAL REQUIREMENT: Every insight MUST:
+1. Mention ${brandName} by name in the title OR description
+2. Reference ${brandName}'s specific industry/niche (${nicheIndicators || 'their industry'})
+3. Compare ${brandName} to specific named competitors
+4. Include specific numbers/metrics
+5. Be so specific that it would NOT work for a different brand
 
 Generate 2-3 insights SPECIFIC to ${brandName}:
-- Title: 4-6 words, action-focused, mention ${brandName} or their industry
-- Description: Include specific numbers/comparisons. What ${brandName}'s competitors do vs what ${brandName} does. MUST reference ${brandName} by name or their specific industry.
+- Title: 4-6 words, action-focused, MUST mention ${brandName} or their specific industry term
+- Description: MUST include ${brandName}'s name, specific numbers, and named competitors. What ${brandName}'s competitors do vs what ${brandName} does.
 - Impact: "HIGH IMPACT" or "MEDIUM IMPACT"
 - Effort: "Quick win" or "Takes time"
 
@@ -3830,7 +3873,7 @@ async function generateCompetitorIntelligence(validatedContent: any, brandDNA: a
     if (websiteContent && websiteContent.length > 100) {
       // Website content is the most reliable source for understanding what the business actually does
       contentContext = `WEBSITE CONTENT (PRIMARY SOURCE - most accurate):\n${websiteContent.substring(0, 15000)}\n\n`;
-      if (combinedText && combinedText.length > 50) {
+    if (combinedText && combinedText.length > 50) {
         contentContext += `Social Media Posts:\n${combinedText.substring(0, 10000)}\n\n`;
       }
       if (bio && bio.length > 20) {
