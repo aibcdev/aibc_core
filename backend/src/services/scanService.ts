@@ -846,12 +846,79 @@ export async function startScan(
       }
     }
 
+    // Generate Content Ideas based on brand DNA and content themes
+    storage.updateScan(scanId, { progress: 99 });
+    let contentIdeas: any[] = [];
+    try {
+      const { generateJSON } = await import('./llmService');
+      const contentPrompt = `Based on this brand's content and DNA, generate 5-8 specific, actionable content ideas that align with their voice and themes.
+
+Brand DNA:
+${JSON.stringify(brandDNA, null, 2)}
+
+Content Themes: ${validatedContent.content_themes.join(', ')}
+
+Recent Posts Sample:
+${validatedContent.posts.slice(0, 5).map((p: any) => p.content).join('\n\n')}
+
+Generate content ideas that:
+1. Match their voice and tone
+2. Align with their content themes
+3. Are specific and actionable (not generic)
+4. Would resonate with their audience
+
+Return JSON array of content ideas, each with:
+{
+  "title": "Specific content idea title",
+  "description": "Detailed description of the content",
+  "platform": "twitter|instagram|linkedin|youtube",
+  "theme": "Which content theme this aligns with",
+  "format": "post|video|carousel|thread"
+}`;
+
+      contentIdeas = await generateJSON<{ ideas: any[] }>(contentPrompt, 'You are a content strategist. Generate specific, actionable content ideas that match the brand voice.', { tier: scanTier });
+      
+      if (Array.isArray(contentIdeas)) {
+        // Already an array
+      } else if (contentIdeas.ideas && Array.isArray(contentIdeas.ideas)) {
+        contentIdeas = contentIdeas.ideas;
+      } else {
+        contentIdeas = [];
+      }
+      
+      // Ensure we have at least 5 content ideas
+      if (contentIdeas.length < 5) {
+        addLog(scanId, `[WARNING] Only ${contentIdeas.length} content ideas generated - adding fallback ideas`);
+        const fallbackIdeas = [
+          { title: 'Behind-the-scenes content', description: 'Share behind-the-scenes moments that showcase brand values', platform: 'instagram', theme: validatedContent.content_themes[0] || 'brand values', format: 'carousel' },
+          { title: 'Educational content', description: 'Create educational posts that provide value to your audience', platform: 'linkedin', theme: validatedContent.content_themes[0] || 'industry insights', format: 'post' },
+          { title: 'User-generated content', description: 'Feature customer stories and testimonials', platform: 'instagram', theme: 'community', format: 'carousel' },
+          { title: 'Industry insights', description: 'Share thought leadership on industry trends', platform: 'linkedin', theme: 'thought leadership', format: 'post' },
+          { title: 'Product highlights', description: 'Showcase product features and benefits', platform: 'twitter', theme: 'product', format: 'thread' }
+        ];
+        contentIdeas = [...contentIdeas, ...fallbackIdeas].slice(0, 8);
+      }
+      
+      addLog(scanId, `[SUCCESS] Generated ${contentIdeas.length} content ideas`);
+    } catch (error: any) {
+      addLog(scanId, `[WARNING] Content ideas generation failed: ${error.message} - using fallback`);
+      contentIdeas = [
+        { title: 'Behind-the-scenes content', description: 'Share behind-the-scenes moments that showcase brand values', platform: 'instagram', theme: validatedContent.content_themes[0] || 'brand values', format: 'carousel' },
+        { title: 'Educational content', description: 'Create educational posts that provide value to your audience', platform: 'linkedin', theme: validatedContent.content_themes[0] || 'industry insights', format: 'post' },
+        { title: 'User-generated content', description: 'Feature customer stories and testimonials', platform: 'instagram', theme: 'community', format: 'carousel' },
+        { title: 'Industry insights', description: 'Share thought leadership on industry trends', platform: 'linkedin', theme: 'thought leadership', format: 'post' },
+        { title: 'Product highlights', description: 'Showcase product features and benefits', platform: 'twitter', theme: 'product', format: 'thread' }
+      ];
+    }
+
     const results = {
       extractedContent: validatedContent,
       brandDNA,
       marketShare,
       strategicInsights,
-      competitorIntelligence
+      competitorIntelligence,
+      socialLinks: discoveredSocialLinks, // Add discovered social links
+      contentIdeas // Add generated content ideas
     };
 
     storage.updateScan(scanId, {
