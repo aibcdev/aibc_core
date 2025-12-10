@@ -54,9 +54,33 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
       }
     };
     
+    // Listen for new scan started - clear all state
+    const handleNewScanStarted = (event: CustomEvent) => {
+      console.log('🧹 Dashboard: New scan started, clearing all state');
+      const { username } = event.detail;
+      
+      // Clear all dashboard state
+      setStrategicInsights([]);
+      setCompetitorIntelligence([]);
+      setBrandDNA(null);
+      setMarketShare(null);
+      setAnalytics(null);
+      setScanUsername(null);
+      
+      // Clear localStorage cache
+      localStorage.removeItem('lastScanResults');
+      localStorage.removeItem('lastScanId');
+      
+      // Reload data for new scan - will be handled by existing loadScanData effect
+      // Just trigger a reload by clearing and letting the effect handle it
+    };
+    
     window.addEventListener('navigateToPage', handleNavigateToPage as EventListener);
+    window.addEventListener('newScanStarted', handleNewScanStarted as EventListener);
+    
     return () => {
       window.removeEventListener('navigateToPage', handleNavigateToPage as EventListener);
+      window.removeEventListener('newScanStarted', handleNewScanStarted as EventListener);
     };
   }, []);
   const [activeTab, setActiveTab] = useState<'activity' | 'tasks'>('tasks');
@@ -277,9 +301,10 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
       const limits = TIER_LIMITS[subscription.tier];
       const balance = getCreditBalance();
       const total = limits.monthlyCredits;
-      const used = total === -1 ? 0 : Math.max(0, total - balance.credits); // For unlimited, show 0 used
+      // Calculate used credits
+      const used = Math.max(0, total - balance.credits);
       
-      setCreditInfo({ used, total: total === -1 ? Infinity : total });
+      setCreditInfo({ used, total });
     };
     
     updateCreditInfo();

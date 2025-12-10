@@ -45,6 +45,31 @@ const StrategyView: React.FC = () => {
     loadScanData();
     loadStrategyData();
     
+    // Listen for new scan started - clear all state
+    const handleNewScanStarted = (event: CustomEvent) => {
+      console.log('🧹 Strategy: New scan started, clearing all state');
+      const { username } = event.detail;
+      
+      // Clear all strategy state
+      setStrategicInsights([]);
+      setBrandDNA(null);
+      setCompetitorIntelligence([]);
+      setScanUsername(null);
+      setMessages([]);
+      setStrategyPlans([]);
+      
+      // Clear localStorage cache
+      localStorage.removeItem('lastScanResults');
+      localStorage.removeItem('activeContentStrategy');
+      localStorage.removeItem('strategyPlans');
+      
+      // Reload data for new scan
+      setTimeout(() => {
+        loadScanData();
+        loadStrategyData();
+      }, 500);
+    };
+    
     // Listen for scan completion events
     const handleScanComplete = () => {
       console.log('📥 Scan completed - reloading strategy data...');
@@ -63,6 +88,7 @@ const StrategyView: React.FC = () => {
       }
     };
     
+    window.addEventListener('newScanStarted', handleNewScanStarted as EventListener);
     window.addEventListener('scanComplete', handleScanComplete);
     
     // Poll for username changes
@@ -74,6 +100,7 @@ const StrategyView: React.FC = () => {
     }, 2000);
     
     return () => {
+      window.removeEventListener('newScanStarted', handleNewScanStarted as EventListener);
       window.removeEventListener('scanComplete', handleScanComplete);
       clearInterval(usernameCheckInterval);
     };

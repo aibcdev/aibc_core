@@ -84,6 +84,32 @@ async function launchChromiumWithFallback(options: { headless?: boolean; args?: 
     throw new Error(`Failed to launch chromium from any path. Last error: ${playwrightError.message}`);
   }
 }
+// Extract text content from HTML (simple regex-based extraction)
+function extractTextFromHTML(html: string): string {
+  if (!html || html.length === 0) return '';
+  
+  // Remove script and style tags
+  let text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+  text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+  text = text.replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, '');
+  
+  // Remove HTML tags but keep text content
+  text = text.replace(/<[^>]+>/g, ' ');
+  
+  // Decode HTML entities
+  text = text.replace(/&nbsp;/g, ' ');
+  text = text.replace(/&amp;/g, '&');
+  text = text.replace(/&lt;/g, '<');
+  text = text.replace(/&gt;/g, '>');
+  text = text.replace(/&quot;/g, '"');
+  text = text.replace(/&#39;/g, "'");
+  
+  // Clean up whitespace
+  text = text.replace(/\s+/g, ' ').trim();
+  
+  return text;
+}
+
 // URL validation functions
 function isValidUrl(urlString: string): boolean {
   try {
@@ -226,6 +252,8 @@ export async function startScan(
     
     // STEP 1: Discover social media links
     let discoveredSocialLinks: Record<string, string> = {};
+    // Store website content for competitor analysis (declared at function scope)
+    let websiteTextContent: string = '';
     
     // First, check if username is a social media URL (e.g., instagram.com/username, twitter.com/username)
     const socialMediaUrlPatterns: Record<string, RegExp[]> = {
@@ -335,8 +363,12 @@ export async function startScan(
           }
           
           const html = await response.text();
-          websiteContent = { html, text: '', url: websiteUrl };
-          addLog(scanId, `[DISCOVERY] Fetch successful (${html.length} chars HTML)`);
+          // Extract text content from HTML for competitor analysis
+          const textContent = extractTextFromHTML(html);
+          websiteContent = { html, text: textContent, url: websiteUrl };
+          // Store website text content for competitor intelligence
+          websiteTextContent = textContent.substring(0, 20000); // Store up to 20k chars
+          addLog(scanId, `[DISCOVERY] Fetch successful (${html.length} chars HTML, ${textContent.length} chars text)`);
         } catch (fetchError: any) {
           addLog(scanId, `[DISCOVERY] Fetch failed: ${fetchError.message} - continuing with empty HTML (will use LLM fallback)`);
           // Don't fallback to browser - it hangs. Just use empty content and let LLM extract from domain
@@ -840,57 +872,20 @@ export async function startScan(
     storage.updateScan(scanId, { progress: 95 });
     let strategicInsights;
     try {
-      strategicInsights = await generateStrategicInsights(validatedContent, brandDNA, scanTier);
+      strategicInsights = await generateStrategicInsights(validatedContent, brandDNA, scanTier, username);
       
-      // Ensure we have at least 3 insights
-      if (!strategicInsights || strategicInsights.length < 3) {
-        addLog(scanId, `[WARNING] Only ${strategicInsights?.length || 0} insights generated - adding fallback insights`);
-        const fallbackInsights = [
-          {
-            title: 'Content Strategy Optimization',
-            description: 'Analyze posting frequency and content mix to improve engagement.',
-            impact: 'MEDIUM IMPACT',
-            effort: 'Medium effort (1 month)'
-          },
-          {
-            title: 'Platform Diversification',
-            description: 'Expand presence across multiple platforms to reach broader audience.',
-            impact: 'HIGH IMPACT',
-            effort: 'Quick win (1 week)'
-          },
-          {
-            title: 'Engagement Rate Improvement',
-            description: 'Focus on creating content that drives meaningful engagement and conversation.',
-            impact: 'MEDIUM IMPACT',
-            effort: 'Takes time (2-3 months)'
-          }
-        ];
-        strategicInsights = [...(strategicInsights || []), ...fallbackInsights].slice(0, 5);
+      // NO FALLBACK INSIGHTS - Only use what was actually generated
+      // This ensures insights are unique to each company
+      if (!strategicInsights || strategicInsights.length === 0) {
+        addLog(scanId, `[WARNING] No strategic insights generated - this is expected if no content was found`);
+        strategicInsights = [];
       }
       
       addLog(scanId, `[SUCCESS] Strategic insights generated: ${strategicInsights.length} insights`);
     } catch (error: any) {
-      addLog(scanId, `[WARNING] Strategic insights generation failed: ${error.message} - using fallback`);
-      strategicInsights = [
-        {
-          title: 'Content Strategy Optimization',
-          description: 'Analyze posting frequency and content mix to improve engagement.',
-          impact: 'MEDIUM IMPACT',
-          effort: 'Medium effort (1 month)'
-        },
-        {
-          title: 'Platform Diversification',
-          description: 'Expand presence across multiple platforms to reach broader audience.',
-          impact: 'HIGH IMPACT',
-          effort: 'Quick win (1 week)'
-        },
-        {
-          title: 'Engagement Rate Improvement',
-          description: 'Focus on creating content that drives meaningful engagement and conversation.',
-          impact: 'MEDIUM IMPACT',
-          effort: 'Takes time (2-3 months)'
-        }
-      ];
+      addLog(scanId, `[WARNING] Strategic insights generation failed: ${error.message}`);
+      // NO GENERIC FALLBACKS - Return empty array
+      strategicInsights = [];
     }
 
     // Generate Competitor Intelligence (CRITICAL - MUST ALWAYS RUN)
@@ -903,8 +898,9 @@ export async function startScan(
     const researchCompetitors = allExtractedContent.find(ec => ec.competitors && Array.isArray(ec.competitors) && ec.competitors.length > 0)?.competitors;
     
     // ALWAYS call generateCompetitorIntelligence to ensure we have competitors
+    // Pass website content if available (critical for accurate competitor analysis)
     try {
-      const competitorData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier);
+      const competitorData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier, websiteTextContent);
       
       // Handle new format with marketShare
       if (competitorData && competitorData.competitors && Array.isArray(competitorData.competitors)) {
@@ -931,7 +927,7 @@ export async function startScan(
         addLog(scanId, `[WARNING] Only ${competitorIntelligence.length} competitors found (minimum ${minCompetitors}) - retrying...`);
         // Retry with more explicit prompt
         try {
-          const retryData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier);
+          const retryData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier, websiteTextContent);
           if (retryData && retryData.competitors && Array.isArray(retryData.competitors) && retryData.competitors.length >= minCompetitors) {
             competitorIntelligence = retryData.competitors;
             marketShare = retryData.marketShare;
@@ -3387,24 +3383,17 @@ Return ONLY valid JSON:
   }
 }
 
-async function generateStrategicInsights(validatedContent: any, brandDNA: any, scanTier: ScanTier = 'basic'): Promise<any[]> {
-  const defaultInsights = [
-    {
-      title: 'No Video Content Strategy',
-      description: 'Zero presence on YouTube or TikTok while competitors like Jasper post 2x weekly product demos averaging 10k views. Video drives 3x more engagement than text.',
-      impact: 'HIGH IMPACT',
-      effort: 'Medium effort (1 month)'
-    },
-    {
-      title: 'Inconsistent Posting Cadence',
-      description: 'Posting frequency varies from 5x/week to 0x/week. Competitors maintain daily cadence. Algorithm penalizes inconsistency by 40%.',
-      impact: 'MEDIUM IMPACT',
-      effort: 'Quick win (1 week)'
-    }
-  ];
-
+async function generateStrategicInsights(validatedContent: any, brandDNA: any, scanTier: ScanTier = 'basic', scanUsername?: string): Promise<any[]> {
+  // NO GENERIC FALLBACKS - Only return insights if we have actual data
   if (!isLLMConfigured()) {
-    return defaultInsights;
+    console.warn('LLM not configured - cannot generate strategic insights');
+    return []; // Return empty array instead of generic insights
+  }
+  
+  // Require actual content to generate insights
+  if (!validatedContent || !validatedContent.posts || validatedContent.posts.length === 0) {
+    console.warn('No content available - cannot generate strategic insights');
+    return [];
   }
 
   try {
@@ -3505,7 +3494,9 @@ Return ONLY valid JSON:
     throw new Error('Failed to parse strategic insights as JSON');
   } catch (error) {
     console.error('Strategic insights generation error:', error);
-    return defaultInsights;
+    // NO GENERIC FALLBACKS - Return empty array if generation fails
+    // This ensures we don't show generic insights for all companies
+    return [];
   }
 }
 
@@ -3774,7 +3765,7 @@ function generateIndustrySpecificFallback(brandName: string, nicheIndicators: st
   ];
 }
 
-async function generateCompetitorIntelligence(validatedContent: any, brandDNA: any, username?: string, scanTier: ScanTier = 'basic'): Promise<any> {
+async function generateCompetitorIntelligence(validatedContent: any, brandDNA: any, username?: string, scanTier: ScanTier = 'basic', websiteContent?: string): Promise<any> {
   // Always try to generate competitors - even with minimal data, we can use LLM knowledge
   const hasRealContent = validatedContent.posts && validatedContent.posts.length > 0;
   const hasRealProfile = validatedContent.profile && validatedContent.profile.bio && 
@@ -3799,9 +3790,18 @@ async function generateCompetitorIntelligence(validatedContent: any, brandDNA: a
     const bio = validatedContent.profile?.bio || '';
     const themes = (validatedContent.content_themes || []).join(', ');
 
-    // Build context - use whatever we have
+    // Build context - PRIORITIZE website content if available (most accurate for business understanding)
     let contentContext = '';
-    if (combinedText && combinedText.length > 50) {
+    if (websiteContent && websiteContent.length > 100) {
+      // Website content is the most reliable source for understanding what the business actually does
+      contentContext = `WEBSITE CONTENT (PRIMARY SOURCE - most accurate):\n${websiteContent.substring(0, 15000)}\n\n`;
+      if (combinedText && combinedText.length > 50) {
+        contentContext += `Social Media Posts:\n${combinedText.substring(0, 10000)}\n\n`;
+      }
+      if (bio && bio.length > 20) {
+        contentContext += `Bio: ${bio}\n\n`;
+      }
+    } else if (combinedText && combinedText.length > 50) {
       contentContext = `Their content: ${combinedText}`;
     } else if (bio && bio.length > 20) {
       contentContext = `Their bio: ${bio}`;
@@ -3827,6 +3827,14 @@ ${contentContext}
 ${brandDNA ? `Brand DNA: ${JSON.stringify(brandDNA, null, 2)}` : ''}
 ${themes ? `Topics: ${themes}` : ''}
 ${nicheIndicators ? `Niche Indicators: ${nicheIndicators}` : ''}
+
+CRITICAL: If website content is provided above, it is the PRIMARY and MOST ACCURATE source for understanding what this business actually does. Use the website content to identify:
+- What products/services they offer
+- What industry/vertical they operate in
+- Who their target customers are
+- What makes them unique
+
+DO NOT rely solely on social media posts or bio - the website content tells you what the business ACTUALLY does.
 
 CRITICAL NICHE ANALYSIS:
 - What is their EXACT niche? (e.g., "Web3 Launchpad Platform" NOT "General Tech", "AI Hackathon Platform" NOT "Event Platform", "Football/Soccer content creators" NOT "American football/NFL")

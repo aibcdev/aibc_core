@@ -35,6 +35,29 @@ const AnalyticsView: React.FC = () => {
     }
 
     loadAnalyticsData();
+    
+    // Listen for new scan started - clear all state
+    const handleNewScanStarted = (event: CustomEvent) => {
+      console.log('🧹 Analytics: New scan started, clearing all state');
+      const { username } = event.detail;
+      
+      // Clear all analytics state
+      setAnalytics({ platforms: [], isLoading: true });
+      
+      // Clear localStorage cache
+      localStorage.removeItem('lastScanResults');
+      
+      // Reload analytics for new scan
+      setTimeout(() => {
+        loadAnalyticsData();
+      }, 500);
+    };
+    
+    window.addEventListener('newScanStarted', handleNewScanStarted as EventListener);
+    
+    return () => {
+      window.removeEventListener('newScanStarted', handleNewScanStarted as EventListener);
+    };
   }, []);
 
   const loadAnalyticsData = async () => {

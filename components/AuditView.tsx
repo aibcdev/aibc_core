@@ -72,6 +72,30 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
         setTimeout(() => { if (mounted) setShowButton(true); }, 2000);
         return;
       }
+      
+      // CRITICAL: Clear ALL existing scan cache when starting new scan
+      // This ensures we start fresh even if user is scanning same company again
+      console.log('🧹 Clearing all scan cache before starting new scan for:', scanUsername);
+      const previousUsername = localStorage.getItem('lastScannedUsername');
+      if (previousUsername && previousUsername.toLowerCase() !== scanUsername.toLowerCase()) {
+        // Different company - clear everything
+        localStorage.removeItem('lastScanResults');
+        localStorage.removeItem('lastScanId');
+        localStorage.removeItem('productionAssets');
+        localStorage.removeItem('strategyPlans');
+        localStorage.removeItem('activeContentStrategy');
+        console.log('✅ Cleared cache for different company');
+      } else {
+        // Same company but new scan - still clear to ensure fresh data
+        localStorage.removeItem('lastScanResults');
+        localStorage.removeItem('lastScanId');
+        console.log('✅ Cleared cache for fresh scan of same company');
+      }
+      
+      // Dispatch event to notify all components to clear state
+      window.dispatchEvent(new CustomEvent('newScanStarted', {
+        detail: { username: scanUsername }
+      }));
 
       // Calculate estimated time (5-10 minutes)
       const totalEstimate = stages.reduce((sum, s) => sum + s.duration, 0);

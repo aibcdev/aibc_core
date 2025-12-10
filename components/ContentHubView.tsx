@@ -24,6 +24,24 @@ const ContentHubView: React.FC = () => {
   useEffect(() => {
     loadContent();
     
+    // Listen for new scan started - clear all state
+    const handleNewScanStarted = (event: CustomEvent) => {
+      console.log('🧹 Content Hub: New scan started, clearing all state');
+      const { username } = event.detail;
+      
+      // Clear all content hub state
+      setAssets([]);
+      setUsername(null);
+      
+      // Clear localStorage cache
+      localStorage.removeItem('lastScanResults');
+      
+      // Reload content for new scan
+      setTimeout(() => {
+        loadContent();
+      }, 500);
+    };
+    
     // Listen for brand assets updates
     const handleBrandAssetsUpdate = () => {
       console.log('📥 Brand assets updated - enhancing content ideas...');
@@ -48,6 +66,7 @@ const ContentHubView: React.FC = () => {
       loadContent();
     };
     
+    window.addEventListener('newScanStarted', handleNewScanStarted as EventListener);
     window.addEventListener('brandAssetsUpdated', handleBrandAssetsUpdate);
     window.addEventListener('strategyUpdated', handleStrategyUpdate as EventListener);
     window.addEventListener('competitorUpdated', handleCompetitorUpdate as EventListener);
@@ -60,6 +79,7 @@ const ContentHubView: React.FC = () => {
     }, 5 * 60 * 1000); // 5 minutes
     
     return () => {
+      window.removeEventListener('newScanStarted', handleNewScanStarted as EventListener);
       window.removeEventListener('brandAssetsUpdated', handleBrandAssetsUpdate);
       window.removeEventListener('strategyUpdated', handleStrategyUpdate as EventListener);
       window.removeEventListener('competitorUpdated', handleCompetitorUpdate as EventListener);

@@ -207,14 +207,30 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
       const domain = extractDomainFromURL(inputVal);
       setUsername(domain);
       
+      // CRITICAL: Clear ALL cache when starting a new scan
+      // This ensures fresh data for each scan, even on same browser/login
+      console.log('🧹 Clearing all scan cache for new scan:', domain);
+      localStorage.removeItem('lastScanResults');
+      localStorage.removeItem('lastScanId');
+      
+      // Clear component-specific caches
+      localStorage.removeItem('productionAssets');
+      localStorage.removeItem('strategyPlans');
+      localStorage.removeItem('activeContentStrategy');
+      
       // Store scan type
       if (setScanType) {
         setScanType(selectedScanType);
       }
       localStorage.setItem('lastScanType', selectedScanType);
       
-      // Store in localStorage for persistence
+      // Store NEW username - this will trigger cache validation
       localStorage.setItem('lastScannedUsername', domain);
+      
+      // Dispatch event to clear all component state
+      window.dispatchEvent(new CustomEvent('newScanStarted', {
+        detail: { username: domain }
+      }));
       
       // Navigate to audit view - scan will start there
       onNavigate(ViewState.AUDIT);
