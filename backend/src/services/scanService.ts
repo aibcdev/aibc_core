@@ -13,30 +13,75 @@ async function launchChromiumWithFallback(options: { headless?: boolean; args?: 
     '--disable-setuid-sandbox', 
     '--disable-blink-features=AutomationControlled',
     '--disable-dev-shm-usage',
-    '--disable-gpu'
+    '--disable-gpu',
+    '--disable-software-rasterizer',
+    '--disable-extensions',
+    '--disable-background-networking',
+    '--disable-background-timer-throttling',
+    '--disable-renderer-backgrounding',
+    '--disable-backgrounding-occluded-windows',
+    '--disable-ipc-flooding-protection'
   ];
   
+  // Try Playwright browsers first
   try {
-    return await chromium.launch({
+    const browser = await chromium.launch({
       headless: options.headless !== false,
       args: options.args || defaultArgs,
+      timeout: 30000,
     });
-  } catch (playwrightError: any) {
-    // Fallback: Use system chromium if Playwright browsers aren't available
-    if (playwrightError.message?.includes('Executable doesn\'t exist') || 
-        playwrightError.message?.includes('ENOENT') ||
-        playwrightError.message?.includes('spawn')) {
-      console.log('Playwright browsers not found, falling back to system chromium...');
-      return await chromium.launch({
-        headless: options.headless !== false,
-        executablePath: '/usr/bin/chromium-browser', // System chromium from alpine
-        args: [
-          ...(options.args || defaultArgs),
-          '--single-process' // Required for Cloud Run
-        ],
-      });
+    
+    // Verify browser is actually working by checking if it's connected
+    if (browser && browser.isConnected()) {
+      console.log('✅ Playwright chromium launched successfully');
+      return browser;
     }
-    throw playwrightError;
+    throw new Error('Browser launched but not connected');
+  } catch (playwrightError: any) {
+    console.log('Playwright browsers not found, falling back to system chromium...');
+    
+    // Try multiple possible chromium paths (Alpine Linux)
+    const chromiumPaths = [
+      '/usr/bin/chromium-browser',
+      '/usr/bin/chromium',
+      '/usr/bin/google-chrome',
+      '/usr/bin/chrome',
+    ];
+    
+    const fallbackArgs = [
+      ...(options.args || defaultArgs),
+      '--single-process', // Required for Cloud Run resource constraints
+      '--disable-background-timer-throttling',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding',
+    ];
+    
+    // Try each chromium path
+    for (const chromiumPath of chromiumPaths) {
+      try {
+        console.log(`Trying system chromium at: ${chromiumPath}`);
+        const browser = await chromium.launch({
+          headless: options.headless !== false,
+          executablePath: chromiumPath,
+          args: fallbackArgs,
+          timeout: 30000,
+        });
+        
+        // Verify browser is actually working
+        if (browser && browser.isConnected()) {
+          console.log(`✅ System chromium launched successfully from: ${chromiumPath}`);
+          return browser;
+        }
+        throw new Error('Browser launched but not connected');
+      } catch (pathError: any) {
+        console.log(`Failed to launch from ${chromiumPath}: ${pathError.message}`);
+        // Continue to next path
+        continue;
+      }
+    }
+    
+    // If all paths failed, throw original error
+    throw new Error(`Failed to launch chromium from any path. Last error: ${playwrightError.message}`);
   }
 }
 // URL validation functions
@@ -1065,8 +1110,33 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
       addLog(scanId, `[EXTRACT] Launching browser for HTML parsing...`);
     }
     const browser = await launchChromiumWithFallback({ headless: true });
-    const context = await browser.newContext();
-    const page = await context.newPage();
+    
+    // Verify browser is still connected
+    if (!browser || !browser.isConnected()) {
+      throw new Error('Browser launched but immediately disconnected');
+    }
+    
+    let context;
+    let page;
+    
+    try {
+      context = await browser.newContext();
+      
+      // Verify browser is still connected before creating page
+      if (!browser.isConnected()) {
+        throw new Error('Browser disconnected before page creation');
+      }
+      
+      page = await context.newPage();
+    } catch (browserError: any) {
+      // If browser closed, try to close it cleanly and throw
+      try {
+        await browser.close();
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+      throw new Error(`Browser context/page creation failed: ${browserError.message}`);
+    }
     
     // Set HTML content
     await page.setContent(html, { waitUntil: 'domcontentloaded' });
@@ -1622,16 +1692,40 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
         '--disable-gpu'
       ]
     });
+    
+    // Verify browser is still connected before proceeding
+    if (!browser || !browser.isConnected()) {
+      throw new Error('Browser launched but immediately disconnected');
+    }
+    
     if (scanId) {
       addLog(scanId, `[SCRAPE] Browser launched successfully`);
     }
 
-    const context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      viewport: { width: 1920, height: 1080 },
-    });
+    let context;
+    let page;
+    
+    try {
+      context = await browser.newContext({
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        viewport: { width: 1920, height: 1080 },
+      });
 
-    const page = await context.newPage();
+      // Verify browser is still connected before creating page
+      if (!browser.isConnected()) {
+        throw new Error('Browser disconnected before page creation');
+      }
+      
+      page = await context.newPage();
+    } catch (browserError: any) {
+      // If browser closed, try to close it cleanly and throw
+      try {
+        await browser.close();
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+      throw new Error(`Browser context/page creation failed: ${browserError.message}`);
+    }
     
     // Set additional headers to avoid detection
     await page.setExtraHTTPHeaders({
