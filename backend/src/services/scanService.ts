@@ -1165,6 +1165,56 @@ Return JSON array of content ideas, each with:
       const themes = (validatedContent.content_themes || []).join(', ');
       const nicheIndicators = extractNicheIndicators(allPosts.substring(0, 10000), bio, themes, brandDNA, websiteTextContent);
       contentIdeas = generateIndustrySpecificFallback(brandName, nicheIndicators, primaryTheme, brandDNA);
+      
+      // FINAL CHECK: If still empty after catch block, use absolute minimum
+      if (!contentIdeas || contentIdeas.length === 0) {
+        addLog(scanId, `[CRITICAL] Catch block fallback also empty - using absolute minimum`);
+        contentIdeas = [
+          {
+            title: `${brandName} Brand Story`,
+            description: `Share ${brandName}'s unique story and mission in the ${nicheIndicators || 'industry'} space`,
+            platform: 'linkedin',
+            theme: primaryTheme || 'brand building',
+            format: 'post'
+          },
+          {
+            title: `${brandName} Product Showcase`,
+            description: `Highlight ${brandName}'s key products and services`,
+            platform: 'instagram',
+            theme: primaryTheme || 'product',
+            format: 'carousel'
+          },
+          {
+            title: `${brandName} Industry Insights`,
+            description: `Share insights about ${nicheIndicators || 'the industry'} from ${brandName}'s perspective`,
+            platform: 'twitter',
+            theme: primaryTheme || 'thought leadership',
+            format: 'thread'
+          }
+        ];
+      }
+    }
+    
+    // ABSOLUTE FINAL CHECK: Content ideas MUST exist
+    if (!contentIdeas || contentIdeas.length === 0) {
+      addLog(scanId, `[CRITICAL ERROR] Content ideas still empty after all fallbacks - creating emergency set`);
+      const emergencyBrandName = username?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || 'Brand';
+      contentIdeas = [
+        {
+          title: `${emergencyBrandName} Brand Story`,
+          description: `Share ${emergencyBrandName}'s unique story and mission`,
+          platform: 'linkedin',
+          theme: 'brand building',
+          format: 'post'
+        },
+        {
+          title: `${emergencyBrandName} Product Showcase`,
+          description: `Highlight ${emergencyBrandName}'s key products and services`,
+          platform: 'instagram',
+          theme: 'product',
+          format: 'carousel'
+        }
+      ];
     }
 
     const results = {
