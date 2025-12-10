@@ -1801,14 +1801,20 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
     });
 
     try {
-      // Load page with timeout
+      // Load page with timeout (reduced from 30s to 20s)
+      if (scanId) {
+        addLog(scanId, `[SCRAPE] Loading page: ${url}`);
+      }
       await page.goto(url, {
         waitUntil: 'domcontentloaded',
-        timeout: 30000,
+        timeout: 20000, // Reduced from 30s
       });
       
-      // Wait for dynamic content to load
-      await page.waitForTimeout(8000); // Increased wait time
+      // Wait for dynamic content to load (reduced from 8s to 5s for faster scans)
+      if (scanId) {
+        addLog(scanId, `[SCRAPE] Waiting for dynamic content...`);
+      }
+      await page.waitForTimeout(5000);
       
       // Platform-specific scraping strategies with visual content extraction
       let scrapedText = '';
@@ -1831,13 +1837,13 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
       }
       
       if (platform.toLowerCase() === 'twitter' || platform.toLowerCase() === 'x') {
-        // Twitter/X specific: Scroll multiple times to load posts
-        for (let i = 0; i < 5; i++) {
+        // Twitter/X specific: Scroll multiple times to load posts (reduced from 5 to 3 scrolls, 2s each)
+        for (let i = 0; i < 3; i++) {
           await page.evaluate(() => {
             // @ts-ignore
             window.scrollTo(0, document.body.scrollHeight);
           });
-          await page.waitForTimeout(3000); // Wait for posts to load
+          await page.waitForTimeout(2000); // Reduced wait time
         }
         
         // Try to extract tweet text, images, and videos
@@ -1892,13 +1898,13 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
           console.log('Twitter selector extraction failed, using fallback');
         }
       } else if (platform.toLowerCase() === 'instagram') {
-        // Instagram: Scroll to load posts
-        for (let i = 0; i < 5; i++) {
+        // Instagram: Scroll to load posts (reduced from 5 to 3 scrolls, 2s each)
+        for (let i = 0; i < 3; i++) {
           await page.evaluate(() => {
             // @ts-ignore
             window.scrollTo(0, document.body.scrollHeight);
           });
-          await page.waitForTimeout(3000);
+          await page.waitForTimeout(2000); // Reduced wait time
         }
         
         // Try to extract post text, images, and videos
@@ -1953,13 +1959,13 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
           console.log('Instagram selector extraction failed, using fallback');
         }
       } else if (platform.toLowerCase() === 'linkedin') {
-        // LinkedIn: Scroll to load posts
-        for (let i = 0; i < 5; i++) {
+        // LinkedIn: Scroll to load posts (reduced from 5 to 3 scrolls, 2s each)
+        for (let i = 0; i < 3; i++) {
           await page.evaluate(() => {
             // @ts-ignore
             window.scrollTo(0, document.body.scrollHeight);
           });
-          await page.waitForTimeout(3000);
+          await page.waitForTimeout(2000); // Reduced wait time
         }
         
         // Try to extract post text
@@ -1985,12 +1991,12 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
         if (scanId) {
           addLog(scanId, `[SCRAPE] Scrolling to load dynamic content...`);
         }
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 2; i++) {
           await page.evaluate(() => {
             // @ts-ignore
             window.scrollTo(0, document.body.scrollHeight);
           });
-          await page.waitForTimeout(2000);
+          await page.waitForTimeout(1500); // Reduced wait time for websites
         }
         
         // FIRST: Get the FULL HTML including footer/header (for social link extraction)
