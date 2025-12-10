@@ -876,12 +876,12 @@ Return JSON array of content ideas, each with:
   "format": "post|video|carousel|thread"
 }`;
 
-      contentIdeas = await generateJSON<{ ideas: any[] }>(contentPrompt, 'You are a content strategist. Generate specific, actionable content ideas that match the brand voice.', { tier: scanTier });
+      const contentIdeasResult = await generateJSON<any>(contentPrompt, 'You are a content strategist. Generate specific, actionable content ideas that match the brand voice.', { tier: scanTier });
       
-      if (Array.isArray(contentIdeas)) {
-        // Already an array
-      } else if (contentIdeas.ideas && Array.isArray(contentIdeas.ideas)) {
-        contentIdeas = contentIdeas.ideas;
+      if (Array.isArray(contentIdeasResult)) {
+        contentIdeas = contentIdeasResult;
+      } else if (contentIdeasResult && contentIdeasResult.ideas && Array.isArray(contentIdeasResult.ideas)) {
+        contentIdeas = contentIdeasResult.ideas;
       } else {
         contentIdeas = [];
       }
