@@ -112,7 +112,7 @@ const InboxView: React.FC<NavProps> = ({ onNavigate }) => {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <div className="px-4 py-2 bg-gradient-to-r from-orange-500/10 to-purple-600/10 border border-orange-500/20 rounded-lg">
+              <div className="px-4 py-2 bg-orange-500/10 border border-orange-500/20 rounded-lg">
                 <div className="text-xs text-white/60">Available Credits</div>
                 <div className="text-xl font-bold text-white">{creditBalance.credits}</div>
               </div>

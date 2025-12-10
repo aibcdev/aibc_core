@@ -465,7 +465,7 @@ const SettingsView: React.FC<{ onLogout?: () => void; onNavigate?: (view: ViewSt
                   ) : (
                     <button 
                       onClick={() => onNavigate?.(ViewState.PRICING)}
-                      className="px-4 py-2 bg-gradient-to-r from-orange-500 to-purple-600 hover:from-orange-600 hover:to-purple-700 text-white text-sm font-medium rounded-lg transition-all"
+                      className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-all"
                     >
                       Upgrade
                     </button>
@@ -473,10 +473,10 @@ const SettingsView: React.FC<{ onLogout?: () => void; onNavigate?: (view: ViewSt
                 </div>
 
                 {/* Credit Balance */}
-                <div className="mb-6 p-4 bg-gradient-to-r from-orange-500/10 to-purple-600/10 border border-orange-500/20 rounded-xl">
+                <div className="mb-6 p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-orange-500 to-purple-600 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center">
                         <Zap className="w-5 h-5 text-white" />
                       </div>
                       <div>
@@ -487,7 +487,7 @@ const SettingsView: React.FC<{ onLogout?: () => void; onNavigate?: (view: ViewSt
                     {subscription.tier === SubscriptionTier.FREE && (
                       <button 
                         onClick={() => onNavigate?.(ViewState.PRICING)}
-                        className="px-4 py-2 bg-gradient-to-r from-orange-500 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-orange-600 hover:to-purple-700 transition-all"
+                        className="px-4 py-2 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-all"
                       >
                         Buy Credits
                       </button>

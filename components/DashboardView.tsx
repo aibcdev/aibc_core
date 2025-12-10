@@ -61,6 +61,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
   }, []);
   const [activeTab, setActiveTab] = useState<'activity' | 'tasks'>('tasks');
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const taskInputRef = useRef<HTMLInputElement>(null);
   const [userInfo, setUserInfo] = useState<{ name: string; email: string; initials: string } | null>(null);
   
@@ -672,6 +673,69 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
     };
   }, [scanUsername]);
 
+  const handleSearch = (query: string) => {
+    if (!query.trim()) return;
+    
+    const lowerQuery = query.toLowerCase();
+    
+    // Search in tasks
+    const matchingTasks = tasks.filter(task => 
+      task.title.toLowerCase().includes(lowerQuery) ||
+      task.description?.toLowerCase().includes(lowerQuery)
+    );
+    
+    // Search in strategic insights
+    const matchingInsights = strategicInsights.filter(insight =>
+      insight.title?.toLowerCase().includes(lowerQuery) ||
+      insight.description?.toLowerCase().includes(lowerQuery)
+    );
+    
+    // Search in competitors
+    const matchingCompetitors = competitorIntelligence.filter(comp =>
+      comp.name?.toLowerCase().includes(lowerQuery) ||
+      comp.theirAdvantage?.toLowerCase().includes(lowerQuery)
+    );
+    
+    // If found in tasks, switch to tasks tab and highlight
+    if (matchingTasks.length > 0) {
+      setActiveTab('tasks');
+    }
+    
+    // If found in insights, navigate to strategy view
+    if (matchingInsights.length > 0 && matchingTasks.length === 0) {
+      setCurrentPage('strategy');
+    }
+    
+    // If found in competitors, navigate to competitors view
+    if (matchingCompetitors.length > 0 && matchingTasks.length === 0 && matchingInsights.length === 0) {
+      setCurrentPage('competitors');
+    }
+    
+    // Log search results
+    console.log('Search results:', {
+      query,
+      tasks: matchingTasks.length,
+      insights: matchingInsights.length,
+      competitors: matchingCompetitors.length
+    });
+  };
+
+  // Handle Cmd+K shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        const searchInput = document.querySelector('input[placeholder="Search content, tasks..."]') as HTMLInputElement;
+        if (searchInput) {
+          searchInput.focus();
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const toggleTask = (id: number) => {
     const updatedTasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
     setTasks(updatedTasks);
@@ -765,7 +829,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
 
          <div className="p-4 border-t border-white/10">
              <div className="flex items-center gap-3 px-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 to-purple-600 flex items-center justify-center text-xs font-bold border border-white/20">
+                <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-xs font-bold border border-white/20">
                     {userInfo?.initials || 'U'}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -805,7 +869,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                 // Navigate to IngestionView to start a new scan
                 onNavigate(ViewState.INGESTION);
               }}
-              className="px-3 py-1.5 bg-gradient-to-r from-orange-500 to-purple-600 border border-white/10 rounded-lg text-xs font-bold text-white hover:from-orange-600 hover:to-purple-700 transition-all flex items-center gap-2"
+              className="px-3 py-1.5 bg-orange-500 border border-white/10 rounded-lg text-xs font-bold text-white hover:bg-orange-600 transition-all flex items-center gap-2"
             >
               <Zap className="w-3 h-3" />
               Run Footprint Scan
@@ -999,6 +1063,13 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 group-focus-within:text-white transition-colors" />
             <input 
               type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && searchQuery.trim()) {
+                  handleSearch(searchQuery.trim());
+                }
+              }}
               placeholder="Search content, tasks..." 
               className="w-full bg-[#1A1A1A] border border-white/10 rounded-full py-2 pl-10 pr-4 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-white/20 focus:bg-white/5 transition-all"
             />
@@ -1558,6 +1629,15 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                               }
                                             }
                                             
+                                            // Dispatch event for competitor update
+                                            window.dispatchEvent(new CustomEvent('competitorUpdated', {
+                                              detail: {
+                                                action: 'added',
+                                                competitor: newCompetitorData,
+                                                totalCompetitors: updatedCompetitors.length
+                                              }
+                                            }));
+                                            
                                             setNewCompetitor({ name: '', xHandle: '', youtubeChannel: '', linkedinUrl: '', instagramHandle: '', tiktokHandle: '', threatLevel: 'MEDIUM', notes: '' });
                                             setCompetitorVerification(null);
                                             setShowAddCompetitor(false);
@@ -1614,6 +1694,15 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                               console.error('Error saving competitor to cache:', e);
                                             }
                                           }
+                                          
+                                          // Dispatch event for competitor update
+                                          window.dispatchEvent(new CustomEvent('competitorUpdated', {
+                                            detail: {
+                                              action: 'added',
+                                              competitor: newCompetitorData,
+                                              totalCompetitors: updatedCompetitors.length
+                                            }
+                                          }));
                                           
                                           setNewCompetitor({ name: '', xHandle: '', youtubeChannel: '', linkedinUrl: '', instagramHandle: '', tiktokHandle: '', threatLevel: 'MEDIUM', notes: '' });
                                           setCompetitorVerification(null);
@@ -2129,7 +2218,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                     onNavigate(ViewState.INGESTION);
                   }
                 }}
-                className="flex-1 px-4 py-2 bg-gradient-to-r from-orange-500 to-purple-600 rounded-lg text-sm font-bold text-white hover:from-orange-600 hover:to-purple-700 transition-colors"
+                className="flex-1 px-4 py-2 bg-orange-500 rounded-lg text-sm font-bold text-white hover:bg-orange-600 transition-colors"
               >
                 Continue with Rescan
               </button>
@@ -2453,11 +2542,15 @@ const generateStrategicInsightsFromData = (
     });
   }
   
-  // Insight 4: Content Theme Focus
+  // Insight 4: Content Theme Focus - Brand-specific
   if (contentThemes.length === 0 && postCount > 0) {
+    const brandName = scanUsername?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || 'your brand';
+    const industry = brandDNA?.industry || 'your industry';
+    const topTheme = brandDNA?.themes?.[0] || brandDNA?.corePillars?.[0] || 'brand building';
+    
     insights.push({
-      title: 'Content Strategy Optimization',
-      description: `Analyze posting frequency and content mix to improve engagement. Your content lacks clear thematic focus compared to competitors.`,
+      title: `${brandName.charAt(0).toUpperCase() + brandName.slice(1)} Content Theme Focus`,
+      description: `Your content lacks clear thematic focus around ${topTheme}. Competitors in ${industry} maintain consistent themes that drive 2.5x more engagement. Develop a content strategy centered on ${topTheme} to improve audience connection.`,
       impact: 'MEDIUM',
       effort: 'Medium effort (1 month)'
     });
@@ -2499,13 +2592,16 @@ const generateStrategicInsightsFromData = (
     }
   }
   
-  // If no insights were generated but we have data, create at least one generic insight
+  // If no insights were generated but we have data, create brand-specific insight
   if (insights.length === 0 && (posts.length > 0 || brandDNA || competitors.length > 0)) {
+    const brandName = scanUsername?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || 'your brand';
+    const industry = brandDNA?.industry || 'your industry';
+    const primaryTheme = brandDNA?.themes?.[0] || brandDNA?.corePillars?.[0] || 'content strategy';
+    const topCompetitor = competitors.length > 0 ? competitors[0].name : 'competitors';
+    
     insights.push({
-      title: 'Content Strategy Optimization',
-      description: scanUsername 
-        ? `Analyze ${scanUsername}'s posting patterns and content themes to identify opportunities for growth and engagement.`
-        : 'Review your content strategy to identify opportunities for improvement and growth.',
+      title: `${brandName.charAt(0).toUpperCase() + brandName.slice(1)} Content Strategy in ${industry}`,
+      description: `Analyze ${brandName}'s posting patterns and ${primaryTheme} content themes to identify opportunities for growth. ${topCompetitor !== 'competitors' ? `Competitors like ${topCompetitor} are gaining market share. ` : ''}Focus on ${primaryTheme} to differentiate in ${industry}.`,
       impact: 'MEDIUM',
       effort: 'Medium effort (1 month)'
     });

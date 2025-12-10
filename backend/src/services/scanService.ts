@@ -3562,12 +3562,38 @@ function extractNicheIndicators(content: string, bio: string, themes: string, br
     indicators.push('Athletic/Apparel');
   }
   
-  // DeFi/Web3 indicators
+  // DeFi/Web3 indicators - Enhanced for launchpad/hackathon platforms
   if (lowerContent.includes('defi') || lowerContent.includes('web3') ||
       lowerContent.includes('crypto') || lowerContent.includes('blockchain') ||
       lowerContent.includes('token') || lowerContent.includes('launchpad') ||
-      lowerContent.includes('nft') || lowerContent.includes('dao')) {
-    indicators.push('DeFi/Web3');
+      lowerContent.includes('nft') || lowerContent.includes('dao') ||
+      lowerContent.includes('hackathon') || lowerContent.includes('icm') ||
+      lowerContent.includes('initial coin model') || lowerContent.includes('token launch') ||
+      lowerContent.includes('ai hackathon') || lowerContent.includes('builder platform') ||
+      lowerContent.includes('project launch') || lowerContent.includes('fundraising') ||
+      lowerContent.includes('crowdfunding') || lowerContent.includes('token sale')) {
+    // More specific categorization
+    if (lowerContent.includes('launchpad') || lowerContent.includes('token launch') || 
+        lowerContent.includes('project launch') || lowerContent.includes('icm')) {
+      indicators.push('Web3 Launchpad Platform');
+    } else if (lowerContent.includes('hackathon') || lowerContent.includes('ai hackathon') || 
+               lowerContent.includes('builder platform')) {
+      indicators.push('Web3 Hackathon/Builder Platform');
+    } else {
+      indicators.push('DeFi/Web3');
+    }
+  }
+  
+  // AI/ML Tech indicators - More specific
+  if (lowerContent.includes('ai') || lowerContent.includes('machine learning') ||
+      lowerContent.includes('ml') || lowerContent.includes('artificial intelligence')) {
+    if (lowerContent.includes('hackathon') || lowerContent.includes('competition')) {
+      indicators.push('AI Hackathon Platform');
+    } else if (lowerContent.includes('agent') || lowerContent.includes('automation')) {
+      indicators.push('AI Agent Platform');
+    } else {
+      indicators.push('AI/ML Technology');
+    }
   }
   
   return indicators.join(', ') || 'General';
@@ -3803,16 +3829,19 @@ ${themes ? `Topics: ${themes}` : ''}
 ${nicheIndicators ? `Niche Indicators: ${nicheIndicators}` : ''}
 
 CRITICAL NICHE ANALYSIS:
-- What is their EXACT niche? (e.g., "Football/Soccer content creators" NOT "American football/NFL")
-- What sport/industry/vertical? Be SPECIFIC
-- What type of content? (e.g., "Soccer highlights and analysis" vs "NFL game breakdowns")
-- What audience? (e.g., "European football fans" vs "American football fans")
+- What is their EXACT niche? (e.g., "Web3 Launchpad Platform" NOT "General Tech", "AI Hackathon Platform" NOT "Event Platform", "Football/Soccer content creators" NOT "American football/NFL")
+- What industry/vertical? Be SPECIFIC (e.g., "Web3 Launchpad", "AI Hackathon", "Travel & Hospitality", "Athletic Apparel")
+- What type of platform/service? (e.g., "Token launch platform" vs "General crypto exchange", "AI hackathon organizer" vs "General event platform")
+- What audience? (e.g., "Web3 builders and investors" vs "General crypto users", "AI developers" vs "General tech enthusiasts")
 
 IMPORTANT DISTINCTIONS:
+- "Launchpad" = Token/project launch platform (e.g., Surge.xyz, CoinList, DAO Maker) - NOT general crypto exchanges (Coinbase, Binance)
+- "Hackathon Platform" = Developer competition platform (e.g., Devpost, Surge.xyz) - NOT general event platforms (Eventbrite)
+- "Web3" = Blockchain/crypto platforms - NOT general tech companies
+- "AI Platform" = AI-specific tools/services - NOT general software
 - "Football" in UK/Europe = Soccer (the sport with 11 players, round ball, goals)
 - "Football" in US = American Football (NFL, gridiron, touchdowns)
-- "Soccer" = Association Football (the global sport)
-- These are DIFFERENT sports with DIFFERENT competitors
+- These are DIFFERENT niches with DIFFERENT competitors
 
 STEP 2: COMPETITOR IDENTIFICATION
 Based on the EXACT niche identified, find REAL competitors who:
@@ -3822,6 +3851,8 @@ Based on the EXACT niche identified, find REAL competitors who:
 - Are in the same market space
 
 CRITICAL: Match competitors to the EXACT niche:
+- If niche is "Web3 Launchpad" → Find launchpad platforms (CoinList, DAO Maker, Polkastarter), NOT crypto exchanges (Coinbase, Binance)
+- If niche is "AI Hackathon Platform" → Find hackathon platforms (Devpost, MLH), NOT general event platforms (Eventbrite)
 - If niche is "Soccer/Football (European)" → Find soccer creators, NOT NFL creators
 - If niche is "American Football/NFL" → Find NFL creators, NOT soccer creators
 - If niche is "Tech reviews" → Find tech reviewers, NOT gaming streamers

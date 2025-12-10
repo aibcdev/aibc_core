@@ -385,7 +385,7 @@ const AdminView: React.FC<NavProps> = ({ onNavigate }) => {
                             setShowAddTeamMember(true);
                           }
                         }}
-                        className="px-4 py-2 bg-gradient-to-r from-orange-500 to-purple-600 rounded-lg text-sm font-bold text-white hover:from-orange-600 hover:to-purple-700 transition-colors flex items-center gap-2"
+                        className="px-4 py-2 bg-orange-500 rounded-lg text-sm font-bold text-white hover:bg-orange-600 transition-colors flex items-center gap-2"
                       >
                         <Plus className="w-4 h-4" />
                         Add Team Member
@@ -432,7 +432,7 @@ const AdminView: React.FC<NavProps> = ({ onNavigate }) => {
                                 <tr key={user.id} className="hover:bg-white/5">
                                   <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex items-center gap-3">
-                                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white">
+                                      <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-xs font-bold text-white">
                                         {user.name?.[0] || user.email?.[0] || 'U'}
                                       </div>
                                       <div>
@@ -562,7 +562,7 @@ const AdminView: React.FC<NavProps> = ({ onNavigate }) => {
               </button>
               <button
                 onClick={handleAddTeamMember}
-                className="flex-1 px-4 py-2 bg-gradient-to-r from-orange-500 to-purple-600 rounded-lg text-sm font-bold text-white hover:from-orange-600 hover:to-purple-700 transition-colors"
+                className="flex-1 px-4 py-2 bg-orange-500 rounded-lg text-sm font-bold text-white hover:bg-orange-600 transition-colors"
               >
                 Send Invitation
               </button>
@@ -600,7 +600,7 @@ const AdminView: React.FC<NavProps> = ({ onNavigate }) => {
                   setShowBillingModal(false);
                   onNavigate(ViewState.PRICING);
                 }}
-                className="flex-1 px-4 py-2 bg-gradient-to-r from-orange-500 to-purple-600 rounded-lg text-sm font-bold text-white hover:from-orange-600 hover:to-purple-700 transition-colors"
+                className="flex-1 px-4 py-2 bg-orange-500 rounded-lg text-sm font-bold text-white hover:bg-orange-600 transition-colors"
               >
                 Upgrade Plan
               </button>

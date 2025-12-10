@@ -43,7 +43,7 @@ const FeatureLock: React.FC<FeatureLockProps> = ({
       {/* Lock overlay */}
       <div className="absolute inset-0 flex items-start justify-center bg-[#050505]/80 backdrop-blur-sm rounded-lg z-50 pt-20">
         <div className="text-center p-8 max-w-md">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-orange-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center mx-auto mb-4">
             <Lock className="w-8 h-8 text-white" />
           </div>
           <h3 className="text-xl font-bold text-white mb-2">Upgrade to Pro to view this page</h3>
@@ -64,7 +64,7 @@ const FeatureLock: React.FC<FeatureLockProps> = ({
             {onNavigate ? (
               <button
                 onClick={() => onNavigate(ViewState.PRICING)}
-                className="px-6 py-3 bg-gradient-to-r from-orange-500 to-purple-600 rounded-lg text-sm font-semibold text-white hover:from-orange-600 hover:to-purple-700 transition-all flex items-center gap-2"
+                className="px-6 py-3 bg-orange-500 rounded-lg text-sm font-semibold text-white hover:bg-orange-600 transition-all flex items-center gap-2"
               >
                 <Zap className="w-4 h-4" />
                 Upgrade
@@ -72,7 +72,7 @@ const FeatureLock: React.FC<FeatureLockProps> = ({
             ) : (
               <a
                 href="#pricing"
-                className="px-6 py-3 bg-gradient-to-r from-orange-500 to-purple-600 rounded-lg text-sm font-semibold text-white hover:from-orange-600 hover:to-purple-700 transition-all flex items-center gap-2"
+                className="px-6 py-3 bg-orange-500 rounded-lg text-sm font-semibold text-white hover:bg-orange-600 transition-all flex items-center gap-2"
               >
                 <Zap className="w-4 h-4" />
                 Upgrade

@@ -26,16 +26,179 @@ const ContentHubView: React.FC = () => {
     
     // Listen for brand assets updates
     const handleBrandAssetsUpdate = () => {
-      console.log('Brand assets updated - reloading content...');
+      console.log('📥 Brand assets updated - enhancing content ideas...');
+      enhanceContentIdeas();
+    };
+    
+    // Listen for strategy updates
+    const handleStrategyUpdate = (event: CustomEvent) => {
+      console.log('📥 Strategy updated - regenerating content ideas...', event.detail);
+      enhanceContentIdeas();
+    };
+    
+    // Listen for competitor updates
+    const handleCompetitorUpdate = (event: CustomEvent) => {
+      console.log('📥 Competitor updated - updating content ideas...', event.detail);
+      enhanceContentIdeas();
+    };
+    
+    // Listen for scan completion
+    const handleScanComplete = () => {
+      console.log('📥 Scan completed - reloading content...');
       loadContent();
     };
     
     window.addEventListener('brandAssetsUpdated', handleBrandAssetsUpdate);
+    window.addEventListener('strategyUpdated', handleStrategyUpdate as EventListener);
+    window.addEventListener('competitorUpdated', handleCompetitorUpdate as EventListener);
+    window.addEventListener('scanComplete', handleScanComplete);
+    
+    // Periodic refresh (every 5 minutes) to check for new data
+    const periodicRefresh = setInterval(() => {
+      console.log('🔄 Periodic content refresh...');
+      enhanceContentIdeas();
+    }, 5 * 60 * 1000); // 5 minutes
     
     return () => {
       window.removeEventListener('brandAssetsUpdated', handleBrandAssetsUpdate);
+      window.removeEventListener('strategyUpdated', handleStrategyUpdate as EventListener);
+      window.removeEventListener('competitorUpdated', handleCompetitorUpdate as EventListener);
+      window.removeEventListener('scanComplete', handleScanComplete);
+      clearInterval(periodicRefresh);
     };
   }, []);
+
+  const enhanceContentIdeas = async () => {
+    try {
+      const cachedScanResults = localStorage.getItem('lastScanResults');
+      if (!cachedScanResults) return;
+      
+      const parsed = JSON.parse(cachedScanResults);
+      let contentIdeas = parsed.contentIdeas || [];
+      
+      if (contentIdeas.length === 0) return;
+      
+      // Load context
+      const brandMaterials = JSON.parse(localStorage.getItem('brandMaterials') || '[]');
+      const brandProfile = JSON.parse(localStorage.getItem('brandProfile') || 'null');
+      const brandVoice = JSON.parse(localStorage.getItem('brandVoice') || 'null');
+      const brandColors = JSON.parse(localStorage.getItem('brandColors') || '[]');
+      const brandFonts = JSON.parse(localStorage.getItem('brandFonts') || '[]');
+      const activeStrategy = JSON.parse(localStorage.getItem('activeContentStrategy') || 'null');
+      const competitorIntelligence = parsed.competitorIntelligence || [];
+      const brandDNA = parsed.brandDNA || null;
+      
+      // Enhance content ideas with new context
+      const enhancedIdeas = await enhanceContentIdeasWithContext(contentIdeas, {
+        brandMaterials,
+        brandProfile,
+        brandVoice,
+        brandColors,
+        brandFonts,
+        activeStrategy,
+        competitorIntelligence,
+        brandDNA
+      });
+      
+      // Update content ideas
+      if (enhancedIdeas.length > 0) {
+        const updatedAssets = enhancedIdeas.map((idea: any, index: number) => {
+          const platformMap: Record<string, string> = {
+            'twitter': 'X', 'x': 'X', 'linkedin': 'LINKEDIN', 'instagram': 'INSTAGRAM',
+            'tiktok': 'TIKTOK', 'youtube': 'YOUTUBE', 'podcast': 'PODCAST', 'facebook': 'FACEBOOK'
+          };
+          const formatMap: Record<string, string> = {
+            'post': 'document', 'thread': 'thread', 'video': 'video', 'carousel': 'carousel',
+            'reel': 'reel', 'podcast': 'podcast', 'audio': 'audio'
+          };
+          
+          return {
+            id: `content_idea_${index}`,
+            title: idea.title || 'Untitled Content',
+            description: idea.description || '',
+            platform: platformMap[idea.platform?.toLowerCase() || 'twitter'] || 'X',
+            status: 'suggested' as const,
+            type: (formatMap[idea.format?.toLowerCase() || 'post'] || 'document') as any,
+            timeAgo: 'AI suggested',
+            basedOn: idea.theme || '',
+            theme: idea.theme
+          };
+        });
+        
+        setAssets(updatedAssets);
+        
+        // Update cache
+        parsed.contentIdeas = enhancedIdeas;
+        localStorage.setItem('lastScanResults', JSON.stringify(parsed));
+      }
+    } catch (e) {
+      console.error('Error enhancing content ideas:', e);
+    }
+  };
+
+  const enhanceContentIdeasWithContext = async (
+    contentIdeas: any[],
+    context: {
+      brandMaterials?: any[];
+      brandProfile?: any;
+      brandVoice?: any;
+      brandColors?: any[];
+      brandFonts?: any[];
+      activeStrategy?: any;
+      competitorIntelligence?: any[];
+      brandDNA?: any;
+    }
+  ): Promise<any[]> => {
+    if (!contentIdeas || contentIdeas.length === 0) return contentIdeas;
+    
+    // Enhance ideas based on context
+    const enhanced = contentIdeas.map((idea: any) => {
+      const enhanced = { ...idea };
+      
+      // Enhance with strategy context
+      if (context.activeStrategy) {
+        if (context.activeStrategy.type === 'competitor_focus' && context.competitorIntelligence) {
+          const competitorName = context.activeStrategy.title.replace('Focus on ', '');
+          enhanced.description = `${enhanced.description} (Tailored to compete with ${competitorName})`;
+        } else if (context.activeStrategy.type === 'brand_building') {
+          enhanced.description = `${enhanced.description} (Focusing on brand building and thought leadership)`;
+        }
+      }
+      
+      // Enhance with competitor context
+      if (context.competitorIntelligence && context.competitorIntelligence.length > 0) {
+        const topCompetitor = context.competitorIntelligence[0];
+        if (topCompetitor.advantage) {
+          enhanced.description = `${enhanced.description} (Addressing competitor advantage: ${topCompetitor.advantage})`;
+        }
+      }
+      
+      // Enhance with brand DNA context
+      if (context.brandDNA) {
+        const themes = context.brandDNA.themes || context.brandDNA.corePillars || [];
+        if (themes.length > 0 && !enhanced.theme) {
+          enhanced.theme = themes[0];
+        }
+      }
+      
+      // Enhance with brand assets context
+      if (context.brandMaterials && context.brandMaterials.length > 0) {
+        const hasVideoAssets = context.brandMaterials.some((m: any) => m.type === 'video');
+        const hasImageAssets = context.brandMaterials.some((m: any) => m.type === 'image' || m.type === 'logo');
+        
+        if (hasVideoAssets && enhanced.format === 'video') {
+          enhanced.description = `${enhanced.description} (Can use brand video assets)`;
+        }
+        if (hasImageAssets && (enhanced.format === 'carousel' || enhanced.format === 'post')) {
+          enhanced.description = `${enhanced.description} (Can use brand image assets)`;
+        }
+      }
+      
+      return enhanced;
+    });
+    
+    return enhanced;
+  };
 
   const loadContent = async () => {
     try {
@@ -82,11 +245,36 @@ const ContentHubView: React.FC = () => {
         }
       }
       
-      // Enhance content ideas with brand assets context if available
-      if (brandMaterials.length > 0 || brandProfile || brandVoice) {
-        console.log(`Content Hub: Using ${brandMaterials.length} brand assets to enhance content suggestions`);
-        // Brand assets are now available for future content generation improvements
-        // The content ideas from scan are already brand-specific, but we can enhance them further
+      // Load additional context for enhancement
+      const activeStrategy = JSON.parse(localStorage.getItem('activeContentStrategy') || 'null');
+      const cachedResults = localStorage.getItem('lastScanResults');
+      let competitorIntelligence: any[] = [];
+      let brandDNA: any = null;
+      
+      if (cachedResults) {
+        try {
+          const parsedResults = JSON.parse(cachedResults);
+          competitorIntelligence = parsedResults.competitorIntelligence || [];
+          brandDNA = parsedResults.brandDNA || null;
+        } catch (e) {
+          console.error('Error parsing scan results for context:', e);
+        }
+      }
+      
+      // Enhance content ideas with brand assets, strategy, and competitor context
+      const enhancedIdeas = await enhanceContentIdeasWithContext(contentIdeasFromScan, {
+        brandMaterials,
+        brandProfile,
+        brandVoice,
+        brandColors,
+        brandFonts,
+        activeStrategy,
+        competitorIntelligence,
+        brandDNA
+      });
+      
+      if (enhancedIdeas.length > 0) {
+        contentIdeasFromScan = enhancedIdeas;
       }
       
       // Convert content ideas to ContentAsset format

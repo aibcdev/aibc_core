@@ -229,8 +229,8 @@ const AnalyticsView: React.FC = () => {
       }
       
       // Generate brand-specific insights based on actual content
-      const whatsWorking = generateBrandSpecificWhatsWorking(platform, posts, themes, voice);
-      const areasForImprovement = generateBrandSpecificImprovements(platform, posts, themes, voice, competitors);
+      const whatsWorking = generateBrandSpecificWhatsWorking(platform, posts, themes, voice, brandDNA);
+      const areasForImprovement = generateBrandSpecificImprovements(platform, posts, themes, voice, competitors, brandDNA);
 
       return {
         platform: platformInfo.name,
@@ -243,67 +243,104 @@ const AnalyticsView: React.FC = () => {
     });
   };
 
-  const generateBrandSpecificWhatsWorking = (platform: string, posts: any[], themes: string[], voice: any): string[] => {
+  const generateBrandSpecificWhatsWorking = (platform: string, posts: any[], themes: string[], voice: any, brandDNA?: any): string[] => {
     const insights: string[] = [];
+    const brandName = localStorage.getItem('lastScannedUsername')?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || '';
+    const industry = brandDNA?.industry || '';
+    const primaryTheme = themes[0] || brandDNA?.themes?.[0] || brandDNA?.corePillars?.[0] || '';
     
     // Analyze actual content patterns
     if (posts.length > 0) {
       const avgLength = posts.reduce((sum, p) => sum + (p.content?.length || 0), 0) / posts.length;
+      const platformPosts = posts.filter((p: any) => p.platform === platform);
       
       if (platform === 'instagram' || platform === 'tiktok') {
         if (avgLength < 200) insights.push('Short, punchy captions');
-        if (themes.length > 0) insights.push(`Focus on ${themes[0]} content`);
-        if (voice.tone === 'casual' || voice.formality === 'casual') insights.push('Authentic, casual tone');
+        if (primaryTheme) insights.push(`Focus on ${primaryTheme} content`);
+        if (voice?.tone === 'casual' || voice?.formality === 'casual') insights.push('Authentic, casual tone');
+        if (platformPosts.some((p: any) => p.media_urls?.length > 0)) insights.push('Strong visual content');
       } else if (platform === 'linkedin' || platform === 'twitter') {
         if (avgLength > 500) insights.push('In-depth, value-driven posts');
-        if (themes.length > 0) insights.push(`Expert insights on ${themes[0]}`);
-        if (voice.style === 'professional') insights.push('Professional, authoritative voice');
+        if (primaryTheme) insights.push(`${primaryTheme} expertise and insights`);
+        if (voice?.style === 'professional' || voice?.formality === 'professional') insights.push('Professional, authoritative voice');
+        if (platformPosts.some((p: any) => p.content?.includes('?'))) insights.push('Engaging question-driven content');
       }
+    } else if (primaryTheme || industry) {
+      // Even without posts, use brand DNA
+      if (primaryTheme) insights.push(`Focus on ${primaryTheme} content`);
+      if (industry) insights.push(`${industry} industry expertise`);
+      if (brandDNA?.voice?.tones?.[0]) insights.push(`${brandDNA.voice.tones[0]} brand voice`);
     }
     
-    // Add platform-specific defaults if not enough insights
-    const defaults = getWhatsWorking(platform);
-    while (insights.length < 3 && defaults.length > 0) {
-      const defaultInsight = defaults.shift();
-      if (defaultInsight && !insights.includes(defaultInsight)) {
-        insights.push(defaultInsight);
-      }
+    // Add platform-specific defaults only if we don't have enough brand-specific insights
+    if (insights.length < 3) {
+      const defaults = getWhatsWorking(platform);
+      defaults.forEach(defaultInsight => {
+        if (insights.length < 3 && !insights.includes(defaultInsight)) {
+          insights.push(defaultInsight);
+        }
+      });
     }
     
     return insights.slice(0, 3);
   };
 
-  const generateBrandSpecificImprovements = (platform: string, posts: any[], themes: string[], voice: any, competitors: any[]): string[] => {
+  const generateBrandSpecificImprovements = (platform: string, posts: any[], themes: string[], voice: any, competitors: any[], brandDNA?: any): string[] => {
     const improvements: string[] = [];
+    const brandName = localStorage.getItem('lastScannedUsername')?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || '';
+    const industry = brandDNA?.industry || '';
+    const primaryTheme = themes[0] || brandDNA?.themes?.[0] || brandDNA?.corePillars?.[0] || '';
     
     // Analyze gaps based on actual content
     if (posts.length === 0) {
       improvements.push('Start posting regularly');
-      improvements.push('Establish content themes');
+      if (primaryTheme) improvements.push(`Establish ${primaryTheme} content themes`);
+      else improvements.push('Establish content themes');
     } else {
-      if (posts.length < 5) improvements.push('Increase posting frequency');
+      const platformPosts = posts.filter((p: any) => p.platform === platform);
+      if (platformPosts.length < 3) improvements.push('Increase posting frequency on this platform');
       
       const avgLength = posts.reduce((sum, p) => sum + (p.content?.length || 0), 0) / posts.length;
       if (platform === 'linkedin' && avgLength < 300) improvements.push('Create longer, more detailed posts');
       if (platform === 'instagram' && avgLength > 500) improvements.push('Shorten captions for better engagement');
+      
+      // Check for video content
+      const hasVideo = posts.some((p: any) => p.platform === 'youtube' || p.media_urls?.some((url: string) => url.includes('video')));
+      if (!hasVideo && (platform === 'instagram' || platform === 'tiktok')) {
+        improvements.push('Add video content to increase engagement');
+      }
     }
     
     // Compare with competitors if available
     if (competitors.length > 0) {
-      const competitorAvgPosts = competitors.reduce((sum, c) => sum + (c.postCount || 0), 0) / competitors.length;
-      const ourPosts = posts.length;
-      if (ourPosts < competitorAvgPosts * 0.8) {
-        improvements.push('Match competitor posting frequency');
+      const topCompetitor = competitors[0];
+      if (topCompetitor.primaryVector) {
+        improvements.push(`Match ${topCompetitor.name}'s ${topCompetitor.primaryVector} strategy`);
+      }
+      if (topCompetitor.theirAdvantage) {
+        improvements.push(`Address ${topCompetitor.name}'s advantage: ${topCompetitor.theirAdvantage.substring(0, 50)}...`);
       }
     }
     
-    // Add platform-specific defaults if not enough improvements
-    const defaults = getAreasForImprovement(platform);
-    while (improvements.length < 3 && defaults.length > 0) {
-      const defaultImprovement = defaults.shift();
-      if (defaultImprovement && !improvements.includes(defaultImprovement)) {
-        improvements.push(defaultImprovement);
+    // Industry-specific improvements
+    if (industry) {
+      if (industry.toLowerCase().includes('web3') || industry.toLowerCase().includes('crypto')) {
+        improvements.push('Leverage Web3 community engagement strategies');
+      } else if (industry.toLowerCase().includes('travel')) {
+        improvements.push('Showcase unique travel experiences');
+      } else if (industry.toLowerCase().includes('tech') || industry.toLowerCase().includes('ai')) {
+        improvements.push('Share technical insights and use cases');
       }
+    }
+    
+    // Add platform-specific defaults only if we don't have enough brand-specific improvements
+    if (improvements.length < 3) {
+      const defaults = getAreasForImprovement(platform);
+      defaults.forEach(defaultImprovement => {
+        if (improvements.length < 3 && !improvements.includes(defaultImprovement)) {
+          improvements.push(defaultImprovement);
+        }
+      });
     }
     
     return improvements.slice(0, 3);

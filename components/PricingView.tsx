@@ -152,7 +152,7 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
         'Priority email support'
       ],
       buttonText: 'Upgrade to Business',
-      buttonStyle: 'bg-gradient-to-r from-orange-500 to-purple-600 text-white hover:from-orange-600 hover:to-purple-700',
+      buttonStyle: 'bg-orange-500 text-white hover:bg-orange-600',
       current: subscription.tier === SubscriptionTier.ENTERPRISE,
       popular: true,
       tier: SubscriptionTier.ENTERPRISE
@@ -175,7 +175,7 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
         'Lifetime Deal badge – price and access locked for the entire year'
       ],
       buttonText: 'Claim Lifetime Deal',
-      buttonStyle: 'bg-gradient-to-r from-orange-500 to-purple-600 text-white hover:from-orange-600 hover:to-purple-700',
+      buttonStyle: 'bg-orange-500 text-white hover:bg-orange-600',
       current: false,
       popular: false,
       limitedOffer: true
@@ -288,7 +288,7 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
             </div>
             <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-8">
               {/* Dashboard mockup placeholder */}
-              <div className="aspect-video bg-gradient-to-br from-orange-500/20 to-purple-600/20 rounded-lg flex items-center justify-center">
+              <div className="aspect-video bg-orange-500/20 rounded-lg flex items-center justify-center">
                 <span className="text-white/40 text-sm">Dashboard Preview</span>
               </div>
             </div>
@@ -321,7 +321,7 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
               } transition-all`}
             >
               {plan.popular && (
-                  <div className="absolute -top-3 left-6 bg-gradient-to-r from-orange-500 to-purple-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                  <div className="absolute -top-3 left-6 bg-orange-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                     Most Popular
                   </div>
                 )}
@@ -644,7 +644,7 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
 
         {/* Final CTA Banner */}
         <div className="max-w-6xl mx-auto">
-          <div className="bg-gradient-to-r from-orange-500/10 to-purple-600/10 border border-white/10 rounded-2xl p-12 text-center">
+          <div className="bg-orange-500/10 border border-white/10 rounded-2xl p-12 text-center">
             <h2 className="text-3xl font-bold text-white mb-4">
               Ready to stop staring at a blank content calendar?
             </h2>
