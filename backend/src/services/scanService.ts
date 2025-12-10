@@ -1577,7 +1577,13 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
     }
     const browser = await chromium.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled'],
+      args: [
+        '--no-sandbox', 
+        '--disable-setuid-sandbox', 
+        '--disable-blink-features=AutomationControlled',
+        '--disable-dev-shm-usage',
+        '--disable-gpu'
+      ],
     });
     if (scanId) {
       addLog(scanId, `[SCRAPE] Browser launched successfully`);
