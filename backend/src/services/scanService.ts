@@ -1062,18 +1062,24 @@ Return JSON array of content ideas, each with:
         contentIdeas = [];
       }
       
-      // Validate and filter out generic ideas
+      // Validate and filter out generic ideas (but be less strict - allow more ideas through)
       const genericKeywords = ['behind-the-scenes', 'educational content', 'user-generated content', 'industry insights', 'product highlights'];
       contentIdeas = contentIdeas.filter((idea: any) => {
         if (!idea.title || !idea.description) return false;
+        // Allow ideas that have brand name or specific details
         const titleLower = idea.title.toLowerCase();
         const descLower = idea.description.toLowerCase();
+        const hasBrandName = titleLower.includes(brandName.toLowerCase()) || descLower.includes(brandName.toLowerCase());
+        const hasSpecificDetails = descLower.length > 80; // Longer descriptions are usually more specific
+        
         // Reject if title is too generic without brand context
         const isGeneric = genericKeywords.some(keyword => 
           titleLower.includes(keyword) && !descLower.includes(brandName.toLowerCase()) && 
           !descLower.includes(themes.toLowerCase().split(',')[0]?.toLowerCase() || '')
         );
-        return !isGeneric;
+        
+        // Allow if has brand name, specific details, or is not generic
+        return hasBrandName || hasSpecificDetails || !isGeneric;
       });
       
       // If we have fewer than 5 after filtering, retry with stronger prompt
@@ -1109,9 +1115,18 @@ Return JSON array of content ideas, each with:
         const primaryTheme = validatedContent.content_themes[0] || 'brand content';
         const industryFallback = generateIndustrySpecificFallback(brandName, nicheIndicators, primaryTheme, brandDNA);
         contentIdeas = [...contentIdeas, ...industryFallback].slice(0, 8);
+        addLog(scanId, `[SUCCESS] Generated ${contentIdeas.length} content ideas (${contentIdeas.length - industryFallback.length} from LLM + ${industryFallback.length} from fallback)`);
+      } else {
+        addLog(scanId, `[SUCCESS] Generated ${contentIdeas.length} brand-specific content ideas`);
       }
       
-      addLog(scanId, `[SUCCESS] Generated ${contentIdeas.length} brand-specific content ideas`);
+      // ENSURE we always have at least 5 content ideas
+      if (contentIdeas.length === 0) {
+        addLog(scanId, `[ERROR] No content ideas generated - using emergency fallback`);
+        const primaryTheme = validatedContent.content_themes[0] || 'brand content';
+        contentIdeas = generateIndustrySpecificFallback(brandName, nicheIndicators || 'General', primaryTheme, brandDNA);
+        addLog(scanId, `[SUCCESS] Emergency fallback generated ${contentIdeas.length} content ideas`);
+      }
     } catch (error: any) {
       addLog(scanId, `[WARNING] Content ideas generation failed: ${error.message} - generating industry-specific fallback`);
       const primaryTheme = validatedContent.content_themes[0] || 'brand content';
