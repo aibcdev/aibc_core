@@ -271,7 +271,7 @@ export async function startScan(
       if (profileUrl) {
         addLog(scanId, `[DISCOVERY] Scraping ${detectedSocialPlatform} profile bio/links page: ${profileUrl}`);
         try {
-          const profileContent = await scrapeProfile(profileUrl, detectedSocialPlatform, scanId);
+          const profileContent = await scrapeProfileWithRetry(profileUrl, detectedSocialPlatform, scanId);
           if (profileContent.html && profileContent.html.length > 100) {
             // Extract social links from the profile page (bio, links section, etc.)
             discoveredSocialLinks = await extractSocialLinksFromProfile(profileContent.html, profileContent.text, profileUrl, scanId);
@@ -310,42 +310,51 @@ export async function startScan(
       try {
         storage.updateScan(scanId, { progress: 22 });
         
-        // Use fetch FIRST for social link discovery (faster, no browser needed)
-        // Browser scraping is slow and can hang - we only need HTML for social links
+        // Use fetch ONLY for social link discovery (no browser - too slow and hangs)
+        // Social links are in HTML - we don't need JavaScript execution
         let websiteContent;
         try {
-          addLog(scanId, `[DISCOVERY] Fetching HTML directly (fast method)...`);
+          addLog(scanId, `[DISCOVERY] Fetching HTML directly (fast method, no browser)...`);
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+          const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout (increased from 10s)
           
           const response = await fetch(websiteUrl, {
             headers: {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+              'Accept-Language': 'en-US,en;q=0.9'
             },
-            signal: controller.signal
+            signal: controller.signal,
+            redirect: 'follow'
           });
           
           clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
           const html = await response.text();
           websiteContent = { html, text: '', url: websiteUrl };
           addLog(scanId, `[DISCOVERY] Fetch successful (${html.length} chars HTML)`);
         } catch (fetchError: any) {
-          addLog(scanId, `[DISCOVERY] Fetch failed: ${fetchError.message} - trying browser scraping...`);
-          // Fallback to browser scraping only if fetch fails
+          addLog(scanId, `[DISCOVERY] Fetch failed: ${fetchError.message} - continuing with empty HTML (will use LLM fallback)`);
+          // Don't fallback to browser - it hangs. Just use empty content and let LLM extract from domain
+          websiteContent = { html: '', text: '', url: websiteUrl };
+          // Try LLM extraction directly from domain name as last resort
           try {
-            websiteContent = await Promise.race([
-              scrapeProfile(websiteUrl, 'website', scanId),
-              new Promise<never>((_, reject) => 
-                setTimeout(() => reject(new Error('Browser scraping timeout after 30 seconds')), 30000)
-              )
-            ]);
-          } catch (scrapeError: any) {
-            addLog(scanId, `[DISCOVERY] Browser scraping also failed: ${scrapeError.message}`);
-            throw new Error(`Both fetch and browser scraping failed: ${scrapeError.message}`);
+            const llmExtracted = await extractSocialLinksWithLLM(`Website: ${websiteUrl}`, websiteUrl, scanId);
+            if (Object.keys(llmExtracted).length > 0) {
+              discoveredSocialLinks = { ...discoveredSocialLinks, ...llmExtracted };
+              addLog(scanId, `[DISCOVERY] LLM found ${Object.keys(llmExtracted).length} social links from domain: ${Object.keys(llmExtracted).join(', ')}`);
+            }
+          } catch (llmError: any) {
+            addLog(scanId, `[DISCOVERY] LLM extraction also failed: ${llmError.message}`);
           }
         }
-          if (websiteContent.html && websiteContent.html.length > 50) {
+        
+        // Process the HTML we got (even if empty)
+        if (websiteContent.html && websiteContent.html.length > 50) {
             addLog(scanId, `[DISCOVERY] Website scraped successfully (${websiteContent.html.length} chars HTML, ${websiteContent.text?.length || 0} chars text)`);
             
             // Extract social links from HTML - use direct regex (fast, no browser)
@@ -373,37 +382,78 @@ export async function startScan(
               addLog(scanId, `[DISCOVERY] Found ${Object.keys(htmlLinks).length} social profiles from HTML: ${Object.keys(htmlLinks).join(', ')}`);
             }
             
-            // Also try LLM extraction from text content as fallback/enhancement
+            // CRITICAL: ALWAYS run LLM extraction - it's the most reliable method
+            // LLM can find social links even when they're in JavaScript, images, or mentioned in text
             if (websiteContent.text && websiteContent.text.length > 50) {
-              const llmExtracted = await extractSocialLinksWithLLM(websiteContent.text, websiteUrl, scanId);
-              if (Object.keys(llmExtracted).length > 0) {
-                // Merge LLM results with HTML results (LLM can find links mentioned in text)
-                discoveredSocialLinks = { ...discoveredSocialLinks, ...llmExtracted };
-                addLog(scanId, `[DISCOVERY] LLM found additional ${Object.keys(llmExtracted).length} social profiles`);
+              try {
+                addLog(scanId, `[DISCOVERY] Running LLM extraction (PRIMARY METHOD) on ${websiteContent.text.length} chars of content...`);
+                const llmExtracted = await extractSocialLinksWithLLM(websiteContent.text, websiteUrl, scanId);
+                if (Object.keys(llmExtracted).length > 0) {
+                  // LLM results take absolute priority - they're the most accurate
+                  discoveredSocialLinks = { ...llmExtracted, ...discoveredSocialLinks };
+                  addLog(scanId, `[DISCOVERY] ✅ LLM found ${Object.keys(llmExtracted).length} social profiles: ${Object.keys(llmExtracted).join(', ')}`);
+                } else {
+                  addLog(scanId, `[DISCOVERY] LLM found no social links (may not exist on this website)`);
+                }
+              } catch (llmError: any) {
+                addLog(scanId, `[DISCOVERY] ⚠️ LLM extraction failed: ${llmError.message}, using HTML results only`);
+              }
+            } else {
+              // Even with minimal text, try LLM - it might still find something
+              try {
+                addLog(scanId, `[DISCOVERY] Running LLM extraction on minimal content (${websiteContent.text?.length || 0} chars)...`);
+                const contentForLLM = websiteContent.text || (websiteContent.html ? websiteContent.html.substring(0, 5000) : '');
+                if (contentForLLM) {
+                  const llmExtracted = await extractSocialLinksWithLLM(contentForLLM, websiteUrl, scanId);
+                  if (Object.keys(llmExtracted).length > 0) {
+                    discoveredSocialLinks = { ...llmExtracted, ...discoveredSocialLinks };
+                    addLog(scanId, `[DISCOVERY] ✅ LLM found ${Object.keys(llmExtracted).length} social profiles from minimal content`);
+                  }
+                }
+              } catch (llmError: any) {
+                addLog(scanId, `[DISCOVERY] LLM extraction failed on minimal content: ${llmError.message}`);
               }
             }
             
             if (Object.keys(discoveredSocialLinks).length > 0) {
-              addLog(scanId, `[DISCOVERY] TOTAL: Found ${Object.keys(discoveredSocialLinks).length} social profiles from website: ${Object.keys(discoveredSocialLinks).join(', ')}`);
+              addLog(scanId, `[DISCOVERY] ✅ TOTAL: Found ${Object.keys(discoveredSocialLinks).length} social profiles from website: ${Object.keys(discoveredSocialLinks).join(', ')}`);
             } else {
-              addLog(scanId, `[DISCOVERY] WARNING: No social links found on website - will skip all platforms`);
+              addLog(scanId, `[DISCOVERY] ℹ️ No social links found on website via HTML/LLM - will try constructed URLs for each platform independently`);
             }
           } else {
             addLog(scanId, `[DISCOVERY] Website scraping returned minimal content (${websiteContent.html?.length || 0} chars HTML) - will still attempt to find social links`);
             // Even with minimal content, try to extract
             if (websiteContent.html) {
-              const htmlLinks = await extractSocialLinksFromWebsite(websiteContent.html, websiteUrl, scanId);
-              if (Object.keys(htmlLinks).length > 0) {
-                discoveredSocialLinks = { ...discoveredSocialLinks, ...htmlLinks };
-                addLog(scanId, `[DISCOVERY] Found ${Object.keys(htmlLinks).length} social profiles despite minimal content`);
+              try {
+                const htmlLinks = await extractSocialLinksFromWebsite(websiteContent.html, websiteUrl, scanId);
+                if (Object.keys(htmlLinks).length > 0) {
+                  discoveredSocialLinks = { ...discoveredSocialLinks, ...htmlLinks };
+                  addLog(scanId, `[DISCOVERY] Found ${Object.keys(htmlLinks).length} social profiles despite minimal content`);
+                }
+                
+                // ALWAYS try LLM even with minimal content
+                const contentForLLM = websiteContent.text || websiteContent.html.substring(0, 5000);
+                if (contentForLLM.length > 50) {
+                  try {
+                    const llmExtracted = await extractSocialLinksWithLLM(contentForLLM, websiteUrl, scanId);
+                    if (Object.keys(llmExtracted).length > 0) {
+                      discoveredSocialLinks = { ...llmExtracted, ...discoveredSocialLinks };
+                      addLog(scanId, `[DISCOVERY] ✅ LLM found ${Object.keys(llmExtracted).length} social profiles from minimal content`);
+                    }
+                  } catch (llmError: any) {
+                    addLog(scanId, `[DISCOVERY] LLM extraction failed: ${llmError.message}`);
+                  }
+                }
+              } catch (extractError: any) {
+                addLog(scanId, `[DISCOVERY] Extraction failed: ${extractError.message}`);
               }
+            }
           }
         }
       } catch (error: any) {
-          addLog(scanId, `[DISCOVERY] ERROR: Failed to extract social links from website: ${error.message}`);
-          addLog(scanId, `[DISCOVERY] Website scraping failed, but will try fallback username construction for platforms`);
-          // Don't skip all platforms - try fallback username construction instead
-        }
+        addLog(scanId, `[DISCOVERY] ERROR: Failed to extract social links from website: ${error.message}`);
+        addLog(scanId, `[DISCOVERY] Website scraping failed, but will try constructed URLs for each platform independently`);
+        // Don't skip all platforms - try constructed URLs instead
       }
     }
     
@@ -432,99 +482,58 @@ export async function startScan(
         
         addLog(scanId, `[DISCOVERY] Checking ${platform} (key: ${platformKey}, lower: ${platformLower}) - found: ${discoveredUrl ? 'YES' : 'NO'}`);
         
+        // SIMPLE INDEPENDENT LOGIC: Each platform is tried independently
+        // Priority order: 1) Discovered link, 2) Connected account, 3) Constructed URL
         if (discoveredUrl) {
           profileUrl = discoveredUrl;
           isDiscovered = true;
-          addLog(scanId, `[DISCOVERY] ✓ Using discovered ${platform} link: ${profileUrl}`);
-        } else {
+          addLog(scanId, `[${platform.toUpperCase()}] ✓ Using discovered link: ${profileUrl}`);
+        } else if (connectedAccounts?.[platform]) {
           // Use connected account handle if available
-          if (connectedAccounts?.[platform]) {
-            profileUrl = getProfileUrl(connectedAccounts[platform], platform);
-            addLog(scanId, `[CONNECTED] Using connected ${platform} account: ${connectedAccounts[platform]}`);
-          } else {
-            // Don't use domain names as usernames - skip if username looks like a domain
-            const isDomain = username.includes('.') && 
-                            (username.includes('.com') || username.includes('.tv') || 
-                             username.includes('.io') || username.includes('.co') ||
-                             username.includes('.net') || username.includes('.org'));
+          profileUrl = getProfileUrl(connectedAccounts[platform], platform);
+          addLog(scanId, `[${platform.toUpperCase()}] Using connected account: ${connectedAccounts[platform]}`);
+        } else {
+          // Always try to construct URL - works for both usernames and domains
+          // For domains, extract the domain name and try it as a username
+          let usernameToTry = username;
+          
+          const isDomain = username.includes('.') && 
+                          (username.includes('.com') || username.includes('.tv') || 
+                           username.includes('.io') || username.includes('.co') ||
+                           username.includes('.net') || username.includes('.org'));
+          
+          if (isDomain) {
+            // Extract domain name and try variations
+            const domainName = username.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0];
+            const usernameVariations = [
+              domainName,
+              domainName.replace(/-/g, ''),
+              domainName.replace(/_/g, ''),
+              domainName + 'tv', // For .tv domains
+              domainName.replace(/tv$/, ''), // Remove 'tv' suffix if present
+            ];
             
-            if (isDomain) {
-              // For domains, try discovered links first, then fallback to username construction
-              if (Object.keys(discoveredSocialLinks).length === 0) {
-                // No discovered links - try fallback username construction from domain
-                addLog(scanId, `[FALLBACK] Domain detected but NO social links found on website. Trying username construction from domain...`);
-                
-                // Extract potential username from domain (e.g., "example.com" -> "example")
-                const domainName = username.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0];
-                
-                // Try common variations
-                const usernameVariations = [
-                  domainName,
-                  domainName.replace(/-/g, ''),
-                  domainName.replace(/_/g, ''),
-                  domainName + 'tv', // For .tv domains
-                  domainName.replace(/tv$/, ''), // Remove 'tv' suffix if present
-                ];
-                
-                // Try each variation for this platform
-                let foundUrl = false;
-                for (const variation of usernameVariations) {
-                  const testUrl = getProfileUrl(variation, platform);
-                  if (testUrl) {
-                    addLog(scanId, `[FALLBACK] Trying ${platform} with username variation: ${variation} -> ${testUrl}`);
-                    // Don't verify here - let the scraping attempt verify
-                    profileUrl = testUrl;
-                    foundUrl = true;
-                    break;
-                  }
-                }
-                
-                if (!foundUrl) {
-                  addLog(scanId, `[SKIP] ${platform} - domain detected, no discovered links, and username construction failed`);
-                  continue;
-                }
-              } else {
-                // We found some links, but not for this platform - try fallback username construction
-                addLog(scanId, `[FALLBACK] Domain detected, found links for other platforms (${Object.keys(discoveredSocialLinks).join(', ')}), trying username construction for ${platform}...`);
-                
-                // Extract potential username from domain
-                const domainName = username.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0];
-                const usernameVariations = [
-                  domainName,
-                  domainName.replace(/-/g, ''),
-                  domainName.replace(/_/g, ''),
-                  domainName + 'tv',
-                  domainName.replace(/tv$/, ''),
-                ];
-                
-                let foundUrl = false;
-                for (const variation of usernameVariations) {
-                  const testUrl = getProfileUrl(variation, platform);
-                  if (testUrl) {
-                    addLog(scanId, `[FALLBACK] Trying ${platform} with username variation: ${variation} -> ${testUrl}`);
-                    profileUrl = testUrl;
-                    foundUrl = true;
-                    break;
-                  }
-                }
-                
-                if (!foundUrl) {
-                  addLog(scanId, `[SKIP] ${platform} - domain detected, link not found on website, and username construction failed`);
-                  continue;
-                }
-              }
-            } else {
-              // Regular username - use it directly
-              profileUrl = getProfileUrl(username, platform);
-            }
+            // Try first variation (most likely)
+            usernameToTry = usernameVariations[0];
+            addLog(scanId, `[${platform.toUpperCase()}] Domain detected, trying username: ${usernameToTry}`);
           }
           
-          // Determine actual platform name for logging (handle domains like script.tv)
-          if (profileUrl && profileUrl.includes('.com') && !profileUrl.includes('twitter.com') && 
-              !profileUrl.includes('youtube.com') && !profileUrl.includes('linkedin.com') && 
-              !profileUrl.includes('instagram.com') && !profileUrl.includes('x.com')) {
-            actualPlatform = 'website';
+          // Construct URL for this platform
+          profileUrl = getProfileUrl(usernameToTry, platform);
+          
+          if (!profileUrl) {
+            addLog(scanId, `[${platform.toUpperCase()}] ⚠️ Could not construct URL for ${platform} - skipping`);
+            continue;
           }
+          
+          addLog(scanId, `[${platform.toUpperCase()}] Trying constructed URL: ${profileUrl}`);
+        }
+        
+        // Determine actual platform name for logging (handle domains like script.tv)
+        if (profileUrl && profileUrl.includes('.com') && !profileUrl.includes('twitter.com') && 
+            !profileUrl.includes('youtube.com') && !profileUrl.includes('linkedin.com') && 
+            !profileUrl.includes('instagram.com') && !profileUrl.includes('x.com')) {
+          actualPlatform = 'website';
         }
         
         if (profileUrl) {
@@ -580,7 +589,7 @@ export async function startScan(
             // For non-discovered links (constructed URLs), verify before scraping
             addLog(scanId, `[SCRAPE] Checking ${actualPlatform} profile: ${profileUrl}`);
             try {
-              const content = await scrapeProfile(profileUrl, actualPlatform, scanId);
+              const content = await scrapeProfileWithRetry(profileUrl, actualPlatform, scanId);
               
               // Verify profile actually exists (not 404, not login page, has actual content)
               const profileExists = await verifyProfileExists(content, actualPlatform);
@@ -1298,7 +1307,7 @@ function extractSocialLinksFromText(text: string): Record<string, string> {
  * This is CRITICAL for finding social profiles that are linked on websites
  */
 async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, scanId?: string): Promise<Record<string, string>> {
-  const socialLinks: Record<string, string> = {};
+  let socialLinks: Record<string, string> = {};
   
   if (scanId) {
     addLog(scanId, `[EXTRACT] Starting social link extraction from ${html.length} chars of HTML`);
@@ -1610,17 +1619,38 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
       }
     }
     
-    // Also use LLM to extract social links from text content (as fallback)
-    if (Object.keys(socialLinks).length === 0 && pageText && pageText.length > 100) {
-      try {
-        await browser.close(); // Close browser before LLM call
-        const llmExtracted = await extractSocialLinksWithLLM(pageText, websiteUrl, scanId);
-          Object.assign(socialLinks, llmExtracted);
-      } catch (e) {
-        console.log('LLM social link extraction failed:', e);
+    // CRITICAL: ALWAYS run LLM extraction - it's the most reliable method
+    // LLM can find social links even when they're in JavaScript, images, or mentioned in text
+    try {
+      await browser.close(); // Close browser before LLM call
+      
+      // Use pageText if available, otherwise use HTML (LLM can extract from HTML too)
+      const contentForLLM = pageText && pageText.length > 100 ? pageText : rawHtml?.substring(0, 10000) || '';
+      
+      if (contentForLLM.length > 50 && websiteUrl) {
+        addLog(scanId, `[DISCOVERY] Running LLM extraction (PRIMARY METHOD) on ${contentForLLM.length} chars...`);
+        const llmExtracted = await extractSocialLinksWithLLM(contentForLLM, websiteUrl, scanId);
+        // LLM results take absolute priority - they're the most accurate
+        if (Object.keys(llmExtracted).length > 0) {
+          socialLinks = { ...llmExtracted, ...socialLinks };
+          if (scanId) {
+            addLog(scanId, `[DISCOVERY] ✅ LLM found ${Object.keys(llmExtracted).length} social profiles: ${Object.keys(llmExtracted).join(', ')}`);
+          }
+        } else {
+          if (scanId) {
+            addLog(scanId, `[DISCOVERY] LLM found no social links (may not exist on this website)`);
+          }
+        }
+      } else {
+        if (scanId) {
+          addLog(scanId, `[DISCOVERY] ⚠️ Not enough content for LLM extraction (${contentForLLM.length} chars)`);
+        }
       }
-    } else {
-      await browser.close(); // Close browser if we found links via HTML parsing
+    } catch (e) {
+      console.log('LLM social link extraction failed:', e);
+      if (scanId) {
+        addLog(scanId, `[DISCOVERY] ⚠️ LLM extraction failed: ${e instanceof Error ? e.message : 'Unknown error'}, using HTML parsing results only`);
+      }
     }
     
   } catch (error: any) {
@@ -1719,58 +1749,105 @@ async function extractSocialLinksWithLLM(textContent: string, websiteUrl: string
   const socialLinks: Record<string, string> = {};
   
   try {
-    const prompt = `You are analyzing a website's content to find social media profile links.
+    // Use more content for better accuracy (up to 10000 chars)
+    const contentToAnalyze = textContent.length > 10000 ? textContent.substring(0, 10000) : textContent;
+    
+    const prompt = `You are an expert at finding social media profile links on websites. Your job is to find ALL social media links, even if they're:
+- In JavaScript-rendered content
+- Mentioned in text without full URLs
+- In image alt text or metadata
+- In footer/header sections
+- In any format (full URLs, partial URLs, @handles, etc.)
 
 Website URL: ${websiteUrl}
 
-Website Content (first 5000 chars):
-${textContent.substring(0, 5000)}
+Website Content:
+${contentToAnalyze}
 
-Find all social media profile links mentioned in this content. Look for:
-- Twitter/X handles (twitter.com/username or x.com/username)
-- Instagram handles (instagram.com/username)
-- YouTube channels (youtube.com/@channel or youtube.com/channel/ID)
-- LinkedIn profiles (linkedin.com/in/username)
-- TikTok profiles (tiktok.com/@username)
+Find ALL social media profile links. Look for:
+- Twitter/X: twitter.com/username, x.com/username, @username mentions
+- Instagram: instagram.com/username, @username mentions
+- YouTube: youtube.com/@channel, youtube.com/channel/ID, youtube.com/user/ID, @channel mentions
+- LinkedIn: linkedin.com/in/username, linkedin.com/company/companyname
+- TikTok: tiktok.com/@username, @username mentions
+- Facebook: facebook.com/username, fb.com/username
+- Pinterest: pinterest.com/username
+- GitHub: github.com/username
+- Any other social platforms you find
+
+Be thorough - check every mention, every link, every reference. If you see "Follow us on Twitter @example" or "Check our Instagram: example", extract those too.
 
 Return ONLY a JSON object with this exact structure:
 {
   "twitter": "https://twitter.com/username or https://x.com/username",
   "instagram": "https://instagram.com/username",
   "youtube": "https://youtube.com/@channel",
-  "linkedin": "https://linkedin.com/in/username",
-  "tiktok": "https://tiktok.com/@username"
+  "linkedin": "https://linkedin.com/in/username or https://linkedin.com/company/companyname",
+  "tiktok": "https://tiktok.com/@username",
+  "facebook": "https://facebook.com/username",
+  "pinterest": "https://pinterest.com/username",
+  "github": "https://github.com/username"
 }
 
-Only include platforms that you actually found. If a platform is not found, omit it from the JSON.
-Return ONLY valid JSON, no other text.`;
+IMPORTANT:
+- Always return full URLs starting with https://
+- If you find a username/handle, construct the full URL
+- Only include platforms you actually found
+- Be very thorough - don't miss any social links
+- Return ONLY valid JSON, no other text`;
 
-    const systemPrompt = `You are a social media link extractor. Return ONLY valid JSON with this exact structure:
-{
-  "twitter": "https://twitter.com/username or https://x.com/username",
-  "instagram": "https://instagram.com/username",
-  "youtube": "https://youtube.com/@channel",
-  "linkedin": "https://linkedin.com/in/username",
-  "tiktok": "https://tiktok.com/@username"
-}
-
-Only include platforms that you actually found. If a platform is not found, omit it from the JSON. Return ONLY valid JSON, no other text.`;
+    const systemPrompt = `You are an expert social media link extractor. You are extremely thorough and never miss social media links. 
+You can find links in any format: full URLs, partial URLs, @handles, mentions in text, etc.
+Always return full URLs in the format: https://platform.com/username
+Return ONLY valid JSON with the structure specified in the prompt.`;
     
     const result = await generateJSON<Record<string, string>>(prompt, systemPrompt, { tier: 'basic' });
     
     if (result && typeof result === 'object') {
       // Validate and clean URLs
       for (const [platform, url] of Object.entries(result)) {
-        if (url && typeof url === 'string' && url.startsWith('http')) {
-          socialLinks[platform] = url;
-          if (scanId) {
-            addLog(scanId, `[DISCOVERY] LLM found ${platform} link: ${url}`);
+        if (url && typeof url === 'string') {
+          // Ensure it's a full URL
+          let fullUrl = url.trim();
+          if (!fullUrl.startsWith('http')) {
+            // Try to construct full URL from partial
+            if (platform === 'twitter' || platform === 'x') {
+              fullUrl = `https://twitter.com/${fullUrl.replace(/^@/, '').replace(/^https?:\/\//, '').replace(/^(twitter\.com|x\.com)\//, '')}`;
+            } else if (platform === 'instagram') {
+              fullUrl = `https://instagram.com/${fullUrl.replace(/^@/, '').replace(/^https?:\/\//, '').replace(/^instagram\.com\//, '')}`;
+            } else if (platform === 'youtube') {
+              if (!fullUrl.includes('youtube.com')) {
+                fullUrl = `https://youtube.com/@${fullUrl.replace(/^@/, '').replace(/^https?:\/\//, '')}`;
+              } else {
+                fullUrl = fullUrl.startsWith('http') ? fullUrl : `https://${fullUrl}`;
+              }
+            } else if (platform === 'linkedin') {
+              if (!fullUrl.includes('linkedin.com')) {
+                fullUrl = `https://linkedin.com/in/${fullUrl.replace(/^https?:\/\//, '')}`;
+              } else {
+                fullUrl = fullUrl.startsWith('http') ? fullUrl : `https://${fullUrl}`;
+              }
+            } else if (platform === 'tiktok') {
+              fullUrl = `https://tiktok.com/@${fullUrl.replace(/^@/, '').replace(/^https?:\/\//, '').replace(/^tiktok\.com\/@?/, '')}`;
+            } else {
+              fullUrl = fullUrl.startsWith('http') ? fullUrl : `https://${fullUrl}`;
+            }
+          }
+          
+          if (fullUrl.startsWith('http')) {
+            socialLinks[platform] = fullUrl;
+            if (scanId) {
+              addLog(scanId, `[LLM] Found ${platform}: ${fullUrl}`);
+            }
           }
         }
       }
     }
   } catch (error: any) {
     console.error('LLM social link extraction error:', error);
+    if (scanId) {
+      addLog(scanId, `[LLM] Error: ${error.message}`);
+    }
   }
   
   return socialLinks;
@@ -2047,42 +2124,94 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
             // @ts-ignore
             window.scrollTo(0, document.body.scrollHeight);
           });
-          await page.waitForTimeout(2000); // Reduced wait time
+          await page.waitForTimeout(2000 + Math.random() * 1000); // Randomized wait time
         }
         
-        // Try to extract tweet text, images, and videos
+        // Try to extract tweet text, images, and videos with multiple selector strategies
         try {
           const tweetData = await page.evaluate(() => {
             // @ts-ignore
-            const tweetElements = Array.from(document.querySelectorAll('[data-testid="tweet"], article[data-testid="tweet"]'));
+            // Try multiple selector strategies with fallbacks
+            const selectors = [
+              '[data-testid="tweet"]',
+              'article[data-testid="tweet"]',
+              '[role="article"]',
+              '.tweet',
+              'article',
+            ];
+            
+            let tweetElements: any[] = [];
+            for (const selector of selectors) {
+              // @ts-ignore - document is available in browser context
+              tweetElements = Array.from(document.querySelectorAll(selector));
+              if (tweetElements.length > 0) break;
+            }
+            
             const tweets: any[] = [];
             const tweetImages: string[] = [];
             const tweetVideos: string[] = [];
             
             tweetElements.forEach((el: any) => {
-              const textEl = el.querySelector('[data-testid="tweetText"]') || el;
-              const text = textEl?.innerText || textEl?.textContent || '';
+              // Try multiple text extraction strategies
+              const textSelectors = [
+                '[data-testid="tweetText"]',
+                '[lang]',
+                'span',
+                'div[dir="auto"]',
+              ];
+              
+              let text = '';
+              for (const textSelector of textSelectors) {
+                const textEl = el.querySelector(textSelector);
+                if (textEl) {
+                  text = textEl.innerText || textEl.textContent || '';
+                  if (text.length > 10) break;
+                }
+              }
+              
+              // Fallback to element's own text
+              if (!text || text.length < 10) {
+                text = el.innerText || el.textContent || '';
+              }
               
               if (text.length > 10) {
                 tweets.push(text);
               }
               
-              // Extract images
-              const imgElements = el.querySelectorAll('img[src*="pbs.twimg.com"], img[src*="media"]');
-              imgElements.forEach((img: any) => {
-                const src = img.src || img.getAttribute('src');
-                if (src && !tweetImages.includes(src)) {
-                  tweetImages.push(src);
-                }
+              // Extract images with multiple patterns
+              const imgSelectors = [
+                'img[src*="pbs.twimg.com"]',
+                'img[src*="media"]',
+                'img[src*="twimg"]',
+                'img[alt]',
+              ];
+              
+              imgSelectors.forEach(selector => {
+                const imgElements = el.querySelectorAll(selector);
+                imgElements.forEach((img: any) => {
+                  const src = img.src || img.getAttribute('src');
+                  if (src && !src.includes('data:') && !tweetImages.includes(src)) {
+                    tweetImages.push(src);
+                  }
+                });
               });
               
-              // Extract videos
-              const videoElements = el.querySelectorAll('video, [data-testid="video"]');
-              videoElements.forEach((video: any) => {
-                const src = video.src || video.getAttribute('src') || video.querySelector('source')?.src;
-                if (src && !tweetVideos.includes(src)) {
-                  tweetVideos.push(src);
-                }
+              // Extract videos with multiple patterns
+              const videoSelectors = [
+                'video',
+                '[data-testid="video"]',
+                '[data-testid="videoPlayer"]',
+                'video[src]',
+              ];
+              
+              videoSelectors.forEach(selector => {
+                const videoElements = el.querySelectorAll(selector);
+                videoElements.forEach((video: any) => {
+                  const src = video.src || video.getAttribute('src') || video.querySelector('source')?.src;
+                  if (src && !tweetVideos.includes(src)) {
+                    tweetVideos.push(src);
+                  }
+                });
               });
             });
             
@@ -2108,42 +2237,93 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
             // @ts-ignore
             window.scrollTo(0, document.body.scrollHeight);
           });
-          await page.waitForTimeout(2000); // Reduced wait time
+          await page.waitForTimeout(2000 + Math.random() * 1000); // Randomized wait time
         }
         
-        // Try to extract post text, images, and videos
+        // Try to extract post text, images, and videos with multiple selector strategies
         try {
           const postData = await page.evaluate(() => {
             // @ts-ignore
-            const postElements = Array.from(document.querySelectorAll('article, [role="article"]'));
+            // Try multiple selector strategies
+            const selectors = [
+              'article',
+              '[role="article"]',
+              '[data-testid="post"]',
+              'div[role="dialog"] article',
+              'section article',
+            ];
+            
+            let postElements: any[] = [];
+            for (const selector of selectors) {
+              // @ts-ignore - document is available in browser context
+              postElements = Array.from(document.querySelectorAll(selector));
+              if (postElements.length > 0) break;
+            }
+            
             const posts: any[] = [];
             const postImages: string[] = [];
             const postVideos: string[] = [];
             
             postElements.forEach((el: any) => {
-              const textEl = el.querySelector('span, h1') || el;
-              const text = textEl?.innerText || textEl?.textContent || '';
+              // Try multiple text extraction strategies
+              const textSelectors = [
+                'span',
+                'h1',
+                '[data-testid="post-text"]',
+                'div[dir="auto"]',
+              ];
+              
+              let text = '';
+              for (const textSelector of textSelectors) {
+                const textEl = el.querySelector(textSelector);
+                if (textEl) {
+                  text = textEl.innerText || textEl.textContent || '';
+                  if (text.length > 10) break;
+                }
+              }
+              
+              if (!text || text.length < 10) {
+                text = el.innerText || el.textContent || '';
+              }
               
               if (text.length > 10) {
                 posts.push(text);
               }
               
-              // Extract images
-              const imgElements = el.querySelectorAll('img[src*="instagram"], img[src*="cdninstagram"]');
-              imgElements.forEach((img: any) => {
-                const src = img.src || img.getAttribute('src');
-                if (src && !postImages.includes(src)) {
-                  postImages.push(src);
-                }
+              // Extract images with multiple patterns
+              const imgSelectors = [
+                'img[src*="instagram"]',
+                'img[src*="cdninstagram"]',
+                'img[src*="fbcdn"]',
+                'img[alt]',
+              ];
+              
+              imgSelectors.forEach(selector => {
+                const imgElements = el.querySelectorAll(selector);
+                imgElements.forEach((img: any) => {
+                  const src = img.src || img.getAttribute('src');
+                  if (src && !src.includes('data:') && !postImages.includes(src)) {
+                    postImages.push(src);
+                  }
+                });
               });
               
-              // Extract videos
-              const videoElements = el.querySelectorAll('video, [type="video"]');
-              videoElements.forEach((video: any) => {
-                const src = video.src || video.getAttribute('src') || video.querySelector('source')?.src;
-                if (src && !postVideos.includes(src)) {
-                  postVideos.push(src);
-                }
+              // Extract videos with multiple patterns
+              const videoSelectors = [
+                'video',
+                '[type="video"]',
+                'video[src]',
+                '[data-testid="video"]',
+              ];
+              
+              videoSelectors.forEach(selector => {
+                const videoElements = el.querySelectorAll(selector);
+                videoElements.forEach((video: any) => {
+                  const src = video.src || video.getAttribute('src') || video.querySelector('source')?.src;
+                  if (src && !postVideos.includes(src)) {
+                    postVideos.push(src);
+                  }
+                });
               });
             });
             
@@ -2169,17 +2349,53 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
             // @ts-ignore
             window.scrollTo(0, document.body.scrollHeight);
           });
-          await page.waitForTimeout(2000); // Reduced wait time
+          await page.waitForTimeout(2000 + Math.random() * 1000); // Randomized wait time
         }
         
-        // Try to extract post text
+        // Try to extract post text with multiple selector strategies
         try {
           const posts = await page.evaluate(() => {
             // @ts-ignore
-            const postElements = Array.from(document.querySelectorAll('[data-id*="urn"], article, .feed-shared-update-v2'));
+            // Try multiple selector strategies
+            const selectors = [
+              '[data-id*="urn"]',
+              'article',
+              '.feed-shared-update-v2',
+              '.feed-shared-update',
+              '[data-testid="feed-shared-update"]',
+            ];
+            
+            let postElements: any[] = [];
+            for (const selector of selectors) {
+              // @ts-ignore - document is available in browser context
+              postElements = Array.from(document.querySelectorAll(selector));
+              if (postElements.length > 0) break;
+            }
+            
             return postElements.map((el: any) => {
-              const textEl = el.querySelector('.feed-shared-text, .update-components-text, span') || el;
-              return textEl?.innerText || textEl?.textContent || '';
+              // Try multiple text extraction strategies
+              const textSelectors = [
+                '.feed-shared-text',
+                '.update-components-text',
+                'span',
+                'div[dir="ltr"]',
+                'p',
+              ];
+              
+              let text = '';
+              for (const textSelector of textSelectors) {
+                const textEl = el.querySelector(textSelector);
+                if (textEl) {
+                  text = textEl.innerText || textEl.textContent || '';
+                  if (text.length > 10) break;
+                }
+              }
+              
+              if (!text || text.length < 10) {
+                text = el.innerText || el.textContent || '';
+              }
+              
+              return text;
             }).filter((text: string) => text.length > 10);
           });
           
@@ -2188,6 +2404,102 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
           }
         } catch (e) {
           console.log('LinkedIn selector extraction failed, using fallback');
+        }
+      } else if (platform.toLowerCase() === 'youtube') {
+        // YouTube-specific handling: Scroll to load videos
+        for (let i = 0; i < 3; i++) {
+          await page.evaluate(() => {
+            // @ts-ignore
+            window.scrollTo(0, document.body.scrollHeight);
+          });
+          await page.waitForTimeout(2000 + Math.random() * 1000); // Randomized wait time
+        }
+        
+        // Try to extract video titles, descriptions, and metadata
+        try {
+          const videoData = await page.evaluate(() => {
+            // @ts-ignore
+            // Try multiple selector strategies for YouTube
+            const selectors = [
+              '#dismissible',
+              'ytd-grid-video-renderer',
+              'ytd-video-renderer',
+              '.ytd-video-renderer',
+              '[id*="video"]',
+            ];
+            
+            let videoElements: any[] = [];
+            for (const selector of selectors) {
+              // @ts-ignore - document is available in browser context
+              videoElements = Array.from(document.querySelectorAll(selector));
+              if (videoElements.length > 0) break;
+            }
+            
+            const videos: any[] = [];
+            const videoThumbnails: string[] = [];
+            
+            videoElements.forEach((el: any) => {
+              // Extract video title
+              const titleSelectors = [
+                '#video-title',
+                'a[id="video-title"]',
+                'h3',
+                '.ytd-video-meta-block',
+              ];
+              
+              let title = '';
+              for (const titleSelector of titleSelectors) {
+                const titleEl = el.querySelector(titleSelector);
+                if (titleEl) {
+                  title = titleEl.innerText || titleEl.textContent || titleEl.getAttribute('title') || '';
+                  if (title.length > 5) break;
+                }
+              }
+              
+              // Extract video description/metadata
+              const descSelectors = [
+                '#description-text',
+                '.ytd-video-meta-block',
+                '#metadata-line',
+                'span',
+              ];
+              
+              let description = '';
+              for (const descSelector of descSelectors) {
+                const descEl = el.querySelector(descSelector);
+                if (descEl) {
+                  description = descEl.innerText || descEl.textContent || '';
+                  if (description.length > 10) break;
+                }
+              }
+              
+              if (title || description) {
+                videos.push(`${title}${description ? ' - ' + description : ''}`);
+              }
+              
+              // Extract thumbnails
+              const imgElements = el.querySelectorAll('img[src*="ytimg"], img[src*="youtube"]');
+              imgElements.forEach((img: any) => {
+                const src = img.src || img.getAttribute('src');
+                if (src && !src.includes('data:') && !videoThumbnails.includes(src)) {
+                  videoThumbnails.push(src);
+                }
+              });
+            });
+            
+            return { videos, images: videoThumbnails };
+          });
+          
+          if (videoData.videos.length > 0) {
+            scrapedText = `Profile: ${url}\n\nVideos:\n${videoData.videos.slice(0, 20).join('\n\n---\n\n')}`;
+            images = videoData.images.slice(0, 10);
+            
+            if (scanId && images.length > 0) {
+              addLog(scanId, `[VISUAL] Extracted ${images.length} thumbnails from YouTube`);
+            }
+          }
+        } catch (e) {
+          console.log('YouTube selector extraction failed, using fallback');
         }
       } else {
         // Generic website scraping (for domains like script.tv)
