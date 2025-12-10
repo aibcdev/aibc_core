@@ -294,13 +294,13 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
               <>
                 <button 
                   onClick={() => onNavigate(ViewState.SIGNIN)} 
-                  className="text-sm text-white hover:text-orange-500 transition-colors"
+                  className="px-4 py-2 rounded-lg border border-white/20 bg-white/5 text-sm text-white hover:bg-white/10 hover:border-white/30 transition-all"
                 >
                   Log In
                 </button>
                 <button 
                   onClick={() => onNavigate(ViewState.INGESTION)}
-                  className="text-sm text-white hover:text-orange-500 transition-colors"
+                  className="px-4 py-2 rounded-lg border border-white/20 bg-white/5 text-sm text-white hover:bg-white/10 hover:border-white/30 transition-all"
                 >
                   Get Started
                 </button>

@@ -146,7 +146,7 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
             </div>
 
             <div className="grid lg:grid-cols-3 gap-6">
-              {/* Know what works */}
+              {/* Know what works - Left side, spans 2 columns */}
               <div className="lg:col-span-2 bg-[#0A0A0A] border border-white/10 rounded-2xl p-8">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
@@ -195,8 +195,10 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
                 </div>
               </div>
 
-              {/* Always in Sync */}
-              <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-8">
+              {/* Right column - two cards stacked */}
+              <div className="flex flex-col gap-6">
+                {/* Always in Sync - Top right */}
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-8">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
@@ -216,10 +218,10 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
                 <div className="bg-[#050505] rounded-lg h-2 overflow-hidden">
                   <div className="h-full bg-gradient-to-r from-orange-500 to-orange-400" style={{ width: '85%' }}></div>
                 </div>
-              </div>
+                </div>
 
-              {/* Writes in Your Voice */}
-              <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-8">
+                {/* Writes in Your Voice - Bottom right */}
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-8">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-12 h-12 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center">
                     <Sparkles className="w-6 h-6 text-purple-400" />
