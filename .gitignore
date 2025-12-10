@@ -12,12 +12,37 @@ dist
 dist-ssr
 *.local
 
-# Environment variables
+# Environment variables - NEVER COMMIT THESE
 .env
-.env.local
-.env.*.local
+.env.*
+*.env
+*.env.*
+**/.env
+**/.env.*
 backend/.env
 backend/.env.local
+backend/.env.bak
+backend/.env.*
+frontend/.env
+frontend/.env.*
+
+# Backup files that might contain secrets
+*.bak
+*.backup
+*.old
+*.orig
+*~
+
+# API Keys and Secrets - NEVER COMMIT
+*.pem
+*.key
+**/secrets/
+**/credentials/
+.secrets
+secrets.json
+credentials.json
+*api*key*
+*secret*
 
 # Editor directories and files
 .vscode/*
