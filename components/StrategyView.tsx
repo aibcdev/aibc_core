@@ -88,8 +88,44 @@ const StrategyView: React.FC = () => {
       }
     };
     
+    // Listen for content hub updates - may trigger strategy adjustments
+    const handleContentHubUpdate = (event: CustomEvent) => {
+      console.log('📥 Strategy: Content Hub updated - updating strategy context...');
+      loadScanData();
+    };
+    
+    // Listen for analytics updates
+    const handleAnalyticsUpdate = (event: CustomEvent) => {
+      console.log('📥 Strategy: Analytics updated - may need strategy adjustment...');
+      // Analytics changes may influence strategy recommendations
+      loadScanData();
+    };
+    
+    // Listen for competitor updates
+    const handleCompetitorUpdate = (event: CustomEvent) => {
+      console.log('📥 Strategy: Competitor updated - refreshing competitor data...', event.detail);
+      loadScanData();
+    };
+    
+    // Listen for brand assets updates
+    const handleBrandAssetsUpdate = () => {
+      console.log('📥 Strategy: Brand assets updated - updating strategy context...');
+      loadScanData();
+    };
+    
+    // Listen for any data change
+    const handleDataChange = (event: CustomEvent) => {
+      console.log('📥 Strategy: Data changed - refreshing...', event.detail?.eventType);
+      loadScanData();
+    };
+    
     window.addEventListener('newScanStarted', handleNewScanStarted as EventListener);
     window.addEventListener('scanComplete', handleScanComplete);
+    window.addEventListener('contentHubUpdated', handleContentHubUpdate as EventListener);
+    window.addEventListener('analyticsUpdated', handleAnalyticsUpdate as EventListener);
+    window.addEventListener('competitorUpdated', handleCompetitorUpdate as EventListener);
+    window.addEventListener('brandAssetsUpdated', handleBrandAssetsUpdate);
+    window.addEventListener('dataChanged', handleDataChange as EventListener);
     
     // Poll for username changes
     const usernameCheckInterval = setInterval(() => {
@@ -102,6 +138,11 @@ const StrategyView: React.FC = () => {
     return () => {
       window.removeEventListener('newScanStarted', handleNewScanStarted as EventListener);
       window.removeEventListener('scanComplete', handleScanComplete);
+      window.removeEventListener('contentHubUpdated', handleContentHubUpdate as EventListener);
+      window.removeEventListener('analyticsUpdated', handleAnalyticsUpdate as EventListener);
+      window.removeEventListener('competitorUpdated', handleCompetitorUpdate as EventListener);
+      window.removeEventListener('brandAssetsUpdated', handleBrandAssetsUpdate);
+      window.removeEventListener('dataChanged', handleDataChange as EventListener);
       clearInterval(usernameCheckInterval);
     };
   }, [scanUsername]);
@@ -353,6 +394,7 @@ const StrategyView: React.FC = () => {
           ...plan,
           appliedAt: new Date().toISOString()
         });
+        parsed.lastUpdated = Date.now();
         localStorage.setItem('lastScanResults', JSON.stringify(parsed));
       } catch (e) {
         console.error('Error updating scan results:', e);
@@ -360,15 +402,34 @@ const StrategyView: React.FC = () => {
     }
     
     // Save active strategy for content generation
-    localStorage.setItem('activeContentStrategy', JSON.stringify({
+    const activeStrategy = {
       ...plan,
       appliedAt: new Date().toISOString(),
-      affectsContentGeneration: true
+      affectsContentGeneration: true,
+      brandDNA,
+      scanUsername
+    };
+    localStorage.setItem('activeContentStrategy', JSON.stringify(activeStrategy));
+    
+    // Dispatch events to notify ALL components
+    console.log('📡 Strategy: Dispatching strategyUpdated event');
+    window.dispatchEvent(new CustomEvent('strategyUpdated', {
+      detail: { 
+        strategy: plan,
+        activeStrategy,
+        timestamp: Date.now(),
+        source: 'StrategyView'
+      }
     }));
     
-    // Dispatch event to notify content generation components
-    window.dispatchEvent(new CustomEvent('strategyUpdated', {
-      detail: { strategy: plan }
+    // Also dispatch a general data change event
+    window.dispatchEvent(new CustomEvent('dataChanged', {
+      detail: {
+        eventType: 'strategyUpdated',
+        timestamp: Date.now(),
+        source: 'StrategyView',
+        data: plan
+      }
     }));
   };
 

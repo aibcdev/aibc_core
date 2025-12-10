@@ -66,11 +66,25 @@ const ContentHubView: React.FC = () => {
       loadContent();
     };
     
+    // Listen for analytics updates - may affect content recommendations
+    const handleAnalyticsUpdate = (event: CustomEvent) => {
+      console.log('📥 Content Hub: Analytics updated - adjusting content ideas...', event.detail);
+      enhanceContentIdeas();
+    };
+    
+    // Listen for any data change
+    const handleDataChange = (event: CustomEvent) => {
+      console.log('📥 Content Hub: Data changed - refreshing...', event.detail?.eventType);
+      loadContent();
+    };
+    
     window.addEventListener('newScanStarted', handleNewScanStarted as EventListener);
     window.addEventListener('brandAssetsUpdated', handleBrandAssetsUpdate);
     window.addEventListener('strategyUpdated', handleStrategyUpdate as EventListener);
     window.addEventListener('competitorUpdated', handleCompetitorUpdate as EventListener);
     window.addEventListener('scanComplete', handleScanComplete);
+    window.addEventListener('analyticsUpdated', handleAnalyticsUpdate as EventListener);
+    window.addEventListener('dataChanged', handleDataChange as EventListener);
     
     // Periodic refresh (every 5 minutes) to check for new data
     const periodicRefresh = setInterval(() => {
@@ -84,6 +98,8 @@ const ContentHubView: React.FC = () => {
       window.removeEventListener('strategyUpdated', handleStrategyUpdate as EventListener);
       window.removeEventListener('competitorUpdated', handleCompetitorUpdate as EventListener);
       window.removeEventListener('scanComplete', handleScanComplete);
+      window.removeEventListener('analyticsUpdated', handleAnalyticsUpdate as EventListener);
+      window.removeEventListener('dataChanged', handleDataChange as EventListener);
       clearInterval(periodicRefresh);
     };
   }, []);
@@ -394,8 +410,20 @@ const ContentHubView: React.FC = () => {
         
         // Merge with existing production assets (prioritize brand-specific)
         const existingNonSuggested = productionAssets.filter((a: ContentAsset) => a.status !== 'suggested');
-        setAssets([...brandSpecificAssets, ...existingNonSuggested]);
-        localStorage.setItem('productionAssets', JSON.stringify([...brandSpecificAssets, ...existingNonSuggested]));
+        const newAssets = [...brandSpecificAssets, ...existingNonSuggested];
+        setAssets(newAssets);
+        localStorage.setItem('productionAssets', JSON.stringify(newAssets));
+        
+        // Dispatch event to notify other components that content hub was updated
+        console.log('📡 Content Hub: Dispatching contentHubUpdated event');
+        window.dispatchEvent(new CustomEvent('contentHubUpdated', {
+          detail: {
+            assets: newAssets,
+            contentIdeas: contentIdeasFromScan,
+            timestamp: Date.now(),
+            source: 'ContentHubView'
+          }
+        }));
         return;
       }
       

@@ -39,7 +39,6 @@ const AnalyticsView: React.FC = () => {
     // Listen for new scan started - clear all state
     const handleNewScanStarted = (event: CustomEvent) => {
       console.log('🧹 Analytics: New scan started, clearing all state');
-      const { username } = event.detail;
       
       // Clear all analytics state
       setAnalytics({ platforms: [], isLoading: true });
@@ -53,10 +52,50 @@ const AnalyticsView: React.FC = () => {
       }, 500);
     };
     
+    // Listen for scan completion - reload data
+    const handleScanComplete = () => {
+      console.log('📥 Analytics: Scan completed - reloading data...');
+      loadAnalyticsData();
+    };
+    
+    // Listen for strategy updates - regenerate insights based on new strategy
+    const handleStrategyUpdate = (event: CustomEvent) => {
+      console.log('📥 Analytics: Strategy updated - regenerating insights...', event.detail);
+      loadAnalyticsData();
+    };
+    
+    // Listen for competitor updates - update analytics
+    const handleCompetitorUpdate = (event: CustomEvent) => {
+      console.log('📥 Analytics: Competitor updated - refreshing...', event.detail);
+      loadAnalyticsData();
+    };
+    
+    // Listen for brand assets updates - may affect recommendations
+    const handleBrandAssetsUpdate = () => {
+      console.log('📥 Analytics: Brand assets updated - refreshing insights...');
+      loadAnalyticsData();
+    };
+    
+    // Listen for any data change
+    const handleDataChange = (event: CustomEvent) => {
+      console.log('📥 Analytics: Data changed - refreshing...', event.detail?.eventType);
+      loadAnalyticsData();
+    };
+    
     window.addEventListener('newScanStarted', handleNewScanStarted as EventListener);
+    window.addEventListener('scanComplete', handleScanComplete);
+    window.addEventListener('strategyUpdated', handleStrategyUpdate as EventListener);
+    window.addEventListener('competitorUpdated', handleCompetitorUpdate as EventListener);
+    window.addEventListener('brandAssetsUpdated', handleBrandAssetsUpdate);
+    window.addEventListener('dataChanged', handleDataChange as EventListener);
     
     return () => {
       window.removeEventListener('newScanStarted', handleNewScanStarted as EventListener);
+      window.removeEventListener('scanComplete', handleScanComplete);
+      window.removeEventListener('strategyUpdated', handleStrategyUpdate as EventListener);
+      window.removeEventListener('competitorUpdated', handleCompetitorUpdate as EventListener);
+      window.removeEventListener('brandAssetsUpdated', handleBrandAssetsUpdate);
+      window.removeEventListener('dataChanged', handleDataChange as EventListener);
     };
   }, []);
 
@@ -175,6 +214,16 @@ const AnalyticsView: React.FC = () => {
         platforms: platformData,
         isLoading: false
       });
+      
+      // Dispatch event to notify other components
+      console.log('📡 Analytics: Dispatching analyticsUpdated event');
+      window.dispatchEvent(new CustomEvent('analyticsUpdated', {
+        detail: {
+          platforms: platformData,
+          timestamp: Date.now(),
+          source: 'AnalyticsView'
+        }
+      }));
     } catch (error: any) {
       console.error('Error loading analytics:', error);
       
