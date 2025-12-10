@@ -15,7 +15,7 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
   const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
   
   // Privy hooks
-  const { ready, authenticated, user, login } = usePrivy();
+  const { ready, authenticated, user, loginWithEmail, loginWithGoogle } = usePrivy();
   
   // Handle successful authentication
   useEffect(() => {
@@ -60,7 +60,7 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
 
     try {
       // Use Privy for email/password login
-      await login({ loginMethod: 'email', email, password });
+      await loginWithEmail({ email, password });
       // Navigation will be handled by useEffect when authenticated
     } catch (err: any) {
       console.error('Login error:', err);
@@ -235,7 +235,7 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
                   setLoading(true);
                   setError('');
                   try {
-                    await login({ loginMethod: 'google' });
+                    await loginWithGoogle();
                     // Navigation will be handled by useEffect when authenticated
                   } catch (err: any) {
                     console.error('Google login error:', err);
