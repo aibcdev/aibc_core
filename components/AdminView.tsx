@@ -16,6 +16,12 @@ interface UserData {
   clicks?: number;
   requests?: number;
   createdAt?: string;
+  onboardingData?: {
+    selectedOptions: string[];
+    package: string;
+    companyCreatorName: string;
+    timestamp: string;
+  };
 }
 
 const AdminView: React.FC<NavProps> = ({ onNavigate }) => {
@@ -51,13 +57,22 @@ const AdminView: React.FC<NavProps> = ({ onNavigate }) => {
         getAdminStats(),
       ]);
       
-      // Enhance user data with analytics
-      const enhancedUsers = usersData.map((user: any) => ({
-        ...user,
-        timeOnSite: calculateTimeOnSite(user.id),
-        clicks: calculateClicks(user.id),
-        requests: calculateRequests(user.id),
-      }));
+      // Load onboarding data from localStorage
+      const allOnboardingData = JSON.parse(localStorage.getItem('allOnboardingData') || '[]');
+      
+      // Enhance user data with analytics and onboarding data
+      const enhancedUsers = usersData.map((user: any) => {
+        // Find onboarding data for this user by email
+        const onboardingData = allOnboardingData.find((od: any) => od.email === user.email);
+        
+        return {
+          ...user,
+          timeOnSite: calculateTimeOnSite(user.id),
+          clicks: calculateClicks(user.id),
+          requests: calculateRequests(user.id),
+          onboardingData: onboardingData || undefined,
+        };
+      });
       
       setUsers(enhancedUsers);
       setStats(statsData);
@@ -385,6 +400,8 @@ const AdminView: React.FC<NavProps> = ({ onNavigate }) => {
                           <tr>
                             <th className="px-6 py-3 text-left text-xs font-bold text-white/60 uppercase tracking-wider">USER</th>
                             <th className="px-6 py-3 text-left text-xs font-bold text-white/60 uppercase tracking-wider">TIER</th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-white/60 uppercase tracking-wider">COMPANY/CREATOR</th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-white/60 uppercase tracking-wider">ONBOARDING</th>
                             <th className="px-6 py-3 text-left text-xs font-bold text-white/60 uppercase tracking-wider">TIME ON SITE</th>
                             <th className="px-6 py-3 text-left text-xs font-bold text-white/60 uppercase tracking-wider">CLICKS</th>
                             <th className="px-6 py-3 text-left text-xs font-bold text-white/60 uppercase tracking-wider">REQUESTS</th>
@@ -395,50 +412,83 @@ const AdminView: React.FC<NavProps> = ({ onNavigate }) => {
                         <tbody className="divide-y divide-white/5">
                           {filteredUsers.length === 0 ? (
                             <tr>
-                              <td colSpan={7} className="px-6 py-8 text-center text-white/40">
+                              <td colSpan={9} className="px-6 py-8 text-center text-white/40">
                                 {searchQuery ? 'No users found' : 'No users yet'}
                               </td>
                             </tr>
                           ) : (
-                            filteredUsers.map((user) => (
-                              <tr key={user.id} className="hover:bg-white/5">
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white">
-                                      {user.name?.[0] || user.email?.[0] || 'U'}
+                            filteredUsers.map((user) => {
+                              const onboardingOptions = user.onboardingData?.selectedOptions || [];
+                              const optionLabels: Record<string, string> = {
+                                'no-time': "No time",
+                                'inconsistent': "Inconsistent",
+                                'more-leads': "More leads",
+                                'video': "Video",
+                                'competitors': "Competitors",
+                                'exploring': "Exploring"
+                              };
+                              
+                              return (
+                                <tr key={user.id} className="hover:bg-white/5">
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white">
+                                        {user.name?.[0] || user.email?.[0] || 'U'}
+                                      </div>
+                                      <div>
+                                        <div className="text-sm font-medium text-white">{user.name || 'No name'}</div>
+                                        <div className="text-xs text-white/40">{user.email || 'N/A'}</div>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <div className="text-sm font-medium text-white">{user.name || 'No name'}</div>
-                                      <div className="text-xs text-white/40">{user.email || 'N/A'}</div>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className={`px-2 py-1 text-xs font-bold rounded border ${getTierColor(user.subscription?.tier || 'free')}`}>
-                                    {(user.subscription?.tier || 'Free').toUpperCase()}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-white/80">{user.timeOnSite || '0h 0m'}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-white/80">{user.clicks?.toLocaleString() || '0'}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-white/80">{user.requests || 0}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  {user.subscription?.status === 'active' ? (
-                                    <span className="px-2 py-1 text-xs font-bold rounded bg-green-500/20 text-green-400 border border-green-500/30">
-                                      ACTIVE
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <span className={`px-2 py-1 text-xs font-bold rounded border ${getTierColor(user.subscription?.tier || 'free')}`}>
+                                      {(user.subscription?.tier || 'Free').toUpperCase()}
                                     </span>
-                                  ) : (
-                                    <span className="px-2 py-1 text-xs font-bold rounded bg-white/10 text-white/60 border border-white/20">
-                                      INACTIVE
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <button className="p-2 hover:bg-white/5 rounded transition-colors">
-                                    <MoreHorizontal className="w-4 h-4 text-white/40" />
-                                  </button>
-                                </td>
-                              </tr>
-                            ))
+                                  </td>
+                                  <td className="px-6 py-4 text-sm text-white/80">
+                                    {user.onboardingData?.companyCreatorName || 'N/A'}
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    {onboardingOptions.length > 0 ? (
+                                      <div className="flex flex-wrap gap-1">
+                                        {onboardingOptions.slice(0, 2).map((opt: string) => (
+                                          <span key={opt} className="px-2 py-1 text-xs font-medium rounded bg-white/10 text-white/80 border border-white/20">
+                                            {optionLabels[opt] || opt}
+                                          </span>
+                                        ))}
+                                        {onboardingOptions.length > 2 && (
+                                          <span className="px-2 py-1 text-xs font-medium rounded bg-white/10 text-white/80 border border-white/20">
+                                            +{onboardingOptions.length - 2}
+                                          </span>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs text-white/40">Not completed</span>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white/80">{user.timeOnSite || '0h 0m'}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white/80">{user.clicks?.toLocaleString() || '0'}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white/80">{user.requests || 0}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    {user.subscription?.status === 'active' ? (
+                                      <span className="px-2 py-1 text-xs font-bold rounded bg-green-500/20 text-green-400 border border-green-500/30">
+                                        ACTIVE
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-1 text-xs font-bold rounded bg-white/10 text-white/60 border border-white/20">
+                                        INACTIVE
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <button className="p-2 hover:bg-white/5 rounded transition-colors">
+                                      <MoreHorizontal className="w-4 h-4 text-white/40" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })
                           )}
                         </tbody>
                       </table>

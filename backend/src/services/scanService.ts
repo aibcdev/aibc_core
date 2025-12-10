@@ -1,6 +1,6 @@
 import { chromium, Browser } from 'playwright';
 import { storage } from './storage';
-import { generateJSON, isLLMConfigured, getActiveProvider, ScanTier } from './llmService';
+import { generateJSON, generateText, isLLMConfigured, getActiveProvider, ScanTier } from './llmService';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -75,6 +75,7 @@ export async function startScan(
       try {
         const websiteContent = await scrapeProfile(websiteUrl, 'website', scanId);
         if (websiteContent.html && websiteContent.html.length > 100) {
+          addLog(scanId, `[DISCOVERY] Website scraped successfully (${websiteContent.html.length} chars HTML, ${websiteContent.text.length} chars text)`);
           discoveredSocialLinks = await extractSocialLinksFromWebsite(websiteContent.html, websiteUrl, scanId);
           if (Object.keys(discoveredSocialLinks).length > 0) {
             addLog(scanId, `[DISCOVERY] Found ${Object.keys(discoveredSocialLinks).length} social profiles: ${Object.keys(discoveredSocialLinks).join(', ')}`);
@@ -86,12 +87,19 @@ export async function startScan(
               if (Object.keys(llmExtracted).length > 0) {
                 discoveredSocialLinks = llmExtracted;
                 addLog(scanId, `[DISCOVERY] LLM found ${Object.keys(discoveredSocialLinks).length} social profiles`);
+              } else {
+                addLog(scanId, `[DISCOVERY] LLM extraction also found no social links`);
               }
+            } else {
+              addLog(scanId, `[DISCOVERY] Website text content too short (${websiteContent.text?.length || 0} chars) for LLM extraction`);
             }
           }
+        } else {
+          addLog(scanId, `[DISCOVERY] Website scraping returned minimal content (${websiteContent.html?.length || 0} chars HTML)`);
         }
       } catch (error: any) {
         addLog(scanId, `[DISCOVERY] Failed to extract social links from website: ${error.message}`);
+        addLog(scanId, `[DISCOVERY] Will attempt LLM-based handle discovery for each platform individually`);
       }
     }
     
@@ -111,9 +119,41 @@ export async function startScan(
           profileUrl = discoveredSocialLinks[platformKey] || discoveredSocialLinks[platform.toLowerCase()];
           addLog(scanId, `[DISCOVERY] Using discovered ${platform} link: ${profileUrl}`);
         } else {
-          // Use connected account handle if available, otherwise fall back to username
-          const handleToUse = connectedAccounts?.[platform] || username;
-          profileUrl = getProfileUrl(handleToUse, platform);
+          // Use connected account handle if available
+          if (connectedAccounts?.[platform]) {
+            profileUrl = getProfileUrl(connectedAccounts[platform], platform);
+            addLog(scanId, `[CONNECTED] Using connected ${platform} account: ${connectedAccounts[platform]}`);
+          } else {
+            // Don't use domain names as usernames - skip if username looks like a domain
+            const isDomain = username.includes('.') && 
+                            (username.includes('.com') || username.includes('.tv') || 
+                             username.includes('.io') || username.includes('.co') ||
+                             username.includes('.net') || username.includes('.org'));
+            
+            if (isDomain) {
+              // For domains, we should have found social links from the website
+              // If we didn't, try LLM-based discovery as a last resort
+              addLog(scanId, `[SKIP] ${platform} - domain detected but no social link found. Trying LLM discovery...`);
+              
+              // Try LLM to find the actual handle
+              try {
+                const llmDiscovered = await discoverSocialHandlesWithLLM(username, platform, scanId);
+                if (llmDiscovered) {
+                  profileUrl = getProfileUrl(llmDiscovered, platform);
+                  addLog(scanId, `[LLM] Discovered ${platform} handle: ${llmDiscovered}`);
+                } else {
+                  addLog(scanId, `[SKIP] ${platform} profile not found - no handle discovered for domain`);
+                  continue; // Skip this platform
+                }
+              } catch (llmError: any) {
+                addLog(scanId, `[SKIP] ${platform} - could not discover handle: ${llmError.message}`);
+                continue; // Skip this platform
+              }
+            } else {
+              // Regular username - use it directly
+              profileUrl = getProfileUrl(username, platform);
+            }
+          }
           
           // Determine actual platform name for logging (handle domains like script.tv)
           if (profileUrl && profileUrl.includes('.com') && !profileUrl.includes('twitter.com') && 
@@ -131,15 +171,30 @@ export async function startScan(
           // Verify profile actually exists (not 404, not login page, has actual content)
           const profileExists = await verifyProfileExists(content, actualPlatform);
           
-          if (profileExists && content.text && content.text.length > 100) {
+          // Be more lenient with content length - accept profiles with at least 30 chars
+          // Some profiles might have minimal text but are still valid (e.g., Instagram with mostly images)
+          const minContentLength = 30;
+          const hasMinimalContent = content.text && content.text.length >= minContentLength;
+          
+          if (profileExists && hasMinimalContent) {
             verifiedPlatforms.push(actualPlatform);
             scrapedData.push({ platform: actualPlatform, content });
             const visualCount = (content.images?.length || 0) + (content.videos?.length || 0);
             addLog(scanId, `[SUCCESS] ${actualPlatform} profile found - ${content.text.length} chars, ${visualCount} visual assets`);
           } else if (!profileExists) {
             addLog(scanId, `[SKIP] ${actualPlatform} profile not found or not accessible - skipping`);
+            // Log why it was rejected for debugging
+            if (content.text) {
+              addLog(scanId, `[DEBUG] Profile rejected - text length: ${content.text.length}, exists: ${profileExists}`);
+            }
+          } else if (!hasMinimalContent) {
+            // Even if verification passed, if content is too short, log but still try to use it
+            addLog(scanId, `[WARNING] ${actualPlatform} scraping returned minimal content (${content.text?.length || 0} chars) - will attempt LLM extraction anyway`);
+            // Still add it - LLM might be able to extract something useful
+            verifiedPlatforms.push(actualPlatform);
+            scrapedData.push({ platform: actualPlatform, content });
           } else {
-            addLog(scanId, `[WARNING] ${actualPlatform} scraping returned minimal content - skipping`);
+            addLog(scanId, `[SKIP] ${actualPlatform} profile verification failed`);
           }
         }
       } catch (error: any) {
@@ -793,6 +848,50 @@ Only include platforms that you actually found. If a platform is not found, omit
   return socialLinks;
 }
 
+/**
+ * Use LLM to discover social media handles for a domain/website
+ */
+async function discoverSocialHandlesWithLLM(domain: string, platform: string, scanId?: string): Promise<string | null> {
+  try {
+    if (!isLLMConfigured()) {
+      return null;
+    }
+
+    const prompt = `Find the ${platform} social media handle/username for the website/domain: ${domain}
+
+For example:
+- If the website is "script.tv" and their Twitter is @scripttv, return "scripttv"
+- If their Instagram is @script_tv, return "script_tv"
+- If their YouTube is @scripttv, return "scripttv"
+
+Return ONLY the username/handle (without @ symbol), or "not found" if you cannot find it.
+Do not return URLs, just the username.`;
+
+    const systemPrompt = `You are a social media handle finder. Return ONLY the username/handle (without @ symbol) or "not found".`;
+
+    const result = await generateText(prompt, systemPrompt, { tier: 'basic' });
+    
+    if (result && typeof result === 'string') {
+      const cleaned = result.trim().toLowerCase().replace('@', '').replace(/^https?:\/\//, '').replace(/^www\./, '');
+      
+      // Check if it's a valid response (not "not found" or empty)
+      if (cleaned && cleaned !== 'not found' && cleaned.length > 1 && !cleaned.includes('http') && !cleaned.includes('.')) {
+        if (scanId) {
+          addLog(scanId, `[LLM] Discovered ${platform} handle: ${cleaned}`);
+        }
+        return cleaned;
+      }
+    }
+  } catch (error: any) {
+    console.error('LLM handle discovery error:', error);
+    if (scanId) {
+      addLog(scanId, `[LLM] Error discovering ${platform} handle: ${error.message}`);
+    }
+  }
+  
+  return null;
+}
+
 function getProfileUrl(username: string, platform: string): string | null {
   const cleanUsername = username.replace('@', '').replace(/^https?:\/\//, '').replace(/^www\./, '');
   
@@ -830,58 +929,74 @@ function getProfileUrl(username: string, platform: string): string | null {
 
 // Verify if profile actually exists (not 404, not login page)
 async function verifyProfileExists(content: { html: string; text: string; url: string }, platform: string): Promise<boolean> {
-  if (!content.text || content.text.length < 50) return false;
+  // Be very lenient - only reject if we have almost no content at all
+  if (!content.text || content.text.length < 20) return false;
   
-  // Check for common "not found" indicators
+  // Check for common "not found" indicators (more specific to avoid false positives)
   const notFoundIndicators = [
     'this page doesn\'t exist',
     'page not found',
-    '404',
     'doesn\'t exist',
     'couldn\'t find',
     'user not found',
     'account not found',
-    'profile not found'
+    'profile not found',
+    'this account doesn\'t exist',
+    'sorry, that page',
+    'nothing to see here'
   ];
   
   const lowerText = content.text.toLowerCase();
+  // Only fail if we have strong indicators of "not found"
   if (notFoundIndicators.some(indicator => lowerText.includes(indicator))) {
-    return false;
+    // But check if it's just a mention, not the main message
+    const notFoundCount = notFoundIndicators.filter(indicator => lowerText.includes(indicator)).length;
+    if (notFoundCount >= 2 || (notFoundCount >= 1 && content.text.length < 100)) {
+      return false;
+    }
   }
   
-  // Check for login page indicators
+  // Check for login page indicators (be more lenient)
   const loginIndicators = [
-    'sign in',
-    'log in',
-    'login to',
-    'create account',
-    'join now'
+    'sign in to',
+    'log in to',
+    'login to continue',
+    'create an account to',
+    'join now to'
   ];
   
-  // If it's mostly login prompts, it's not a valid profile
+  // Only fail if it's clearly a login page (multiple strong indicators)
   const loginCount = loginIndicators.filter(indicator => lowerText.includes(indicator)).length;
-  if (loginCount >= 2 && content.text.length < 500) {
+  if (loginCount >= 3 && content.text.length < 300) {
     return false;
   }
   
-  // Platform-specific checks
+  // Platform-specific checks (very lenient - only reject if clearly not a profile)
+  // Most platforms have some identifying content, but we'll be very permissive
   if (platform === 'twitter' || platform === 'x') {
-    // Twitter should have tweet-related content
-    if (!lowerText.includes('tweet') && !lowerText.includes('follow') && content.text.length < 200) {
+    // Twitter/X - only reject if we have very little content AND no platform indicators
+    if (content.text.length < 50 && !lowerText.includes('twitter') && !lowerText.includes('x.com') && !lowerText.includes('tweet')) {
       return false;
     }
   } else if (platform === 'instagram') {
-    // Instagram should have post/media related content
-    if (!lowerText.includes('post') && !lowerText.includes('followers') && content.text.length < 200) {
+    // Instagram - only reject if we have very little content AND no platform indicators
+    if (content.text.length < 50 && !lowerText.includes('instagram') && !lowerText.includes('post') && !lowerText.includes('photo')) {
+      return false;
+    }
+  } else if (platform === 'youtube') {
+    // YouTube - only reject if we have very little content AND no platform indicators
+    if (content.text.length < 50 && !lowerText.includes('youtube') && !lowerText.includes('subscribe') && !lowerText.includes('video')) {
       return false;
     }
   } else if (platform === 'linkedin') {
-    // LinkedIn should have profile or post content
-    if (!lowerText.includes('linkedin') && !lowerText.includes('experience') && content.text.length < 200) {
+    // LinkedIn - only reject if we have very little content AND no platform indicators
+    if (content.text.length < 50 && !lowerText.includes('linkedin') && !lowerText.includes('profile') && !lowerText.includes('experience')) {
       return false;
     }
   }
   
+  // If we have any reasonable content and no strong "not found" indicators, assume it exists
+  // This is intentionally permissive - we'd rather try to extract from a profile than skip it
   return true;
 }
 
@@ -923,6 +1038,20 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
       let scrapedHtml = '';
       let images: string[] = [];
       let videos: string[] = [];
+      
+      // Always get basic page content as fallback
+      try {
+        scrapedHtml = await page.content();
+        scrapedText = await page.evaluate(() => {
+          // @ts-ignore
+          return document.body?.innerText || document.body?.textContent || document.documentElement?.innerText || '';
+        });
+        if (scanId && scrapedText.length > 50) {
+          addLog(scanId, `[SCRAPE] Basic page content extracted: ${scrapedText.length} chars`);
+        }
+      } catch (e) {
+        console.log('Basic content extraction failed:', e);
+      }
       
       if (platform.toLowerCase() === 'twitter' || platform.toLowerCase() === 'x') {
         // Twitter/X specific: Scroll multiple times to load posts
@@ -1138,25 +1267,36 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
         }
       }
       
-      // Fallback: Get all text if platform-specific extraction didn't work
-      if (!scrapedText || scrapedText.length < 100) {
-        scrapedText = await page.innerText('body').catch(() => '');
+      // Fallback: Get all text if platform-specific extraction didn't work or returned minimal content
+      if (!scrapedText || scrapedText.length < 50) {
+        try {
+          const fallbackText = await page.innerText('body').catch(() => '');
+          if (fallbackText && fallbackText.length > scrapedText.length) {
+            scrapedText = fallbackText;
+            if (scanId) {
+              addLog(scanId, `[SCRAPE] Using fallback text extraction: ${fallbackText.length} chars`);
+            }
+          }
+        } catch (e) {
+          console.log('Fallback text extraction failed:', e);
+        }
       }
       
-      scrapedHtml = await page.content();
+      // Always get HTML content
+      if (!scrapedHtml) {
+        scrapedHtml = await page.content();
+      }
       
       await browser.close();
       
-      if (scrapedText && scrapedText.length > 100) {
-        return { html: scrapedHtml, text: scrapedText, url, images, videos };
-      } else {
-        console.log(`Scraped content too short for ${url}: ${scrapedText.length} chars`);
-        // Even if minimal, return what we got - LLM can work with it
-        if (scrapedText && scrapedText.length > 50) {
-          return { html: scrapedHtml, text: scrapedText, url, images, videos };
-        }
-        return { html: scrapedHtml, text: scrapedText || '', url, images, videos };
+      // Return whatever content we have - even minimal content is better than nothing
+      // The verification function will decide if it's valid, not this scraping function
+      const finalText = scrapedText || '';
+      if (scanId && finalText.length > 0) {
+        addLog(scanId, `[SCRAPE] Final scraped content: ${finalText.length} chars, ${images.length} images, ${videos.length} videos`);
       }
+      
+      return { html: scrapedHtml, text: finalText, url, images, videos };
     } catch (error: any) {
       await browser.close();
       console.log(`Scraping failed for ${url}: ${error.message}`);

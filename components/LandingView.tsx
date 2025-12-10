@@ -70,7 +70,6 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
               className="absolute inset-0 w-full h-full object-cover opacity-100"
               style={{ zIndex: 1, minHeight: '100%', minWidth: '100%' }}
             >
-              <source src="/hero-video.mov" type="video/quicktime" />
               <source src="/hero-video.mp4" type="video/mp4" />
               <source src="/hero-video.webm" type="video/webm" />
               Your browser does not support the video tag.

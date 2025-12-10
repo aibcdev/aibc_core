@@ -218,26 +218,55 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
 
   // Regenerate insights when scan data changes
   useEffect(() => {
-    if (scanUsername) {
+    const regenerateInsights = () => {
       const cachedResults = localStorage.getItem('lastScanResults');
       if (cachedResults) {
         try {
           const cached = JSON.parse(cachedResults);
+          console.log('Regenerating insights with data:', {
+            hasScanData: !!cached,
+            hasBrandDNA: !!(brandDNA || cached.brandDNA),
+            competitorsCount: competitorIntelligence.length || (cached.competitorIntelligence?.length || 0),
+            scanUsername
+          });
+          
           const generatedInsights = generateStrategicInsightsFromData(
             cached,
             brandDNA || cached.brandDNA,
             competitorIntelligence.length > 0 ? competitorIntelligence : (cached.competitorIntelligence || []),
-            scanUsername
+            scanUsername || cached.scanUsername || localStorage.getItem('lastScannedUsername')
           );
+          
+          console.log('Generated insights:', generatedInsights.length, generatedInsights);
           
           if (generatedInsights.length > 0) {
             setStrategicInsights(generatedInsights);
+            // Also update cache with generated insights
+            cached.strategicInsights = generatedInsights;
+            localStorage.setItem('lastScanResults', JSON.stringify(cached));
+          } else if (cached.strategicInsights && Array.isArray(cached.strategicInsights) && cached.strategicInsights.length > 0) {
+            // Fallback to cached insights if generation failed
+            console.log('Using cached insights:', cached.strategicInsights.length);
+            setStrategicInsights(cached.strategicInsights);
           }
         } catch (e) {
           console.error('Error regenerating insights:', e);
         }
+      } else if (scanUsername) {
+        // Even without cached results, try to generate from available data
+        const generatedInsights = generateStrategicInsightsFromData(
+          null,
+          brandDNA,
+          competitorIntelligence,
+          scanUsername
+        );
+        if (generatedInsights.length > 0) {
+          setStrategicInsights(generatedInsights);
+        }
       }
-    }
+    };
+    
+    regenerateInsights();
   }, [scanUsername, brandDNA, competitorIntelligence]);
 
   // Update credit info
@@ -2165,14 +2194,30 @@ const generateStrategicInsightsFromData = (
 ): any[] => {
   const insights: any[] = [];
   
-  if (!scanData && !brandDNA && !competitors.length) {
+  console.log('generateStrategicInsightsFromData called with:', {
+    hasScanData: !!scanData,
+    hasBrandDNA: !!brandDNA,
+    competitorsCount: competitors.length,
+    scanUsername
+  });
+  
+  // If we have no data at all, return empty
+  if (!scanData && !brandDNA && (!competitors || competitors.length === 0)) {
+    console.log('No data available for insights generation');
     return [];
   }
 
-  const extractedContent = scanData?.extractedContent || {};
-  const posts = extractedContent.posts || [];
-  const contentThemes = extractedContent.content_themes || [];
-  const platforms = scanData?.platforms || [];
+  // Try to get data from scanData or use what's available
+  const extractedContent = scanData?.extractedContent || scanData?.data?.extractedContent || {};
+  const posts = extractedContent.posts || scanData?.posts || [];
+  const contentThemes = extractedContent.content_themes || brandDNA?.themes || [];
+  const platforms = scanData?.platforms || scanData?.data?.platforms || [];
+  
+  console.log('Data extracted:', {
+    postsCount: posts.length,
+    themesCount: contentThemes.length,
+    platformsCount: platforms.length
+  });
   
   // Analyze posting frequency
   const postCount = posts.length;
@@ -2297,6 +2342,19 @@ const generateStrategicInsightsFromData = (
     }
   }
   
+  // If no insights were generated but we have data, create at least one generic insight
+  if (insights.length === 0 && (posts.length > 0 || brandDNA || competitors.length > 0)) {
+    insights.push({
+      title: 'Content Strategy Optimization',
+      description: scanUsername 
+        ? `Analyze ${scanUsername}'s posting patterns and content themes to identify opportunities for growth and engagement.`
+        : 'Review your content strategy to identify opportunities for improvement and growth.',
+      impact: 'MEDIUM',
+      effort: 'Medium effort (1 month)'
+    });
+  }
+  
+  console.log('Generated insights count:', insights.length);
   return insights.slice(0, 5); // Return top 5 insights
 };
 
