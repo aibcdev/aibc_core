@@ -676,6 +676,183 @@ function addLog(scanId: string, message: string) {
 }
 
 /**
+ * Extract social media links from a profile's bio/links page (Instagram, Twitter, etc.)
+ * This looks for links in the bio, "Links in bio" sections, and profile descriptions
+ */
+async function extractSocialLinksFromProfile(html: string, text: string, profileUrl: string, scanId?: string): Promise<Record<string, string>> {
+  const socialLinks: Record<string, string> = {};
+  
+  try {
+    // Use Playwright to parse HTML and extract links from bio/links sections
+    const browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    
+    await page.setContent(html, { waitUntil: 'domcontentloaded' });
+    
+    // Extract all links, especially from bio sections, link-in-bio sections, etc.
+    const allLinks = await page.evaluate(() => {
+      // @ts-ignore
+      const links = Array.from(document.querySelectorAll('a[href]'));
+      return links.map((link: any) => ({
+        href: link.href || link.getAttribute('href'),
+        text: link.innerText || link.textContent || '',
+        ariaLabel: link.getAttribute('aria-label') || '',
+        // Check if link is in bio section
+        inBio: link.closest('[class*="bio"], [class*="Bio"], [id*="bio"], [id*="Bio"], [data-testid*="bio"], [data-testid*="Bio"]') !== null,
+        // Check if link is in links section
+        inLinks: link.closest('[class*="link"], [class*="Link"], [id*="link"], [id*="Link"], [data-testid*="link"], [data-testid*="Link"]') !== null,
+      }));
+    });
+    
+    await browser.close();
+    
+    // Pattern matching for social media platforms
+    const socialPatterns: Record<string, RegExp[]> = {
+      twitter: [
+        /twitter\.com\/([a-zA-Z0-9_]+)/i,
+        /x\.com\/([a-zA-Z0-9_]+)/i,
+      ],
+      instagram: [
+        /instagram\.com\/([a-zA-Z0-9_.]+)/i,
+        /instagr\.am\/([a-zA-Z0-9_.]+)/i,
+      ],
+      youtube: [
+        /youtube\.com\/(?:channel\/|user\/|@)?([a-zA-Z0-9_-]+)/i,
+        /youtu\.be\/([a-zA-Z0-9_-]+)/i,
+      ],
+      linkedin: [
+        /linkedin\.com\/(?:in|company)\/([a-zA-Z0-9-]+)/i,
+      ],
+      tiktok: [
+        /tiktok\.com\/@([a-zA-Z0-9_.]+)/i,
+      ],
+    };
+    
+    // Prioritize links found in bio/links sections
+    for (const link of allLinks) {
+      if (!link.href) continue;
+      
+      const href = link.href.toLowerCase();
+      const isInBioOrLinks = link.inBio || link.inLinks;
+      
+      // Check each platform pattern
+      for (const [platform, patterns] of Object.entries(socialPatterns)) {
+        for (const pattern of patterns) {
+          const match = href.match(pattern);
+          if (match && match[1]) {
+            // Construct full URL
+            let fullUrl = link.href;
+            if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
+              if (platform === 'twitter' && (href.includes('x.com') || href.includes('twitter.com'))) {
+                fullUrl = href.includes('x.com') ? `https://x.com/${match[1]}` : `https://twitter.com/${match[1]}`;
+              } else if (platform === 'instagram') {
+                fullUrl = `https://instagram.com/${match[1]}`;
+              } else if (platform === 'youtube') {
+                if (href.includes('/channel/') || href.includes('/user/') || href.includes('/c/')) {
+                  fullUrl = `https://youtube.com/${match[0].replace(/^https?:\/\/(www\.)?youtube\.com\//, '')}`;
+                } else {
+                  fullUrl = `https://youtube.com/@${match[1]}`;
+                }
+              } else if (platform === 'linkedin') {
+                fullUrl = href.includes('/company/') 
+                  ? `https://linkedin.com/company/${match[1]}`
+                  : `https://linkedin.com/in/${match[1]}`;
+              } else if (platform === 'tiktok') {
+                fullUrl = `https://tiktok.com/@${match[1]}`;
+              }
+            } else {
+              // Normalize existing URL
+              if (platform === 'twitter' && href.includes('x.com')) {
+                fullUrl = `https://x.com/${match[1]}`;
+              } else if (platform === 'twitter' && href.includes('twitter.com')) {
+                fullUrl = `https://twitter.com/${match[1]}`;
+              }
+            }
+            
+            // Prefer links from bio/links sections, but accept any valid social link
+            if (!socialLinks[platform] || isInBioOrLinks) {
+              socialLinks[platform] = fullUrl;
+              if (scanId) {
+                addLog(scanId, `[DISCOVERY] Found ${platform} link${isInBioOrLinks ? ' in bio/links section' : ''}: ${fullUrl}`);
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Also extract from text content (bio text might contain @mentions or URLs)
+    if (text && text.length > 50) {
+      // Look for @mentions and URLs in bio text
+      const textLinks = extractSocialLinksFromText(text);
+      for (const [platform, url] of Object.entries(textLinks)) {
+        if (!socialLinks[platform]) {
+          socialLinks[platform] = url;
+          if (scanId) {
+            addLog(scanId, `[DISCOVERY] Found ${platform} link in bio text: ${url}`);
+          }
+        }
+      }
+    }
+    
+  } catch (error: any) {
+    console.error('Error extracting social links from profile:', error);
+    if (scanId) {
+      addLog(scanId, `[DISCOVERY] Error extracting social links from profile: ${error.message}`);
+    }
+  }
+  
+  return socialLinks;
+}
+
+/**
+ * Extract social links from plain text (for bio text that might contain @mentions or URLs)
+ */
+function extractSocialLinksFromText(text: string): Record<string, string> {
+  const socialLinks: Record<string, string> = {};
+  
+  // Pattern for URLs
+  const urlPattern = /(https?:\/\/[^\s]+)/g;
+  const urls = Array.from(text.matchAll(urlPattern));
+  
+  // Check URLs for social media patterns
+  for (const urlMatch of urls) {
+    const url = urlMatch[1];
+    if (url.includes('instagram.com/')) {
+      const match = url.match(/instagram\.com\/([a-zA-Z0-9_.]+)/i);
+      if (match && match[1]) {
+        socialLinks.instagram = `https://instagram.com/${match[1]}`;
+      }
+    } else if (url.includes('twitter.com/') || url.includes('x.com/')) {
+      const match = url.match(/(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)/i);
+      if (match && match[1]) {
+        socialLinks.twitter = url.includes('x.com') ? `https://x.com/${match[1]}` : `https://twitter.com/${match[1]}`;
+      }
+    } else if (url.includes('youtube.com/')) {
+      const match = url.match(/youtube\.com\/(?:channel\/|user\/|@|c\/)?([a-zA-Z0-9_-]+)/i);
+      if (match && match[1]) {
+        socialLinks.youtube = `https://youtube.com/@${match[1]}`;
+      }
+    } else if (url.includes('linkedin.com/')) {
+      const match = url.match(/linkedin\.com\/(?:in|company)\/([a-zA-Z0-9-]+)/i);
+      if (match && match[1]) {
+        socialLinks.linkedin = url.includes('/company/') 
+          ? `https://linkedin.com/company/${match[1]}`
+          : `https://linkedin.com/in/${match[1]}`;
+      }
+    } else if (url.includes('tiktok.com/')) {
+      const match = url.match(/tiktok\.com\/@([a-zA-Z0-9_.]+)/i);
+      if (match && match[1]) {
+        socialLinks.tiktok = `https://tiktok.com/@${match[1]}`;
+      }
+    }
+  }
+  
+  return socialLinks;
+}
+
+/**
  * Extract social media links from a website's HTML
  * This is CRITICAL for finding social profiles that are linked on websites
  */
