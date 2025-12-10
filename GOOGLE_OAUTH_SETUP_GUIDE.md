@@ -267,3 +267,4 @@ GOOGLE_CLIENT_ID=your_client_id_here.apps.googleusercontent.com
 - ✅ Only add trusted domains to authorized origins
 - ✅ Keep your Client ID secret (don't expose in client-side code comments)
 
+

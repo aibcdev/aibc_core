@@ -46,3 +46,4 @@ Visit `http://localhost:5173` to see the new landing page.
 - Design matches the provided screenshots
 - Ready for production after testing
 
+

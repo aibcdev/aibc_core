@@ -119,11 +119,16 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
               onMouseEnter={() => setShowAibcStreamDropdown(true)}
               onMouseLeave={() => setShowAibcStreamDropdown(false)}
             >
-              <button className="text-sm font-bold hover:text-orange-400 transition-colors flex items-center gap-1">
+              <a 
+                href="https://aibroadcasting.xyz" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-sm font-bold hover:text-orange-400 transition-colors flex items-center gap-1"
+              >
                 <span className="text-orange-500">AIBC</span>
                 <span className="text-white">STREAM</span>
                 <ChevronDown className="w-4 h-4 text-white" />
-              </button>
+              </a>
               
               {/* Dropdown Modal - AI Streaming Channels Preview */}
               {showAibcStreamDropdown && (
