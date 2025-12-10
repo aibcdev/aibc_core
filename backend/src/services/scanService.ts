@@ -54,52 +54,118 @@ export async function startScan(
     const scrapedData: Array<{ platform: string; content: { html: string; text: string; url: string; images?: string[]; videos?: string[] } }> = [];
     const verifiedPlatforms: string[] = [];
     
-    // STEP 1: If scanning a website, first extract social media links from the website
+    // STEP 1: Discover social media links
     let discoveredSocialLinks: Record<string, string> = {};
     
-    // Check if username is a website/domain (more aggressive detection)
-    const isWebsite = username.includes('.') && 
-                      (username.includes('.com') || username.includes('.tv') || 
-                       username.includes('.io') || username.includes('.co') || 
-                       username.includes('.net') || username.includes('.org')) &&
-                      !username.includes('twitter.com') && !username.includes('instagram.com') &&
-                      !username.includes('youtube.com') && !username.includes('linkedin.com') &&
-                      !username.includes('x.com') && !username.includes('tiktok.com');
+    // First, check if username is a social media URL (e.g., instagram.com/username, twitter.com/username)
+    const socialMediaUrlPatterns: Record<string, RegExp[]> = {
+      instagram: [
+        /(?:https?:\/\/)?(?:www\.)?instagram\.com\/([a-zA-Z0-9_.]+)/i,
+        /(?:https?:\/\/)?(?:www\.)?instagr\.am\/([a-zA-Z0-9_.]+)/i,
+      ],
+      twitter: [
+        /(?:https?:\/\/)?(?:www\.)?(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)/i,
+      ],
+      youtube: [
+        /(?:https?:\/\/)?(?:www\.)?youtube\.com\/(?:channel\/|user\/|@|c\/)?([a-zA-Z0-9_-]+)/i,
+        /(?:https?:\/\/)?(?:www\.)?youtu\.be\/([a-zA-Z0-9_-]+)/i,
+      ],
+      linkedin: [
+        /(?:https?:\/\/)?(?:www\.)?linkedin\.com\/(?:in|company)\/([a-zA-Z0-9-]+)/i,
+      ],
+      tiktok: [
+        /(?:https?:\/\/)?(?:www\.)?tiktok\.com\/@([a-zA-Z0-9_.]+)/i,
+      ],
+    };
     
-    const websiteUrl = isWebsite 
-      ? (username.startsWith('http') ? username : `https://${username.replace(/^www\./, '')}`)
-      : getProfileUrl(username, 'website');
+    let detectedSocialPlatform: string | null = null;
+    let detectedSocialUsername: string | null = null;
     
-    if (websiteUrl && (websiteUrl.includes('http://') || websiteUrl.includes('https://'))) {
-      addLog(scanId, `[DISCOVERY] Scanning website for social media links: ${websiteUrl}`);
-      try {
-        const websiteContent = await scrapeProfile(websiteUrl, 'website', scanId);
-        if (websiteContent.html && websiteContent.html.length > 100) {
-          addLog(scanId, `[DISCOVERY] Website scraped successfully (${websiteContent.html.length} chars HTML, ${websiteContent.text.length} chars text)`);
-          discoveredSocialLinks = await extractSocialLinksFromWebsite(websiteContent.html, websiteUrl, scanId);
-          if (Object.keys(discoveredSocialLinks).length > 0) {
-            addLog(scanId, `[DISCOVERY] Found ${Object.keys(discoveredSocialLinks).length} social profiles: ${Object.keys(discoveredSocialLinks).join(', ')}`);
-          } else {
-            addLog(scanId, `[DISCOVERY] No social links found in HTML, trying LLM extraction from text...`);
-            // Try LLM extraction from text content as well
-            if (websiteContent.text && websiteContent.text.length > 100) {
-              const llmExtracted = await extractSocialLinksWithLLM(websiteContent.text, websiteUrl, scanId);
-              if (Object.keys(llmExtracted).length > 0) {
-                discoveredSocialLinks = llmExtracted;
-                addLog(scanId, `[DISCOVERY] LLM found ${Object.keys(discoveredSocialLinks).length} social profiles`);
-              } else {
-                addLog(scanId, `[DISCOVERY] LLM extraction also found no social links`);
-              }
+    // Check if username is a social media URL
+    for (const [platform, patterns] of Object.entries(socialMediaUrlPatterns)) {
+      for (const pattern of patterns) {
+        const match = username.match(pattern);
+        if (match && match[1]) {
+          detectedSocialPlatform = platform;
+          detectedSocialUsername = match[1];
+          addLog(scanId, `[DISCOVERY] Detected ${platform} URL - extracting username: ${detectedSocialUsername}`);
+          break;
+        }
+      }
+      if (detectedSocialPlatform) break;
+    }
+    
+    // If it's a social media URL, scrape that profile's bio/links page to find other social links
+    if (detectedSocialPlatform && detectedSocialUsername) {
+      const profileUrl = getProfileUrl(detectedSocialUsername, detectedSocialPlatform);
+      if (profileUrl) {
+        addLog(scanId, `[DISCOVERY] Scraping ${detectedSocialPlatform} profile bio/links page: ${profileUrl}`);
+        try {
+          const profileContent = await scrapeProfile(profileUrl, detectedSocialPlatform, scanId);
+          if (profileContent.html && profileContent.html.length > 100) {
+            // Extract social links from the profile page (bio, links section, etc.)
+            discoveredSocialLinks = await extractSocialLinksFromProfile(profileContent.html, profileContent.text, profileUrl, scanId);
+            
+            // Also add the detected platform itself
+            discoveredSocialLinks[detectedSocialPlatform] = profileUrl;
+            
+            if (Object.keys(discoveredSocialLinks).length > 1) {
+              addLog(scanId, `[DISCOVERY] Found ${Object.keys(discoveredSocialLinks).length} social profiles from ${detectedSocialPlatform} bio: ${Object.keys(discoveredSocialLinks).join(', ')}`);
             } else {
-              addLog(scanId, `[DISCOVERY] Website text content too short (${websiteContent.text?.length || 0} chars) for LLM extraction`);
+              addLog(scanId, `[DISCOVERY] No additional social links found in ${detectedSocialPlatform} profile bio`);
             }
           }
-        } else {
-          addLog(scanId, `[DISCOVERY] Website scraping returned minimal content (${websiteContent.html?.length || 0} chars HTML)`);
+        } catch (error: any) {
+          addLog(scanId, `[DISCOVERY] Failed to scrape ${detectedSocialPlatform} profile: ${error.message}`);
         }
-      } catch (error: any) {
-        addLog(scanId, `[DISCOVERY] Failed to extract social links from website: ${error.message}`);
-        addLog(scanId, `[DISCOVERY] Will attempt LLM-based handle discovery for each platform individually`);
+      }
+    }
+    
+    // If not a social media URL, check if it's a website/domain
+    if (!detectedSocialPlatform) {
+      const isWebsite = username.includes('.') && 
+                        (username.includes('.com') || username.includes('.tv') || 
+                         username.includes('.io') || username.includes('.co') || 
+                         username.includes('.net') || username.includes('.org')) &&
+                        !username.includes('twitter.com') && !username.includes('instagram.com') &&
+                        !username.includes('youtube.com') && !username.includes('linkedin.com') &&
+                        !username.includes('x.com') && !username.includes('tiktok.com');
+      
+      const websiteUrl = isWebsite 
+        ? (username.startsWith('http') ? username : `https://${username.replace(/^www\./, '')}`)
+        : getProfileUrl(username, 'website');
+      
+      if (websiteUrl && (websiteUrl.includes('http://') || websiteUrl.includes('https://'))) {
+        addLog(scanId, `[DISCOVERY] Scanning website for social media links: ${websiteUrl}`);
+        try {
+          const websiteContent = await scrapeProfile(websiteUrl, 'website', scanId);
+          if (websiteContent.html && websiteContent.html.length > 100) {
+            addLog(scanId, `[DISCOVERY] Website scraped successfully (${websiteContent.html.length} chars HTML, ${websiteContent.text.length} chars text)`);
+            discoveredSocialLinks = await extractSocialLinksFromWebsite(websiteContent.html, websiteUrl, scanId);
+            if (Object.keys(discoveredSocialLinks).length > 0) {
+              addLog(scanId, `[DISCOVERY] Found ${Object.keys(discoveredSocialLinks).length} social profiles: ${Object.keys(discoveredSocialLinks).join(', ')}`);
+            } else {
+              addLog(scanId, `[DISCOVERY] No social links found in HTML, trying LLM extraction from text...`);
+              // Try LLM extraction from text content as well
+              if (websiteContent.text && websiteContent.text.length > 100) {
+                const llmExtracted = await extractSocialLinksWithLLM(websiteContent.text, websiteUrl, scanId);
+                if (Object.keys(llmExtracted).length > 0) {
+                  discoveredSocialLinks = llmExtracted;
+                  addLog(scanId, `[DISCOVERY] LLM found ${Object.keys(discoveredSocialLinks).length} social profiles`);
+                } else {
+                  addLog(scanId, `[DISCOVERY] LLM extraction also found no social links`);
+                }
+              } else {
+                addLog(scanId, `[DISCOVERY] Website text content too short (${websiteContent.text?.length || 0} chars) for LLM extraction`);
+              }
+            }
+          } else {
+            addLog(scanId, `[DISCOVERY] Website scraping returned minimal content (${websiteContent.html?.length || 0} chars HTML)`);
+          }
+        } catch (error: any) {
+          addLog(scanId, `[DISCOVERY] Failed to extract social links from website: ${error.message}`);
+          addLog(scanId, `[DISCOVERY] Will attempt LLM-based handle discovery for each platform individually`);
+        }
       }
     }
     
