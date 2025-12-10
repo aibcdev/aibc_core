@@ -80,9 +80,15 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
               onClick={() => onNavigate(ViewState.LANDING)}
               className="flex items-center gap-2"
             >
-              <span className="text-xl font-black text-white">AIBC</span>
-              <span className="text-xl font-normal text-white">MEDIA</span>
-              <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+              <div className="relative w-8 h-8 flex items-center justify-center">
+                {/* Outer white circle */}
+                <div className="absolute w-8 h-8 rounded-full border-2 border-white"></div>
+                {/* Inner white circle */}
+                <div className="absolute w-5 h-5 rounded-full border border-white"></div>
+                {/* Orange center dot */}
+                <div className="absolute w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+              </div>
+              <span className="text-xl font-black text-white uppercase">AIBC</span>
             </button>
           </div>
 
@@ -96,27 +102,15 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
                   onNavigate(ViewState.LANDING);
                 }
               }}
-              className="text-sm font-bold text-white hover:text-orange-500 transition-colors"
+              className="text-sm font-bold text-white hover:text-orange-500 transition-colors uppercase"
             >
-              Product
-            </button>
-            <button 
-              onClick={() => onNavigate(ViewState.LANDING)}
-              className="text-sm font-bold text-white hover:text-orange-500 transition-colors"
-            >
-              Solutions
+              HOME
             </button>
             <button 
               onClick={() => onNavigate(ViewState.PRICING)}
-              className="text-sm font-bold text-white hover:text-orange-500 transition-colors"
+              className="text-sm font-bold text-white hover:text-orange-500 transition-colors uppercase"
             >
-              Pricing
-            </button>
-            <button 
-              onClick={() => onNavigate(ViewState.LANDING)}
-              className="text-sm font-bold text-white hover:text-orange-500 transition-colors"
-            >
-              Resources
+              PRICING
             </button>
             {/* AIBC STREAM Dropdown */}
             <div 
@@ -125,9 +119,10 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
               onMouseEnter={() => setShowAibcStreamDropdown(true)}
               onMouseLeave={() => setShowAibcStreamDropdown(false)}
             >
-              <button className="text-sm font-bold text-orange-500 hover:text-orange-400 transition-colors flex items-center gap-1">
-                AIBC STREAM
-                <ChevronDown className="w-4 h-4" />
+              <button className="text-sm font-bold hover:text-orange-400 transition-colors flex items-center gap-1">
+                <span className="text-orange-500">AIBC</span>
+                <span className="text-white">STREAM</span>
+                <ChevronDown className="w-4 h-4 text-white" />
               </button>
               
               {/* Dropdown Modal - AI Streaming Channels Preview */}
@@ -298,13 +293,13 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
                   onClick={() => onNavigate(ViewState.SIGNIN)} 
                   className="text-sm text-white hover:text-orange-500 transition-colors"
                 >
-                  Sign In
+                  Log In
                 </button>
                 <button 
                   onClick={() => onNavigate(ViewState.INGESTION)}
-                  className="px-4 py-2 border border-white text-white text-sm font-medium rounded-lg hover:bg-white/10 transition-colors"
+                  className="px-4 py-2 bg-gray-800 border border-white/20 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
                 >
-                  Start Free Trial
+                  Get Started
                 </button>
               </>
             )}

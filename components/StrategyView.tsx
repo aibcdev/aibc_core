@@ -76,6 +76,18 @@ const StrategyView: React.FC = () => {
         console.error('Error updating scan results:', e);
       }
     }
+    
+    // Save active strategy for content generation
+    localStorage.setItem('activeContentStrategy', JSON.stringify({
+      ...plan,
+      appliedAt: new Date().toISOString(),
+      affectsContentGeneration: true
+    }));
+    
+    // Dispatch event to notify content generation components
+    window.dispatchEvent(new CustomEvent('strategyUpdated', {
+      detail: { strategy: plan }
+    }));
   };
 
   const handleSend = async () => {

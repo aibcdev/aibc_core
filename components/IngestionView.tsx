@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ScanLine, Zap, Lock, CheckCircle, AlertCircle, Activity } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
 import { getUserSubscription, SubscriptionTier, canPerformAction } from '../services/subscriptionService';
+import Navigation from './shared/Navigation';
+import Footer from './shared/Footer';
 
 interface IngestionProps extends NavProps {
   setUsername: (username: string) => void;
@@ -165,9 +167,11 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
   };
 
   return (
-    <div id="ingestion-view" className="fixed inset-0 z-[70] overflow-y-auto bg-black">
-      {/* Subtle Orange Glow Background */}
-      <div 
+    <div id="ingestion-view" className="min-h-screen bg-[#050505] text-white">
+      <Navigation onNavigate={onNavigate} />
+      <div className="fixed inset-0 z-[70] overflow-y-auto bg-black">
+        {/* Subtle Orange Glow Background */}
+        <div 
         className="absolute inset-0"
         style={{
           background: 'radial-gradient(ellipse at center, rgba(251, 146, 60, 0.15) 0%, rgba(234, 88, 12, 0.08) 40%, transparent 70%)'
@@ -354,6 +358,8 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
             </div>
         </div>
       </div>
+      </div>
+      <Footer />
     </div>
   );
 };

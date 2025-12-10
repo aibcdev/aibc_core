@@ -70,28 +70,51 @@ export async function verifyHandle(handle: string, platform: string): Promise<{
  */
 export async function verifyCompetitor(name: string, industry?: string): Promise<{
   verified: boolean;
-  profile?: { name: string; bio?: string; followers?: string };
+  profile?: { name: string; bio?: string; followers?: string; industry?: string; url?: string };
   error?: string;
+  isRelated?: boolean;
 }> {
   if (!name || name.trim().length < 2) {
     return { verified: false, error: 'Invalid name' };
   }
 
   const cleanName = name.trim();
+  
+  // Check if it's a URL
+  const isURL = cleanName.includes('http://') || cleanName.includes('https://') || 
+                (cleanName.includes('.') && (cleanName.includes('.com') || cleanName.includes('.io') || 
+                 cleanName.includes('.co') || cleanName.includes('.net') || cleanName.includes('.org')));
+  
+  // If it's a URL, validate it
+  if (isURL) {
+    try {
+      const url = cleanName.startsWith('http') ? cleanName : `https://${cleanName}`;
+      new URL(url); // This will throw if invalid
+      // URL is valid format
+    } catch {
+      return { verified: false, error: 'Invalid URL format' };
+    }
+  }
 
   // Try to verify using LLM if available
   if (genAI) {
     try {
       const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
       
-      const industryHint = industry ? ` in the ${industry} space` : '';
-      const prompt = `Is "${cleanName}" a real company, brand, or creator${industryHint}? 
+      const industryHint = industry ? ` in the ${industry} industry` : '';
+      const prompt = `Is "${cleanName}" a real, active company, brand, or creator${industryHint}? 
       
-      If YES, provide their full name and what they do (1 sentence).
-      If NO or you can't verify, say so.
+      Check if this is a valid business/creator with an online presence.
+      
+      If YES, provide:
+      - Their full name
+      - What industry/space they operate in (1-2 words)
+      - A brief description (1 sentence)
+      
+      If NO or you can't verify, return verified: false.
       
       Return ONLY valid JSON:
-      {"verified": true/false, "name": "...", "bio": "..."}`;
+      {"verified": true/false, "name": "...", "bio": "...", "industry": "..."}`;
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
@@ -100,21 +123,41 @@ export async function verifyCompetitor(name: string, industry?: string): Promise
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const data = JSON.parse(jsonMatch[0]);
-        return {
-          verified: data.verified === true,
-          profile: data.verified ? { name: data.name || cleanName, bio: data.bio } : undefined,
-          error: data.verified ? undefined : 'Could not verify competitor'
-        };
+        
+        if (data.verified === true) {
+          // Check if competitor is related to our industry
+          const competitorIndustry = data.industry?.toLowerCase() || '';
+          const ourIndustry = industry?.toLowerCase() || '';
+          const isRelated = !ourIndustry || !competitorIndustry || 
+                           competitorIndustry.includes(ourIndustry) || 
+                           ourIndustry.includes(competitorIndustry) ||
+                           competitorIndustry === ourIndustry;
+          
+          return {
+            verified: true,
+            profile: { 
+              name: data.name || cleanName, 
+              bio: data.bio,
+              industry: data.industry
+            },
+            isRelated: isRelated
+          };
+        } else {
+          return {
+            verified: false,
+            error: 'Could not verify this competitor. Please ensure it is a valid brand/creator.'
+          };
+        }
       }
     } catch (err) {
       console.error('LLM verification error:', err);
     }
   }
 
-  // Fallback: accept if name looks valid
+  // No fallback - require real verification
   return {
-    verified: cleanName.length >= 2,
-    profile: { name: cleanName }
+    verified: false,
+    error: 'Could not verify competitor. Please ensure the name is a valid brand/creator.'
   };
 }
 

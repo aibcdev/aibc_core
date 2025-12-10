@@ -124,9 +124,7 @@ REQUIREMENTS:
 
 Generate the complete content now (not a template, actual content):`;
 
-    const result = await generateJSON(prompt, {
-      content: 'string'
-    }, 'basic');
+    const result = await generateJSON<{ content: string }>(prompt, undefined, { tier: 'basic' });
     
     res.json({
       success: true,

@@ -19,6 +19,16 @@ export default defineConfig(({ mode }) => {
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
+          '@solana-program/system': path.resolve(__dirname, 'src/stubs/solana-system.js'),
+        }
+      },
+      optimizeDeps: {
+        include: ['@privy-io/react-auth', '@solana/web3.js'],
+      },
+      build: {
+        commonjsOptions: {
+          include: [/node_modules/],
+          transformMixedEsModules: true
         }
       }
     };

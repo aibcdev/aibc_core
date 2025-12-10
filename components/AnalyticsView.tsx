@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, AlertCircle, ArrowRight, Instagram, Facebook, Linkedin, Mail, FileText, Music } from 'lucide-react';
+import { Loader2, AlertCircle, ArrowRight, Instagram, Facebook, Linkedin, Mail, FileText, Music, Check } from 'lucide-react';
 
 interface PlatformData {
   platform: string;
@@ -46,11 +46,26 @@ const AnalyticsView: React.FC = () => {
       const lastUsername = localStorage.getItem('lastScannedUsername');
       
       if (!lastScanResults || !lastUsername) {
-        setAnalytics({ 
-          platforms: [],
-          isLoading: false, 
-          error: 'No scan data available. Run a digital footprint scan first.' 
-        });
+        // Try to generate insights from any available scan data
+        const scanData = lastScanResults ? JSON.parse(lastScanResults) : null;
+        if (scanData && scanData.extractedContent) {
+          const platforms = ['twitter', 'linkedin', 'instagram', 'facebook', 'tiktok'];
+          const platformData = generateInsightsFromData(
+            { posts: scanData.extractedContent.posts || [], totalEngagement: 0, avgEngagement: 0 },
+            scanData.competitorIntelligence || [],
+            platforms
+          );
+          setAnalytics({
+            platforms: platformData,
+            isLoading: false
+          });
+        } else {
+          setAnalytics({ 
+            platforms: [],
+            isLoading: false, 
+            error: 'No scan data available. Run a digital footprint scan first.' 
+          });
+        }
         return;
       }
 
@@ -67,37 +82,51 @@ const AnalyticsView: React.FC = () => {
         platforms: platforms
       })).filter((c: any) => c.username);
 
-      // Call backend to scrape last 7 days of content
+      // Try to call backend to scrape last 7 days of content
       const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${API_BASE_URL}/api/analytics/last7days`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          companyUsername: lastUsername,
-          companyPlatforms: platforms,
-          competitors: competitorData
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch analytics data');
-      }
-
-      const result = await response.json();
       
-      if (result.success && result.data) {
-        const { company, competitors: compData, insights } = result.data;
-        
-        // Generate platform-specific insights using AI
-        const platformData = await generatePlatformInsights(company, compData, platforms);
-        
-        setAnalytics({
-          platforms: platformData,
-          isLoading: false
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/analytics/last7days`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            companyUsername: lastUsername,
+            companyPlatforms: platforms,
+            competitors: competitorData
+          })
         });
-      } else {
-        throw new Error(result.error || 'Failed to load analytics');
+
+        if (response.ok) {
+          const result = await response.json();
+          
+          if (result.success && result.data) {
+            const { company, competitors: compData, insights } = result.data;
+            
+            // Generate platform-specific insights using AI
+            const platformData = await generatePlatformInsights(company, compData, platforms);
+            
+            setAnalytics({
+              platforms: platformData,
+              isLoading: false
+            });
+            return;
+          }
+        }
+      } catch (apiError) {
+        console.warn('Analytics API call failed, using scan data:', apiError);
       }
+
+      // Fallback: Generate insights from existing scan data
+      const platformData = generateInsightsFromData(
+        { posts: scanData.extractedContent?.posts || [], totalEngagement: 0, avgEngagement: 0 },
+        competitors,
+        platforms
+      );
+      
+      setAnalytics({
+        platforms: platformData,
+        isLoading: false
+      });
     } catch (error: any) {
       console.error('Error loading analytics:', error);
       
@@ -335,101 +364,88 @@ const AnalyticsView: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#050505]">
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Welcome Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-gray-900 mb-2">
-            Welcome back, {userName.charAt(0).toUpperCase() + userName.slice(1)}!
+          <h1 className="text-3xl font-black uppercase tracking-tighter text-white mb-2">
+            Analytics
           </h1>
+          <p className="text-white/40 text-sm">Performance insights across all platforms</p>
         </div>
 
         {/* Loading State */}
         {analytics.isLoading && (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+            <Loader2 className="w-8 h-8 text-white/40 animate-spin" />
           </div>
         )}
 
         {/* Error State */}
         {analytics.error && !analytics.isLoading && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 mb-6">
             <div className="flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-yellow-600" />
-              <p className="text-sm text-yellow-800">{analytics.error}</p>
+              <AlertCircle className="w-5 h-5 text-amber-400" />
+              <p className="text-sm text-white/70">{analytics.error}</p>
             </div>
           </div>
         )}
 
-        {/* Platform Performance Table */}
+        {/* Platform Performance Cards */}
         {!analytics.isLoading && analytics.platforms.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Platform performance
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      What's working
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Areas for improvement
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {analytics.platforms.map((platform, index) => (
-                    <tr key={index} className="hover:bg-gray-50 transition-colors">
-                      {/* Platform Performance Column */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 ${platform.iconColor} rounded-lg flex items-center justify-center text-white flex-shrink-0`}>
-                            {platform.icon}
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">{platform.platform}</div>
-                            <div className="text-sm font-semibold text-green-600">
-                              +{platform.performance}%
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* What's Working Column */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-start justify-between group">
-                          <p className="text-sm text-gray-700 leading-relaxed">
-                            {platform.whatsWorking.join(', ')}
-                          </p>
-                          <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors ml-2 flex-shrink-0 mt-0.5" />
-                        </div>
-                      </td>
-
-                      {/* Areas for Improvement Column */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-start justify-between group">
-                          <p className="text-sm text-gray-700 leading-relaxed">
-                            {platform.areasForImprovement.join(', ')}
-                          </p>
-                          <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors ml-2 flex-shrink-0 mt-0.5" />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {analytics.platforms.map((platform, index) => (
+              <div key={index} className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6 hover:border-white/20 transition-all">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 ${platform.iconColor} rounded-lg flex items-center justify-center text-white`}>
+                      {platform.icon}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-white">{platform.platform}</h3>
+                      <div className="text-lg font-black text-green-400">
+                        +{platform.performance}%
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2">What's Working</div>
+                    <ul className="space-y-1">
+                      {platform.whatsWorking.map((item, i) => (
+                        <li key={i} className="text-xs text-white/70 flex items-start gap-2">
+                          <Check className="w-3 h-3 text-green-400 mt-0.5 flex-shrink-0" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2">Areas for Improvement</div>
+                    <ul className="space-y-1">
+                      {platform.areasForImprovement.map((item, i) => (
+                        <li key={i} className="text-xs text-white/70 flex items-start gap-2">
+                          <AlertCircle className="w-3 h-3 text-amber-400 mt-0.5 flex-shrink-0" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
         {/* Strategic Recommendations Section */}
         {!analytics.isLoading && analytics.platforms.length > 0 && (
           <div className="mt-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Strategic Recommendations</h2>
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <p className="text-sm text-gray-600">
+            <h2 className="text-xl font-bold text-white mb-4">Strategic Recommendations</h2>
+            <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+              <p className="text-sm text-white/70 leading-relaxed">
                 Based on your performance across all platforms, focus on increasing video content production 
                 and improving engagement rates through more personalized messaging. Consider A/B testing 
                 different content formats to identify what resonates best with your audience.
@@ -441,8 +457,8 @@ const AnalyticsView: React.FC = () => {
         {/* Empty State */}
         {!analytics.isLoading && analytics.platforms.length === 0 && !analytics.error && (
           <div className="text-center py-20">
-            <p className="text-gray-500 mb-4">No platform data available</p>
-            <p className="text-sm text-gray-400">Run a digital footprint scan to see your analytics</p>
+            <p className="text-white/60 mb-4">No platform data available</p>
+            <p className="text-sm text-white/40">Run a digital footprint scan to see your analytics</p>
           </div>
         )}
       </div>

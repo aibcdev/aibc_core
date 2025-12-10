@@ -75,30 +75,28 @@ const IntegrationsView: React.FC = () => {
   const connectedCount = integrations.filter(i => i.connected).length;
   const totalConnectable = integrations.filter(i => !i.comingSoon).length;
 
-  // LLM-based verification fallback
+  // LLM-based verification fallback (not used, but kept for reference)
   const verifyWithLLM = useCallback(async (handle: string, platform: string) => {
+    // This function is not currently used - verifyHandle is used instead
+    // Keeping for potential future use
     try {
       const cleanHandle = handle.replace('@', '').trim();
-      
-      // Simulate LLM verification with realistic data lookup
-      // In production, this would call Gemini/GPT to verify the account
       const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${API_BASE_URL}/api/scan/verify`, {
+      const response = await fetch(`${API_BASE_URL}/api/verify-handle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          username: cleanHandle, 
-          platform,
-          verificationType: 'quick'
+          handle: cleanHandle, 
+          platform
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.profile) {
+        if (data.verified && data.profile) {
           setVerificationResult({
             verified: true,
-            name: data.profile.name || cleanHandle,
+            name: data.profile.name || data.name || cleanHandle,
             avatar: data.profile.avatar,
             followers: data.profile.followers,
             bio: data.profile.bio
@@ -106,11 +104,10 @@ const IntegrationsView: React.FC = () => {
         } else {
           setVerificationResult({
             verified: false,
-            error: 'Could not verify this account. Please check the username.'
+            error: data.error || 'Could not verify this account. Please check the username.'
           });
         }
       } else {
-        // Final fallback - simulate verification based on handle format
         simulateVerification(cleanHandle, platform);
       }
     } catch (error) {
@@ -181,16 +178,32 @@ const IntegrationsView: React.FC = () => {
         } else if (data.error) {
           setVerificationResult({
             verified: false,
-            error: data.error
+            error: data.error || 'Could not verify this account. Please check the username.'
           });
         } else {
-          // Fallback: Use simulated verification
-          simulateVerification(handle.replace('@', '').trim(), platform);
+          // Fallback: Use simulated verification only if format is valid
+          const cleanHandle = handle.replace('@', '').trim();
+          if (cleanHandle.length >= 2) {
+            simulateVerification(cleanHandle, platform);
+          } else {
+            setVerificationResult({
+              verified: false,
+              error: 'Please enter a valid username (at least 2 characters)'
+            });
+          }
         }
       } else {
         const errorData = await response.json().catch(() => ({}));
-        // Fallback: Use simulated verification
-        simulateVerification(handle.replace('@', '').trim(), platform);
+        // Fallback: Use simulated verification only if format is valid
+        const cleanHandle = handle.replace('@', '').trim();
+        if (cleanHandle.length >= 2 && /^[a-zA-Z0-9._-]+$/.test(cleanHandle)) {
+          simulateVerification(cleanHandle, platform);
+        } else {
+          setVerificationResult({
+            verified: false,
+            error: errorData.error || 'Could not verify this account. Please check the username.'
+          });
+        }
       }
     } catch (error) {
       console.error('Verification error:', error);

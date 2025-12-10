@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Palette, Type, Image as ImageIcon, FileText, Video, Music, X, Plus, Check, Globe, Trash2, Edit3, Link2, Sparkles, RefreshCw, Save, Clock, Megaphone, Target, Compass, Info, Lock, ChevronDown, Cloud } from 'lucide-react';
+import { Upload, Palette, Type, Image as ImageIcon, FileText, Video, Music, X, Plus, Check, Globe, Trash2, Edit3, Link2, Sparkles, RefreshCw, Save, Clock, Megaphone, Target, Compass, Info, Lock, ChevronDown, Cloud, Bot } from 'lucide-react';
 
 interface BrandAsset {
   id: string;
@@ -27,8 +27,15 @@ interface BrandFont {
 }
 
 const BrandAssetsView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'materials' | 'profile' | 'styles' | 'voice' | 'preferences'>('materials');
+  const [activeTab, setActiveTab] = useState<'materials' | 'profile' | 'styles' | 'voice' | 'preferences' | 'agent'>('materials');
   const [preferencesCategory, setPreferencesCategory] = useState<'video' | 'image' | 'social' | 'blog' | 'general'>('video');
+  
+  // Brand DNA State
+  const [brandDNA, setBrandDNA] = useState({
+    archetype: 'The Architect',
+    voiceTone: 'Systematic', // Systematic, Transparent, Dense
+    corePillars: ['Automated Content Scale', 'Forensic Brand Analysis', 'Enterprise Reliability']
+  });
   const [showAddContextModal, setShowAddContextModal] = useState(false);
   const [showAddColorModal, setShowAddColorModal] = useState(false);
   const [showAddFontModal, setShowAddFontModal] = useState(false);
@@ -291,6 +298,7 @@ const BrandAssetsView: React.FC = () => {
           { id: 'profile', label: 'Brand Profile' },
           { id: 'styles', label: 'Styles & Colors' },
           { id: 'voice', label: 'Voice & Tone' },
+          { id: 'agent', label: 'Brand DNA' },
         ].map(tab => (
           <button
             key={tab.id}
@@ -1338,6 +1346,57 @@ const BrandAssetsView: React.FC = () => {
                 <Save className="w-4 h-4" />
                 Save Voice Settings
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'agent' && (
+        <div className="space-y-6">
+          {/* Brand DNA Card */}
+          <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-8 max-w-4xl">
+            <h2 className="text-2xl font-black uppercase tracking-tighter text-white mb-8">Brand DNA</h2>
+
+            {/* ARCHETYPE */}
+            <div className="mb-8">
+              <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-4">ARCHETYPE</label>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                <span className="text-sm text-white">• The Architect</span>
+              </div>
+            </div>
+
+            {/* VOICE TONE */}
+            <div className="mb-8">
+              <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-4">VOICE TONE</label>
+              <div className="flex gap-2">
+                {['Systematic', 'Transparent', 'Dense'].map((tone) => (
+                  <button
+                    key={tone}
+                    onClick={() => setBrandDNA({ ...brandDNA, voiceTone: tone })}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      brandDNA.voiceTone === tone
+                        ? 'bg-white/10 border border-white/30 text-white'
+                        : 'bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/[0.07]'
+                    }`}
+                  >
+                    {tone}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* CORE PILLARS */}
+            <div>
+              <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-4">CORE PILLARS</label>
+              <ul className="space-y-2">
+                {brandDNA.corePillars.map((pillar, index) => (
+                  <li key={index} className="text-sm text-white flex items-center gap-2">
+                    <span>•</span>
+                    <span>{pillar}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>

@@ -79,7 +79,10 @@ async function scrapePlatformContent(
 
     // Scroll to load more content
     for (let i = 0; i < 3; i++) {
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await page.evaluate(() => {
+        // @ts-ignore - window and document are available in browser context
+        window.scrollTo(0, document.body.scrollHeight);
+      });
       await page.waitForTimeout(1000);
     }
 
@@ -90,8 +93,9 @@ async function scrapePlatformContent(
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
       if (platform === 'twitter' || platform === 'x') {
+        // @ts-ignore - document is available in browser context
         const tweetElements = document.querySelectorAll('article[data-testid="tweet"]');
-        tweetElements.forEach((el, idx) => {
+        tweetElements.forEach((el: any, idx: number) => {
           const textEl = el.querySelector('[data-testid="tweetText"]');
           const timeEl = el.querySelector('time');
           const likeEl = el.querySelector('[data-testid="like"]');
@@ -118,8 +122,9 @@ async function scrapePlatformContent(
           }
         });
       } else if (platform === 'instagram') {
+        // @ts-ignore - document is available in browser context
         const postElements = document.querySelectorAll('article > div > div > div > a');
-        postElements.forEach((el, idx) => {
+        postElements.forEach((el: any, idx: number) => {
           if (idx < 12) { // Last 12 posts
             const href = el.getAttribute('href') || '';
             posts.push({
@@ -272,15 +277,8 @@ Return as JSON with this structure:
 }`;
 
   try {
-    const result = await generateJSON(prompt, {
-      engagementTrend: { value: 'number', change: 'number', direction: 'string' },
-      contentPerformance: { score: 'number', vsCompetitors: 'string' },
-      postingFrequency: { postsPerDay: 'number', recommendation: 'string' },
-      engagementRate: { rate: 'number', vsCompetitors: 'number' },
-      marketShare: { percentage: 'number', rank: 'number', totalCompetitors: 'number' },
-      topPerformingContent: 'array',
-      recommendations: 'array'
-    }, 'basic');
+    // The schema is already in the prompt, just call generateJSON
+    const result = await generateJSON<any>(prompt, undefined, { tier: 'basic' });
 
     return result;
   } catch (error: any) {

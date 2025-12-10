@@ -144,7 +144,6 @@ const SettingsView: React.FC<{ onLogout?: () => void; onNavigate?: (view: ViewSt
     { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
     { id: 'security', label: 'Security', icon: <Shield className="w-4 h-4" /> },
     { id: 'billing', label: 'Billing', icon: <CreditCard className="w-4 h-4" /> },
-    { id: 'appearance', label: 'Appearance', icon: <Moon className="w-4 h-4" /> },
     { id: 'data', label: 'Data & Privacy', icon: <Globe className="w-4 h-4" /> },
   ];
 
@@ -520,38 +519,6 @@ const SettingsView: React.FC<{ onLogout?: () => void; onNavigate?: (view: ViewSt
                   <div className="text-center py-8 text-white/40 text-sm">
                     No billing history yet
                   </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Appearance Section */}
-          {activeSection === 'appearance' && (
-            <div className="space-y-6">
-              <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-6">
-                <h2 className="text-lg font-bold text-white mb-6">Theme</h2>
-                
-                <div className="grid grid-cols-3 gap-4">
-                  {[
-                    { id: 'dark', label: 'Dark', icon: <Moon className="w-5 h-5" /> },
-                    { id: 'light', label: 'Light', icon: <Sun className="w-5 h-5" /> },
-                    { id: 'system', label: 'System', icon: <Globe className="w-5 h-5" /> },
-                  ].map(t => (
-                    <button
-                      key={t.id}
-                      onClick={() => setTheme(t.id as any)}
-                      className={`p-4 rounded-xl border transition-all ${
-                        theme === t.id
-                          ? 'bg-green-500/10 border-green-500/30 text-green-400'
-                          : 'bg-white/[0.02] border-white/10 text-white/40 hover:border-white/20'
-                      }`}
-                    >
-                      <div className="flex flex-col items-center gap-2">
-                        {t.icon}
-                        <span className="text-sm font-medium">{t.label}</span>
-                      </div>
-                    </button>
-                  ))}
                 </div>
               </div>
             </div>
