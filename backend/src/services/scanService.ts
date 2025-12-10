@@ -308,12 +308,44 @@ export async function startScan(
     if (websiteUrl && (websiteUrl.includes('http://') || websiteUrl.includes('https://'))) {
         addLog(scanId, `[DISCOVERY] CRITICAL: Scanning website for social media links: ${websiteUrl}`);
       try {
-        const websiteContent = await scrapeProfile(websiteUrl, 'website', scanId);
+        storage.updateScan(scanId, { progress: 22 });
+        // Add timeout wrapper for website scraping (max 60 seconds)
+        let websiteContent;
+        try {
+          websiteContent = await Promise.race([
+            scrapeProfile(websiteUrl, 'website', scanId),
+            new Promise<never>((_, reject) => 
+              setTimeout(() => reject(new Error('Website scraping timeout after 60 seconds')), 60000)
+            )
+          ]);
+        } catch (scrapeError: any) {
+          addLog(scanId, `[DISCOVERY] Browser scraping failed: ${scrapeError.message} - trying fetch fallback...`);
+          // Fallback: Use fetch to get HTML directly (faster, no browser)
+          const response = await fetch(websiteUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            },
+            signal: AbortSignal.timeout(15000) // 15s timeout
+          });
+          const html = await response.text();
+          websiteContent = { html, text: '', url: websiteUrl };
+          addLog(scanId, `[DISCOVERY] Fetch fallback successful (${html.length} chars HTML)`);
+        }
           if (websiteContent.html && websiteContent.html.length > 50) {
             addLog(scanId, `[DISCOVERY] Website scraped successfully (${websiteContent.html.length} chars HTML, ${websiteContent.text?.length || 0} chars text)`);
             
-            // Extract social links from HTML
-            const htmlLinks = await extractSocialLinksFromWebsite(websiteContent.html, websiteUrl, scanId);
+            // Extract social links from HTML (with timeout)
+            storage.updateScan(scanId, { progress: 25 });
+            const htmlLinks = await Promise.race([
+              extractSocialLinksFromWebsite(websiteContent.html, websiteUrl, scanId),
+              new Promise<Record<string, string>>((_, reject) => 
+                setTimeout(() => reject(new Error('Social link extraction timeout after 60 seconds')), 60000)
+              )
+            ]).catch(async (error) => {
+              addLog(scanId, `[EXTRACT] Browser-based extraction failed: ${error.message} - trying regex fallback...`);
+              // Fallback: Direct regex on HTML without browser
+              return extractSocialLinksFromHTMLDirect(websiteContent.html, websiteUrl, scanId);
+            });
             if (Object.keys(htmlLinks).length > 0) {
               discoveredSocialLinks = { ...discoveredSocialLinks, ...htmlLinks };
               addLog(scanId, `[DISCOVERY] Found ${Object.keys(htmlLinks).length} social profiles from HTML: ${Object.keys(htmlLinks).join(', ')}`);
@@ -1497,44 +1529,82 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
       addLog(scanId, `[EXTRACT] Trying regex-based fallback extraction...`);
     }
     
-    // FALLBACK: Use regex to extract social links directly from HTML
-    // This works even if Playwright fails (e.g., in serverless environments)
-    try {
-      const regexPatterns: Record<string, RegExp> = {
-        twitter: /href=["']?(https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/[a-zA-Z0-9_]+)["']?/gi,
-        instagram: /href=["']?(https?:\/\/(?:www\.)?instagram\.com\/[a-zA-Z0-9_.]+)["']?/gi,
-        facebook: /href=["']?(https?:\/\/(?:www\.)?facebook\.com\/[a-zA-Z0-9_.]+)["']?/gi,
-        youtube: /href=["']?(https?:\/\/(?:www\.)?youtube\.com\/(?:channel\/|user\/|@|c\/)?[a-zA-Z0-9_-]+)["']?/gi,
-        linkedin: /href=["']?(https?:\/\/(?:www\.)?linkedin\.com\/(?:in|company)\/[a-zA-Z0-9_-]+)["']?/gi,
-        tiktok: /href=["']?(https?:\/\/(?:www\.)?tiktok\.com\/@[a-zA-Z0-9_.]+)["']?/gi,
-        pinterest: /href=["']?(https?:\/\/(?:www\.)?pinterest\.com\/[a-zA-Z0-9_]+)["']?/gi,
-        github: /href=["']?(https?:\/\/(?:www\.)?github\.com\/[a-zA-Z0-9_-]+)["']?/gi,
-        discord: /href=["']?(https?:\/\/(?:www\.)?discord\.(?:gg|com\/invite)\/[a-zA-Z0-9_-]+)["']?/gi,
-        twitch: /href=["']?(https?:\/\/(?:www\.)?twitch\.tv\/[a-zA-Z0-9_]+)["']?/gi,
-      };
-      
-      for (const [platform, pattern] of Object.entries(regexPatterns)) {
-        const matches = html.match(pattern);
-        if (matches && matches.length > 0) {
-          // Extract the URL from the first match
-          const urlMatch = matches[0].match(/https?:\/\/[^\s"']+/);
-          if (urlMatch) {
-            socialLinks[platform] = urlMatch[0].replace(/["']$/, '');
-            if (scanId) {
-              addLog(scanId, `[EXTRACT] Regex found ${platform}: ${socialLinks[platform]}`);
-            }
+    // Fallback: Direct regex extraction without browser
+    return extractSocialLinksFromHTMLDirect(html, websiteUrl, scanId);
+  }
+  
+  return socialLinks;
+}
+
+/**
+ * Extract social links directly from HTML using regex (no browser required)
+ * Fast fallback when browser-based extraction fails
+ */
+function extractSocialLinksFromHTMLDirect(html: string, websiteUrl: string, scanId?: string): Record<string, string> {
+  const socialLinks: Record<string, string> = {};
+  
+  if (scanId) {
+    addLog(scanId, `[EXTRACT] Using direct regex extraction on HTML (${html.length} chars)`);
+  }
+  
+  try {
+    // Comprehensive regex patterns for social media URLs in HTML
+    const regexPatterns: Record<string, RegExp> = {
+      twitter: /(?:https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+))/gi,
+      instagram: /(?:https?:\/\/(?:www\.)?instagram\.com\/([a-zA-Z0-9_.]+))/gi,
+      youtube: /(?:https?:\/\/(?:www\.)?youtube\.com\/(?:channel\/|user\/|@|c\/)?([a-zA-Z0-9_-]+))/gi,
+      linkedin: /(?:https?:\/\/(?:www\.)?linkedin\.com\/(?:in|company)\/([a-zA-Z0-9-]+))/gi,
+      tiktok: /(?:https?:\/\/(?:www\.)?tiktok\.com\/@([a-zA-Z0-9_.]+))/gi,
+      facebook: /(?:https?:\/\/(?:www\.)?facebook\.com\/([a-zA-Z0-9_.]+))/gi,
+      pinterest: /(?:https?:\/\/(?:www\.)?pinterest\.com\/([a-zA-Z0-9_]+))/gi,
+      github: /(?:https?:\/\/(?:www\.)?github\.com\/([a-zA-Z0-9_-]+))/gi,
+    };
+    
+    for (const [platform, pattern] of Object.entries(regexPatterns)) {
+      const matches = [...html.matchAll(pattern)];
+      if (matches.length > 0) {
+        // Get first unique match
+        const firstMatch = matches[0];
+        const username = firstMatch[1];
+        let fullUrl = firstMatch[0];
+        
+        // Normalize URLs
+        if (platform === 'twitter' && fullUrl.includes('x.com')) {
+          fullUrl = `https://x.com/${username}`;
+        } else if (platform === 'twitter') {
+          fullUrl = `https://twitter.com/${username}`;
+        } else if (platform === 'instagram') {
+          fullUrl = `https://instagram.com/${username}`;
+        } else if (platform === 'youtube') {
+          if (fullUrl.includes('/channel/') || fullUrl.includes('/user/') || fullUrl.includes('/c/')) {
+            fullUrl = fullUrl; // Keep original format
+          } else {
+            fullUrl = `https://youtube.com/@${username}`;
           }
+        } else if (platform === 'linkedin') {
+          fullUrl = fullUrl.includes('/company/') 
+            ? `https://linkedin.com/company/${username}`
+            : `https://linkedin.com/in/${username}`;
+        } else if (platform === 'tiktok') {
+          fullUrl = `https://tiktok.com/@${username}`;
+        } else if (!fullUrl.startsWith('http')) {
+          fullUrl = `https://${fullUrl}`;
+        }
+        
+        socialLinks[platform] = fullUrl;
+        if (scanId) {
+          addLog(scanId, `[EXTRACT] Regex found ${platform}: ${fullUrl}`);
         }
       }
-      
-      if (Object.keys(socialLinks).length > 0 && scanId) {
-        addLog(scanId, `[EXTRACT] Regex fallback found ${Object.keys(socialLinks).length} social links`);
-      }
-    } catch (regexError: any) {
-      console.error('Regex fallback also failed:', regexError);
-      if (scanId) {
-        addLog(scanId, `[EXTRACT] Regex fallback also failed: ${regexError.message}`);
-      }
+    }
+    
+    if (Object.keys(socialLinks).length > 0 && scanId) {
+      addLog(scanId, `[EXTRACT] Direct regex extraction found ${Object.keys(socialLinks).length} social links: ${Object.keys(socialLinks).join(', ')}`);
+    }
+  } catch (error: any) {
+    console.error('Direct HTML extraction failed:', error);
+    if (scanId) {
+      addLog(scanId, `[EXTRACT] Direct HTML extraction failed: ${error.message}`);
     }
   }
   
