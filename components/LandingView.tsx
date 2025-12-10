@@ -69,10 +69,9 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
               preload="auto"
               className="absolute inset-0 w-full h-full object-cover opacity-100"
               style={{ zIndex: 1, minHeight: '100%', minWidth: '100%' }}
-              key={`hero-video-${Date.now()}`}
             >
-              <source src={`/hero-video.mp4?v=${Date.now()}`} type="video/mp4" />
-              <source src={`/hero-video.webm?v=${Date.now()}`} type="video/webm" />
+              <source src="/hero-video.mp4?v=2" type="video/mp4" />
+              <source src="/hero-video.webm?v=2" type="video/webm" />
               Your browser does not support the video tag.
             </video>
             <div className="absolute inset-0 bg-black/50 z-10" style={{ zIndex: 2 }}></div>
