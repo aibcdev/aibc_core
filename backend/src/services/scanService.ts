@@ -124,22 +124,22 @@ export async function startScan(
     // If not a social media URL, check if it's a website/domain
     // ALWAYS try to scrape website first if it looks like a domain
     if (!detectedSocialPlatform) {
-      const isWebsite = username.includes('.') && 
-                        (username.includes('.com') || username.includes('.tv') || 
-                         username.includes('.io') || username.includes('.co') || 
-                         username.includes('.net') || username.includes('.org')) &&
-                        !username.includes('twitter.com') && !username.includes('instagram.com') &&
-                        !username.includes('youtube.com') && !username.includes('linkedin.com') &&
-                        !username.includes('x.com') && !username.includes('tiktok.com');
-      
-      const websiteUrl = isWebsite 
-        ? (username.startsWith('http') ? username : `https://${username.replace(/^www\./, '')}`)
-        : getProfileUrl(username, 'website');
-      
-      if (websiteUrl && (websiteUrl.includes('http://') || websiteUrl.includes('https://'))) {
+    const isWebsite = username.includes('.') && 
+                      (username.includes('.com') || username.includes('.tv') || 
+                       username.includes('.io') || username.includes('.co') || 
+                       username.includes('.net') || username.includes('.org')) &&
+                      !username.includes('twitter.com') && !username.includes('instagram.com') &&
+                      !username.includes('youtube.com') && !username.includes('linkedin.com') &&
+                      !username.includes('x.com') && !username.includes('tiktok.com');
+    
+    const websiteUrl = isWebsite 
+      ? (username.startsWith('http') ? username : `https://${username.replace(/^www\./, '')}`)
+      : getProfileUrl(username, 'website');
+    
+    if (websiteUrl && (websiteUrl.includes('http://') || websiteUrl.includes('https://'))) {
         addLog(scanId, `[DISCOVERY] CRITICAL: Scanning website for social media links: ${websiteUrl}`);
-        try {
-          const websiteContent = await scrapeProfile(websiteUrl, 'website', scanId);
+      try {
+        const websiteContent = await scrapeProfile(websiteUrl, 'website', scanId);
           if (websiteContent.html && websiteContent.html.length > 50) {
             addLog(scanId, `[DISCOVERY] Website scraped successfully (${websiteContent.html.length} chars HTML, ${websiteContent.text?.length || 0} chars text)`);
             
@@ -174,9 +174,9 @@ export async function startScan(
                 discoveredSocialLinks = { ...discoveredSocialLinks, ...htmlLinks };
                 addLog(scanId, `[DISCOVERY] Found ${Object.keys(htmlLinks).length} social profiles despite minimal content`);
               }
-            }
           }
-        } catch (error: any) {
+        }
+      } catch (error: any) {
           addLog(scanId, `[DISCOVERY] ERROR: Failed to extract social links from website: ${error.message}`);
           addLog(scanId, `[DISCOVERY] Will skip all platforms since website scraping failed`);
         }
@@ -274,30 +274,30 @@ export async function startScan(
             }
           } else {
             // For non-discovered links (constructed URLs), verify before scraping
-            addLog(scanId, `[SCRAPE] Checking ${actualPlatform} profile: ${profileUrl}`);
-            const content = await scrapeProfile(profileUrl, actualPlatform, scanId);
-            
-            // Verify profile actually exists (not 404, not login page, has actual content)
-            const profileExists = await verifyProfileExists(content, actualPlatform);
-            
+          addLog(scanId, `[SCRAPE] Checking ${actualPlatform} profile: ${profileUrl}`);
+          const content = await scrapeProfile(profileUrl, actualPlatform, scanId);
+          
+          // Verify profile actually exists (not 404, not login page, has actual content)
+          const profileExists = await verifyProfileExists(content, actualPlatform);
+          
             // Be more lenient with content length - accept profiles with at least 20 chars
             const minContentLength = 20;
             const hasMinimalContent = content.text && content.text.length >= minContentLength;
             
             if (profileExists && hasMinimalContent) {
-              verifiedPlatforms.push(actualPlatform);
-              scrapedData.push({ platform: actualPlatform, content });
-              const visualCount = (content.images?.length || 0) + (content.videos?.length || 0);
-              addLog(scanId, `[SUCCESS] ${actualPlatform} profile found - ${content.text.length} chars, ${visualCount} visual assets`);
-            } else if (!profileExists) {
-              addLog(scanId, `[SKIP] ${actualPlatform} profile not found or not accessible - skipping`);
+            verifiedPlatforms.push(actualPlatform);
+            scrapedData.push({ platform: actualPlatform, content });
+            const visualCount = (content.images?.length || 0) + (content.videos?.length || 0);
+            addLog(scanId, `[SUCCESS] ${actualPlatform} profile found - ${content.text.length} chars, ${visualCount} visual assets`);
+          } else if (!profileExists) {
+            addLog(scanId, `[SKIP] ${actualPlatform} profile not found or not accessible - skipping`);
             } else if (!hasMinimalContent) {
               // Even if verification passed, if content is too short, log but still try to use it
               addLog(scanId, `[WARNING] ${actualPlatform} scraping returned minimal content (${content.text?.length || 0} chars) - will attempt LLM extraction anyway`);
               // Still add it - LLM might be able to extract something useful
               verifiedPlatforms.push(actualPlatform);
               scrapedData.push({ platform: actualPlatform, content });
-            } else {
+          } else {
               addLog(scanId, `[SKIP] ${actualPlatform} profile verification failed`);
             }
           }
@@ -925,9 +925,9 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
       
       return [
         ...links.map((link: any) => ({
-          href: link.href || link.getAttribute('href'),
-          text: link.innerText || link.textContent || '',
-          ariaLabel: link.getAttribute('aria-label') || '',
+        href: link.href || link.getAttribute('href'),
+        text: link.innerText || link.textContent || '',
+        ariaLabel: link.getAttribute('aria-label') || '',
         })),
         ...metaLinks
       ];
@@ -1048,22 +1048,22 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
       }
     }
     
+    // Also search for social URLs in plain text content (already extracted above)
+    if (pageText) {
+      const textUrls = extractSocialLinksFromText(pageText);
+      Object.assign(socialLinks, textUrls);
+      if (scanId && Object.keys(textUrls).length > 0) {
+        addLog(scanId, `[DISCOVERY] Found ${Object.keys(textUrls).length} social links in page text: ${Object.keys(textUrls).join(', ')}`);
+      }
+    }
+    
     // Also use LLM to extract social links from text content (as fallback)
-    if (Object.keys(socialLinks).length === 0) {
+    if (Object.keys(socialLinks).length === 0 && pageText && pageText.length > 100) {
       try {
-        const textContent = await page.evaluate(() => {
-          // @ts-ignore
-          return document.body.innerText || document.body.textContent || '';
-        });
-        
         await browser.close(); // Close browser before LLM call
-        
-        if (textContent && textContent.length > 100) {
-          const llmExtracted = await extractSocialLinksWithLLM(textContent, websiteUrl, scanId);
+        const llmExtracted = await extractSocialLinksWithLLM(pageText, websiteUrl, scanId);
           Object.assign(socialLinks, llmExtracted);
-        }
       } catch (e) {
-        await browser.close(); // Ensure browser is closed even on error
         console.log('LLM social link extraction failed:', e);
       }
     } else {
@@ -1255,7 +1255,7 @@ async function verifyProfileExists(content: { html: string; text: string; url: s
     // But check if it's just a mention, not the main message
     const notFoundCount = notFoundIndicators.filter(indicator => lowerText.includes(indicator)).length;
     if (notFoundCount >= 2 || (notFoundCount >= 1 && content.text.length < 100)) {
-      return false;
+    return false;
     }
   }
   
@@ -1567,7 +1567,7 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
       
       // Always get HTML content
       if (!scrapedHtml) {
-        scrapedHtml = await page.content();
+      scrapedHtml = await page.content();
       }
       
       await browser.close();
