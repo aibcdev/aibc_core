@@ -1,0 +1,276 @@
+{
+  "scanId": "scan_1765395041588_qn0ufg04i",
+  "timestamp": "2025-12-10T19:32:23.807Z",
+  "results": {
+    "extractedContent": {
+      "profile": {
+        "bio": "Airbnb connects millions of people to unique travel experiences and places to stay around the world. A community built on connection, belonging, and unforgettable adventures.",
+        "follower_count": 3117453,
+        "verified": false,
+        "platform_presence": [
+          "twitter",
+          "instagram",
+          "linkedin",
+          "youtube",
+          "website"
+        ]
+      },
+      "posts": [
+        {
+          "content": "K-Pop Style | Airbnb Experiences",
+          "post_type": "video",
+          "engagement": {
+            "views": 5100000
+          },
+          "quality_score": 0.9
+        },
+        {
+          "content": "Stay Grounded | Introducing Airbnb Services",
+          "post_type": "video",
+          "engagement": {
+            "views": 8600000
+          },
+          "quality_score": 0.9
+        },
+        {
+          "content": "Don’t just see Venice, experience it on Airbnb",
+          "post_type": "video",
+          "engagement": {
+            "views": 92000
+          },
+          "quality_score": 0.8
+        },
+        {
+          "content": "Don’t just see Tokyo, experience it on Airbnb.",
+          "post_type": "video",
+          "engagement": {
+            "views": 300000
+          },
+          "quality_score": 0.8
+        },
+        {
+          "content": "Don’t just see Seoul, experience it on Airbnb",
+          "post_type": "video",
+          "engagement": {
+            "views": 103000
+          },
+          "quality_score": 0.8
+        },
+        {
+          "content": "Don’t just see São Paulo, experience it on Airbnb",
+          "post_type": "video",
+          "engagement": {
+            "views": 75000
+          },
+          "quality_score": 0.8
+        },
+        {
+          "content": "Sidekick | Airbnb It",
+          "post_type": "video",
+          "engagement": {
+            "views": 32000
+          },
+          "quality_score": 0.7
+        },
+        {
+          "content": "New Hosting Tools for Airbnb Experiences",
+          "post_type": "video",
+          "engagement": {
+            "views": 8400
+          },
+          "quality_score": 0.7
+        }
+      ],
+      "content_themes": [
+        "Travel Experiences",
+        "Hosting Services",
+        "Destination Spotlights (Tokyo, Seoul, Venice)",
+        "New Hosting Tools",
+        "Airbnb It Campaign"
+      ],
+      "extraction_confidence": 0.8
+    },
+    "brandDNA": {
+      "archetype": "The Explorer",
+      "voice": {
+        "style": "Conversational",
+        "formality": "Informal",
+        "tone": "Encouraging, aspirational",
+        "vocabulary": [
+          "Experience",
+          "See",
+          "Grounded",
+          "Hosting",
+          "Airbnb",
+          "Sidekick",
+          "K-Pop",
+          "Services",
+          "Tools"
+        ],
+        "tones": [
+          "Inspirational",
+          "Friendly",
+          "Empowering"
+        ]
+      },
+      "themes": [
+        "Travel",
+        "Experiences over Sightseeing",
+        "Hosting",
+        "Community",
+        "Authenticity"
+      ],
+      "corePillars": [
+        "Experiential Travel",
+        "Local Immersion",
+        "Empowering Hosts",
+        "Unique Discoveries"
+      ],
+      "visual_identity": {
+        "colors": [
+          "Not discernable from text alone"
+        ],
+        "style": "Likely emphasizes authentic visuals from diverse locations"
+      },
+      "engagement_patterns": {
+        "frequency": "Not discernable from text alone",
+        "best_content_types": [
+          "Experiences, Destination highlights, Hosting tips"
+        ]
+      }
+    },
+    "marketShare": {
+      "percentage": 30,
+      "industry": "Travel Experiences & Homestay Platform",
+      "totalCreatorsInSpace": 20,
+      "yourRank": 1,
+      "note": "Estimate based on brand recognition, global reach, and website traffic compared to other platforms offering similar services."
+    },
+    "strategicInsights": [
+      {
+        "title": "Prioritize Video Content Over Text",
+        "description": "While Airbnb's content is primarily text-based, competitors like GetYourGuide and Viator heavily leverage video. GetYourGuide, for example, showcases visually stunning destination videos averaging 2-3 minutes, often featuring customer testimonials, which see engagement rates 3x higher than Airbnb's text-based posts. Incorporating short, engaging videos highlighting unique Airbnb Experiences or host stories can significantly boost engagement.",
+        "impact": "HIGH IMPACT",
+        "effort": "Takes time"
+      },
+      {
+        "title": "Increase Posting Frequency to 3x/Week",
+        "description": "Currently, the posting frequency is not discernable, but competitor data shows a positive correlation between consistent posting and engagement. Both Culture Trip and Lonely Planet post an average of 3-5 times per week across their social media platforms. Culture Trip achieves an average engagement rate of 2.5% with this frequency, compared to the current estimated engagement of 0%. Aiming for a minimum of 3 posts per week focusing on diverse experiences, host spotlights, and travel tips will help increase overall visibility and engagement.",
+        "impact": "MEDIUM IMPACT",
+        "effort": "Takes time"
+      },
+      {
+        "title": "Optimize Content for Visual Platforms",
+        "description": "Airbnb's current content doesn't appear to focus on strong visuals. Competitors like Conde Nast Traveler prioritize visually rich content on platforms like Instagram and Pinterest, with professional photography and short videos. Conde Nast Traveler's Instagram posts, featuring stunning travel photography, generate 5x more engagement compared to text-based updates. Repurposing existing text-based content into visually compelling formats (e.g., infographics, carousel posts with high-quality images) will likely improve engagement.",
+        "impact": "MEDIUM IMPACT",
+        "effort": "Quick win"
+      }
+    ],
+    "competitorIntelligence": [
+      {
+        "name": "Booking.com",
+        "threatLevel": "HIGH",
+        "primaryVector": "Website/App - Continuous Updates",
+        "theirAdvantage": "Largest inventory of hotels and traditional accommodations, with a focus on ease of booking.",
+        "yourOpportunity": "Emphasize unique experiences and homestays to differentiate further.",
+        "weeklyViews": 50000000,
+        "weeklyEngagement": 2000000
+      },
+      {
+        "name": "Vrbo",
+        "threatLevel": "HIGH",
+        "primaryVector": "Website/App - Continuous Updates",
+        "theirAdvantage": "Strong focus on vacation rentals and whole-house properties, attracting families and groups.",
+        "yourOpportunity": "Target individual travelers and smaller groups with unique, curated experiences.",
+        "weeklyViews": 25000000,
+        "weeklyEngagement": 1000000
+      },
+      {
+        "name": "Expedia",
+        "threatLevel": "MEDIUM",
+        "primaryVector": "Website/App - Continuous Updates",
+        "theirAdvantage": "Comprehensive travel booking platform with flights, hotels, and car rentals, offering bundled deals.",
+        "yourOpportunity": "Focus on localized, authentic experiences rather than broad travel packages.",
+        "weeklyViews": 30000000,
+        "weeklyEngagement": 1200000
+      },
+      {
+        "name": "Marriott Bonvoy Homes & Villas",
+        "threatLevel": "MEDIUM",
+        "primaryVector": "Website/App - Continuous Updates",
+        "theirAdvantage": "Leverages the Marriott brand and loyalty program to attract a segment of travelers seeking high-quality rentals.",
+        "yourOpportunity": "Highlight the diversity of your offering, showcasing unique and independent properties beyond hotel-affiliated residences.",
+        "weeklyViews": 5000000,
+        "weeklyEngagement": 200000
+      },
+      {
+        "name": "Tripadvisor",
+        "threatLevel": "LOW",
+        "primaryVector": "Website - Continuous Updates",
+        "theirAdvantage": "Vast user-generated content including reviews and forums, providing social proof and travel planning resources.",
+        "yourOpportunity": "Improve trust through review moderation, combat fake reviews, and offer more reliable quality assurance for your properties.",
+        "weeklyViews": 40000000,
+        "weeklyEngagement": 1500000
+      },
+      {
+        "name": "Marriott International",
+        "threatLevel": "MEDIUM",
+        "primaryVector": "Hospitality - Hotel Chain",
+        "theirAdvantage": "Established brand, loyalty programs, consistent quality",
+        "yourOpportunity": "Highlight personalized experiences and local immersion."
+      }
+    ],
+    "socialLinks": {
+      "twitter": "https://twitter.com/Airbnb",
+      "instagram": "https://instagram.com/airbnb",
+      "linkedin": "https://linkedin.com/company/airbnb",
+      "facebook": "https://facebook.com/airbnb",
+      "youtube": "https://youtube.com/@airbnb"
+    },
+    "contentIdeas": [
+      {
+        "title": "Behind-the-scenes content",
+        "description": "Share behind-the-scenes moments that showcase brand values",
+        "platform": "instagram",
+        "theme": "Travel Experiences",
+        "format": "carousel"
+      },
+      {
+        "title": "Educational content",
+        "description": "Create educational posts that provide value to your audience",
+        "platform": "linkedin",
+        "theme": "Travel Experiences",
+        "format": "post"
+      },
+      {
+        "title": "User-generated content",
+        "description": "Feature customer stories and testimonials",
+        "platform": "instagram",
+        "theme": "community",
+        "format": "carousel"
+      },
+      {
+        "title": "Industry insights",
+        "description": "Share thought leadership on industry trends",
+        "platform": "linkedin",
+        "theme": "thought leadership",
+        "format": "post"
+      },
+      {
+        "title": "Product highlights",
+        "description": "Showcase product features and benefits",
+        "platform": "twitter",
+        "theme": "product",
+        "format": "thread"
+      }
+    ]
+  },
+  "assessment": {
+    "successes": [
+      "✅ Found 5 social links",
+      "✅ Extracted 8 posts",
+      "✅ Profile bio extracted (174 chars)"
+    ],
+    "issues": []
+  }
+}

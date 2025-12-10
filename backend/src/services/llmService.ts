@@ -6,7 +6,7 @@
  * FALLBACK: DeepSeek R1 - ~$0.02/scan (great reasoning, cheap)
  */
 
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 dotenv.config();
 
 // API Keys

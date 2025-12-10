@@ -1,7 +1,7 @@
 import { chromium, Browser } from 'playwright';
 import { storage } from './storage';
 import { generateJSON, generateText, isLLMConfigured, getActiveProvider, ScanTier } from './llmService';
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 
 /**
  * Launch chromium with fallback to system chromium if Playwright browsers aren't available
@@ -373,10 +373,17 @@ export async function startScan(
             
             // CRITICAL: ALWAYS run LLM extraction - it's the most reliable method
             // LLM can find social links even when they're in JavaScript, images, or mentioned in text
-            if (websiteContent.text && websiteContent.text.length > 50) {
-              try {
-                addLog(scanId, `[DISCOVERY] Running LLM extraction (PRIMARY METHOD) on ${websiteContent.text.length} chars of content...`);
-                const llmExtracted = await extractSocialLinksWithLLM(websiteContent.text, websiteUrl, scanId);
+            // Use HTML directly if text is empty - LLM can extract from HTML
+            try {
+              // Prioritize text if available and meaningful, otherwise use HTML
+              const textContent = websiteContent.text && websiteContent.text.length > 50 ? websiteContent.text : null;
+              const htmlContent = websiteContent.html && websiteContent.html.length > 50 ? websiteContent.html.substring(0, 10000) : null;
+              const contentForLLM = textContent || htmlContent;
+              
+              if (contentForLLM && contentForLLM.length > 50) {
+                const contentType = textContent ? 'text' : 'HTML';
+                addLog(scanId, `[DISCOVERY] Running LLM extraction (PRIMARY METHOD) on ${contentForLLM.length} chars of ${contentType}...`);
+                const llmExtracted = await extractSocialLinksWithLLM(contentForLLM, websiteUrl, scanId);
                 if (Object.keys(llmExtracted).length > 0) {
                   // LLM results take absolute priority - they're the most accurate
                   discoveredSocialLinks = { ...llmExtracted, ...discoveredSocialLinks };
@@ -384,30 +391,27 @@ export async function startScan(
                 } else {
                   addLog(scanId, `[DISCOVERY] LLM found no social links (may not exist on this website)`);
                 }
-              } catch (llmError: any) {
-                addLog(scanId, `[DISCOVERY] ⚠️ LLM extraction failed: ${llmError.message}, using HTML results only`);
+              } else {
+                addLog(scanId, `[DISCOVERY] ⚠️ Not enough content for LLM extraction (text: ${websiteContent.text?.length || 0} chars, HTML: ${websiteContent.html?.length || 0} chars)`);
               }
-            } else {
-              // Even with minimal text, try LLM - it might still find something
-              try {
-                addLog(scanId, `[DISCOVERY] Running LLM extraction on minimal content (${websiteContent.text?.length || 0} chars)...`);
-                const contentForLLM = websiteContent.text || (websiteContent.html ? websiteContent.html.substring(0, 5000) : '');
-                if (contentForLLM) {
-                  const llmExtracted = await extractSocialLinksWithLLM(contentForLLM, websiteUrl, scanId);
-                  if (Object.keys(llmExtracted).length > 0) {
-                    discoveredSocialLinks = { ...llmExtracted, ...discoveredSocialLinks };
-                    addLog(scanId, `[DISCOVERY] ✅ LLM found ${Object.keys(llmExtracted).length} social profiles from minimal content`);
-                  }
-                }
-              } catch (llmError: any) {
-                addLog(scanId, `[DISCOVERY] LLM extraction failed on minimal content: ${llmError.message}`);
+            } catch (llmError: any) {
+              addLog(scanId, `[DISCOVERY] ⚠️ LLM extraction failed: ${llmError.message}, using HTML results only`);
+            }
+            
+            // If LLM found no links, try regex as fallback
+            if (Object.keys(discoveredSocialLinks).length === 0 && websiteContent.html && websiteContent.html.length > 100) {
+              addLog(scanId, `[DISCOVERY] LLM found no links - trying regex fallback extraction...`);
+              const regexLinks = extractSocialLinksFromHTMLDirect(websiteContent.html, websiteUrl, scanId);
+              if (Object.keys(regexLinks).length > 0) {
+                discoveredSocialLinks = { ...discoveredSocialLinks, ...regexLinks };
+                addLog(scanId, `[DISCOVERY] ✅ Regex fallback found ${Object.keys(regexLinks).length} social profiles: ${Object.keys(regexLinks).join(', ')}`);
               }
             }
             
             if (Object.keys(discoveredSocialLinks).length > 0) {
               addLog(scanId, `[DISCOVERY] ✅ TOTAL: Found ${Object.keys(discoveredSocialLinks).length} social profiles from website: ${Object.keys(discoveredSocialLinks).join(', ')}`);
             } else {
-              addLog(scanId, `[DISCOVERY] ℹ️ No social links found on website via HTML/LLM - will try constructed URLs for each platform independently`);
+              addLog(scanId, `[DISCOVERY] ℹ️ No social links found on website via HTML/LLM/Regex - will try constructed URLs for each platform independently`);
             }
           } else {
             addLog(scanId, `[DISCOVERY] Website scraping returned minimal content (${websiteContent.html?.length || 0} chars HTML) - will still attempt to find social links`);
@@ -419,14 +423,19 @@ export async function startScan(
                 addLog(scanId, `[DISCOVERY] Found ${Object.keys(htmlLinks).length} social profiles despite minimal content`);
               }
               
-              // ALWAYS try LLM even with minimal content
-              const contentForLLM = websiteContent.text || websiteContent.html.substring(0, 5000);
-              if (contentForLLM.length > 50 && websiteUrl) {
+              // ALWAYS try LLM even with minimal content - use HTML if text is empty
+              const textContent = websiteContent.text && websiteContent.text.length > 50 ? websiteContent.text : null;
+              const htmlContent = websiteContent.html && websiteContent.html.length > 50 ? websiteContent.html.substring(0, 10000) : null;
+              const contentForLLM = textContent || htmlContent;
+              
+              if (contentForLLM && contentForLLM.length > 50 && websiteUrl) {
                 try {
+                  const contentType = textContent ? 'text' : 'HTML';
+                  addLog(scanId, `[DISCOVERY] Running LLM extraction on ${contentForLLM.length} chars of ${contentType}...`);
                   const llmExtracted = await extractSocialLinksWithLLM(contentForLLM, websiteUrl, scanId);
                   if (Object.keys(llmExtracted).length > 0) {
                     discoveredSocialLinks = { ...llmExtracted, ...discoveredSocialLinks };
-                    addLog(scanId, `[DISCOVERY] ✅ LLM found ${Object.keys(llmExtracted).length} social profiles from minimal content`);
+                    addLog(scanId, `[DISCOVERY] ✅ LLM found ${Object.keys(llmExtracted).length} social profiles from ${contentType}`);
                   }
                 } catch (llmError: any) {
                   addLog(scanId, `[DISCOVERY] LLM extraction failed: ${llmError.message}`);
@@ -439,6 +448,7 @@ export async function startScan(
         addLog(scanId, `[DISCOVERY] Website scraping failed, but will try constructed URLs for each platform independently`);
         // Don't skip all platforms - try constructed URLs instead
       }
+    }
     }
     
     // STEP 2: Scrape all platforms, using discovered links when available
@@ -977,32 +987,66 @@ export async function startScan(
     let contentIdeas: any[] = [];
     try {
       const { generateJSON } = await import('./llmService');
-      const contentPrompt = `Based on this brand's content and DNA, generate 5-8 specific, actionable content ideas that align with their voice and themes.
+      
+      // Extract industry/niche context for better tailoring
+      const allPosts = (validatedContent.posts || []).map((p: any) => p.content).join('\n\n');
+      const bio = validatedContent.profile?.bio || '';
+      const themes = (validatedContent.content_themes || []).join(', ');
+      const nicheIndicators = extractNicheIndicators(allPosts.substring(0, 10000), bio, themes, brandDNA);
+      
+      // Extract brand name from username
+      const brandName = username?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || username || 'this brand';
+      
+      const contentPrompt = `You are a content strategist for ${brandName}. Generate 5-8 SPECIFIC, BRAND-SPECIFIC content ideas that are UNIQUE to this brand and cannot be applied to other brands in different industries.
+
+CRITICAL REQUIREMENTS:
+- Each idea MUST reference specific brand elements (products, services, themes, or industry-specific concepts)
+- Each idea MUST align with their exact industry/niche
+- NO generic ideas like "behind-the-scenes content" or "educational content" without brand context
+- Ideas must be actionable and specific to their audience
+- Each idea should be so specific that it would NOT work for a different brand in a different industry
+
+Brand Name: ${brandName}
+Industry/Niche: ${nicheIndicators || 'Based on content analysis'}
 
 Brand DNA:
 ${JSON.stringify(brandDNA, null, 2)}
 
-Content Themes: ${validatedContent.content_themes.join(', ')}
+Content Themes: ${themes || 'None identified'}
 
 Recent Posts Sample:
-${validatedContent.posts.slice(0, 5).map((p: any) => p.content).join('\n\n')}
+${validatedContent.posts.slice(0, 5).map((p: any) => p.content).join('\n\n') || 'No posts available'}
+
+Profile Bio:
+${bio || 'No bio available'}
 
 Generate content ideas that:
-1. Match their voice and tone
-2. Align with their content themes
-3. Are specific and actionable (not generic)
-4. Would resonate with their audience
+1. Are SPECIFIC to ${brandName} (e.g., "Nike Athlete Story: [Athlete Name]" NOT "Behind-the-scenes")
+2. Reference their actual products/services/themes/industry
+3. Match their voice and tone EXACTLY
+4. Are actionable and tailored to their audience
+5. Cannot be applied to other brands in different industries
+
+EXAMPLES OF GOOD IDEAS (brand-specific):
+- For Airbnb: "Host Story Spotlight: Unique Property in Tokyo" (NOT "Behind-the-scenes content")
+- For Nike: "Just Do It: Athlete Journey Series - [Athlete Name]" (NOT "Product highlights")
+- For Surge: "Builder Success Story: How [Project] Launched on Surge" (NOT "Educational content")
+
+EXAMPLES OF BAD IDEAS (too generic):
+- "Behind-the-scenes content" (too generic - could be any brand)
+- "Educational content" (too generic - needs brand context)
+- "User-generated content" (too generic - needs brand-specific angle)
 
 Return JSON array of content ideas, each with:
 {
-  "title": "Specific content idea title",
-  "description": "Detailed description of the content",
+  "title": "Specific, brand-tailored content idea (e.g., 'Host Story: Unique Airbnb Property in Tokyo')",
+  "description": "Detailed description referencing specific brand elements, products, services, or themes",
   "platform": "twitter|instagram|linkedin|youtube",
   "theme": "Which content theme this aligns with",
   "format": "post|video|carousel|thread"
 }`;
 
-      const contentIdeasResult = await generateJSON<any>(contentPrompt, 'You are a content strategist. Generate specific, actionable content ideas that match the brand voice.', { tier: scanTier });
+      const contentIdeasResult = await generateJSON<any>(contentPrompt, `You are a content strategist specializing in ${nicheIndicators || 'brand-specific content'}. Generate specific, actionable content ideas that are UNIQUE to this brand and reference their actual products, services, or themes. NEVER generate generic ideas that could apply to any brand.`, { tier: scanTier });
       
       if (Array.isArray(contentIdeasResult)) {
         contentIdeas = contentIdeasResult;
@@ -1012,29 +1056,65 @@ Return JSON array of content ideas, each with:
         contentIdeas = [];
       }
       
-      // Ensure we have at least 5 content ideas
+      // Validate and filter out generic ideas
+      const genericKeywords = ['behind-the-scenes', 'educational content', 'user-generated content', 'industry insights', 'product highlights'];
+      contentIdeas = contentIdeas.filter((idea: any) => {
+        if (!idea.title || !idea.description) return false;
+        const titleLower = idea.title.toLowerCase();
+        const descLower = idea.description.toLowerCase();
+        // Reject if title is too generic without brand context
+        const isGeneric = genericKeywords.some(keyword => 
+          titleLower.includes(keyword) && !descLower.includes(brandName.toLowerCase()) && 
+          !descLower.includes(themes.toLowerCase().split(',')[0]?.toLowerCase() || '')
+        );
+        return !isGeneric;
+      });
+      
+      // If we have fewer than 5 after filtering, retry with stronger prompt
       if (contentIdeas.length < 5) {
-        addLog(scanId, `[WARNING] Only ${contentIdeas.length} content ideas generated - adding fallback ideas`);
-        const fallbackIdeas = [
-          { title: 'Behind-the-scenes content', description: 'Share behind-the-scenes moments that showcase brand values', platform: 'instagram', theme: validatedContent.content_themes[0] || 'brand values', format: 'carousel' },
-          { title: 'Educational content', description: 'Create educational posts that provide value to your audience', platform: 'linkedin', theme: validatedContent.content_themes[0] || 'industry insights', format: 'post' },
-          { title: 'User-generated content', description: 'Feature customer stories and testimonials', platform: 'instagram', theme: 'community', format: 'carousel' },
-          { title: 'Industry insights', description: 'Share thought leadership on industry trends', platform: 'linkedin', theme: 'thought leadership', format: 'post' },
-          { title: 'Product highlights', description: 'Showcase product features and benefits', platform: 'twitter', theme: 'product', format: 'thread' }
-        ];
-        contentIdeas = [...contentIdeas, ...fallbackIdeas].slice(0, 8);
+        addLog(scanId, `[WARNING] Only ${contentIdeas.length} brand-specific content ideas after filtering - retrying with stronger prompt`);
+        try {
+          const retryPrompt = `${contentPrompt}\n\nIMPORTANT: The previous attempt generated too many generic ideas. Generate ideas that are SPECIFIC to ${brandName} in the ${nicheIndicators || 'their industry'} space. Each idea must reference their actual products, services, themes, or industry-specific concepts.`;
+          const retryResult = await generateJSON<any>(retryPrompt, `You are a content strategist. Generate ONLY brand-specific content ideas for ${brandName}. Reject any generic ideas.`, { tier: scanTier });
+          
+          if (Array.isArray(retryResult)) {
+            const retryIdeas = retryResult.filter((idea: any) => {
+              if (!idea.title || !idea.description) return false;
+              const titleLower = idea.title.toLowerCase();
+              const descLower = idea.description.toLowerCase();
+              const isGeneric = genericKeywords.some(keyword => 
+                titleLower.includes(keyword) && !descLower.includes(brandName.toLowerCase())
+              );
+              return !isGeneric;
+            });
+            if (retryIdeas.length >= 5) {
+              contentIdeas = retryIdeas.slice(0, 8);
+              addLog(scanId, `[SUCCESS] Retry successful - ${contentIdeas.length} brand-specific ideas generated`);
+            }
+          }
+        } catch (retryError: any) {
+          addLog(scanId, `[WARNING] Retry failed: ${retryError.message}`);
+        }
       }
       
-      addLog(scanId, `[SUCCESS] Generated ${contentIdeas.length} content ideas`);
+      // If still insufficient, generate industry-specific fallback (not generic)
+      if (contentIdeas.length < 5) {
+        addLog(scanId, `[WARNING] Only ${contentIdeas.length} brand-specific content ideas - generating industry-specific fallback`);
+        const primaryTheme = validatedContent.content_themes[0] || 'brand content';
+        const industryFallback = generateIndustrySpecificFallback(brandName, nicheIndicators, primaryTheme, brandDNA);
+        contentIdeas = [...contentIdeas, ...industryFallback].slice(0, 8);
+      }
+      
+      addLog(scanId, `[SUCCESS] Generated ${contentIdeas.length} brand-specific content ideas`);
     } catch (error: any) {
-      addLog(scanId, `[WARNING] Content ideas generation failed: ${error.message} - using fallback`);
-      contentIdeas = [
-        { title: 'Behind-the-scenes content', description: 'Share behind-the-scenes moments that showcase brand values', platform: 'instagram', theme: validatedContent.content_themes[0] || 'brand values', format: 'carousel' },
-        { title: 'Educational content', description: 'Create educational posts that provide value to your audience', platform: 'linkedin', theme: validatedContent.content_themes[0] || 'industry insights', format: 'post' },
-        { title: 'User-generated content', description: 'Feature customer stories and testimonials', platform: 'instagram', theme: 'community', format: 'carousel' },
-        { title: 'Industry insights', description: 'Share thought leadership on industry trends', platform: 'linkedin', theme: 'thought leadership', format: 'post' },
-        { title: 'Product highlights', description: 'Showcase product features and benefits', platform: 'twitter', theme: 'product', format: 'thread' }
-      ];
+      addLog(scanId, `[WARNING] Content ideas generation failed: ${error.message} - generating industry-specific fallback`);
+      const primaryTheme = validatedContent.content_themes[0] || 'brand content';
+      const brandName = username?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || username || 'this brand';
+      const allPosts = (validatedContent.posts || []).map((p: any) => p.content).join('\n\n');
+      const bio = validatedContent.profile?.bio || '';
+      const themes = (validatedContent.content_themes || []).join(', ');
+      const nicheIndicators = extractNicheIndicators(allPosts.substring(0, 10000), bio, themes, brandDNA);
+      contentIdeas = generateIndustrySpecificFallback(brandName, nicheIndicators, primaryTheme, brandDNA);
     }
 
     const results = {
@@ -1060,7 +1140,6 @@ Return JSON array of content ideas, each with:
     addLog(scanId, `[METRICS] Content Posts: ${validatedContent.posts.length}`);
     addLog(scanId, `[METRICS] Content Themes: ${validatedContent.content_themes.length}`);
     addLog(scanId, `[METRICS] Extraction Confidence: ${Math.round(validatedContent.extraction_confidence * 100)}%`);
-
   } catch (error: any) {
     console.error(`Scan ${scanId} failed:`, error);
     addLog(scanId, `[ERROR] Scan failed: ${error.message}`);
@@ -1362,7 +1441,7 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
       });
       
       // Combine all link sources
-      const allLinkElements = [...new Set([...links, ...footerLinks, ...headerLinks, ...socialIconLinks])];
+      const allLinkElements = Array.from(new Set([...links, ...footerLinks, ...headerLinks, ...socialIconLinks]));
       
       return {
         links: [
@@ -1609,12 +1688,15 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
       await browser.close(); // Close browser before LLM call
       
       // Use pageText if available, otherwise use HTML (LLM can extract from HTML too)
-      const contentForLLM = pageText && pageText.length > 100 ? pageText : rawHtml?.substring(0, 10000) || '';
-      const urlForLLM = websiteUrl || 'unknown';
+      const contentForLLM = pageText && pageText.length > 100 ? pageText : (rawHtml ? rawHtml.substring(0, 10000) : '');
+      const urlForLLM = (websiteUrl || 'unknown') as string;
       
-      if (contentForLLM.length > 50 && urlForLLM) {
-        addLog(scanId, `[DISCOVERY] Running LLM extraction (PRIMARY METHOD) on ${contentForLLM.length} chars...`);
-        const llmExtracted = await extractSocialLinksWithLLM(contentForLLM, urlForLLM, scanId);
+      if (contentForLLM.length > 50 && urlForLLM !== 'unknown') {
+        if (scanId) {
+          addLog(scanId, `[DISCOVERY] Running LLM extraction (PRIMARY METHOD) on ${contentForLLM.length} chars...`);
+        }
+        const safeUrl: string = urlForLLM === 'unknown' ? '' : urlForLLM;
+        const llmExtracted = await extractSocialLinksWithLLM(contentForLLM, safeUrl, scanId);
         // LLM results take absolute priority - they're the most accurate
         if (Object.keys(llmExtracted).length > 0) {
           socialLinks = { ...llmExtracted, ...socialLinks };
@@ -1665,51 +1747,120 @@ function extractSocialLinksFromHTMLDirect(html: string, websiteUrl: string, scan
   
   try {
     // Comprehensive regex patterns for social media URLs in HTML
-    const regexPatterns: Record<string, RegExp> = {
-      twitter: /(?:https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+))/gi,
-      instagram: /(?:https?:\/\/(?:www\.)?instagram\.com\/([a-zA-Z0-9_.]+))/gi,
-      youtube: /(?:https?:\/\/(?:www\.)?youtube\.com\/(?:channel\/|user\/|@|c\/)?([a-zA-Z0-9_-]+))/gi,
-      linkedin: /(?:https?:\/\/(?:www\.)?linkedin\.com\/(?:in|company)\/([a-zA-Z0-9-]+))/gi,
-      tiktok: /(?:https?:\/\/(?:www\.)?tiktok\.com\/@([a-zA-Z0-9_.]+))/gi,
-      facebook: /(?:https?:\/\/(?:www\.)?facebook\.com\/([a-zA-Z0-9_.]+))/gi,
-      pinterest: /(?:https?:\/\/(?:www\.)?pinterest\.com\/([a-zA-Z0-9_]+))/gi,
-      github: /(?:https?:\/\/(?:www\.)?github\.com\/([a-zA-Z0-9_-]+))/gi,
+    // Look for URLs in href attributes, src attributes, and plain text
+    const regexPatterns: Record<string, RegExp[]> = {
+      twitter: [
+        /(?:https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+))/gi,
+        /href=["'](?:https?:\/\/)?(?:www\.)?(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)/gi,
+        /(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)/gi,
+      ],
+      instagram: [
+        /(?:https?:\/\/(?:www\.)?instagram\.com\/([a-zA-Z0-9_.]+))/gi,
+        /href=["'](?:https?:\/\/)?(?:www\.)?instagram\.com\/([a-zA-Z0-9_.]+)/gi,
+        /instagram\.com\/([a-zA-Z0-9_.]+)/gi,
+      ],
+      youtube: [
+        /(?:https?:\/\/(?:www\.)?youtube\.com\/(?:channel\/|user\/|@|c\/)?([a-zA-Z0-9_-]+))/gi,
+        /href=["'](?:https?:\/\/)?(?:www\.)?youtube\.com\/(?:channel\/|user\/|@|c\/)?([a-zA-Z0-9_-]+)/gi,
+        /youtube\.com\/(?:channel\/|user\/|@|c\/)?([a-zA-Z0-9_-]+)/gi,
+      ],
+      linkedin: [
+        /(?:https?:\/\/(?:www\.)?linkedin\.com\/(?:in|company)\/([a-zA-Z0-9-]+))/gi,
+        /href=["'](?:https?:\/\/)?(?:www\.)?linkedin\.com\/(?:in|company)\/([a-zA-Z0-9-]+)/gi,
+        /linkedin\.com\/(?:in|company)\/([a-zA-Z0-9-]+)/gi,
+      ],
+      tiktok: [
+        /(?:https?:\/\/(?:www\.)?tiktok\.com\/@([a-zA-Z0-9_.]+))/gi,
+        /href=["'](?:https?:\/\/)?(?:www\.)?tiktok\.com\/@([a-zA-Z0-9_.]+)/gi,
+        /tiktok\.com\/@([a-zA-Z0-9_.]+)/gi,
+      ],
+      facebook: [
+        /(?:https?:\/\/(?:www\.)?facebook\.com\/([a-zA-Z0-9_.]+))/gi,
+        /href=["'](?:https?:\/\/)?(?:www\.)?facebook\.com\/([a-zA-Z0-9_.]+)/gi,
+        /facebook\.com\/([a-zA-Z0-9_.]+)/gi,
+      ],
+      pinterest: [
+        /(?:https?:\/\/(?:www\.)?pinterest\.com\/([a-zA-Z0-9_]+))/gi,
+        /href=["'](?:https?:\/\/)?(?:www\.)?pinterest\.com\/([a-zA-Z0-9_]+)/gi,
+        /pinterest\.com\/([a-zA-Z0-9_]+)/gi,
+      ],
+      github: [
+        /(?:https?:\/\/(?:www\.)?github\.com\/([a-zA-Z0-9_-]+))/gi,
+        /href=["'](?:https?:\/\/)?(?:www\.)?github\.com\/([a-zA-Z0-9_-]+)/gi,
+        /github\.com\/([a-zA-Z0-9_-]+)/gi,
+      ],
     };
     
-    for (const [platform, pattern] of Object.entries(regexPatterns)) {
-      const matches = [...html.matchAll(pattern)];
-      if (matches.length > 0) {
-        // Get first unique match
-        const firstMatch = matches[0];
-        const username = firstMatch[1];
-        let fullUrl = firstMatch[0];
-        
-        // Normalize URLs
-        if (platform === 'twitter' && fullUrl.includes('x.com')) {
-          fullUrl = `https://x.com/${username}`;
-        } else if (platform === 'twitter') {
-          fullUrl = `https://twitter.com/${username}`;
-        } else if (platform === 'instagram') {
-          fullUrl = `https://instagram.com/${username}`;
-        } else if (platform === 'youtube') {
-          if (fullUrl.includes('/channel/') || fullUrl.includes('/user/') || fullUrl.includes('/c/')) {
-            fullUrl = fullUrl; // Keep original format
-          } else {
-            fullUrl = `https://youtube.com/@${username}`;
+    for (const [platform, patterns] of Object.entries(regexPatterns)) {
+      // Skip if we already found this platform
+      if (socialLinks[platform]) continue;
+      
+      // Try each pattern for this platform
+      for (const pattern of patterns) {
+        const matches = Array.from(html.matchAll(pattern));
+        if (matches.length > 0) {
+          // Get first unique match
+          const firstMatch = matches[0];
+          let username = firstMatch[1];
+          
+          // If no capture group, extract from full match
+          if (!username) {
+            const urlPart = firstMatch[0];
+            if (urlPart.includes('href=')) {
+              // Extract from href attribute
+              const hrefMatch = urlPart.match(/href=["']([^"']+)/);
+              if (hrefMatch) {
+                const hrefUrl = hrefMatch[1];
+                const parts = hrefUrl.split('/');
+                username = parts[parts.length - 1]?.replace(/[^a-zA-Z0-9_.-]/g, '') || parts[parts.length - 2]?.replace(/[^a-zA-Z0-9_.-]/g, '');
+              }
+            } else {
+              const parts = urlPart.split('/');
+              username = parts[parts.length - 1]?.replace(/[^a-zA-Z0-9_.-]/g, '') || parts[parts.length - 2]?.replace(/[^a-zA-Z0-9_.-]/g, '');
+            }
           }
-        } else if (platform === 'linkedin') {
-          fullUrl = fullUrl.includes('/company/') 
-            ? `https://linkedin.com/company/${username}`
-            : `https://linkedin.com/in/${username}`;
-        } else if (platform === 'tiktok') {
-          fullUrl = `https://tiktok.com/@${username}`;
-        } else if (!fullUrl.startsWith('http')) {
-          fullUrl = `https://${fullUrl}`;
-        }
-        
-        socialLinks[platform] = fullUrl;
-        if (scanId) {
-          addLog(scanId, `[EXTRACT] Regex found ${platform}: ${fullUrl}`);
+          
+          if (!username) continue;
+          
+          // Normalize username (remove @, query params, etc.)
+          username = username.replace(/^@/, '').split('?')[0].split('#')[0].trim();
+          
+          // Construct full URL
+          let fullUrl: string;
+          if (platform === 'twitter') {
+            fullUrl = firstMatch[0].includes('x.com') ? `https://x.com/${username}` : `https://twitter.com/${username}`;
+          } else if (platform === 'instagram') {
+            fullUrl = `https://instagram.com/${username}`;
+          } else if (platform === 'youtube') {
+            if (firstMatch[0].includes('/channel/') || firstMatch[0].includes('/user/') || firstMatch[0].includes('/c/')) {
+              fullUrl = firstMatch[0].startsWith('http') ? firstMatch[0] : `https://${firstMatch[0]}`;
+            } else {
+              fullUrl = `https://youtube.com/@${username}`;
+            }
+          } else if (platform === 'linkedin') {
+            fullUrl = firstMatch[0].includes('/company/') 
+              ? `https://linkedin.com/company/${username}`
+              : `https://linkedin.com/in/${username}`;
+          } else if (platform === 'tiktok') {
+            fullUrl = `https://tiktok.com/@${username}`;
+          } else if (platform === 'facebook') {
+            fullUrl = `https://facebook.com/${username}`;
+          } else if (platform === 'pinterest') {
+            fullUrl = `https://pinterest.com/${username}`;
+          } else if (platform === 'github') {
+            fullUrl = `https://github.com/${username}`;
+          } else {
+            fullUrl = firstMatch[0].startsWith('http') ? firstMatch[0] : `https://${firstMatch[0]}`;
+          }
+          
+          // Clean up URL
+          fullUrl = fullUrl.split('?')[0].split('#')[0];
+          
+          socialLinks[platform] = fullUrl;
+          if (scanId) {
+            addLog(scanId, `[EXTRACT] Regex found ${platform}: ${fullUrl}`);
+          }
+          break; // Found this platform, move to next
         }
       }
     }
@@ -1737,37 +1888,43 @@ async function extractSocialLinksWithLLM(textContent: string, websiteUrl: string
     // Use more content for better accuracy (up to 10000 chars)
     const contentToAnalyze = textContent.length > 10000 ? textContent.substring(0, 10000) : textContent;
     
-    const prompt = `You are an expert at finding social media profile links on websites. Your job is to find ALL social media links, even if they're:
-- In JavaScript-rendered content
-- Mentioned in text without full URLs
-- In image alt text or metadata
-- In footer/header sections
-- In any format (full URLs, partial URLs, @handles, etc.)
+    const isHTML = contentToAnalyze.includes('<') && contentToAnalyze.includes('>');
+    const contentType = isHTML ? 'HTML' : 'text';
+    
+    const prompt = `You are an expert at finding social media profile links on websites. Your job is to find ALL social media links from the ${contentType} content provided.
+
+${isHTML ? 'This is HTML content. Parse through all HTML tags, attributes (href, src, data-*), and text content to find social media links.' : 'This is plain text content. Look for mentions, URLs, and references to social media.'}
 
 Website URL: ${websiteUrl}
 
-Website Content:
+${isHTML ? 'HTML Content (first 10,000 chars):' : 'Website Content:'}
 ${contentToAnalyze}
 
-Find ALL social media profile links. Look for:
-- Twitter/X: twitter.com/username, x.com/username, @username mentions
-- Instagram: instagram.com/username, @username mentions
-- YouTube: youtube.com/@channel, youtube.com/channel/ID, youtube.com/user/ID, @channel mentions
-- LinkedIn: linkedin.com/in/username, linkedin.com/company/companyname
-- TikTok: tiktok.com/@username, @username mentions
-- Facebook: facebook.com/username, fb.com/username
-- Pinterest: pinterest.com/username
-- GitHub: github.com/username
-- Any other social platforms you find
+CRITICAL: Find ALL social media profile links. Look for:
+- Twitter/X: twitter.com/username, x.com/username, @username mentions, href="https://twitter.com/..."
+- Instagram: instagram.com/username, @username mentions, href="https://instagram.com/..."
+- YouTube: youtube.com/@channel, youtube.com/channel/ID, youtube.com/user/ID, @channel mentions, href="https://youtube.com/..."
+- LinkedIn: linkedin.com/in/username, linkedin.com/company/companyname, href="https://linkedin.com/..."
+- TikTok: tiktok.com/@username, @username mentions, href="https://tiktok.com/..."
+- Facebook: facebook.com/username, fb.com/username, href="https://facebook.com/..."
+- Pinterest: pinterest.com/username, href="https://pinterest.com/..."
+- GitHub: github.com/username, href="https://github.com/..."
 
-Be thorough - check every mention, every link, every reference. If you see "Follow us on Twitter @example" or "Check our Instagram: example", extract those too.
+${isHTML ? 'In HTML, check: <a href="..."> tags, <link> tags, data attributes, JavaScript variables, and any text content.' : 'In text, check: URLs, @mentions, "Follow us on..." statements, and any references.'}
 
-Return ONLY a JSON object with this exact structure:
+Be EXTREMELY thorough - check every link, every mention, every reference. For airbnb.com specifically, you should find:
+- Twitter: @Airbnb or twitter.com/Airbnb
+- Instagram: @airbnb or instagram.com/airbnb
+- LinkedIn: linkedin.com/company/airbnb
+- Facebook: facebook.com/airbnb
+- YouTube: youtube.com/@airbnb or similar
+
+Return ONLY a JSON object with this exact structure (only include platforms you found):
 {
-  "twitter": "https://twitter.com/username or https://x.com/username",
+  "twitter": "https://twitter.com/username",
   "instagram": "https://instagram.com/username",
   "youtube": "https://youtube.com/@channel",
-  "linkedin": "https://linkedin.com/in/username or https://linkedin.com/company/companyname",
+  "linkedin": "https://linkedin.com/company/companyname",
   "tiktok": "https://tiktok.com/@username",
   "facebook": "https://facebook.com/username",
   "pinterest": "https://pinterest.com/username",
@@ -1776,10 +1933,11 @@ Return ONLY a JSON object with this exact structure:
 
 IMPORTANT:
 - Always return full URLs starting with https://
-- If you find a username/handle, construct the full URL
-- Only include platforms you actually found
+- If you find a username/handle, construct the full URL (e.g., @airbnb → https://instagram.com/airbnb)
+- Only include platforms you actually found (don't include empty values)
 - Be very thorough - don't miss any social links
-- Return ONLY valid JSON, no other text`;
+- Return ONLY valid JSON, no other text
+- If you find multiple links for the same platform, use the main/official one`;
 
     const systemPrompt = `You are an expert social media link extractor. You are extremely thorough and never miss social media links. 
 You can find links in any format: full URLs, partial URLs, @handles, mentions in text, etc.
@@ -1787,6 +1945,10 @@ Always return full URLs in the format: https://platform.com/username
 Return ONLY valid JSON with the structure specified in the prompt.`;
     
     const result = await generateJSON<Record<string, string>>(prompt, systemPrompt, { tier: 'basic' });
+    
+    if (scanId) {
+      addLog(scanId, `[LLM] LLM extraction result: ${JSON.stringify(result).substring(0, 200)}...`);
+    }
     
     if (result && typeof result === 'object') {
       // Validate and clean URLs
@@ -1827,12 +1989,24 @@ Return ONLY valid JSON with the structure specified in the prompt.`;
           }
         }
       }
+      
+      if (Object.keys(socialLinks).length === 0 && scanId) {
+        addLog(scanId, `[LLM] LLM returned result but no valid social links found: ${JSON.stringify(result).substring(0, 200)}`);
+      }
+    } else {
+      if (scanId) {
+        addLog(scanId, `[LLM] LLM returned null or undefined result`);
+      }
     }
   } catch (error: any) {
     console.error('LLM social link extraction error:', error);
     if (scanId) {
       addLog(scanId, `[LLM] Error: ${error.message}`);
     }
+  }
+  
+  if (scanId && Object.keys(socialLinks).length === 0) {
+    addLog(scanId, `[LLM] No social links extracted from LLM response`);
   }
   
   return socialLinks;
@@ -2521,6 +2695,7 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
             // Get main content areas from clone
             // @ts-ignore - document is available in browser context
             const mainContent = clone.querySelector('main, article, .content, #content, .main-content') || clone;
+            // @ts-ignore - innerText exists in browser context
             return mainContent.innerText || mainContent.textContent || '';
           });
           
@@ -3371,7 +3546,206 @@ function extractNicheIndicators(content: string, bio: string, themes: string, br
     indicators.push('Gaming');
   }
   
+  // Travel/Tourism indicators
+  if (lowerContent.includes('travel') || lowerContent.includes('tourism') || 
+      lowerContent.includes('hotel') || lowerContent.includes('accommodation') ||
+      lowerContent.includes('destination') || lowerContent.includes('experience') ||
+      lowerContent.includes('host') || lowerContent.includes('booking')) {
+    indicators.push('Travel/Tourism');
+  }
+  
+  // Athletic/Apparel indicators
+  if (lowerContent.includes('athletic') || lowerContent.includes('sportswear') ||
+      lowerContent.includes('sneaker') || lowerContent.includes('athlete') ||
+      lowerContent.includes('running') || lowerContent.includes('fitness') ||
+      lowerContent.includes('sport') || lowerContent.includes('apparel')) {
+    indicators.push('Athletic/Apparel');
+  }
+  
+  // DeFi/Web3 indicators
+  if (lowerContent.includes('defi') || lowerContent.includes('web3') ||
+      lowerContent.includes('crypto') || lowerContent.includes('blockchain') ||
+      lowerContent.includes('token') || lowerContent.includes('launchpad') ||
+      lowerContent.includes('nft') || lowerContent.includes('dao')) {
+    indicators.push('DeFi/Web3');
+  }
+  
   return indicators.join(', ') || 'General';
+}
+
+// Generate industry-specific fallback content ideas (not generic)
+function generateIndustrySpecificFallback(brandName: string, nicheIndicators: string, primaryTheme: string, brandDNA: any): any[] {
+  const lowerNiche = nicheIndicators.toLowerCase();
+  const lowerTheme = primaryTheme.toLowerCase();
+  const brandLower = brandName.toLowerCase();
+  
+  // Travel/Tourism industry
+  if (lowerNiche.includes('travel') || lowerNiche.includes('tourism') || 
+      lowerTheme.includes('travel') || lowerTheme.includes('experience') ||
+      lowerTheme.includes('destination') || lowerTheme.includes('host')) {
+    return [
+      { 
+        title: `${brandName} Host Story Spotlight`, 
+        description: `Feature unique hosts and their properties, showcasing what makes each ${brandName} listing special`, 
+        platform: 'instagram', 
+        theme: primaryTheme, 
+        format: 'carousel' 
+      },
+      { 
+        title: `Destination Experience Guide`, 
+        description: `Create "Don't just see [destination], experience it" style content highlighting unique local experiences`, 
+        platform: 'youtube', 
+        theme: primaryTheme, 
+        format: 'video' 
+      },
+      { 
+        title: `Local Immersion Tips`, 
+        description: `Share tips on how to experience destinations like a local through ${brandName}`, 
+        platform: 'twitter', 
+        theme: primaryTheme, 
+        format: 'thread' 
+      },
+      { 
+        title: `${brandName} Experiences Showcase`, 
+        description: `Highlight unique activities and experiences available through ${brandName}`, 
+        platform: 'instagram', 
+        theme: primaryTheme, 
+        format: 'carousel' 
+      },
+      { 
+        title: `Travel Community Stories`, 
+        description: `Share guest testimonials and memorable stays that showcase the ${brandName} community`, 
+        platform: 'instagram', 
+        theme: 'community', 
+        format: 'carousel' 
+      }
+    ];
+  }
+  
+  // Athletic/Apparel industry
+  if (lowerNiche.includes('athletic') || lowerNiche.includes('apparel') ||
+      lowerTheme.includes('athlete') || lowerTheme.includes('sport') ||
+      lowerTheme.includes('running') || lowerTheme.includes('fitness')) {
+    return [
+      { 
+        title: `${brandName} Athlete Story Series`, 
+        description: `Deep dives into ${brandName} athletes' journeys and achievements, aligned with brand values`, 
+        platform: 'youtube', 
+        theme: primaryTheme, 
+        format: 'video' 
+      },
+      { 
+        title: `Product Innovation Showcase`, 
+        description: `Behind-the-scenes content showcasing ${brandName}'s technology and innovation in athletic gear`, 
+        platform: 'instagram', 
+        theme: primaryTheme, 
+        format: 'carousel' 
+      },
+      { 
+        title: `Training Tips & Workouts`, 
+        description: `Athletic performance content featuring ${brandName} products and training methodologies`, 
+        platform: 'youtube', 
+        theme: primaryTheme, 
+        format: 'video' 
+      },
+      { 
+        title: `Inclusivity & Representation`, 
+        description: `Diverse athlete spotlights showcasing ${brandName}'s commitment to inclusivity`, 
+        platform: 'instagram', 
+        theme: primaryTheme, 
+        format: 'carousel' 
+      },
+      { 
+        title: `${brandName} Community Content`, 
+        description: `Feature ${brandName} community members and their athletic achievements`, 
+        platform: 'twitter', 
+        theme: 'community', 
+        format: 'thread' 
+      }
+    ];
+  }
+  
+  // DeFi/Web3 industry
+  if (lowerNiche.includes('defi') || lowerNiche.includes('web3') ||
+      lowerTheme.includes('token') || lowerTheme.includes('blockchain') ||
+      lowerTheme.includes('crypto') || lowerTheme.includes('launchpad')) {
+    return [
+      { 
+        title: `${brandName} Builder Success Stories`, 
+        description: `Showcase projects that successfully launched on ${brandName}, highlighting their journey`, 
+        platform: 'twitter', 
+        theme: primaryTheme, 
+        format: 'thread' 
+      },
+      { 
+        title: `${brandName} Platform Tutorials`, 
+        description: `Educational content showing how builders and investors use ${brandName}'s features`, 
+        platform: 'youtube', 
+        theme: primaryTheme, 
+        format: 'video' 
+      },
+      { 
+        title: `Web3 Investment Guides`, 
+        description: `Educational content on token launches and Web3 investment strategies through ${brandName}`, 
+        platform: 'linkedin', 
+        theme: primaryTheme, 
+        format: 'post' 
+      },
+      { 
+        title: `Protocol Deep Dives`, 
+        description: `Technical content explaining ${brandName}'s launch mechanisms and protocol features`, 
+        platform: 'twitter', 
+        theme: primaryTheme, 
+        format: 'thread' 
+      },
+      { 
+        title: `Partner Project Spotlights`, 
+        description: `Feature projects launching on ${brandName} and their unique value propositions`, 
+        platform: 'linkedin', 
+        theme: primaryTheme, 
+        format: 'post' 
+      }
+    ];
+  }
+  
+  // Generic fallback (but still theme-specific)
+  return [
+    { 
+      title: `${brandName} Success Stories`, 
+      description: `Feature success stories that showcase ${brandName}'s impact in ${primaryTheme}`, 
+      platform: 'instagram', 
+      theme: primaryTheme, 
+      format: 'carousel' 
+    },
+    { 
+      title: `${primaryTheme} Deep Dive`, 
+      description: `Create in-depth content exploring ${primaryTheme} from ${brandName}'s perspective`, 
+      platform: 'linkedin', 
+      theme: primaryTheme, 
+      format: 'post' 
+    },
+    { 
+      title: `${brandName} Community Highlights`, 
+      description: `Showcase community members and their experiences with ${brandName}`, 
+      platform: 'twitter', 
+      theme: 'community', 
+      format: 'thread' 
+    },
+    { 
+      title: `${primaryTheme} Best Practices`, 
+      description: `Share best practices and insights related to ${primaryTheme} from ${brandName}`, 
+      platform: 'linkedin', 
+      theme: primaryTheme, 
+      format: 'post' 
+    },
+    { 
+      title: `${brandName} Feature Showcase`, 
+      description: `Highlight ${brandName}'s key features and how they benefit users in ${primaryTheme}`, 
+      platform: 'twitter', 
+      theme: primaryTheme, 
+      format: 'thread' 
+    }
+  ];
 }
 
 async function generateCompetitorIntelligence(validatedContent: any, brandDNA: any, username?: string, scanTier: ScanTier = 'basic'): Promise<any> {

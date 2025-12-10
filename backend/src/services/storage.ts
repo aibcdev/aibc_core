@@ -80,7 +80,7 @@ class StorageService {
     cutoff.setDate(cutoff.getDate() - olderThanDays);
     
     let deleted = 0;
-    for (const [id, scan] of this.scans.entries()) {
+    for (const [id, scan] of Array.from(this.scans.entries())) {
       if (new Date(scan.createdAt) < cutoff) {
         this.scans.delete(id);
         // Remove from userScans

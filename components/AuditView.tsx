@@ -221,11 +221,31 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
         }).then(results => {
           if (results.success && results.data) {
             scanResults = results.data;
-            // Store complete scan results
-            localStorage.setItem('lastScanResults', JSON.stringify(results.data));
-            // Store username for dashboard loading
+            // Store complete scan results with username for validation
+            const scanResultsWithUsername = {
+              ...results.data,
+              scanUsername: scanUsername,
+              username: scanUsername,
+              lastUpdated: new Date().toISOString()
+            };
+            localStorage.setItem('lastScanResults', JSON.stringify(scanResultsWithUsername));
+            // Store username and scan ID for dashboard loading
             localStorage.setItem('lastScannedUsername', scanUsername);
+            if (scanId) {
+              localStorage.setItem('lastScanId', scanId);
+            }
             addLog(`[SUCCESS] Scan results stored for ${scanUsername}`);
+            
+            // Dispatch event to notify dashboard of new scan completion
+            const event = new CustomEvent('scanComplete', {
+              detail: {
+                username: scanUsername,
+                scanId: scanId,
+                results: scanResultsWithUsername
+              }
+            });
+            window.dispatchEvent(event);
+            console.log('📢 Dispatched scanComplete event for:', scanUsername);
           }
         }).catch(err => {
           console.error('Background poll error:', err);

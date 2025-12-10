@@ -30,6 +30,7 @@ export interface ScanResults {
     brandDNA: any;
     strategicInsights?: any[];
     competitorIntelligence?: any[];
+    contentIdeas?: any[];
     marketShare?: {
       percentage: number;
       industry: string;

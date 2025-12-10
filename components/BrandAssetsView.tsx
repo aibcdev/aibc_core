@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Upload, Palette, Type, Image as ImageIcon, FileText, Video, Music, X, Plus, Check, Globe, Trash2, Edit3, Link2, Sparkles, RefreshCw, Save, Clock, Megaphone, Target, Compass, Info, Lock, ChevronDown, Cloud, Bot } from 'lucide-react';
+import { getScanResults } from '../services/apiClient';
 
 interface BrandAsset {
   id: string;
@@ -30,11 +31,18 @@ const BrandAssetsView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'materials' | 'profile' | 'styles' | 'voice' | 'preferences' | 'agent'>('materials');
   const [preferencesCategory, setPreferencesCategory] = useState<'video' | 'image' | 'social' | 'blog' | 'general'>('video');
   
-  // Brand DNA State
-  const [brandDNA, setBrandDNA] = useState({
-    archetype: 'The Architect',
-    voiceTone: 'Systematic', // Systematic, Transparent, Dense
-    corePillars: ['Automated Content Scale', 'Forensic Brand Analysis', 'Enterprise Reliability']
+  // Brand DNA State - Load from scan results
+  const [brandDNA, setBrandDNA] = useState<{
+    archetype: string;
+    voiceTone: string;
+    corePillars: string[];
+    voice?: any;
+    loading: boolean;
+  }>({
+    archetype: '',
+    voiceTone: '',
+    corePillars: [],
+    loading: true
   });
   const [showAddContextModal, setShowAddContextModal] = useState(false);
   const [showAddColorModal, setShowAddColorModal] = useState(false);
@@ -47,6 +55,139 @@ const BrandAssetsView: React.FC = () => {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
+
+  // Load Brand DNA from scan results
+  useEffect(() => {
+    const loadBrandDNA = async () => {
+      try {
+        // Try to get scan ID from localStorage
+        const lastScanId = localStorage.getItem('lastScanId');
+        if (lastScanId) {
+          const results = await getScanResults(lastScanId);
+          if (results.success && results.data?.brandDNA) {
+            const dna = results.data.brandDNA;
+            
+            // Extract archetype
+            const archetype = dna.archetype || 'The Creator';
+            
+            // Extract voice tone from voice object
+            let voiceTone = 'Professional';
+            if (dna.voice) {
+              // Use the primary tone from voice.tones array or tone field
+              if (dna.voice.tones && dna.voice.tones.length > 0) {
+                voiceTone = dna.voice.tones[0];
+              } else if (dna.voice.tone) {
+                voiceTone = dna.voice.tone;
+              } else if (dna.voice.style) {
+                voiceTone = dna.voice.style;
+              }
+            }
+            
+            // Extract core pillars - make them actionable
+            let corePillars: string[] = [];
+            if (dna.corePillars && Array.isArray(dna.corePillars) && dna.corePillars.length > 0) {
+              corePillars = dna.corePillars.map((pillar: string) => {
+                // Make pillars actionable by adding action verbs
+                if (!pillar.toLowerCase().startsWith('drive') && 
+                    !pillar.toLowerCase().startsWith('build') &&
+                    !pillar.toLowerCase().startsWith('create') &&
+                    !pillar.toLowerCase().startsWith('empower') &&
+                    !pillar.toLowerCase().startsWith('champion') &&
+                    !pillar.toLowerCase().startsWith('enhance') &&
+                    !pillar.toLowerCase().startsWith('promote')) {
+                  // Add action verb based on pillar content
+                  if (pillar.toLowerCase().includes('innovation') || pillar.toLowerCase().includes('technology')) {
+                    return `Drive ${pillar}`;
+                  } else if (pillar.toLowerCase().includes('community') || pillar.toLowerCase().includes('audience')) {
+                    return `Build ${pillar}`;
+                  } else if (pillar.toLowerCase().includes('experience') || pillar.toLowerCase().includes('travel')) {
+                    return `Create ${pillar}`;
+                  } else if (pillar.toLowerCase().includes('inclusivity') || pillar.toLowerCase().includes('diversity')) {
+                    return `Champion ${pillar}`;
+                  } else {
+                    return `Strengthen ${pillar}`;
+                  }
+                }
+                return pillar;
+              });
+            } else if (dna.themes && Array.isArray(dna.themes) && dna.themes.length > 0) {
+              // Fallback to themes if corePillars not available
+              corePillars = dna.themes.slice(0, 5).map((theme: string) => {
+                if (!theme.toLowerCase().startsWith('drive') && 
+                    !theme.toLowerCase().startsWith('build') &&
+                    !theme.toLowerCase().startsWith('create')) {
+                  return `Focus on ${theme}`;
+                }
+                return theme;
+              });
+            }
+            
+            setBrandDNA({
+              archetype,
+              voiceTone,
+              corePillars: corePillars.length > 0 ? corePillars : ['Building brand presence', 'Engaging with audience', 'Creating valuable content'],
+              voice: dna.voice,
+              loading: false
+            });
+            return;
+          }
+        }
+        
+        // Fallback: Try to get from localStorage scan results
+        const scanResultsStr = localStorage.getItem('lastScanResults');
+        if (scanResultsStr) {
+          try {
+            const scanResults = JSON.parse(scanResultsStr);
+            if (scanResults.brandDNA) {
+              const dna = scanResults.brandDNA;
+              const archetype = dna.archetype || 'The Creator';
+              let voiceTone = 'Professional';
+              if (dna.voice?.tones?.[0]) {
+                voiceTone = dna.voice.tones[0];
+              } else if (dna.voice?.tone) {
+                voiceTone = dna.voice.tone;
+              }
+              const corePillars = dna.corePillars || dna.themes || ['Building brand presence', 'Engaging with audience', 'Creating valuable content'];
+              
+              setBrandDNA({
+                archetype,
+                voiceTone,
+                corePillars: corePillars.map((p: string) => {
+                  if (!p.toLowerCase().match(/^(drive|build|create|empower|champion|enhance|promote|strengthen|focus)/)) {
+                    return `Strengthen ${p}`;
+                  }
+                  return p;
+                }),
+                voice: dna.voice,
+                loading: false
+              });
+              return;
+            }
+          } catch (e) {
+            console.error('Error parsing scan results:', e);
+          }
+        }
+        
+        // No scan data available
+        setBrandDNA({
+          archetype: 'Not Scanned',
+          voiceTone: 'Unknown',
+          corePillars: ['Run a digital footprint scan to discover your Brand DNA'],
+          loading: false
+        });
+      } catch (error) {
+        console.error('Error loading Brand DNA:', error);
+        setBrandDNA({
+          archetype: 'Error Loading',
+          voiceTone: 'Unknown',
+          corePillars: ['Unable to load Brand DNA. Please run a scan.'],
+          loading: false
+        });
+      }
+    };
+    
+    loadBrandDNA();
+  }, []);
   
   // Form states
   const [newWebpage, setNewWebpage] = useState('');
@@ -125,6 +266,55 @@ const BrandAssetsView: React.FC = () => {
     }
   });
 
+  // Load materials and brand assets from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedMaterials = localStorage.getItem('brandMaterials');
+      if (savedMaterials) {
+        setMaterials(JSON.parse(savedMaterials));
+      }
+      const savedColors = localStorage.getItem('brandColors');
+      if (savedColors) {
+        setColors(JSON.parse(savedColors));
+      }
+      const savedFonts = localStorage.getItem('brandFonts');
+      if (savedFonts) {
+        setFonts(JSON.parse(savedFonts));
+      }
+      const savedProfile = localStorage.getItem('brandProfile');
+      if (savedProfile) {
+        setBrandProfile(JSON.parse(savedProfile));
+      }
+      const savedVoice = localStorage.getItem('brandVoice');
+      if (savedVoice) {
+        setVoiceSettings(JSON.parse(savedVoice));
+      }
+    } catch (e) {
+      console.error('Error loading brand assets:', e);
+    }
+  }, []);
+  
+  // Save materials to localStorage and notify Content Hub when materials change
+  useEffect(() => {
+    if (materials.length >= 0) {
+      localStorage.setItem('brandMaterials', JSON.stringify(materials));
+      localStorage.setItem('brandColors', JSON.stringify(colors));
+      localStorage.setItem('brandFonts', JSON.stringify(fonts));
+      // Dispatch event to notify Content Hub
+      const event = new CustomEvent('brandAssetsUpdated', {
+        detail: {
+          materials,
+          colors,
+          fonts,
+          voiceSettings,
+          brandProfile,
+          contentPreferences
+        }
+      });
+      window.dispatchEvent(event);
+    }
+  }, [materials, colors, fonts, voiceSettings, brandProfile, contentPreferences]);
+
   const getAssetIcon = (type: string) => {
     switch (type) {
       case 'logo': return <ImageIcon className="w-4 h-4 text-amber-400" />;
@@ -149,7 +339,21 @@ const BrandAssetsView: React.FC = () => {
         addedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         lastUpdated: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       };
-      setMaterials([...materials, newMaterial]);
+      const updatedMaterials = [...materials, newMaterial];
+      setMaterials(updatedMaterials);
+      localStorage.setItem('brandMaterials', JSON.stringify(updatedMaterials));
+      // Notify Content Hub immediately
+      const event = new CustomEvent('brandAssetsUpdated', {
+        detail: {
+          materials: updatedMaterials,
+          colors,
+          fonts,
+          voiceSettings,
+          brandProfile,
+          contentPreferences
+        }
+      });
+      window.dispatchEvent(event);
       setShowAddContextModal(false);
     }
   };
@@ -165,7 +369,21 @@ const BrandAssetsView: React.FC = () => {
         addedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         lastUpdated: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       };
-      setMaterials([...materials, newMaterial]);
+      const updatedMaterials = [...materials, newMaterial];
+      setMaterials(updatedMaterials);
+      localStorage.setItem('brandMaterials', JSON.stringify(updatedMaterials));
+      // Notify Content Hub immediately
+      const event = new CustomEvent('brandAssetsUpdated', {
+        detail: {
+          materials: updatedMaterials,
+          colors,
+          fonts,
+          voiceSettings,
+          brandProfile,
+          contentPreferences
+        }
+      });
+      window.dispatchEvent(event);
       setNewWebpage('');
       setShowWebpageModal(false);
       setShowAddContextModal(false);
@@ -183,7 +401,21 @@ const BrandAssetsView: React.FC = () => {
         addedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         lastUpdated: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       };
-      setMaterials([...materials, newMaterial]);
+      const updatedMaterials = [...materials, newMaterial];
+      setMaterials(updatedMaterials);
+      localStorage.setItem('brandMaterials', JSON.stringify(updatedMaterials));
+      // Notify Content Hub immediately
+      const event = new CustomEvent('brandAssetsUpdated', {
+        detail: {
+          materials: updatedMaterials,
+          colors,
+          fonts,
+          voiceSettings,
+          brandProfile,
+          contentPreferences
+        }
+      });
+      window.dispatchEvent(event);
       setNewText('');
       setShowTextModal(false);
       setShowAddContextModal(false);
@@ -191,12 +423,40 @@ const BrandAssetsView: React.FC = () => {
   };
 
   const handleDeleteMaterial = (id: string) => {
-    setMaterials(materials.filter(m => m.id !== id));
+    const updatedMaterials = materials.filter(m => m.id !== id);
+    setMaterials(updatedMaterials);
+    localStorage.setItem('brandMaterials', JSON.stringify(updatedMaterials));
+    // Notify Content Hub
+    const event = new CustomEvent('brandAssetsUpdated', {
+      detail: {
+        materials: updatedMaterials,
+        colors,
+        fonts,
+        voiceSettings,
+        brandProfile,
+        contentPreferences
+      }
+    });
+    window.dispatchEvent(event);
   };
 
   const handleAddColor = () => {
     if (newColor.name && newColor.hex) {
-      setColors([...colors, { ...newColor, id: Date.now().toString() }]);
+      const updatedColors = [...colors, { ...newColor, id: Date.now().toString() }];
+      setColors(updatedColors);
+      localStorage.setItem('brandColors', JSON.stringify(updatedColors));
+      // Notify Content Hub
+      const event = new CustomEvent('brandAssetsUpdated', {
+        detail: {
+          materials,
+          colors: updatedColors,
+          fonts,
+          voiceSettings,
+          brandProfile,
+          contentPreferences
+        }
+      });
+      window.dispatchEvent(event);
       setNewColor({ name: '', hex: '#10B981', usage: '' });
       setShowAddColorModal(false);
     }
@@ -208,7 +468,21 @@ const BrandAssetsView: React.FC = () => {
 
   const handleAddFont = () => {
     if (newFont.name) {
-      setFonts([...fonts, { ...newFont, id: Date.now().toString() }]);
+      const updatedFonts = [...fonts, { ...newFont, id: Date.now().toString() }];
+      setFonts(updatedFonts);
+      localStorage.setItem('brandFonts', JSON.stringify(updatedFonts));
+      // Notify Content Hub
+      const event = new CustomEvent('brandAssetsUpdated', {
+        detail: {
+          materials,
+          colors,
+          fonts: updatedFonts,
+          voiceSettings,
+          brandProfile,
+          contentPreferences
+        }
+      });
+      window.dispatchEvent(event);
       setNewFont({ name: '', style: 'Sans-serif', usage: '' });
       setShowAddFontModal(false);
     }
@@ -237,12 +511,36 @@ const BrandAssetsView: React.FC = () => {
 
   const handleSaveProfile = () => {
     localStorage.setItem('brandProfile', JSON.stringify(brandProfile));
-    alert('Brand profile saved!');
+    // Notify Content Hub
+    const event = new CustomEvent('brandAssetsUpdated', {
+      detail: {
+        materials,
+        colors,
+        fonts,
+        voiceSettings,
+        brandProfile,
+        contentPreferences
+      }
+    });
+    window.dispatchEvent(event);
+    alert('Brand profile saved! Content Hub will update with new context.');
   };
 
   const handleSaveVoice = () => {
     localStorage.setItem('brandVoice', JSON.stringify(voiceSettings));
-    alert('Brand voice settings saved!');
+    // Notify Content Hub
+    const event = new CustomEvent('brandAssetsUpdated', {
+      detail: {
+        materials,
+        colors,
+        fonts,
+        voiceSettings,
+        brandProfile,
+        contentPreferences
+      }
+    });
+    window.dispatchEvent(event);
+    alert('Brand voice settings saved! Content Hub will update with new context.');
   };
 
   return (
@@ -1357,47 +1655,104 @@ const BrandAssetsView: React.FC = () => {
           <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-8 max-w-4xl">
             <h2 className="text-2xl font-black uppercase tracking-tighter text-white mb-8">Brand DNA</h2>
 
-            {/* ARCHETYPE */}
-            <div className="mb-8">
-              <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-4">ARCHETYPE</label>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                <span className="text-sm text-white">• The Architect</span>
+            {brandDNA.loading ? (
+              <div className="flex items-center justify-center py-12">
+                <RefreshCw className="w-6 h-6 text-white/40 animate-spin" />
+                <span className="ml-3 text-sm text-white/60">Loading Brand DNA...</span>
               </div>
-            </div>
+            ) : (
+              <>
+                {/* ARCHETYPE */}
+                <div className="mb-8">
+                  <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-4">ARCHETYPE</label>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                    <span className="text-sm text-white">• {brandDNA.archetype || 'Not Identified'}</span>
+                  </div>
+                  {brandDNA.archetype && brandDNA.archetype !== 'Not Scanned' && brandDNA.archetype !== 'Error Loading' && (
+                    <p className="text-xs text-white/40 mt-2 ml-4">
+                      Your brand's core personality archetype, identified from your content patterns
+                    </p>
+                  )}
+                </div>
 
-            {/* VOICE TONE */}
-            <div className="mb-8">
-              <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-4">VOICE TONE</label>
-              <div className="flex gap-2">
-                {['Systematic', 'Transparent', 'Dense'].map((tone) => (
-                  <button
-                    key={tone}
-                    onClick={() => setBrandDNA({ ...brandDNA, voiceTone: tone })}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                      brandDNA.voiceTone === tone
-                        ? 'bg-white/10 border border-white/30 text-white'
-                        : 'bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/[0.07]'
-                    }`}
-                  >
-                    {tone}
-                  </button>
-                ))}
-              </div>
-            </div>
+                {/* VOICE TONE */}
+                <div className="mb-8">
+                  <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-4">VOICE TONE</label>
+                  {brandDNA.voice && brandDNA.voice.tones && brandDNA.voice.tones.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {brandDNA.voice.tones.map((tone: string) => (
+                        <button
+                          key={tone}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                            brandDNA.voiceTone === tone
+                              ? 'bg-white/10 border border-white/30 text-white'
+                              : 'bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/[0.07]'
+                          }`}
+                        >
+                          {tone}
+                        </button>
+                      ))}
+                    </div>
+                  ) : brandDNA.voiceTone ? (
+                    <div className="flex gap-2">
+                      <button className="px-4 py-2 rounded-lg text-sm font-medium bg-white/10 border border-white/30 text-white">
+                        {brandDNA.voiceTone}
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-white/40">Run a scan to identify your voice tone</p>
+                  )}
+                  {brandDNA.voice && (
+                    <div className="mt-4 p-4 bg-white/5 rounded-lg border border-white/10">
+                      <p className="text-xs text-white/60 mb-2">Voice Style: <span className="text-white">{brandDNA.voice.style || 'Not specified'}</span></p>
+                      <p className="text-xs text-white/60 mb-2">Formality: <span className="text-white">{brandDNA.voice.formality || 'Not specified'}</span></p>
+                      {brandDNA.voice.vocabulary && brandDNA.voice.vocabulary.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-xs text-white/60 mb-1">Key Vocabulary:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {brandDNA.voice.vocabulary.slice(0, 8).map((word: string, i: number) => (
+                              <span key={i} className="px-2 py-1 bg-white/5 rounded text-xs text-white/80">{word}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
 
-            {/* CORE PILLARS */}
-            <div>
-              <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-4">CORE PILLARS</label>
-              <ul className="space-y-2">
-                {brandDNA.corePillars.map((pillar, index) => (
-                  <li key={index} className="text-sm text-white flex items-center gap-2">
-                    <span>•</span>
-                    <span>{pillar}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                {/* CORE PILLARS */}
+                <div>
+                  <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-4">CORE PILLARS</label>
+                  {brandDNA.corePillars.length > 0 ? (
+                    <ul className="space-y-3">
+                      {brandDNA.corePillars.map((pillar, index) => (
+                        <li key={index} className="flex items-start gap-3 p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/[0.07] transition-colors group">
+                          <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span className="text-xs font-bold text-purple-400">{index + 1}</span>
+                          </div>
+                          <div className="flex-1">
+                            <span className="text-sm text-white font-medium">{pillar}</span>
+                            <p className="text-xs text-white/40 mt-1">
+                              {pillar.toLowerCase().includes('innovation') && 'Focus on cutting-edge solutions and technological advancement'}
+                              {pillar.toLowerCase().includes('community') && 'Build and nurture engaged audiences'}
+                              {pillar.toLowerCase().includes('experience') && 'Create memorable and meaningful interactions'}
+                              {pillar.toLowerCase().includes('inclusivity') && 'Ensure representation and accessibility for all'}
+                              {pillar.toLowerCase().includes('travel') && 'Connect people with unique destinations and experiences'}
+                              {pillar.toLowerCase().includes('athlete') && 'Inspire and empower through athletic achievement'}
+                              {pillar.toLowerCase().includes('host') && 'Support and empower hosts to create exceptional stays'}
+                              {!pillar.toLowerCase().match(/innovation|community|experience|inclusivity|travel|athlete|host/) && 'Core brand value that guides all content and messaging'}
+                            </p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-white/40">Run a digital footprint scan to discover your core pillars</p>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

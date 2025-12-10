@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Filter, RefreshCw, Plus, FileText, Video, Image as ImageIcon, Mic2, Linkedin, Instagram, Music, X, Play, Sparkles, Loader2 } from 'lucide-react';
+import { getScanResults } from '../services/apiClient';
 
 interface ContentAsset {
   id: string;
@@ -22,17 +23,122 @@ const ContentHubView: React.FC = () => {
 
   useEffect(() => {
     loadContent();
+    
+    // Listen for brand assets updates
+    const handleBrandAssetsUpdate = () => {
+      console.log('Brand assets updated - reloading content...');
+      loadContent();
+    };
+    
+    window.addEventListener('brandAssetsUpdated', handleBrandAssetsUpdate);
+    
+    return () => {
+      window.removeEventListener('brandAssetsUpdated', handleBrandAssetsUpdate);
+    };
   }, []);
 
-  const loadContent = () => {
+  const loadContent = async () => {
     try {
-      // Load from Production Room assets
+      // Load brand assets for context
+      const brandMaterials = JSON.parse(localStorage.getItem('brandMaterials') || '[]');
+      const brandProfile = JSON.parse(localStorage.getItem('brandProfile') || 'null');
+      const brandVoice = JSON.parse(localStorage.getItem('brandVoice') || 'null');
+      const brandColors = JSON.parse(localStorage.getItem('brandColors') || '[]');
+      const brandFonts = JSON.parse(localStorage.getItem('brandFonts') || '[]');
+      
+      // Load from Production Room assets first
       const productionAssets = JSON.parse(localStorage.getItem('productionAssets') || '[]');
       const lastUsername = localStorage.getItem('lastScannedUsername');
       
       setUsername(lastUsername);
       
-      // Also check for suggested content from scan
+      // Try to load actual content ideas from scan results
+      const lastScanId = localStorage.getItem('lastScanId');
+      let contentIdeasFromScan: any[] = [];
+      
+      if (lastScanId) {
+        try {
+          const results = await getScanResults(lastScanId);
+          if (results.success && results.data?.contentIdeas && Array.isArray(results.data.contentIdeas)) {
+            contentIdeasFromScan = results.data.contentIdeas;
+          }
+        } catch (e) {
+          console.error('Error fetching scan results:', e);
+        }
+      }
+      
+      // Fallback to localStorage scan results
+      if (contentIdeasFromScan.length === 0) {
+        const lastScanResults = localStorage.getItem('lastScanResults');
+        if (lastScanResults) {
+          try {
+            const parsed = JSON.parse(lastScanResults);
+            if (parsed.contentIdeas && Array.isArray(parsed.contentIdeas)) {
+              contentIdeasFromScan = parsed.contentIdeas;
+            }
+          } catch (e) {
+            console.error('Error parsing scan results:', e);
+          }
+        }
+      }
+      
+      // Enhance content ideas with brand assets context if available
+      if (brandMaterials.length > 0 || brandProfile || brandVoice) {
+        console.log(`Content Hub: Using ${brandMaterials.length} brand assets to enhance content suggestions`);
+        // Brand assets are now available for future content generation improvements
+        // The content ideas from scan are already brand-specific, but we can enhance them further
+      }
+      
+      // Convert content ideas to ContentAsset format
+      if (contentIdeasFromScan.length > 0) {
+        const brandSpecificAssets = contentIdeasFromScan.map((idea: any, index: number) => {
+          // Map platform names
+          const platformMap: Record<string, string> = {
+            'twitter': 'X',
+            'x': 'X',
+            'linkedin': 'LINKEDIN',
+            'instagram': 'INSTAGRAM',
+            'tiktok': 'TIKTOK',
+            'youtube': 'YOUTUBE',
+            'podcast': 'PODCAST',
+            'facebook': 'FACEBOOK'
+          };
+          
+          // Map format types
+          const formatMap: Record<string, string> = {
+            'post': 'document',
+            'thread': 'thread',
+            'video': 'video',
+            'carousel': 'carousel',
+            'reel': 'reel',
+            'podcast': 'podcast',
+            'audio': 'audio'
+          };
+          
+          const platform = platformMap[idea.platform?.toLowerCase() || 'twitter'] || 'X';
+          const type = formatMap[idea.format?.toLowerCase() || 'post'] || 'document';
+          
+          return {
+            id: `content_idea_${index}`,
+            title: idea.title || 'Untitled Content',
+            description: idea.description || '',
+            platform: platform,
+            status: 'suggested' as const,
+            type: type as any,
+            timeAgo: 'AI suggested',
+            basedOn: idea.theme || '',
+            theme: idea.theme || ''
+          };
+        });
+        
+        // Merge with existing production assets (prioritize brand-specific)
+        const existingNonSuggested = productionAssets.filter((a: ContentAsset) => a.status !== 'suggested');
+        setAssets([...brandSpecificAssets, ...existingNonSuggested]);
+        localStorage.setItem('productionAssets', JSON.stringify([...brandSpecificAssets, ...existingNonSuggested]));
+        return;
+      }
+      
+      // Fallback: Use themes to generate suggestions if no content ideas available
       const lastScanResults = localStorage.getItem('lastScanResults');
       if (lastScanResults) {
         const parsed = JSON.parse(lastScanResults);
@@ -144,10 +250,8 @@ const ContentHubView: React.FC = () => {
   const handleRegenerate = async () => {
     setIsRegenerating(true);
     // Reload content suggestions
-    setTimeout(() => {
-      loadContent();
-      setIsRegenerating(false);
-    }, 1000);
+    await loadContent();
+    setIsRegenerating(false);
   };
 
   const getPlatformIcon = (platform: string) => {
@@ -221,7 +325,7 @@ const ContentHubView: React.FC = () => {
               const event = new CustomEvent('navigateToPage', { detail: { page: 'production' } });
               window.dispatchEvent(event);
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-400 text-white rounded-lg text-sm font-bold transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-400 text-white rounded-lg text-sm font-bold transition-colors"
           >
             <Mic2 className="w-4 h-4" />
             Generate Podcast
@@ -307,7 +411,7 @@ const ContentHubView: React.FC = () => {
                   {getPlatformIcon(asset.platform)}
                 </div>
                 {asset.status === 'suggested' && (
-                  <span className="px-2 py-1 bg-purple-500/20 text-purple-400 text-[10px] font-bold rounded">
+                  <span className="px-2 py-1 bg-orange-500/20 text-orange-400 text-[10px] font-bold rounded">
                     AI SUGGESTED
                   </span>
                 )}
@@ -337,13 +441,13 @@ const ContentHubView: React.FC = () => {
                       const event = new CustomEvent('navigateToPage', { detail: { page: 'production', assetId: asset.id } });
                       window.dispatchEvent(event);
                     }}
-                    className="px-3 py-1.5 bg-purple-500 hover:bg-purple-400 text-white text-xs font-bold rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                    className="px-3 py-1.5 bg-orange-500 hover:bg-orange-400 text-white text-xs font-bold rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                   >
                     Start Creating
                   </button>
                 )}
                 {asset.status === 'draft' && (
-                  <span className="px-2 py-1 bg-amber-500/20 text-amber-400 text-[10px] font-bold rounded">
+                  <span className="px-2 py-1 bg-orange-500/20 text-orange-400 text-[10px] font-bold rounded">
                     DRAFT
                   </span>
                 )}

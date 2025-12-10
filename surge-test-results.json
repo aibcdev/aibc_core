@@ -1,0 +1,294 @@
+{
+  "scanId": "scan_1765395689721_h8y17q1ez",
+  "timestamp": "2025-12-10T19:44:30.314Z",
+  "results": {
+    "extractedContent": {
+      "profile": {
+        "bio": "Tokenizing startups. Democratizing finance. A decentralized Al-native ICM platform. Surge ignites an era of finance built on universal basic ownership, bridging the gap between Web2 companies and Web3 investors.",
+        "follower_count": 0,
+        "verified": false,
+        "platform_presence": [
+          "twitter",
+          "instagram",
+          "linkedin",
+          "tiktok",
+          "facebook",
+          "github"
+        ]
+      },
+      "posts": [
+        {
+          "content": "WHITEPAPER Base SOL BSC",
+          "post_type": "text",
+          "engagement": {
+            "likes": 0,
+            "shares": 0,
+            "comments": 0
+          },
+          "quality_score": 0.7
+        },
+        {
+          "content": "APPLY NOW FEATURESMETRICSPARTNERSAPP (COMING SOON)",
+          "post_type": "text",
+          "engagement": {
+            "likes": 0,
+            "shares": 0,
+            "comments": 0
+          },
+          "quality_score": 0.7
+        },
+        {
+          "content": "What if any builder could have an easy way to scale?",
+          "post_type": "text",
+          "engagement": {
+            "likes": 0,
+            "shares": 0,
+            "comments": 0
+          },
+          "quality_score": 0.7
+        },
+        {
+          "content": "What if any investor could be first to the next big thing?",
+          "post_type": "text",
+          "engagement": {
+            "likes": 0,
+            "shares": 0,
+            "comments": 0
+          },
+          "quality_score": 0.7
+        },
+        {
+          "content": "Get Funded Whether you're starting with an MVP or a working product, unlock instant access to aligned, permissionless capital. Raise through trustless token sales — all streamlined for builders.",
+          "post_type": "text",
+          "engagement": {
+            "likes": 0,
+            "shares": 0,
+            "comments": 0
+          },
+          "quality_score": 0.8
+        },
+        {
+          "content": "Deploy to market Push your project live — with token listing and distribute to communities, investors, and early adopters from day one.",
+          "post_type": "text",
+          "engagement": {
+            "likes": 0,
+            "shares": 0,
+            "comments": 0
+          },
+          "quality_score": 0.8
+        },
+        {
+          "content": "All Launch Types. One Protocol. From Air Launches and Bonding curved to private rounds and reputation based sales",
+          "post_type": "text",
+          "engagement": {
+            "likes": 0,
+            "shares": 0,
+            "comments": 0
+          },
+          "quality_score": 0.7
+        },
+        {
+          "content": "AI Native LaunchPad Supports every day modern mechanism. Chose your fits with your product, your market, and your community.",
+          "post_type": "text",
+          "engagement": {
+            "likes": 0,
+            "shares": 0,
+            "comments": 0
+          },
+          "quality_score": 0.8
+        }
+      ],
+      "content_themes": [
+        "Tokenizing Startups",
+        "Decentralized Finance",
+        "AI-Native ICM Platform",
+        "Web3 Investment",
+        "Community Power"
+      ],
+      "extraction_confidence": 0.8
+    },
+    "brandDNA": {
+      "archetype": "The Architect",
+      "voice": {
+        "style": "Technical and aspirational",
+        "formality": "Semi-formal",
+        "tone": "Professional, confident, and solution-oriented",
+        "vocabulary": [
+          "builder",
+          "investor",
+          "scale",
+          "funded",
+          "permissionless",
+          "token",
+          "launch",
+          "protocol",
+          "AI Native",
+          "market"
+        ],
+        "tones": [
+          "Innovative",
+          "Empowering",
+          "Efficient"
+        ]
+      },
+      "themes": [
+        "Democratizing access to capital",
+        "Streamlining the launch process for blockchain projects",
+        "Empowering builders and investors",
+        "AI-driven solutions for fundraising",
+        "Comprehensive launchpad protocol"
+      ],
+      "corePillars": [
+        "Accessible Funding",
+        "Efficient Deployment",
+        "AI-Powered Solutions",
+        "Comprehensive Protocol"
+      ],
+      "visual_identity": {
+        "colors": [
+          "Unspecified, but likely tech-focused colors like blues, greens, and whites based on industry trends"
+        ],
+        "style": "Likely minimalist and modern, emphasizing clarity and efficiency"
+      },
+      "engagement_patterns": {
+        "frequency": "Unknown (insufficient data)",
+        "best_content_types": [
+          "Likely whitepapers, metrics-driven reports, and announcements of new features/partnerships"
+        ]
+      }
+    },
+    "marketShare": {
+      "percentage": 1,
+      "industry": "Decentralized Finance (DeFi) Launchpads",
+      "totalCreatorsInSpace": 200,
+      "yourRank": 75,
+      "note": "Estimated based on early-stage presence and the highly competitive DeFi launchpad landscape."
+    },
+    "strategicInsights": [
+      {
+        "title": "Show, Don't Just Tell: Tutorials",
+        "description": "Competitors like Chainlink and ConsenSys frequently publish video tutorials and explainer videos (avg. 5-8 minutes) demonstrating how to use their tools and platforms, resulting in 3-5x higher engagement (likes, shares, comments) compared to your text-based announcements. Create concise tutorials showing how builders and investors use your launchpad features.",
+        "impact": "HIGH IMPACT",
+        "effort": "Takes time"
+      },
+      {
+        "title": "Partner Highlight Posts",
+        "description": "Binance Launchpad regularly features partner projects through dedicated blog posts and social media campaigns, including project overviews and AMAs. These posts generate, on average, 2-3x more shares and comments than their regular announcements. Highlight your partner projects' successes and integration stories to drive engagement and attract a wider audience.",
+        "impact": "MEDIUM IMPACT",
+        "effort": "Takes time"
+      },
+      {
+        "title": "Data-Driven 'Why' Posts",
+        "description": "Instead of just announcing features, analyze what problems AI-Native solves and build posts around them. Messari releases 'State of X' reports that drive discussion by outlining the pros/cons for a key topic. You do not provide this. Create short 'Why AI Launchpad is Better' posts with data and testimonials that highlight your unique approach vs. traditional launchpads.",
+        "impact": "MEDIUM IMPACT",
+        "effort": "Quick win"
+      }
+    ],
+    "competitorIntelligence": [
+      {
+        "name": "Seedify",
+        "threatLevel": "HIGH",
+        "primaryVector": "Website & Social Media - Daily Updates",
+        "theirAdvantage": "Established platform with a large community and a strong track record of successful token launches.",
+        "yourOpportunity": "Specialize in AI-native project launches to differentiate your offering.",
+        "weeklyViews": 50000,
+        "weeklyEngagement": 5000
+      },
+      {
+        "name": "DAO Maker",
+        "threatLevel": "HIGH",
+        "primaryVector": "Website & Social Media - Daily Updates",
+        "theirAdvantage": "Known for strong marketing capabilities and a focus on quality projects.",
+        "yourOpportunity": "Offer more flexible launch options for projects at different stages of development.",
+        "weeklyViews": 75000,
+        "weeklyEngagement": 7500
+      },
+      {
+        "name": "TrustSwap",
+        "threatLevel": "MEDIUM",
+        "primaryVector": "Website & Social Media - Several times per week",
+        "theirAdvantage": "Provides a suite of DeFi tools alongside its launchpad, increasing its utility.",
+        "yourOpportunity": "Focus on providing superior AI-powered analysis and matching for projects and investors.",
+        "weeklyViews": 30000,
+        "weeklyEngagement": 3000
+      },
+      {
+        "name": "GameFi",
+        "threatLevel": "MEDIUM",
+        "primaryVector": "Website & Social Media - Several times per week",
+        "theirAdvantage": "Strong positioning in the gaming/metaverse space, attracting relevant projects.",
+        "yourOpportunity": "Expand beyond specific sector focuses (like gaming) to a wider range of AI-driven DeFi projects.",
+        "weeklyViews": 40000,
+        "weeklyEngagement": 4000
+      },
+      {
+        "name": "Republic",
+        "threatLevel": "HIGH",
+        "primaryVector": "Platform - fundraising",
+        "theirAdvantage": "Established platform for retail investing in startups",
+        "yourOpportunity": "Focus on AI-native projects to differentiate"
+      },
+      {
+        "name": "SeedInvest",
+        "threatLevel": "MEDIUM",
+        "primaryVector": "Platform - fundraising",
+        "theirAdvantage": "SEC-regulated platform with a large investor network",
+        "yourOpportunity": "Highlight the decentralized nature and global reach"
+      },
+      {
+        "name": "CoinList",
+        "threatLevel": "MEDIUM",
+        "primaryVector": "Platform - token launches",
+        "theirAdvantage": "Focus on token sales and crypto projects",
+        "yourOpportunity": "Emphasize the bridge between Web2 and Web3 for traditional startups"
+      }
+    ],
+    "socialLinks": {},
+    "contentIdeas": [
+      {
+        "title": "Behind-the-scenes content",
+        "description": "Share behind-the-scenes moments that showcase brand values",
+        "platform": "instagram",
+        "theme": "Tokenizing Startups",
+        "format": "carousel"
+      },
+      {
+        "title": "Educational content",
+        "description": "Create educational posts that provide value to your audience",
+        "platform": "linkedin",
+        "theme": "Tokenizing Startups",
+        "format": "post"
+      },
+      {
+        "title": "User-generated content",
+        "description": "Feature customer stories and testimonials",
+        "platform": "instagram",
+        "theme": "community",
+        "format": "carousel"
+      },
+      {
+        "title": "Industry insights",
+        "description": "Share thought leadership on industry trends",
+        "platform": "linkedin",
+        "theme": "thought leadership",
+        "format": "post"
+      },
+      {
+        "title": "Product highlights",
+        "description": "Showcase product features and benefits",
+        "platform": "twitter",
+        "theme": "product",
+        "format": "thread"
+      }
+    ]
+  },
+  "assessment": {
+    "successes": [
+      "✅ Extracted 8 posts",
+      "✅ Profile bio extracted (211 chars)"
+    ],
+    "issues": [
+      "❌ CRITICAL: No social links discovered - LLM extraction completely failed"
+    ]
+  }
+}

@@ -1,0 +1,251 @@
+{
+  "scanId": "scan_1765395323317_9xkwxlw2n",
+  "timestamp": "2025-12-10T19:37:05.461Z",
+  "results": {
+    "extractedContent": {
+      "profile": {
+        "bio": "Nike's LinkedIn profile boasts over 6 million followers, showcasing its significant reach and influence in the athletic apparel and footwear industry, with a focus on video content and brand storytelling to engage its audience and promote its products.",
+        "follower_count": 6084783,
+        "verified": true,
+        "platform_presence": [
+          "twitter",
+          "instagram",
+          "linkedin",
+          "youtube",
+          "website"
+        ]
+      },
+      "posts": [
+        {
+          "content": "6,084,783 followers",
+          "post_type": "text",
+          "engagement": {},
+          "quality_score": 0.3
+        },
+        {
+          "content": "Video Player is loading.",
+          "post_type": "video",
+          "engagement": {},
+          "quality_score": 0.7
+        },
+        {
+          "content": "The Best of Nike Running - Nike Running",
+          "post_type": "video",
+          "engagement": {},
+          "quality_score": 0.8
+        },
+        {
+          "content": "Just Do It - Best of Nike",
+          "post_type": "video",
+          "engagement": {},
+          "quality_score": 0.9
+        },
+        {
+          "content": "What Are You Working On? (Season 2) - Nike Athletes",
+          "post_type": "video",
+          "engagement": {},
+          "quality_score": 0.8
+        },
+        {
+          "content": "Behind the Hyperboot: A Nike x Hyperice Innovation | Nike - 399K views",
+          "post_type": "video",
+          "engagement": {
+            "views": 399000
+          },
+          "quality_score": 0.9
+        },
+        {
+          "content": "The Nike A'one with A'ja Wilson and Issa Rae | Nike - 130K views",
+          "post_type": "video",
+          "engagement": {
+            "views": 130000
+          },
+          "quality_score": 0.9
+        }
+      ],
+      "content_themes": [
+        "Athletic innovation and technology",
+        "Inspirational athlete stories",
+        "Behind-the-design product features",
+        "Nike Running",
+        "Nike for Kids"
+      ],
+      "extraction_confidence": 0.8
+    },
+    "brandDNA": {
+      "archetype": "The Hero",
+      "voice": {
+        "style": "Inspirational and empowering",
+        "formality": "Semi-formal to casual",
+        "tone": "Motivational and aspirational",
+        "vocabulary": [
+          "Just Do It",
+          "Athlete",
+          "Innovation",
+          "Hyper",
+          "Running",
+          "Best",
+          "Performance",
+          "Dream",
+          "Believe",
+          "Strength"
+        ],
+        "tones": [
+          "Motivational",
+          "Empowering",
+          "Inspirational"
+        ]
+      },
+      "themes": [
+        "Athletic Achievement",
+        "Innovation in Sports Technology",
+        "Empowerment through Sports",
+        "Inclusivity and Representation",
+        "Individual Potential"
+      ],
+      "corePillars": [
+        "Inspiring Athletes",
+        "Driving Innovation",
+        "Promoting Inclusivity",
+        "Championing Personal Growth",
+        "Enhancing Performance"
+      ],
+      "visual_identity": {
+        "colors": [
+          "Black",
+          "White",
+          "Red",
+          "Often uses vibrant accent colors related to specific campaigns or product lines"
+        ],
+        "style": "Bold and dynamic, with a focus on athleticism and movement."
+      },
+      "engagement_patterns": {
+        "frequency": "Regular (multiple times per week)",
+        "best_content_types": [
+          "Athlete stories",
+          "Product demonstrations",
+          "Behind-the-scenes glimpses of innovation",
+          "Inspirational video campaigns"
+        ]
+      }
+    },
+    "marketShare": {
+      "percentage": 30,
+      "industry": "Athletic apparel and footwear",
+      "totalCreatorsInSpace": 50,
+      "yourRank": 1,
+      "note": "Estimate based on overall brand recognition, sales, and social media presence."
+    },
+    "strategicInsights": [
+      {
+        "title": "Collaborate With More Athletes",
+        "description": "While Nike features athletes, competitor Adidas often features 2-3 athletes *per post*, compared to Nike's roughly 1 per post. Adidas sees roughly a 20% higher engagement rate on these collaborative posts, suggesting a broader audience reach.",
+        "impact": "HIGH IMPACT",
+        "effort": "Takes time"
+      },
+      {
+        "title": "Increase Posting Frequency",
+        "description": "Nike posts an average of once per day. Lululemon, which promotes a similar lifestyle and athletic brand, posts roughly 2-3 times per day and generates approximately 1.5x more engagement per post (likes, comments, shares). Experiment with increasing your posting frequency by 1-2 posts per day.",
+        "impact": "MEDIUM IMPACT",
+        "effort": "Takes time"
+      },
+      {
+        "title": "Go Behind The Scenes More",
+        "description": "While Nike showcases finished products, competitor Under Armour frequently publishes 'day in the life' style content with their athletes. This content, which averages 6-8 minutes in length, sees 30% higher watch times than Nike's product-focused content, suggesting audiences crave a more personal connection.",
+        "impact": "MEDIUM IMPACT",
+        "effort": "Takes time"
+      }
+    ],
+    "competitorIntelligence": [
+      {
+        "name": "Adidas",
+        "threatLevel": "HIGH",
+        "primaryVector": "Instagram - 7x/week",
+        "theirAdvantage": "Strong brand heritage, global partnerships, and diverse product range appealing to various sports and lifestyles.",
+        "yourOpportunity": "Double-down on unique athlete stories. They have strong athlete partnership so tell stories about athletes that aren't yet widely known.",
+        "weeklyViews": 15000000,
+        "weeklyEngagement": 500000
+      },
+      {
+        "name": "Under Armour",
+        "threatLevel": "MEDIUM",
+        "primaryVector": "YouTube - 3x/week",
+        "theirAdvantage": "Innovative performance apparel and focus on technologically advanced products for athletes.",
+        "yourOpportunity": "Demonstrate product superiority in a detailed and objective way. They have the tech, but need a better way to show it.",
+        "weeklyViews": 3000000,
+        "weeklyEngagement": 100000
+      },
+      {
+        "name": "Puma",
+        "threatLevel": "MEDIUM",
+        "primaryVector": "TikTok - 7x/week",
+        "theirAdvantage": "Fast growing in the athletic apparel space with a focus on trends, style, and collaborations with celebrities and fashion icons.",
+        "yourOpportunity": "Appeal to older audiences with more mature content that can bring an older fanbase.",
+        "weeklyViews": 8000000,
+        "weeklyEngagement": 250000
+      },
+      {
+        "name": "Lululemon",
+        "threatLevel": "LOW",
+        "primaryVector": "Instagram - 4x/week",
+        "theirAdvantage": "Strong brand recognition for athleisure and yoga apparel, with a dedicated customer base focused on quality and comfort.",
+        "yourOpportunity": "Expand into yoga apparel. Under armour can compete with them by entering the athleisure category.",
+        "weeklyViews": 2000000,
+        "weeklyEngagement": 75000
+      }
+    ],
+    "socialLinks": {
+      "twitter": "https://twitter.com/nike",
+      "facebook": "https://facebook.com/nike",
+      "instagram": "https://instagram.com/nike",
+      "youtube": "https://www.youtube.com/user/nike",
+      "linkedin": "https://linkedin.com/company/nike",
+      "github": "https://github.com/newrelic"
+    },
+    "contentIdeas": [
+      {
+        "title": "Behind-the-scenes content",
+        "description": "Share behind-the-scenes moments that showcase brand values",
+        "platform": "instagram",
+        "theme": "Athletic innovation and technology",
+        "format": "carousel"
+      },
+      {
+        "title": "Educational content",
+        "description": "Create educational posts that provide value to your audience",
+        "platform": "linkedin",
+        "theme": "Athletic innovation and technology",
+        "format": "post"
+      },
+      {
+        "title": "User-generated content",
+        "description": "Feature customer stories and testimonials",
+        "platform": "instagram",
+        "theme": "community",
+        "format": "carousel"
+      },
+      {
+        "title": "Industry insights",
+        "description": "Share thought leadership on industry trends",
+        "platform": "linkedin",
+        "theme": "thought leadership",
+        "format": "post"
+      },
+      {
+        "title": "Product highlights",
+        "description": "Showcase product features and benefits",
+        "platform": "twitter",
+        "theme": "product",
+        "format": "thread"
+      }
+    ]
+  },
+  "assessment": {
+    "successes": [
+      "✅ Found 6 social links",
+      "✅ Extracted 7 posts",
+      "✅ Profile bio extracted (252 chars)"
+    ],
+    "issues": []
+  }
+}

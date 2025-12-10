@@ -7,7 +7,7 @@
  * - Quota tracking: Track usage per key
  */
 
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 dotenv.config();
 
 // Load multiple API keys from environment

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Sparkles, AlertCircle, TrendingUp, Target, MessageSquare, Loader2 } from 'lucide-react';
+import { getLatestScanResults } from '../services/apiClient';
 
 interface StrategyMessage {
   id: string;
@@ -17,23 +18,271 @@ interface StrategyPlan {
   createdAt: Date;
 }
 
+interface StrategicInsight {
+  id: string;
+  type: 'signal' | 'market_shift' | 'sentiment' | 'opportunity' | 'threat';
+  title: string;
+  description: string;
+  timestamp: Date;
+  priority: 'high' | 'medium' | 'low';
+  tag: string;
+  tagColor: 'red' | 'green' | 'amber' | 'blue';
+}
+
 const StrategyView: React.FC = () => {
   const [messages, setMessages] = useState<StrategyMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [strategyPlans, setStrategyPlans] = useState<StrategyPlan[]>([]);
+  const [strategicInsights, setStrategicInsights] = useState<StrategicInsight[]>([]);
+  const [brandDNA, setBrandDNA] = useState<any>(null);
+  const [competitorIntelligence, setCompetitorIntelligence] = useState<any[]>([]);
+  const [scanUsername, setScanUsername] = useState<string | null>(null);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    loadScanData();
     loadStrategyData();
-    // Initial AI message
+    
+    // Listen for scan completion events
+    const handleScanComplete = () => {
+      console.log('📥 Scan completed - reloading strategy data...');
+      loadScanData();
+    };
+    
+    // Listen for username changes
+    const handleUsernameChange = () => {
+      const newUsername = localStorage.getItem('lastScannedUsername');
+      if (newUsername && newUsername !== scanUsername) {
+        console.log('📥 Username changed - reloading strategy data...');
+        setStrategicInsights([]);
+        setBrandDNA(null);
+        setCompetitorIntelligence([]);
+        loadScanData();
+      }
+    };
+    
+    window.addEventListener('scanComplete', handleScanComplete);
+    
+    // Poll for username changes
+    const usernameCheckInterval = setInterval(() => {
+      const newUsername = localStorage.getItem('lastScannedUsername');
+      if (newUsername && newUsername !== scanUsername) {
+        handleUsernameChange();
+      }
+    }, 2000);
+    
+    return () => {
+      window.removeEventListener('scanComplete', handleScanComplete);
+      clearInterval(usernameCheckInterval);
+    };
+  }, [scanUsername]);
+
+  useEffect(() => {
+    if (brandDNA || competitorIntelligence.length > 0) {
+      generateStrategicInsights();
+      generateInitialAIMessage();
+    }
+  }, [brandDNA, competitorIntelligence]);
+
+  const loadScanData = async () => {
+    setIsLoadingData(true);
+    try {
+      // Try localStorage first
+      const cachedResults = localStorage.getItem('lastScanResults');
+      const currentUsername = localStorage.getItem('lastScannedUsername');
+      
+      if (cachedResults && currentUsername) {
+        try {
+          const cached = JSON.parse(cachedResults);
+          const cachedUsername = cached.scanUsername || cached.username;
+          
+          // Only use cache if username matches
+          if (cachedUsername && cachedUsername.toLowerCase() === currentUsername.toLowerCase()) {
+            setBrandDNA(cached.brandDNA || null);
+            setCompetitorIntelligence(Array.isArray(cached.competitorIntelligence) ? cached.competitorIntelligence : []);
+            setScanUsername(currentUsername);
+            
+            // Generate insights from cached data
+            if (cached.strategicInsights && Array.isArray(cached.strategicInsights)) {
+              generateInsightsFromData(cached.strategicInsights, cached.brandDNA, cached.competitorIntelligence);
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing cached results:', e);
+        }
+      }
+      
+      // Also try API
+      if (currentUsername) {
+        try {
+          const scanResults = await getLatestScanResults(currentUsername);
+          if (scanResults.success && scanResults.data) {
+            setBrandDNA(scanResults.data.brandDNA || null);
+            setCompetitorIntelligence(Array.isArray(scanResults.data.competitorIntelligence) ? scanResults.data.competitorIntelligence : []);
+            setScanUsername(currentUsername);
+            
+            if (scanResults.data.strategicInsights && Array.isArray(scanResults.data.strategicInsights)) {
+              generateInsightsFromData(scanResults.data.strategicInsights, scanResults.data.brandDNA, scanResults.data.competitorIntelligence);
+            }
+          }
+        } catch (e) {
+          console.error('Error fetching scan results:', e);
+        }
+      }
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
+  const generateInsightsFromData = (insights: any[], dna: any, competitors: any[]) => {
+    const generated: StrategicInsight[] = [];
+    
+    // Generate insights from strategic insights data
+    if (insights && insights.length > 0) {
+      insights.slice(0, 3).forEach((insight, index) => {
+        const insightType = insight.type || insight.category || 'opportunity';
+        const priority = insight.priority || insight.impact || 'medium';
+        
+        let type: StrategicInsight['type'] = 'opportunity';
+        let tag = 'OPPORTUNITY';
+        let tagColor: StrategicInsight['tagColor'] = 'green';
+        
+        if (insightType.toLowerCase().includes('threat') || priority === 'high') {
+          type = 'threat';
+          tag = 'HIGH THREAT';
+          tagColor = 'red';
+        } else if (insightType.toLowerCase().includes('market') || insightType.toLowerCase().includes('trend')) {
+          type = 'market_shift';
+          tag = 'OPPORTUNITY';
+          tagColor = 'green';
+        } else if (insightType.toLowerCase().includes('sentiment')) {
+          type = 'sentiment';
+          tag = 'ALERT';
+          tagColor = 'amber';
+        }
+        
+        generated.push({
+          id: `insight-${index}`,
+          type,
+          title: insight.title || insight.recommendation || 'Strategic Insight',
+          description: insight.description || insight.summary || insight.recommendation || '',
+          timestamp: new Date(Date.now() - (index * 15 * 60 * 1000)), // Stagger timestamps
+          priority: priority === 'high' ? 'high' : priority === 'low' ? 'low' : 'medium',
+          tag,
+          tagColor
+        });
+      });
+    }
+    
+    // Generate competitor-based insights
+    if (competitors && competitors.length > 0 && generated.length < 3) {
+      const topCompetitor = competitors[0];
+      if (topCompetitor.name) {
+        generated.push({
+          id: 'competitor-signal',
+          type: 'signal',
+          title: `Competitor Activity: ${topCompetitor.name}`,
+          description: topCompetitor.advantage 
+            ? `${topCompetitor.name} has a strong focus on ${topCompetitor.advantage}.`
+            : `Recent activity detected from competitor ${topCompetitor.name}.`,
+          timestamp: new Date(Date.now() - (2 * 60 * 1000)), // 2 minutes ago
+          priority: topCompetitor.threatLevel === 'HIGH' ? 'high' : 'medium',
+          tag: topCompetitor.threatLevel === 'HIGH' ? 'HIGH THREAT' : 'SIGNAL',
+          tagColor: topCompetitor.threatLevel === 'HIGH' ? 'red' : 'blue'
+        });
+      }
+    }
+    
+    // Generate market share insights if available
+    if (dna && dna.industry && generated.length < 3) {
+      generated.push({
+        id: 'market-shift',
+        type: 'market_shift',
+        title: `Market Activity in ${dna.industry}`,
+        description: `Increased activity detected in the ${dna.industry} sector. Monitor trends closely.`,
+        timestamp: new Date(Date.now() - (15 * 60 * 1000)), // 15 minutes ago
+        priority: 'medium',
+        tag: 'OPPORTUNITY',
+        tagColor: 'green'
+      });
+    }
+    
+    setStrategicInsights(generated.slice(0, 3)); // Max 3 insights
+  };
+
+  const generateStrategicInsights = () => {
+    // This will be called after data loads
+    const insights: StrategicInsight[] = [];
+    
+    // Generate from competitor intelligence
+    if (competitorIntelligence.length > 0) {
+      const topCompetitor = competitorIntelligence[0];
+      insights.push({
+        id: 'competitor-1',
+        type: 'signal',
+        title: `Competitor Activity: ${topCompetitor.name || 'Key Competitor'}`,
+        description: topCompetitor.advantage 
+          ? `${topCompetitor.name} has a strong focus on ${topCompetitor.advantage}.`
+          : `Recent activity detected from ${topCompetitor.name || 'a key competitor'}.`,
+        timestamp: new Date(Date.now() - (2 * 60 * 1000)),
+        priority: topCompetitor.threatLevel === 'HIGH' ? 'high' : 'medium',
+        tag: topCompetitor.threatLevel === 'HIGH' ? 'HIGH THREAT' : 'SIGNAL',
+        tagColor: topCompetitor.threatLevel === 'HIGH' ? 'red' : 'blue'
+      });
+    }
+    
+    // Generate from brand DNA
+    if (brandDNA && brandDNA.industry) {
+      insights.push({
+        id: 'market-1',
+        type: 'market_shift',
+        title: `Market Activity in ${brandDNA.industry}`,
+        description: `Trending topics detected in the ${brandDNA.industry} sector.`,
+        timestamp: new Date(Date.now() - (15 * 60 * 1000)),
+        priority: 'medium',
+        tag: 'OPPORTUNITY',
+        tagColor: 'green'
+      });
+    }
+    
+    if (insights.length > 0) {
+      setStrategicInsights(insights);
+    }
+  };
+
+  const generateInitialAIMessage = () => {
+    const competitorCount = competitorIntelligence.length;
+    const brandName = scanUsername || brandDNA?.name || 'your brand';
+    const industry = brandDNA?.industry || 'your sector';
+    
+    let message = `I've analyzed the digital footprint scan for ${brandName}. `;
+    
+    if (competitorCount > 0) {
+      message += `I've identified ${competitorCount} key competitor${competitorCount > 1 ? 's' : ''} in ${industry}. `;
+      const topCompetitor = competitorIntelligence[0];
+      if (topCompetitor.name) {
+        message += `${topCompetitor.name} appears to be your primary competitor. `;
+      }
+    }
+    
+    if (brandDNA) {
+      const themes = brandDNA.themes || brandDNA.corePillars || [];
+      if (themes.length > 0) {
+        message += `Your brand focuses on ${themes.slice(0, 2).join(' and ')}. `;
+      }
+    }
+    
+    message += `How can I assist with your content strategy today?`;
+    
     setMessages([{
       id: '1',
       role: 'assistant',
-      content: "I've analyzed the data from your Memory Bank. Competitor activity is high in your sector. How can I assist with your strategy today?",
+      content: message,
       timestamp: new Date()
     }]);
-  }, []);
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -125,13 +374,39 @@ const StrategyView: React.FC = () => {
     }, 1500);
   };
 
+  const getTimeAgo = (timestamp: Date): string => {
+    const now = new Date();
+    const diffMs = now.getTime() - timestamp.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  };
+
   const generateAIResponse = (userInput: string): { content: string; plan?: StrategyPlan } => {
     const lowerInput = userInput.toLowerCase();
+    const brandName = scanUsername || brandDNA?.name || 'your brand';
+    const topCompetitor = competitorIntelligence.length > 0 ? competitorIntelligence[0] : null;
     
     // Detect strategy type
     if (lowerInput.includes('competitor') || lowerInput.includes('focus on')) {
       const competitorMatch = userInput.match(/focus on competitors? like (.+?)(?: and|$)/i);
-      const competitorName = competitorMatch ? competitorMatch[1].trim() : 'key competitors';
+      let competitorName = competitorMatch ? competitorMatch[1].trim() : (topCompetitor?.name || 'key competitors');
+      
+      // Check if mentioned competitor exists in our data
+      if (competitorIntelligence.length > 0) {
+        const foundCompetitor = competitorIntelligence.find(c => 
+          c.name?.toLowerCase().includes(competitorName.toLowerCase()) ||
+          competitorName.toLowerCase().includes(c.name?.toLowerCase() || '')
+        );
+        if (foundCompetitor) {
+          competitorName = foundCompetitor.name;
+        }
+      }
       
       const plan: StrategyPlan = {
         id: Date.now().toString(),
@@ -143,36 +418,49 @@ const StrategyView: React.FC = () => {
       };
 
       return {
-        content: `Got it! I've updated your content strategy to focus on ${competitorName}. Your future content suggestions will prioritize matching their content style, posting frequency, and engagement tactics. This will be reflected in your next content generation cycle.`,
+        content: `Got it! I've updated ${brandName}'s content strategy to focus on ${competitorName}. Your future content suggestions will prioritize matching their content style, posting frequency, and engagement tactics. This will be reflected in your next content generation cycle.`,
         plan
       };
     }
 
     if (lowerInput.includes('brand') || lowerInput.includes('building') || lowerInput.includes('sales')) {
+      const themes = brandDNA?.themes || brandDNA?.corePillars || [];
+      const themeFocus = themes.length > 0 ? themes[0] : 'brand values';
+      
       const plan: StrategyPlan = {
         id: Date.now().toString(),
         type: 'brand_building',
         title: 'Brand Building Focus',
-        description: 'Content strategy shifted to brand building over sales-focused content',
+        description: `Content strategy shifted to brand building with focus on ${themeFocus}`,
         implemented: true,
         createdAt: new Date()
       };
 
       return {
-        content: "Perfect! I've adjusted your content plan to prioritize brand building over sales content for the next month. Your content suggestions will focus on thought leadership, storytelling, and community building rather than direct sales pitches.",
+        content: `Perfect! I've adjusted ${brandName}'s content plan to prioritize brand building over sales content. Your content suggestions will focus on ${themeFocus} and ${themes.length > 1 ? themes[1] : 'thought leadership'}, aligning with your brand DNA.`,
         plan
       };
     }
 
-    if (lowerInput.includes('content') || lowerInput.includes('plan') || lowerInput.includes('strategy')) {
+    if (lowerInput.includes('competitor') && topCompetitor) {
       return {
-        content: "I understand. I'll analyze your current content performance and competitor landscape to suggest strategic adjustments. What specific aspect would you like to focus on?"
+        content: `Based on the scan, ${topCompetitor.name} is your primary competitor. They focus on ${topCompetitor.advantage || 'their core strengths'}. Would you like me to create a strategy to differentiate ${brandName} from ${topCompetitor.name}?`
       };
     }
 
-    // Generic response
+    if (lowerInput.includes('content') || lowerInput.includes('plan') || lowerInput.includes('strategy')) {
+      const industry = brandDNA?.industry || 'your industry';
+      const competitorCount = competitorIntelligence.length;
+      
+      return {
+        content: `I understand. Based on the scan, ${brandName} operates in ${industry} with ${competitorCount} identified competitor${competitorCount !== 1 ? 's' : ''}. I'll analyze your current content performance and competitor landscape to suggest strategic adjustments. What specific aspect would you like to focus on?`
+      };
+    }
+
+    // Generic response with brand context
+    const industry = brandDNA?.industry ? ` in ${brandDNA.industry}` : '';
     return {
-      content: "I've noted your request and will incorporate it into your content strategy. Your next content generation will reflect these changes. Is there anything specific you'd like me to prioritize?"
+      content: `I've noted your request and will incorporate it into ${brandName}'s content strategy${industry}. Your next content generation will reflect these changes. Is there anything specific you'd like me to prioritize?`
     };
   };
 
@@ -189,47 +477,53 @@ const StrategyView: React.FC = () => {
         <div className="lg:col-span-1 space-y-4">
           <h2 className="text-sm font-bold text-white mb-4">Strategic Insights</h2>
           
-          {/* Signal Detected */}
-          <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-white/40 uppercase">SIGNAL DETECTED</span>
-              <span className="text-xs text-white/30">2m ago</span>
+          {isLoadingData ? (
+            <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-4 flex items-center justify-center">
+              <Loader2 className="w-5 h-5 text-white/40 animate-spin" />
+              <span className="text-sm text-white/40 ml-2">Loading insights...</span>
             </div>
-            <p className="text-sm text-white/70 mb-3">
-              Competitor <strong>NextGen Tech</strong> just released a video on 'GPT-5 Rumors'.
-            </p>
-            <span className="inline-block px-2 py-1 bg-red-500/20 text-red-400 text-[10px] font-bold rounded">
-              HIGH THREAT
-            </span>
-          </div>
-
-          {/* Market Shift */}
-          <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-white/40 uppercase">MARKET SHIFT</span>
-              <span className="text-xs text-white/30">15m ago</span>
+          ) : strategicInsights.length === 0 ? (
+            <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-4">
+              <p className="text-sm text-white/40 text-center">
+                {scanUsername 
+                  ? `No strategic insights available yet for ${scanUsername}. Run a digital footprint scan to generate insights.`
+                  : 'No scan data available. Run a digital footprint scan to see strategic insights.'}
+              </p>
             </div>
-            <p className="text-sm text-white/70 mb-3">
-              Keyword 'AI Automation' volume spiked by <strong>+45%</strong> on Twitter.
-            </p>
-            <span className="inline-block px-2 py-1 bg-green-500/20 text-green-400 text-[10px] font-bold rounded">
-              OPPORTUNITY
-            </span>
-          </div>
-
-          {/* Sentiment */}
-          <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-white/40 uppercase">SENTIMENT</span>
-              <span className="text-xs text-white/30">1h ago</span>
-            </div>
-            <p className="text-sm text-white/70 mb-3">
-              Negative sentiment detected on your latest post regarding audio quality.
-            </p>
-            <span className="inline-block px-2 py-1 bg-amber-500/20 text-amber-400 text-[10px] font-bold rounded">
-              ALERT
-            </span>
-          </div>
+          ) : (
+            strategicInsights.map((insight) => {
+              const typeLabels: Record<StrategicInsight['type'], string> = {
+                signal: 'SIGNAL DETECTED',
+                market_shift: 'MARKET SHIFT',
+                sentiment: 'SENTIMENT',
+                opportunity: 'OPPORTUNITY',
+                threat: 'THREAT'
+              };
+              
+              const timeAgo = getTimeAgo(insight.timestamp);
+              const tagColors = {
+                red: 'bg-red-500/20 text-red-400',
+                green: 'bg-green-500/20 text-green-400',
+                amber: 'bg-amber-500/20 text-amber-400',
+                blue: 'bg-blue-500/20 text-blue-400'
+              };
+              
+              return (
+                <div key={insight.id} className="bg-[#0A0A0A] border border-white/10 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-white/40 uppercase">{typeLabels[insight.type]}</span>
+                    <span className="text-xs text-white/30">{timeAgo}</span>
+                  </div>
+                  <p className="text-sm text-white/70 mb-3">
+                    {insight.description}
+                  </p>
+                  <span className={`inline-block px-2 py-1 ${tagColors[insight.tagColor]} text-[10px] font-bold rounded`}>
+                    {insight.tag}
+                  </span>
+                </div>
+              );
+            })
+          )}
 
           {/* Active Strategy Plans */}
           {strategyPlans.length > 0 && (

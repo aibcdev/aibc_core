@@ -353,74 +353,105 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
         
         // Load scan results - try multiple methods
         const loadScanData = () => {
-          // Method 1: Try localStorage cache first (fastest)
+          const currentUsername = localStorage.getItem('lastScannedUsername');
+          const currentScanId = localStorage.getItem('lastScanId');
+          
+          // Method 1: Try localStorage cache first (fastest) - BUT validate username matches
           const cachedResults = localStorage.getItem('lastScanResults');
           if (cachedResults) {
             try {
               const cached = JSON.parse(cachedResults);
-              console.log('=== LOADING FROM CACHE ===');
-              console.log('Cached data keys:', Object.keys(cached));
-              console.log('Strategic insights:', cached.strategicInsights?.length || 0, cached.strategicInsights);
-              console.log('Brand DNA:', !!cached.brandDNA, cached.brandDNA);
-              console.log('Competitor intelligence:', cached.competitorIntelligence?.length || 0, cached.competitorIntelligence);
-              console.log('Market share:', cached.marketShare);
+              const cachedUsername = cached.scanUsername || cached.username;
               
-              // Generate insights from cached data
-              const generatedInsights = generateStrategicInsightsFromData(
-                cached,
-                cached.brandDNA,
-                cached.competitorIntelligence || [],
-                cached.scanUsername || localStorage.getItem('lastScannedUsername')
-              );
-              
-              // Use generated insights if available, otherwise use cached
-              const insights = generatedInsights.length > 0
-                ? generatedInsights
-                : (Array.isArray(cached.strategicInsights) ? cached.strategicInsights : []);
-              console.log('Setting strategic insights from cache:', insights.length);
-              setStrategicInsights(insights);
-              
-              // Set brand DNA
-              if (cached.brandDNA) {
-                console.log('Setting brand DNA');
-                setBrandDNA(cached.brandDNA);
-              } else {
-                console.warn('No brand DNA in cache');
+              // CRITICAL: Only use cached data if username matches current scan
+              if (currentUsername && cachedUsername && currentUsername.toLowerCase() !== cachedUsername.toLowerCase()) {
+                console.log('⚠️ Username mismatch - clearing old cache');
+                console.log('Current username:', currentUsername);
+                console.log('Cached username:', cachedUsername);
+                // Clear old cache for different company
+                localStorage.removeItem('lastScanResults');
+                // Clear state
+                setStrategicInsights([]);
                 setBrandDNA(null);
-              }
-              
-              // Ensure competitorIntelligence is always an array
-              if (cached.competitorIntelligence) {
-                const competitors = Array.isArray(cached.competitorIntelligence) 
-                  ? cached.competitorIntelligence 
-                  : [];
-                console.log('Setting competitors:', competitors.length, 'manual:', competitors.filter((c: any) => c.isManual).length);
-                setCompetitorIntelligence(competitors);
-              } else {
-                console.warn('No competitor intelligence in cache');
                 setCompetitorIntelligence([]);
+                setMarketShare(null);
+                setScanUsername(null);
+                // Don't use cached data - will fetch fresh from API
+              } else if (currentUsername && cachedUsername && currentUsername.toLowerCase() === cachedUsername.toLowerCase()) {
+                // Username matches - safe to use cache
+                console.log('=== LOADING FROM CACHE (username matches) ===');
+                console.log('Cached data keys:', Object.keys(cached));
+                console.log('Strategic insights:', cached.strategicInsights?.length || 0, cached.strategicInsights);
+                console.log('Brand DNA:', !!cached.brandDNA, cached.brandDNA);
+                console.log('Competitor intelligence:', cached.competitorIntelligence?.length || 0, cached.competitorIntelligence);
+                console.log('Market share:', cached.marketShare);
+                
+                // Generate insights from cached data
+                const generatedInsights = generateStrategicInsightsFromData(
+                  cached,
+                  cached.brandDNA,
+                  cached.competitorIntelligence || [],
+                  currentUsername
+                );
+                
+                // Use generated insights if available, otherwise use cached
+                const insights = generatedInsights.length > 0
+                  ? generatedInsights
+                  : (Array.isArray(cached.strategicInsights) ? cached.strategicInsights : []);
+                console.log('Setting strategic insights from cache:', insights.length);
+                setStrategicInsights(insights);
+                
+                // Set brand DNA
+                if (cached.brandDNA) {
+                  console.log('Setting brand DNA');
+                  setBrandDNA(cached.brandDNA);
+                } else {
+                  console.warn('No brand DNA in cache');
+                  setBrandDNA(null);
+                }
+                
+                // Ensure competitorIntelligence is always an array
+                if (cached.competitorIntelligence) {
+                  const competitors = Array.isArray(cached.competitorIntelligence) 
+                    ? cached.competitorIntelligence 
+                    : [];
+                  console.log('Setting competitors:', competitors.length, 'manual:', competitors.filter((c: any) => c.isManual).length);
+                  setCompetitorIntelligence(competitors);
+                } else {
+                  console.warn('No competitor intelligence in cache');
+                  setCompetitorIntelligence([]);
+                }
+                
+                if (cached.marketShare) {
+                  console.log('Setting market share');
+                  setMarketShare(cached.marketShare);
+                }
+                
+                if (currentUsername) {
+                  console.log('Setting scan username:', currentUsername);
+                  setScanUsername(currentUsername);
+                }
+                
+                // Recalculate analytics with cached scan data
+                fetchAnalyticsData().then(updatedAnalytics => {
+                  console.log('Analytics updated from cache:', updatedAnalytics);
+                  setAnalytics(updatedAnalytics);
+                }).catch(err => {
+                  console.error('Error updating analytics:', err);
+                });
+              } else {
+                // No username match - clear cache and state
+                console.log('No username match or missing username - clearing cache');
+                localStorage.removeItem('lastScanResults');
+                setStrategicInsights([]);
+                setBrandDNA(null);
+                setCompetitorIntelligence([]);
+                setMarketShare(null);
               }
-              
-              if (cached.marketShare) {
-                console.log('Setting market share');
-                setMarketShare(cached.marketShare);
-              }
-              
-              const username = localStorage.getItem('lastScannedUsername');
-              if (username) {
-                console.log('Setting scan username:', username);
-                setScanUsername(username);
-              }
-              
-              // Recalculate analytics with cached scan data
-              fetchAnalyticsData().then(updatedAnalytics => {
-                console.log('Analytics updated from cache:', updatedAnalytics);
-                setAnalytics(updatedAnalytics);
-              }).catch(err => {
-                console.error('Error updating analytics:', err);
-              });
             } catch (e) {
               console.error('Error parsing cached results:', e);
+              // Clear corrupted cache
+              localStorage.removeItem('lastScanResults');
             }
           }
           
@@ -510,10 +541,13 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                   setMarketShare(scanResults.data.marketShare || null);
                   setScanUsername(storedUsername);
                   
-                  // Update cache with merged data
+                  // Update cache with merged data - include username for validation
                   const updatedCache = {
                     ...scanResults.data,
-                    competitorIntelligence: mergedCompetitors
+                    competitorIntelligence: mergedCompetitors,
+                    scanUsername: storedUsername, // Store username for validation
+                    username: storedUsername, // Also store as username for compatibility
+                    lastUpdated: new Date().toISOString() // Track when cache was updated
                   };
                   localStorage.setItem('lastScanResults', JSON.stringify(updatedCache));
                   
@@ -544,7 +578,99 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
     };
 
     loadData();
-  }, []);
+    
+    // Listen for scan completion events
+    const handleScanComplete = (event: CustomEvent) => {
+      const { username, scanId, results } = event.detail || {};
+      console.log('📥 Scan completed event received - reloading dashboard data...');
+      console.log('New scan username:', username);
+      console.log('Current scan username:', scanUsername);
+      
+      // Clear old state first if username changed
+      if (username && username !== scanUsername) {
+        console.log('Username changed - clearing old data');
+        setStrategicInsights([]);
+        setBrandDNA(null);
+        setCompetitorIntelligence([]);
+        setMarketShare(null);
+      }
+      
+      // Reload data
+      setTimeout(() => {
+        loadData();
+      }, 500); // Small delay to ensure localStorage is updated
+    };
+    
+    // Listen for username changes (new scan started)
+    const handleUsernameChange = () => {
+      const newUsername = localStorage.getItem('lastScannedUsername');
+      const currentUsername = scanUsername;
+      
+      if (newUsername && newUsername !== currentUsername) {
+        console.log('📥 Username changed - clearing old data and reloading...');
+        console.log('Old username:', currentUsername);
+        console.log('New username:', newUsername);
+        // Clear old state
+        setStrategicInsights([]);
+        setBrandDNA(null);
+        setCompetitorIntelligence([]);
+        setMarketShare(null);
+        setScanUsername(null);
+        // Clear cache if username doesn't match
+        const cachedResults = localStorage.getItem('lastScanResults');
+        if (cachedResults) {
+          try {
+            const cached = JSON.parse(cachedResults);
+            const cachedUsername = cached.scanUsername || cached.username;
+            if (cachedUsername && cachedUsername.toLowerCase() !== newUsername.toLowerCase()) {
+              console.log('Clearing cache for different username');
+              localStorage.removeItem('lastScanResults');
+            }
+          } catch (e) {
+            console.error('Error checking cache:', e);
+          }
+        }
+        // Reload data
+        setTimeout(() => {
+          loadData();
+        }, 500);
+      }
+    };
+    
+    // Listen for storage changes (when scan results are saved)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'lastScanResults' || e.key === 'lastScannedUsername' || e.key === 'lastScanId') {
+        console.log('📥 Storage changed - checking if reload needed...');
+        const newUsername = localStorage.getItem('lastScannedUsername');
+        if (newUsername && newUsername !== scanUsername) {
+          handleUsernameChange();
+        } else if (e.key === 'lastScanResults') {
+          // Same username but results updated - reload
+          console.log('Scan results updated - reloading...');
+          setTimeout(() => {
+            loadData();
+          }, 500);
+        }
+      }
+    };
+    
+    window.addEventListener('scanComplete', handleScanComplete as EventListener);
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Poll for username changes (fallback for same-tab updates)
+    const usernameCheckInterval = setInterval(() => {
+      const newUsername = localStorage.getItem('lastScannedUsername');
+      if (newUsername && newUsername !== scanUsername) {
+        handleUsernameChange();
+      }
+    }, 2000); // Check every 2 seconds
+    
+    return () => {
+      window.removeEventListener('scanComplete', handleScanComplete as EventListener);
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(usernameCheckInterval);
+    };
+  }, [scanUsername]);
 
   const toggleTask = (id: number) => {
     const updatedTasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
@@ -692,40 +818,59 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                 console.log('Manual refresh triggered');
                 
                 try {
-                  // Try localStorage first
+                  const storedUsername = localStorage.getItem('lastScannedUsername');
+                  
+                  // Try localStorage first - BUT validate username matches
                   const cachedResults = localStorage.getItem('lastScanResults');
-                  if (cachedResults) {
+                  if (cachedResults && storedUsername) {
                     try {
                       const cached = JSON.parse(cachedResults);
-                      console.log('Loading from cache:', cached);
+                      const cachedUsername = cached.scanUsername || cached.username;
                       
-                      // Generate insights from cached data
-                      const generatedInsights = generateStrategicInsightsFromData(
-                        cached,
-                        cached.brandDNA,
-                        cached.competitorIntelligence || [],
-                        cached.scanUsername || localStorage.getItem('lastScannedUsername')
-                      );
-                      
-                      // Use generated insights if available, otherwise use cached
-                      const insights = generatedInsights.length > 0
-                        ? generatedInsights
-                        : (cached.strategicInsights || []);
-                      setStrategicInsights(insights);
-                      setBrandDNA(cached.brandDNA || null);
-                      // Ensure competitorIntelligence is always an array
-                      const competitors = Array.isArray(cached.competitorIntelligence) 
-                        ? cached.competitorIntelligence 
-                        : [];
-                      setCompetitorIntelligence(competitors);
-                      setMarketShare(cached.marketShare || null);
+                      // CRITICAL: Only use cache if username matches
+                      if (cachedUsername && cachedUsername.toLowerCase() === storedUsername.toLowerCase()) {
+                        console.log('Loading from cache (username matches):', cached);
+                        
+                        // Generate insights from cached data
+                        const generatedInsights = generateStrategicInsightsFromData(
+                          cached,
+                          cached.brandDNA,
+                          cached.competitorIntelligence || [],
+                          storedUsername
+                        );
+                        
+                        // Use generated insights if available, otherwise use cached
+                        const insights = generatedInsights.length > 0
+                          ? generatedInsights
+                          : (cached.strategicInsights || []);
+                        setStrategicInsights(insights);
+                        setBrandDNA(cached.brandDNA || null);
+                        // Ensure competitorIntelligence is always an array
+                        const competitors = Array.isArray(cached.competitorIntelligence) 
+                          ? cached.competitorIntelligence 
+                          : [];
+                        setCompetitorIntelligence(competitors);
+                        setMarketShare(cached.marketShare || null);
+                        setScanUsername(storedUsername);
+                      } else {
+                        console.log('⚠️ Cache username mismatch - clearing cache');
+                        console.log('Stored username:', storedUsername);
+                        console.log('Cached username:', cachedUsername);
+                        // Clear old cache
+                        localStorage.removeItem('lastScanResults');
+                        // Clear state
+                        setStrategicInsights([]);
+                        setBrandDNA(null);
+                        setCompetitorIntelligence([]);
+                        setMarketShare(null);
+                      }
                     } catch (e) {
                       console.error('Cache parse error:', e);
+                      localStorage.removeItem('lastScanResults');
                     }
                   }
                   
                   // Then try API
-                  const storedUsername = localStorage.getItem('lastScannedUsername');
                   if (storedUsername) {
                     try {
                       const scanResults = await getLatestScanResults(storedUsername);
@@ -789,12 +934,24 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                         setMarketShare(scanResults.data.marketShare || null);
                         setScanUsername(storedUsername);
                         
-                        // Update cache with merged data
+                        // Update cache with merged data - include username for validation
                         const updatedCache = {
                           ...scanResults.data,
-                          competitorIntelligence: mergedCompetitors
+                          competitorIntelligence: mergedCompetitors,
+                          scanUsername: storedUsername, // Store username for validation
+                          username: storedUsername, // Also store as username for compatibility
+                          lastUpdated: new Date().toISOString() // Track when cache was updated
                         };
                         localStorage.setItem('lastScanResults', JSON.stringify(updatedCache));
+                        
+                        // Dispatch event to notify other components
+                        const event = new CustomEvent('scanComplete', {
+                          detail: {
+                            username: storedUsername,
+                            results: updatedCache
+                          }
+                        });
+                        window.dispatchEvent(event);
                         
                         // Recalculate analytics with new scan data
                         const updatedAnalytics = await fetchAnalyticsData();
