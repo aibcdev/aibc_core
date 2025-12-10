@@ -245,6 +245,7 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
                     <div className="text-white/40 mt-2">&gt; <span className="animate-pulse">|</span></div>
                   </div>
                 </div>
+                </div>
               </div>
             </div>
           </div>
@@ -535,7 +536,7 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
           </div>
         </section>
 
-      <Footer />
+        <Footer />
       </main>
     </div>
   );
