@@ -130,13 +130,38 @@ const AnalyticsView: React.FC = () => {
     } catch (error: any) {
       console.error('Error loading analytics:', error);
       
-      // Fallback to mock data if API fails
-      const mockPlatforms = generateMockPlatformData();
-      setAnalytics({
-        platforms: mockPlatforms,
-        isLoading: false,
-        error: error.message || 'Using sample data. Run a scan for real insights.'
-      });
+      // Last resort: Try to generate from any available scan data
+      const lastScanResults = localStorage.getItem('lastScanResults');
+      if (lastScanResults) {
+        try {
+          const scanData = JSON.parse(lastScanResults);
+          const platforms = ['twitter', 'linkedin', 'instagram', 'facebook', 'tiktok'];
+          const platformData = generateInsightsFromData(
+            { posts: scanData.extractedContent?.posts || [], totalEngagement: 0, avgEngagement: 0 },
+            scanData.competitorIntelligence || [],
+            platforms
+          );
+          setAnalytics({
+            platforms: platformData,
+            isLoading: false,
+            error: 'Using scan data. Run a new scan for latest insights.'
+          });
+        } catch (e) {
+          // Only use mock data as absolute last resort
+          const mockPlatforms = generateMockPlatformData();
+          setAnalytics({
+            platforms: mockPlatforms,
+            isLoading: false,
+            error: 'No scan data available. Run a digital footprint scan first.'
+          });
+        }
+      } else {
+        setAnalytics({
+          platforms: [],
+          isLoading: false,
+          error: 'No scan data available. Run a digital footprint scan first.'
+        });
+      }
     }
   };
 

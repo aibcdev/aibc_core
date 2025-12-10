@@ -971,32 +971,12 @@ async function verifyProfileExists(content: { html: string; text: string; url: s
     return false;
   }
   
-  // Platform-specific checks (very lenient - only reject if clearly not a profile)
-  // Most platforms have some identifying content, but we'll be very permissive
-  if (platform === 'twitter' || platform === 'x') {
-    // Twitter/X - only reject if we have very little content AND no platform indicators
-    if (content.text.length < 50 && !lowerText.includes('twitter') && !lowerText.includes('x.com') && !lowerText.includes('tweet')) {
-      return false;
-    }
-  } else if (platform === 'instagram') {
-    // Instagram - only reject if we have very little content AND no platform indicators
-    if (content.text.length < 50 && !lowerText.includes('instagram') && !lowerText.includes('post') && !lowerText.includes('photo')) {
-      return false;
-    }
-  } else if (platform === 'youtube') {
-    // YouTube - only reject if we have very little content AND no platform indicators
-    if (content.text.length < 50 && !lowerText.includes('youtube') && !lowerText.includes('subscribe') && !lowerText.includes('video')) {
-      return false;
-    }
-  } else if (platform === 'linkedin') {
-    // LinkedIn - only reject if we have very little content AND no platform indicators
-    if (content.text.length < 50 && !lowerText.includes('linkedin') && !lowerText.includes('profile') && !lowerText.includes('experience')) {
-      return false;
-    }
-  }
+  // Platform-specific checks - REMOVED - too strict, causing false negatives
+  // We'll accept any content that passes the basic checks above
+  // The LLM extraction will handle empty/invalid profiles gracefully
   
   // If we have any reasonable content and no strong "not found" indicators, assume it exists
-  // This is intentionally permissive - we'd rather try to extract from a profile than skip it
+  // This is intentionally very permissive - we'd rather try to extract from a profile than skip it
   return true;
 }
 

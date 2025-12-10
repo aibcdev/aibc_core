@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
 import { signUp } from '../services/authClient';
-import { usePrivy, useLogin } from '@privy-io/react-auth';
+import { usePrivy } from '@privy-io/react-auth';
 
 const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
   const [email, setEmail] = useState('');
@@ -13,42 +13,25 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
   const [error, setError] = useState('');
   
   // Privy hooks
-  const { ready, authenticated, user } = usePrivy();
-  const { login } = useLogin({
-    onComplete: (params) => {
-      console.log('Privy login complete:', params);
-      setLoading(false);
-      
-      // Store user info
-      if (params.user) {
-        const email = params.user.email?.address || '';
-        const googleEmail = (params.user as any).google?.email || '';
-        const googleName = (params.user as any).google?.name || '';
-        const userName = (params.user as any).name || googleName || email.split('@')[0] || 'User';
-        
-        const userData = {
-          id: params.user.id,
-          email: email || googleEmail,
-          name: userName,
-        };
-        localStorage.setItem('user', JSON.stringify(userData));
-        localStorage.setItem('authToken', params.user.id);
-      }
-      
-      // Check if user has completed onboarding
-      const hasCompletedOnboarding = localStorage.getItem('lastScannedUsername');
-      onNavigate(hasCompletedOnboarding ? ViewState.DASHBOARD : ViewState.INGESTION);
-    },
-    onError: (error) => {
-      console.error('Privy login error:', error);
-      setError('Authentication failed. Please try again.');
-      setLoading(false);
-    },
-  });
-
-  // Redirect if already authenticated
+  const { ready, authenticated, user, login } = usePrivy();
+  
+  // Handle successful authentication
   useEffect(() => {
     if (ready && authenticated && user) {
+      const email = user.email?.address || '';
+      const googleEmail = (user as any).google?.email || '';
+      const googleName = (user as any).google?.name || '';
+      const userName = (user as any).name || googleName || email.split('@')[0] || 'User';
+      
+      const userData = {
+        id: user.id,
+        email: email || googleEmail,
+        name: userName,
+      };
+      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('authToken', user.id);
+      
+      // Check if user has completed onboarding
       const hasCompletedOnboarding = localStorage.getItem('lastScannedUsername');
       onNavigate(hasCompletedOnboarding ? ViewState.DASHBOARD : ViewState.INGESTION);
     }
@@ -66,15 +49,12 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
     }
 
     try {
-      const result = await signUp(email, password, firstName, lastName);
-      if (result.success) {
-        onNavigate(ViewState.INGESTION);
-      } else {
-        setError(result.error || 'Failed to sign up');
-      }
+      // Use Privy for email signup
+      await login({ loginMethod: 'email', email, password });
+      // Navigation will be handled by useEffect when authenticated
     } catch (err: any) {
-      setError(err.message || 'Sign up failed');
-    } finally {
+      console.error('Signup error:', err);
+      setError(err.message || 'Sign up failed. Please try again.');
       setLoading(false);
     }
   };
@@ -124,12 +104,17 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
           {ready && (
             <div className="mb-4">
               <button
-                onClick={() => {
+                onClick={async () => {
                   setLoading(true);
                   setError('');
-                  login({
-                    loginMethod: 'google',
-                  });
+                  try {
+                    await login({ loginMethod: 'google' });
+                    // Navigation will be handled by useEffect when authenticated
+                  } catch (err: any) {
+                    console.error('Google login error:', err);
+                    setError(err.message || 'Google sign-in failed. Please try again.');
+                    setLoading(false);
+                  }
                 }}
                 disabled={loading || !ready}
                 className="w-full flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-white hover:bg-white/10 transition-all hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
