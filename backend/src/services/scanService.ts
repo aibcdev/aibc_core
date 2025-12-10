@@ -362,20 +362,9 @@ export async function startScan(
             addLog(scanId, `[EXTRACT] Extracting social links using direct regex (fast method)...`);
             let htmlLinks = extractSocialLinksFromHTMLDirect(websiteContent.html, websiteUrl, scanId);
             
-            // If regex found nothing, try browser-based extraction as fallback
+            // Skip browser extraction - it hangs. Use LLM as fallback instead
             if (Object.keys(htmlLinks).length === 0) {
-              addLog(scanId, `[EXTRACT] Regex found no links - trying browser-based extraction...`);
-              try {
-                htmlLinks = await Promise.race([
-                  extractSocialLinksFromWebsite(websiteContent.html, websiteUrl, scanId),
-                  new Promise<Record<string, string>>((_, reject) => 
-                    setTimeout(() => reject(new Error('Browser extraction timeout after 30 seconds')), 30000)
-                  )
-                ]);
-              } catch (browserError: any) {
-                addLog(scanId, `[EXTRACT] Browser extraction failed: ${browserError.message} - using regex results`);
-                // Keep regex results (even if empty)
-              }
+              addLog(scanId, `[EXTRACT] Regex found no links - will try LLM extraction instead`);
             }
             if (Object.keys(htmlLinks).length > 0) {
               discoveredSocialLinks = { ...discoveredSocialLinks, ...htmlLinks };
@@ -422,30 +411,26 @@ export async function startScan(
             }
           } else {
             addLog(scanId, `[DISCOVERY] Website scraping returned minimal content (${websiteContent.html?.length || 0} chars HTML) - will still attempt to find social links`);
-            // Even with minimal content, try to extract
+            // Even with minimal content, try to extract (use direct regex, no browser)
             if (websiteContent.html) {
-              try {
-                const htmlLinks = await extractSocialLinksFromWebsite(websiteContent.html, websiteUrl, scanId);
-                if (Object.keys(htmlLinks).length > 0) {
-                  discoveredSocialLinks = { ...discoveredSocialLinks, ...htmlLinks };
-                  addLog(scanId, `[DISCOVERY] Found ${Object.keys(htmlLinks).length} social profiles despite minimal content`);
-                }
-                
-                // ALWAYS try LLM even with minimal content
-                const contentForLLM = websiteContent.text || websiteContent.html.substring(0, 5000);
-                if (contentForLLM.length > 50) {
-                  try {
-                    const llmExtracted = await extractSocialLinksWithLLM(contentForLLM, websiteUrl, scanId);
-                    if (Object.keys(llmExtracted).length > 0) {
-                      discoveredSocialLinks = { ...llmExtracted, ...discoveredSocialLinks };
-                      addLog(scanId, `[DISCOVERY] ✅ LLM found ${Object.keys(llmExtracted).length} social profiles from minimal content`);
-                    }
-                  } catch (llmError: any) {
-                    addLog(scanId, `[DISCOVERY] LLM extraction failed: ${llmError.message}`);
+              const htmlLinks = extractSocialLinksFromHTMLDirect(websiteContent.html, websiteUrl, scanId);
+              if (Object.keys(htmlLinks).length > 0) {
+                discoveredSocialLinks = { ...discoveredSocialLinks, ...htmlLinks };
+                addLog(scanId, `[DISCOVERY] Found ${Object.keys(htmlLinks).length} social profiles despite minimal content`);
+              }
+              
+              // ALWAYS try LLM even with minimal content
+              const contentForLLM = websiteContent.text || websiteContent.html.substring(0, 5000);
+              if (contentForLLM.length > 50 && websiteUrl) {
+                try {
+                  const llmExtracted = await extractSocialLinksWithLLM(contentForLLM, websiteUrl, scanId);
+                  if (Object.keys(llmExtracted).length > 0) {
+                    discoveredSocialLinks = { ...llmExtracted, ...discoveredSocialLinks };
+                    addLog(scanId, `[DISCOVERY] ✅ LLM found ${Object.keys(llmExtracted).length} social profiles from minimal content`);
                   }
+                } catch (llmError: any) {
+                  addLog(scanId, `[DISCOVERY] LLM extraction failed: ${llmError.message}`);
                 }
-              } catch (extractError: any) {
-                addLog(scanId, `[DISCOVERY] Extraction failed: ${extractError.message}`);
               }
             }
           }
@@ -1629,7 +1614,7 @@ async function extractSocialLinksFromWebsite(html: string, websiteUrl: string, s
       
       if (contentForLLM.length > 50 && websiteUrl) {
         addLog(scanId, `[DISCOVERY] Running LLM extraction (PRIMARY METHOD) on ${contentForLLM.length} chars...`);
-        const llmExtracted = await extractSocialLinksWithLLM(contentForLLM, websiteUrl, scanId);
+        const llmExtracted = await extractSocialLinksWithLLM(contentForLLM, websiteUrl || '', scanId);
         // LLM results take absolute priority - they're the most accurate
         if (Object.keys(llmExtracted).length > 0) {
           socialLinks = { ...llmExtracted, ...socialLinks };
