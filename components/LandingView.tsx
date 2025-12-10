@@ -104,37 +104,6 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
           </div>
         </section>
 
-        {/* Powering the Next Generation Section */}
-        <section className="relative py-32 bg-[#050505] border-t border-white/5 overflow-hidden">
-          {/* Background Photo Grid */}
-          <div className="absolute inset-0 z-0">
-            <div className="grid grid-cols-5 grid-rows-3 h-full w-full gap-0">
-              {Array.from({ length: 15 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="relative overflow-hidden grayscale"
-                  style={{
-                    backgroundImage: `url('https://images.unsplash.com/photo-${1522071820 + i}?w=400&h=400&fit=crop&q=80&bw=1')`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                  }}
-                />
-              ))}
-            </div>
-            {/* Dark overlay for text readability */}
-            <div className="absolute inset-0 bg-black/60 z-10"></div>
-          </div>
-
-          {/* Content */}
-          <div className="relative z-20 mx-auto max-w-7xl px-6 lg:px-8">
-            <div className="text-center">
-              <h2 className="text-5xl sm:text-6xl lg:text-7xl font-medium text-white tracking-tight">
-                Powering the next generation of creators and businesses.
-              </h2>
-            </div>
-          </div>
-        </section>
-
         {/* Metrics Section */}
         <section className="py-24 bg-[#050505] border-t border-white/5">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
@@ -214,12 +183,12 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
                               <div className="text-white font-bold">4,291 +8%</div>
                             </div>
                           )}
-                          <div 
-                            className="w-full bg-gradient-to-t from-purple-500 to-purple-400 rounded-t transition-all"
-                            style={{ height: `${height}%` }}
-                          ></div>
-                          <div className="text-[10px] text-white/30 mt-2">{['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'][i]}</div>
-                        </div>
+                        <div 
+                          className="w-full bg-gradient-to-t from-purple-500 to-purple-400 rounded-t transition-all"
+                          style={{ height: `${height}%` }}
+                        ></div>
+                        <div className="text-[10px] text-white/30 mt-2">{['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'][i]}</div>
+                      </div>
                       );
                     })}
                   </div>
@@ -530,6 +499,37 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
             <p className="text-sm text-white/40">
               No credit card required. Cancel anytime.
             </p>
+          </div>
+        </section>
+
+        {/* Powering the Next Generation Section */}
+        <section className="relative py-32 bg-[#050505] border-t border-white/5 overflow-hidden">
+          {/* Background Photo Grid */}
+          <div className="absolute inset-0 z-0">
+              <div className="grid grid-cols-5 grid-rows-3 h-full w-full gap-0">
+                {Array.from({ length: 15 }).map((_, i) => (
+                  <div
+                    key={i}
+                  className="relative overflow-hidden grayscale"
+                    style={{
+                    backgroundImage: `url('https://images.unsplash.com/photo-${1522071820 + i}?w=400&h=400&fit=crop&q=80&bw=1')`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }}
+                  />
+                ))}
+              </div>
+            {/* Dark overlay for text readability */}
+            <div className="absolute inset-0 bg-black/60 z-10"></div>
+          </div>
+
+          {/* Content */}
+          <div className="relative z-20 mx-auto max-w-7xl px-6 lg:px-8">
+            <div className="text-center">
+              <h2 className="text-5xl sm:text-6xl lg:text-7xl font-medium text-white tracking-tight">
+                Powering the next generation of creators and businesses.
+              </h2>
+            </div>
           </div>
         </section>
 
