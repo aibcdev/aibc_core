@@ -1008,49 +1008,57 @@ export async function startScan(
         brandContext += `Recent Posts Sample:\n${validatedContent.posts.slice(0, 5).map((p: any) => p.content).join('\n\n')}\n\n`;
       }
       
-      const contentPrompt = `You are a content strategist for ${brandName}. Generate 5-8 SPECIFIC, BRAND-SPECIFIC content ideas that are UNIQUE to this brand and cannot be applied to other brands in different industries.
+      // SIMPLE DIRECT APPROACH - Like ChatGPT would respond
+      const contentPrompt = `What content should ${brandName} create?
 
-CRITICAL REQUIREMENTS:
-- Each idea MUST reference specific brand elements (products, services, themes, or industry-specific concepts)
-- Each idea MUST align with their exact industry/niche
-- NO generic ideas like "behind-the-scenes content" or "educational content" without brand context
-- Ideas must be actionable and specific to their audience
-- Each idea should be so specific that it would NOT work for a different brand in a different industry
-- If website content is provided, use it as the PRIMARY source to understand what the business actually does
-
-Brand Name: ${brandName}
-Industry/Niche: ${nicheIndicators || 'Based on content analysis'}
-
+COMPANY: ${brandName}
+${websiteTextContent && websiteTextContent.length > 100 ? `
+ABOUT THIS COMPANY (from their website):
+${websiteTextContent.substring(0, 8000)}
+` : ''}
 ${brandContext}
 
-Brand DNA:
-${JSON.stringify(brandDNA, null, 2)}
+TASK: Generate 6 SPECIFIC content ideas for ${brandName}.
 
-Generate content ideas that:
-1. Are SPECIFIC to ${brandName} (e.g., "Nike Athlete Story: [Athlete Name]" NOT "Behind-the-scenes")
-2. Reference their actual products/services/themes/industry
-3. Match their voice and tone EXACTLY
-4. Are actionable and tailored to their audience
-5. Cannot be applied to other brands in different industries
+CRITICAL RULES:
+1. Each idea must ONLY work for ${brandName} - not any other company
+2. Reference their ACTUAL products, services, or industry
+3. If you know ${brandName}, use what you know about them
+4. If website content is provided, use it to understand their business
 
 EXAMPLES OF GOOD IDEAS (brand-specific):
-- For Airbnb: "Host Story Spotlight: Unique Property in Tokyo" (NOT "Behind-the-scenes content")
-- For Nike: "Just Do It: Athlete Journey Series - [Athlete Name]" (NOT "Product highlights")
-- For Surge: "Builder Success Story: How [Project] Launched on Surge" (NOT "Educational content")
+For Nike:
+- "Behind the Design: Air Max 2024 Engineering Story"
+- "Athlete Spotlight: [Athlete Name]'s Morning Training Routine"
+- "Just Do It Moment: Fan Submissions of Personal Victories"
 
-EXAMPLES OF BAD IDEAS (too generic):
-- "Behind-the-scenes content" (too generic - could be any brand)
-- "Educational content" (too generic - needs brand context)
-- "User-generated content" (too generic - needs brand-specific angle)
+For Airbnb:
+- "Unique Stay: The Treehouse Experience in Costa Rica"
+- "Host Success Story: How Maria Grew Her Bookings 300%"
+- "Local's Guide: Hidden Gems Near Top Airbnb Destinations"
 
-Return JSON array of content ideas, each with:
-{
-  "title": "Specific, brand-tailored content idea (e.g., 'Host Story: Unique Airbnb Property in Tokyo')",
-  "description": "Detailed description referencing specific brand elements, products, services, or themes",
-  "platform": "twitter|instagram|linkedin|youtube",
-  "theme": "Which content theme this aligns with",
-  "format": "post|video|carousel|thread"
-}`;
+For Tesla:
+- "Factory Tour: Inside Gigafactory Texas"
+- "Owner Stories: Road Trip Across America in Model 3"
+- "Engineering Deep Dive: How Autopilot Sees the Road"
+
+For HubSpot:
+- "CRM Success Story: How [Company] Grew Revenue 50%"
+- "Marketing Automation Tutorial: Email Sequences That Convert"
+- "Sales Tips: Using HubSpot's Deal Pipeline Effectively"
+
+Now generate 6 ideas for ${brandName}:
+
+Return JSON array:
+[
+  {
+    "title": "Specific content idea for ${brandName}",
+    "description": "Detailed description mentioning ${brandName}'s actual products/services",
+    "platform": "instagram|twitter|linkedin|youtube",
+    "theme": "content theme",
+    "format": "post|video|carousel|thread"
+  }
+]`;
 
       const contentIdeasResult = await generateJSON<any>(contentPrompt, `You are a content strategist specializing in ${nicheIndicators || 'brand-specific content'}. Generate specific, actionable content ideas that are UNIQUE to this brand and reference their actual products, services, or themes. NEVER generate generic ideas that could apply to any brand.`, { tier: scanTier });
       
@@ -4012,91 +4020,68 @@ async function generateCompetitorIntelligence(validatedContent: any, brandDNA: a
     // Extract niche indicators from content - PRIORITIZE website content
     const nicheIndicators = extractNicheIndicators(combinedText, bio, themes, brandDNA, websiteContent);
     
-    const prompt = `You are conducting DEEP competitive intelligence research. This requires multi-step analysis:
+    // SIMPLE DIRECT APPROACH - Like ChatGPT
+    // Just ask who the competitors are directly, using LLM's knowledge base
+    const brandName = username?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || username || 'this brand';
+    
+    const prompt = `Who are the main competitors for ${username || brandName}?
 
-STEP 1: NICHE IDENTIFICATION
-Analyze the creator/brand to identify their EXACT niche and industry.
+COMPANY: ${username || brandName}
+${websiteContent && websiteContent.length > 100 ? `
+ABOUT THIS COMPANY (from their website):
+${websiteContent.substring(0, 8000)}
+` : ''}
+${bio && bio.length > 20 ? `BIO: ${bio}` : ''}
+${themes ? `TOPICS: ${themes}` : ''}
 
-Creator/Brand: ${username || 'Unknown'}
-${contentContext}
-${brandDNA ? `Brand DNA: ${JSON.stringify(brandDNA, null, 2)}` : ''}
-${themes ? `Topics: ${themes}` : ''}
-${nicheIndicators ? `Niche Indicators: ${nicheIndicators}` : ''}
+TASK: Identify 4-6 REAL competitors for ${brandName}.
 
-CRITICAL: If website content is provided above, it is the PRIMARY and MOST ACCURATE source for understanding what this business actually does. Use the website content to identify:
-- What products/services they offer
-- What industry/vertical they operate in
-- Who their target customers are
-- What makes them unique
+CRITICAL RULES:
+1. Use your knowledge base - you know who competes with ${brandName}
+2. If you recognize ${brandName}, list their ACTUAL real-world competitors
+3. If website content is provided, use it to understand their business EXACTLY
+4. Competitors must be in the SAME industry and SAME niche
+5. Be SPECIFIC - not generic industry players
 
-DO NOT rely solely on social media posts or bio - the website content tells you what the business ACTUALLY does.
+EXAMPLES OF GOOD COMPETITOR MATCHING:
+- Nike → Adidas, Puma, Under Armour, New Balance (athletic apparel)
+- Tesla → Rivian, Lucid, BYD, Ford EV (electric vehicles)
+- Airbnb → VRBO, Booking.com, Expedia (vacation rentals)
+- HubSpot → Salesforce, Marketo, ActiveCampaign (marketing automation)
+- Surge.xyz → CoinList, DAO Maker, Polkastarter (Web3 launchpads)
 
-CRITICAL NICHE ANALYSIS:
-- What is their EXACT niche? (e.g., "Web3 Launchpad Platform" NOT "General Tech", "AI Hackathon Platform" NOT "Event Platform", "Football/Soccer content creators" NOT "American football/NFL")
-- What industry/vertical? Be SPECIFIC (e.g., "Web3 Launchpad", "AI Hackathon", "Travel & Hospitality", "Athletic Apparel")
-- What type of platform/service? (e.g., "Token launch platform" vs "General crypto exchange", "AI hackathon organizer" vs "General event platform")
-- What audience? (e.g., "Web3 builders and investors" vs "General crypto users", "AI developers" vs "General tech enthusiasts")
+EXAMPLES OF BAD COMPETITOR MATCHING (DON'T DO THIS):
+- Nike → Apple, Google (wrong industry!)
+- Tesla → Toyota, Honda (wrong - not EV focused)
+- Surge.xyz → Coinbase, Binance (wrong - those are exchanges, not launchpads)
 
-IMPORTANT DISTINCTIONS:
-- "Launchpad" = Token/project launch platform (e.g., Surge.xyz, CoinList, DAO Maker) - NOT general crypto exchanges (Coinbase, Binance)
-- "Hackathon Platform" = Developer competition platform (e.g., Devpost, Surge.xyz) - NOT general event platforms (Eventbrite)
-- "Web3" = Blockchain/crypto platforms - NOT general tech companies
-- "AI Platform" = AI-specific tools/services - NOT general software
-- "Football" in UK/Europe = Soccer (the sport with 11 players, round ball, goals)
-- "Football" in US = American Football (NFL, gridiron, touchdowns)
-- These are DIFFERENT niches with DIFFERENT competitors
-
-STEP 2: COMPETITOR IDENTIFICATION
-Based on the EXACT niche identified, find REAL competitors who:
-- Create content in the SAME niche (not a different sport/industry)
-- Target the SAME audience
-- Use similar content formats
-- Are in the same market space
-
-CRITICAL: Match competitors to the EXACT niche:
-- If niche is "Web3 Launchpad" → Find launchpad platforms (CoinList, DAO Maker, Polkastarter), NOT crypto exchanges (Coinbase, Binance)
-- If niche is "AI Hackathon Platform" → Find hackathon platforms (Devpost, MLH), NOT general event platforms (Eventbrite)
-- If niche is "Soccer/Football (European)" → Find soccer creators, NOT NFL creators
-- If niche is "American Football/NFL" → Find NFL creators, NOT soccer creators
-- If niche is "Tech reviews" → Find tech reviewers, NOT gaming streamers
-- Be PRECISE - wrong niche matching is unacceptable
-
-I need:
-1. Market share estimate (what % of their niche's total attention do they capture?)
-2. Top 3-5 competitors with engagement data - MUST be in the SAME niche
-
-MARKET SHARE:
-- Look at their niche/industry (e.g., "football content creators", "tech reviewers")
-- Estimate what % of total audience attention they get vs the whole space
-- This is an ESTIMATE - be realistic (most creators are under 5%)
-
-For each competitor:
-- name: Real name
+For each competitor provide:
+- name: The real company/brand name
 - threatLevel: "HIGH", "MEDIUM", or "LOW"
-- primaryVector: Platform + posting frequency (e.g. "YouTube - 3x/week")
-- weeklyViews: Estimated weekly views (number)
-- weeklyEngagement: Estimated weekly likes+comments (number)
-- theirAdvantage: One sentence, be specific
-- yourOpportunity: One sentence, start with a verb
+- primaryVector: Their main platform and strategy
+- theirAdvantage: What they do better than ${brandName}
+- yourOpportunity: How ${brandName} can compete
+
+Also estimate ${brandName}'s market share in their industry.
 
 Return ONLY valid JSON:
 {
   "marketShare": {
-    "percentage": 2.5,
-    "industry": "Football YouTube creators",
-    "totalCreatorsInSpace": 500,
-    "yourRank": 45,
-    "note": "Estimate based on subscriber count and average views"
+    "percentage": 5,
+    "industry": "Specific industry name",
+    "totalCreatorsInSpace": 100,
+    "yourRank": 5,
+    "note": "Brief explanation"
   },
   "competitors": [
     {
-      "name": "Chunkz",
+      "name": "Real Competitor Name",
       "threatLevel": "HIGH",
-      "primaryVector": "YouTube - 4x/week",
-      "weeklyViews": 2500000,
-      "weeklyEngagement": 150000,
-      "theirAdvantage": "Massive crossover appeal beyond just football.",
-      "yourOpportunity": "Go deeper on tactics. His content is entertainment-first."
+      "primaryVector": "Platform - strategy",
+      "weeklyViews": 1000000,
+      "weeklyEngagement": 50000,
+      "theirAdvantage": "Specific advantage they have",
+      "yourOpportunity": "Specific action ${brandName} can take"
     }
   ]
 }`;
