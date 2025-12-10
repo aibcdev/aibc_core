@@ -26,11 +26,13 @@ COPY src ./src
 # Build TypeScript
 RUN npm run build
 
-# Remove dev dependencies
-RUN npm prune --production
-
-# Install Playwright browsers
+# Install Playwright browsers BEFORE removing dev dependencies
+# (playwright is needed for browser installation)
 RUN npx playwright install chromium
+RUN npx playwright install chromium-headless-shell
+
+# Remove dev dependencies (but keep playwright for runtime)
+RUN npm prune --production
 
 # Set environment variables
 ENV NODE_ENV=production
