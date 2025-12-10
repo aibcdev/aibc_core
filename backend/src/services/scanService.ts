@@ -1217,6 +1217,38 @@ Return JSON array of content ideas, each with:
       ];
     }
 
+    // FINAL VERIFICATION: Ensure contentIdeas exists before adding to results
+    if (!contentIdeas || contentIdeas.length === 0) {
+      addLog(scanId, `[CRITICAL] Content ideas still empty at results assembly - using emergency set`);
+      const emergencyBrandName = username?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || 'Brand';
+      contentIdeas = [
+        {
+          title: `${emergencyBrandName} Brand Story`,
+          description: `Share ${emergencyBrandName}'s unique story and mission`,
+          platform: 'linkedin',
+          theme: 'brand building',
+          format: 'post'
+        },
+        {
+          title: `${emergencyBrandName} Product Showcase`,
+          description: `Highlight ${emergencyBrandName}'s key products and services`,
+          platform: 'instagram',
+          theme: 'product',
+          format: 'carousel'
+        },
+        {
+          title: `${emergencyBrandName} Industry Insights`,
+          description: `Share insights from ${emergencyBrandName}'s perspective`,
+          platform: 'twitter',
+          theme: 'thought leadership',
+          format: 'thread'
+        }
+      ];
+      addLog(scanId, `[SUCCESS] Emergency content ideas created: ${contentIdeas.length} ideas`);
+    }
+    
+    addLog(scanId, `[FINAL] Content ideas count: ${contentIdeas.length}`);
+    
     const results = {
       extractedContent: validatedContent,
       brandDNA,
@@ -1224,7 +1256,7 @@ Return JSON array of content ideas, each with:
       strategicInsights,
       competitorIntelligence,
       socialLinks: discoveredSocialLinks, // Add discovered social links
-      contentIdeas // Add generated content ideas
+      contentIdeas: contentIdeas || [] // Add generated content ideas - ensure it's never undefined
     };
 
     storage.updateScan(scanId, {
