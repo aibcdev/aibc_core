@@ -122,6 +122,7 @@ export async function startScan(
     }
     
     // If not a social media URL, check if it's a website/domain
+    // ALWAYS try to scrape website first if it looks like a domain
     if (!detectedSocialPlatform) {
       const isWebsite = username.includes('.') && 
                         (username.includes('.com') || username.includes('.tv') || 
@@ -136,40 +137,55 @@ export async function startScan(
         : getProfileUrl(username, 'website');
       
       if (websiteUrl && (websiteUrl.includes('http://') || websiteUrl.includes('https://'))) {
-        addLog(scanId, `[DISCOVERY] Scanning website for social media links: ${websiteUrl}`);
+        addLog(scanId, `[DISCOVERY] CRITICAL: Scanning website for social media links: ${websiteUrl}`);
         try {
           const websiteContent = await scrapeProfile(websiteUrl, 'website', scanId);
-          if (websiteContent.html && websiteContent.html.length > 100) {
-            addLog(scanId, `[DISCOVERY] Website scraped successfully (${websiteContent.html.length} chars HTML, ${websiteContent.text.length} chars text)`);
-            discoveredSocialLinks = await extractSocialLinksFromWebsite(websiteContent.html, websiteUrl, scanId);
-            if (Object.keys(discoveredSocialLinks).length > 0) {
-              addLog(scanId, `[DISCOVERY] Found ${Object.keys(discoveredSocialLinks).length} social profiles: ${Object.keys(discoveredSocialLinks).join(', ')}`);
-            } else {
-              addLog(scanId, `[DISCOVERY] No social links found in HTML, trying LLM extraction from text...`);
-              // Try LLM extraction from text content as well
-              if (websiteContent.text && websiteContent.text.length > 100) {
-                const llmExtracted = await extractSocialLinksWithLLM(websiteContent.text, websiteUrl, scanId);
-                if (Object.keys(llmExtracted).length > 0) {
-                  discoveredSocialLinks = llmExtracted;
-                  addLog(scanId, `[DISCOVERY] LLM found ${Object.keys(discoveredSocialLinks).length} social profiles`);
-                } else {
-                  addLog(scanId, `[DISCOVERY] LLM extraction also found no social links`);
-                }
-              } else {
-                addLog(scanId, `[DISCOVERY] Website text content too short (${websiteContent.text?.length || 0} chars) for LLM extraction`);
+          if (websiteContent.html && websiteContent.html.length > 50) {
+            addLog(scanId, `[DISCOVERY] Website scraped successfully (${websiteContent.html.length} chars HTML, ${websiteContent.text?.length || 0} chars text)`);
+            
+            // Extract social links from HTML
+            const htmlLinks = await extractSocialLinksFromWebsite(websiteContent.html, websiteUrl, scanId);
+            if (Object.keys(htmlLinks).length > 0) {
+              discoveredSocialLinks = { ...discoveredSocialLinks, ...htmlLinks };
+              addLog(scanId, `[DISCOVERY] Found ${Object.keys(htmlLinks).length} social profiles from HTML: ${Object.keys(htmlLinks).join(', ')}`);
+            }
+            
+            // Also try LLM extraction from text content as fallback/enhancement
+            if (websiteContent.text && websiteContent.text.length > 50) {
+              const llmExtracted = await extractSocialLinksWithLLM(websiteContent.text, websiteUrl, scanId);
+              if (Object.keys(llmExtracted).length > 0) {
+                // Merge LLM results with HTML results (LLM can find links mentioned in text)
+                discoveredSocialLinks = { ...discoveredSocialLinks, ...llmExtracted };
+                addLog(scanId, `[DISCOVERY] LLM found additional ${Object.keys(llmExtracted).length} social profiles`);
               }
             }
+            
+            if (Object.keys(discoveredSocialLinks).length > 0) {
+              addLog(scanId, `[DISCOVERY] TOTAL: Found ${Object.keys(discoveredSocialLinks).length} social profiles from website: ${Object.keys(discoveredSocialLinks).join(', ')}`);
+            } else {
+              addLog(scanId, `[DISCOVERY] WARNING: No social links found on website - will skip all platforms`);
+            }
           } else {
-            addLog(scanId, `[DISCOVERY] Website scraping returned minimal content (${websiteContent.html?.length || 0} chars HTML)`);
+            addLog(scanId, `[DISCOVERY] Website scraping returned minimal content (${websiteContent.html?.length || 0} chars HTML) - will still attempt to find social links`);
+            // Even with minimal content, try to extract
+            if (websiteContent.html) {
+              const htmlLinks = await extractSocialLinksFromWebsite(websiteContent.html, websiteUrl, scanId);
+              if (Object.keys(htmlLinks).length > 0) {
+                discoveredSocialLinks = { ...discoveredSocialLinks, ...htmlLinks };
+                addLog(scanId, `[DISCOVERY] Found ${Object.keys(htmlLinks).length} social profiles despite minimal content`);
+              }
+            }
           }
         } catch (error: any) {
-          addLog(scanId, `[DISCOVERY] Failed to extract social links from website: ${error.message}`);
-          addLog(scanId, `[DISCOVERY] Will attempt LLM-based handle discovery for each platform individually`);
+          addLog(scanId, `[DISCOVERY] ERROR: Failed to extract social links from website: ${error.message}`);
+          addLog(scanId, `[DISCOVERY] Will skip all platforms since website scraping failed`);
         }
       }
     }
     
     // STEP 2: Scrape all platforms, using discovered links when available
+    addLog(scanId, `[DISCOVERY] Available discovered links: ${JSON.stringify(Object.keys(discoveredSocialLinks))}`);
+    
     for (const platform of platforms) {
       try {
         // Priority: discovered link > connected account > constructed URL
@@ -178,12 +194,21 @@ export async function startScan(
         
         // Check if we discovered this platform's link from the website
         // Normalize platform name for matching (twitter/x, instagram, youtube, linkedin, tiktok)
-        const normalizedPlatform = platform.toLowerCase().replace('x', 'twitter');
-        const platformKey = normalizedPlatform === 'twitter' || normalizedPlatform === 'x' ? 'twitter' : normalizedPlatform;
+        const platformLower = platform.toLowerCase();
+        const normalizedPlatform = platformLower.replace('x', 'twitter');
+        const platformKey = (normalizedPlatform === 'twitter' || platformLower === 'x') ? 'twitter' : normalizedPlatform;
         
-        if (discoveredSocialLinks[platformKey] || discoveredSocialLinks[platform.toLowerCase()]) {
-          profileUrl = discoveredSocialLinks[platformKey] || discoveredSocialLinks[platform.toLowerCase()];
-          addLog(scanId, `[DISCOVERY] Using discovered ${platform} link: ${profileUrl}`);
+        // Try multiple variations to find the discovered link
+        const discoveredUrl = discoveredSocialLinks[platformKey] || 
+                              discoveredSocialLinks[platformLower] || 
+                              discoveredSocialLinks[platform] ||
+                              discoveredSocialLinks[normalizedPlatform];
+        
+        addLog(scanId, `[DISCOVERY] Checking ${platform} (key: ${platformKey}, lower: ${platformLower}) - found: ${discoveredUrl ? 'YES' : 'NO'}`);
+        
+        if (discoveredUrl) {
+          profileUrl = discoveredUrl;
+          addLog(scanId, `[DISCOVERY] ✓ Using discovered ${platform} link: ${profileUrl}`);
         } else {
           // Use connected account handle if available
           if (connectedAccounts?.[platform]) {
@@ -197,22 +222,14 @@ export async function startScan(
                              username.includes('.net') || username.includes('.org'));
             
             if (isDomain) {
-              // For domains, we should have found social links from the website
-              // If we didn't, try LLM-based discovery as a last resort
-              addLog(scanId, `[SKIP] ${platform} - domain detected but no social link found. Trying LLM discovery...`);
-              
-              // Try LLM to find the actual handle
-              try {
-                const llmDiscovered = await discoverSocialHandlesWithLLM(username, platform, scanId);
-                if (llmDiscovered) {
-                  profileUrl = getProfileUrl(llmDiscovered, platform);
-                  addLog(scanId, `[LLM] Discovered ${platform} handle: ${llmDiscovered}`);
-                } else {
-                  addLog(scanId, `[SKIP] ${platform} profile not found - no handle discovered for domain`);
-                  continue; // Skip this platform
-                }
-              } catch (llmError: any) {
-                addLog(scanId, `[SKIP] ${platform} - could not discover handle: ${llmError.message}`);
+              // For domains, we MUST have found social links from the website
+              // If we didn't find any, skip this platform - don't try to construct URLs
+              if (Object.keys(discoveredSocialLinks).length === 0) {
+                addLog(scanId, `[SKIP] ${platform} - domain detected but NO social links found on website. Website scraping must find links first.`);
+                continue; // Skip this platform - we need website scraping to work first
+              } else {
+                // We found some links, but not for this platform - that's okay, skip it
+                addLog(scanId, `[SKIP] ${platform} - domain detected but this platform's link not found on website. Found: ${Object.keys(discoveredSocialLinks).join(', ')}`);
                 continue; // Skip this platform
               }
             } else {
@@ -231,7 +248,15 @@ export async function startScan(
         
         if (profileUrl) {
           // Check if this is a discovered link from website scraping
-          const isDiscoveredLink = discoveredSocialLinks[platformKey] || discoveredSocialLinks[platform.toLowerCase()];
+          // Try multiple variations to match discovered links
+          const platformLower = platform.toLowerCase();
+          const normalizedPlatform = platformLower.replace('x', 'twitter');
+          const platformKey = (normalizedPlatform === 'twitter' || platformLower === 'x') ? 'twitter' : normalizedPlatform;
+          
+          const isDiscoveredLink = discoveredSocialLinks[platformKey] || 
+                                   discoveredSocialLinks[platformLower] || 
+                                   discoveredSocialLinks[platform] ||
+                                   discoveredSocialLinks[normalizedPlatform];
           
           if (isDiscoveredLink) {
             // If we discovered this link from the website, ALWAYS try to scrape it
