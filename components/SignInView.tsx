@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
-import { signIn, forgotPassword } from '../services/authClient';
-import { usePrivy } from '@privy-io/react-auth';
+import { signIn, forgotPassword, signInWithGoogle } from '../services/authClient';
 
 const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
   const [email, setEmail] = useState('');
@@ -13,43 +12,6 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
   const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
-  
-  // Privy hooks
-  const privy = usePrivy();
-  const { ready, authenticated, user } = privy;
-  const loginWithEmail = privy.loginWithEmail;
-  const loginWithGoogle = privy.loginWithGoogle;
-  const sendPasswordResetEmail = privy.sendPasswordResetEmail;
-  
-  // Handle successful authentication
-  useEffect(() => {
-    if (ready && authenticated && user) {
-      const email = user.email?.address || '';
-      const googleEmail = (user as any).google?.email || '';
-      const googleName = (user as any).google?.name || '';
-      const userName = (user as any).name || googleName || email.split('@')[0] || 'User';
-      
-      const userData = {
-        id: user.id,
-        email: email || googleEmail,
-        name: userName,
-      };
-      localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('authToken', user.id);
-      
-      // Check if user has completed onboarding
-      const hasCompletedOnboarding = localStorage.getItem('lastScannedUsername');
-      onNavigate(hasCompletedOnboarding ? ViewState.DASHBOARD : ViewState.INGESTION);
-    }
-  }, [ready, authenticated, user, onNavigate]);
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (ready && authenticated && user) {
-      const hasCompletedOnboarding = localStorage.getItem('lastScannedUsername');
-      onNavigate(hasCompletedOnboarding ? ViewState.DASHBOARD : ViewState.INGESTION);
-    }
-  }, [ready, authenticated, user, onNavigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,15 +25,31 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
     }
 
     try {
-      // Use Privy for email/password login
-      if (!loginWithEmail) {
-        throw new Error('Sign in is not available. Please check your Privy configuration.');
+      const result = await signIn(email, password);
+      if (result.success) {
+        // Check if user has completed onboarding
+        const hasCompletedOnboarding = localStorage.getItem('lastScannedUsername');
+        onNavigate(hasCompletedOnboarding ? ViewState.DASHBOARD : ViewState.INGESTION);
+      } else {
+        setError(result.error || 'Sign in failed. Please try again.');
+        setLoading(false);
       }
-      await loginWithEmail({ email, password });
-      // Navigation will be handled by useEffect when authenticated
     } catch (err: any) {
       console.error('Login error:', err);
       setError(err.message || 'Sign in failed. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      await signInWithGoogle('');
+      // Navigation will happen via redirect or callback
+    } catch (err: any) {
+      console.error('Google sign-in error:', err);
+      setError(err.message || 'Google sign-in failed. Please try again.');
       setLoading(false);
     }
   };
@@ -89,27 +67,22 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
 
     try {
       console.log('🔐 Forgot password form submitted for:', forgotPasswordEmail);
+      const result = await forgotPassword(forgotPasswordEmail);
+      console.log('🔐 Forgot password result:', result);
       
-      // Use Privy's password reset email
-      if (sendPasswordResetEmail) {
-        await sendPasswordResetEmail(forgotPasswordEmail);
+      if (result.success) {
         setForgotPasswordSent(true);
         setError(''); // Clear any previous errors
       } else {
-        // Fallback to old method if Privy method not available
-        const result = await forgotPassword(forgotPasswordEmail);
-        if (result.success) {
-          setForgotPasswordSent(true);
-          setError('');
-        } else {
-          const errorMsg = result.error || 'Failed to send reset email. Please try again.';
-          setError(errorMsg);
-        }
+        // Show the actual error from Supabase
+        const errorMsg = result.error || 'Failed to send reset email. Please try again.';
+        setError(errorMsg);
+        console.error('❌ Password reset failed:', errorMsg);
       }
     } catch (err: any) {
-      console.error('❌ Password reset exception:', err);
       const errorMsg = err.message || 'Failed to send reset email. Please try again.';
       setError(errorMsg);
+      console.error('❌ Password reset exception:', err);
     } finally {
       setForgotPasswordLoading(false);
     }
@@ -239,28 +212,13 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
             </div>
           )}
 
-          {/* Google Sign-In Button with Privy */}
-          {ready && (
-            <div className="mb-4">
-              <button
-                onClick={async () => {
-                  setLoading(true);
-                  setError('');
-                  try {
-                    if (!loginWithGoogle) {
-                      throw new Error('Google sign-in is not available. Please check your Privy configuration.');
-                    }
-                    await loginWithGoogle();
-                    // Navigation will be handled by useEffect when authenticated
-                  } catch (err: any) {
-                    console.error('Google login error:', err);
-                    setError(err.message || 'Google sign-in failed. Please try again.');
-                    setLoading(false);
-                  }
-                }}
-                disabled={loading || !ready}
-                className="w-full flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-white hover:bg-white/10 transition-all hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+          {/* Google Sign-In Button */}
+          <div className="mb-4">
+            <button
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-white hover:bg-white/10 transition-all hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -277,9 +235,8 @@ const SignInView: React.FC<NavProps> = ({ onNavigate }) => {
                     Continue with Google
                   </>
                 )}
-              </button>
-            </div>
-          )}
+            </button>
+          </div>
 
           <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">

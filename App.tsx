@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from 'react';
-import { PrivyProvider } from '@privy-io/react-auth';
 import LandingView from './components/LandingView';
 import LoginView from './components/LoginView';
 import SignInView from './components/SignInView';
@@ -15,10 +14,7 @@ import AdminView from './components/AdminView';
 import InboxView from './components/InboxView';
 import { ViewState } from './types';
 
-// Privy App ID - get from https://dashboard.privy.io
-const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID || '';
-
-function AppContent() {
+function App() {
   const [view, setView] = useState<ViewState>(ViewState.LANDING);
   const [username, setUsername] = useState<string>('');
   const [scanType, setScanType] = useState<'basic' | 'deep'>('basic');
@@ -95,40 +91,4 @@ function AppContent() {
   );
 }
 
-export default function App() {
-  // Privy configuration - only use if app ID is configured
-  const privyConfig = PRIVY_APP_ID ? {
-    appId: PRIVY_APP_ID,
-    config: {
-      // Enable both email/password and Web3 wallet authentication
-      loginMethods: ['email', 'wallet', 'sms', 'google', 'apple', 'twitter', 'discord', 'github'],
-      // Enable embedded wallets for Web3 users
-      embeddedWallets: {
-        createOnLogin: 'users-without-wallets',
-        requireUserPasswordOnCreate: false,
-      },
-      // Appearance customization
-      appearance: {
-        theme: 'dark',
-        accentColor: '#FF5E1E', // Brand orange
-        logo: 'https://aibcmedia.com/logo.png', // Update with your logo URL
-      },
-      // Legal and terms
-      legal: {
-        termsAndConditionsUrl: 'https://aibcmedia.com/terms',
-        privacyPolicyUrl: 'https://aibcmedia.com/privacy',
-      },
-    },
-  } : null;
-
-  // If Privy is not configured, render without it
-  if (!PRIVY_APP_ID || !privyConfig) {
-    return <AppContent />;
-  }
-
-  return (
-    <PrivyProvider appId={privyConfig.appId} config={privyConfig.config}>
-      <AppContent />
-    </PrivyProvider>
-  );
-}
+export default App;

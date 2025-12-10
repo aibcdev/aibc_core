@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
-import { signUp } from '../services/authClient';
-import { usePrivy } from '@privy-io/react-auth';
+import { signUp, signInWithGoogle } from '../services/authClient';
 
 const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
   const [email, setEmail] = useState('');
@@ -11,34 +10,6 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  // Privy hooks
-  const privy = usePrivy();
-  const { ready, authenticated, user } = privy;
-  const signupWithEmail = privy.signupWithEmail;
-  const loginWithGoogle = privy.loginWithGoogle;
-  
-  // Handle successful authentication
-  useEffect(() => {
-    if (ready && authenticated && user) {
-      const email = user.email?.address || '';
-      const googleEmail = (user as any).google?.email || '';
-      const googleName = (user as any).google?.name || '';
-      const userName = (user as any).name || googleName || email.split('@')[0] || 'User';
-      
-      const userData = {
-        id: user.id,
-        email: email || googleEmail,
-        name: userName,
-      };
-      localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('authToken', user.id);
-      
-      // Check if user has completed onboarding
-      const hasCompletedOnboarding = localStorage.getItem('lastScannedUsername');
-      onNavigate(hasCompletedOnboarding ? ViewState.DASHBOARD : ViewState.INGESTION);
-    }
-  }, [ready, authenticated, user, onNavigate]);
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,15 +23,31 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
     }
 
     try {
-      // Use Privy for email signup
-      if (!signupWithEmail) {
-        throw new Error('Sign up is not available. Please check your Privy configuration.');
+      const result = await signUp(email, password, firstName, lastName);
+      if (result.success) {
+        // Check if user has completed onboarding
+        const hasCompletedOnboarding = localStorage.getItem('lastScannedUsername');
+        onNavigate(hasCompletedOnboarding ? ViewState.DASHBOARD : ViewState.INGESTION);
+      } else {
+        setError(result.error || 'Sign up failed. Please try again.');
+        setLoading(false);
       }
-      await signupWithEmail({ email, password });
-      // Navigation will be handled by useEffect when authenticated
     } catch (err: any) {
       console.error('Signup error:', err);
       setError(err.message || 'Sign up failed. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      await signInWithGoogle('');
+      // Navigation will happen via redirect or callback
+    } catch (err: any) {
+      console.error('Google signup error:', err);
+      setError(err.message || 'Google sign-up failed. Please try again.');
       setLoading(false);
     }
   };
@@ -106,28 +93,13 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
             </div>
           )}
 
-          {/* Google Sign-In Button with Privy */}
-          {ready && (
-            <div className="mb-4">
-              <button
-                onClick={async () => {
-                  setLoading(true);
-                  setError('');
-                  try {
-                    if (!loginWithGoogle) {
-                      throw new Error('Google sign-in is not available. Please check your Privy configuration.');
-                    }
-                    await loginWithGoogle();
-                    // Navigation will be handled by useEffect when authenticated
-                  } catch (err: any) {
-                    console.error('Google login error:', err);
-                    setError(err.message || 'Google sign-in failed. Please try again.');
-                    setLoading(false);
-                  }
-                }}
-                disabled={loading || !ready}
-                className="w-full flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-white hover:bg-white/10 transition-all hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+          {/* Google Sign-In Button */}
+          <div className="mb-4">
+            <button
+              onClick={handleGoogleSignUp}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-white hover:bg-white/10 transition-all hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -144,9 +116,8 @@ const LoginView: React.FC<NavProps> = ({ onNavigate }) => {
                     Continue with Google
                   </>
                 )}
-              </button>
-            </div>
-          )}
+            </button>
+          </div>
 
           {/* Divider */}
           <div className="relative my-8">
