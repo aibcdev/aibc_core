@@ -48,7 +48,7 @@ const StrategyView: React.FC = () => {
     // Listen for new scan started - clear all state
     const handleNewScanStarted = (event: CustomEvent) => {
       console.log('🧹 Strategy: New scan started, clearing all state');
-      const { username } = event.detail;
+      const { username, isRescan } = event.detail;
       
       // Clear all strategy state
       setStrategicInsights([]);
@@ -58,10 +58,14 @@ const StrategyView: React.FC = () => {
       setMessages([]);
       setStrategyPlans([]);
       
-      // Clear localStorage cache
+      // Clear ALL localStorage cache (comprehensive)
       localStorage.removeItem('lastScanResults');
+      localStorage.removeItem('lastScanId');
+      localStorage.removeItem('lastScanTimestamp');
       localStorage.removeItem('activeContentStrategy');
       localStorage.removeItem('strategyPlans');
+      
+      console.log('✅ Strategy: All cache cleared for', isRescan ? 'rescan' : 'new scan');
       
       // Reload data for new scan
       setTimeout(() => {

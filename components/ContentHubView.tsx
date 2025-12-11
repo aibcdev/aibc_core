@@ -27,14 +27,19 @@ const ContentHubView: React.FC = () => {
     // Listen for new scan started - clear all state
     const handleNewScanStarted = (event: CustomEvent) => {
       console.log('🧹 Content Hub: New scan started, clearing all state');
-      const { username } = event.detail;
+      const { username, isRescan } = event.detail;
       
       // Clear all content hub state
       setAssets([]);
       setUsername(null);
       
-      // Clear localStorage cache
+      // Clear ALL localStorage cache (comprehensive)
       localStorage.removeItem('lastScanResults');
+      localStorage.removeItem('lastScanId');
+      localStorage.removeItem('lastScanTimestamp');
+      localStorage.removeItem('productionAssets');
+      
+      console.log('✅ Content Hub: All cache cleared for', isRescan ? 'rescan' : 'new scan');
       
       // Reload content for new scan
       setTimeout(() => {

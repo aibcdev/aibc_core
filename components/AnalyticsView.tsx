@@ -39,12 +39,17 @@ const AnalyticsView: React.FC = () => {
     // Listen for new scan started - clear all state
     const handleNewScanStarted = (event: CustomEvent) => {
       console.log('🧹 Analytics: New scan started, clearing all state');
+      const { isRescan } = event.detail;
       
       // Clear all analytics state
       setAnalytics({ platforms: [], isLoading: true });
       
-      // Clear localStorage cache
+      // Clear ALL localStorage cache (comprehensive)
       localStorage.removeItem('lastScanResults');
+      localStorage.removeItem('lastScanId');
+      localStorage.removeItem('lastScanTimestamp');
+      
+      console.log('✅ Analytics: All cache cleared for', isRescan ? 'rescan' : 'new scan');
       
       // Reload analytics for new scan
       setTimeout(() => {
