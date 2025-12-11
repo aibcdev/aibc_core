@@ -275,16 +275,22 @@ const ContentHubView: React.FC = () => {
       const productionAssets = rawProductionAssets.filter((asset: ContentAsset) => {
         if (!asset.title) return false;
         const titleLower = asset.title.toLowerCase();
-        // Reject generic templates
-        const isGeneric = 
-          titleLower.includes('why') && titleLower.includes('matters now') ||
-          titleLower.includes('hot take on') ||
-          titleLower.includes('what i\'ve learned') ||
-          titleLower.includes('explained') ||
-          titleLower.includes('you finally get') ||
-          titleLower.includes('deep dive:') ||
-          (titleLower.includes('content creation') && !lastUsername) ||
-          (titleLower.includes('brand building') && !lastUsername);
+        const descLower = (asset.description || '').toLowerCase();
+
+        // Hard filter for legacy generic templates (always remove)
+        const genericPatterns = [
+          'content creation',
+          'brand building',
+          'what i\'ve learned',
+          'why content creation matters now',
+          'hot take on',
+          'content creation explained',
+          'you finally get',
+          'deep dive:',
+          'pov:'
+        ];
+
+        const isGeneric = genericPatterns.some((p) => titleLower.includes(p) || descLower.includes(p));
         return !isGeneric;
       });
       
