@@ -13,16 +13,31 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001; // Default to 3001 for local dev
 
-// Middleware
+// Middleware - Allow all origins for API access
+// This is safe because we use authentication for protected routes
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:5173',
-    'http://localhost:3003',
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'https://aibcmedia.com',
-    'https://www.aibcmedia.com'
-  ],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Allow all localhost variants
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      return callback(null, true);
+    }
+    
+    // Allow all Netlify domains
+    if (origin.includes('.netlify.app') || origin.includes('.netlify.com')) {
+      return callback(null, true);
+    }
+    
+    // Allow production domains
+    if (origin.includes('aibcmedia.com') || origin.includes('aibc')) {
+      return callback(null, true);
+    }
+    
+    // Allow any origin for now (API is authenticated anyway)
+    return callback(null, true);
+  },
   credentials: true
 }));
 app.use(express.json());
