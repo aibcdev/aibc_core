@@ -378,6 +378,28 @@ const ContentHubView: React.FC = () => {
         }
       }
       
+      // Filter out any generic content ideas before enhancement
+      const brandNameLower = (lastUsername || '').toLowerCase();
+      const isGenericIdea = (idea: any) => {
+        const title = (idea.title || '').toLowerCase();
+        const desc = (idea.description || '').toLowerCase();
+        const genericPatterns = [
+          'content creation',
+          'brand building',
+          'what i\'ve learned',
+          'why content creation matters now',
+          'hot take',
+          'content creation explained',
+          'you finally get',
+          'deep dive',
+          'pov:'
+        ];
+        const hitsGeneric = genericPatterns.some((p) => title.includes(p) || desc.includes(p));
+        const missingBrand = brandNameLower && !(title.includes(brandNameLower) || desc.includes(brandNameLower));
+        return hitsGeneric && missingBrand;
+      };
+      contentIdeasFromScan = contentIdeasFromScan.filter((idea) => !isGenericIdea(idea));
+
       // Enhance content ideas with brand assets, strategy, and competitor context
       const enhancedIdeas = await enhanceContentIdeasWithContext(contentIdeasFromScan, {
         brandMaterials,
@@ -472,92 +494,6 @@ const ContentHubView: React.FC = () => {
       console.error('Error loading content:', e);
       setAssets([]);
     }
-  };
-
-  const generateInitialSuggestions = (themes: string[], user: string | null): ContentAsset[] => {
-    const suggestions: ContentAsset[] = [];
-    const mainTheme = themes[0] || 'your niche';
-    const secondTheme = themes[1] || mainTheme;
-    const thirdTheme = themes[2] || secondTheme;
-
-    // X content
-    suggestions.push({
-      id: 'x_thread_1',
-      title: `Thread: Why ${mainTheme} matters now`,
-      description: `10-tweet thread breaking down ${mainTheme.toLowerCase()} with your hot takes`,
-      platform: 'X',
-      status: 'suggested',
-      type: 'thread',
-      timeAgo: 'AI suggested',
-      basedOn: mainTheme,
-      theme: mainTheme
-    });
-
-    suggestions.push({
-      id: 'x_post_1',
-      title: `Hot take on ${secondTheme}`,
-      description: `Single tweet with a bold opinion - drives replies`,
-      platform: 'X',
-      status: 'suggested',
-      type: 'document',
-      timeAgo: 'AI suggested',
-      basedOn: secondTheme,
-      theme: secondTheme
-    });
-
-    // LinkedIn
-    suggestions.push({
-      id: 'linkedin_post_1',
-      title: `${mainTheme}: What I've learned`,
-      description: `Personal story + lesson format - high engagement`,
-      platform: 'LINKEDIN',
-      status: 'suggested',
-      type: 'document',
-      timeAgo: 'AI suggested',
-      basedOn: mainTheme,
-      theme: mainTheme
-    });
-
-    // Instagram
-    suggestions.push({
-      id: 'instagram_reel_1',
-      title: `60s Reel: ${mainTheme} explained`,
-      description: `Quick-hit Reel with text overlays and trending audio`,
-      platform: 'INSTAGRAM',
-      status: 'suggested',
-      type: 'reel',
-      timeAgo: 'AI suggested',
-      basedOn: mainTheme,
-      theme: mainTheme
-    });
-
-    // TikTok
-    suggestions.push({
-      id: 'tiktok_video_1',
-      title: `POV: You finally get ${mainTheme}`,
-      description: `Trendy format, 30-60 seconds, casual tone`,
-      platform: 'TIKTOK',
-      status: 'suggested',
-      type: 'video',
-      timeAgo: 'AI suggested',
-      basedOn: mainTheme,
-      theme: mainTheme
-    });
-
-    // Podcast
-    suggestions.push({
-      id: 'podcast_1',
-      title: `Deep dive: ${mainTheme}`,
-      description: `15-minute podcast episode exploring ${mainTheme.toLowerCase()}`,
-      platform: 'PODCAST',
-      status: 'suggested',
-      type: 'podcast',
-      timeAgo: 'AI suggested',
-      basedOn: mainTheme,
-      theme: mainTheme
-    });
-
-    return suggestions;
   };
 
   const handleRegenerate = async () => {
