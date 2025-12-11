@@ -267,9 +267,26 @@ const ContentHubView: React.FC = () => {
       const brandColors = JSON.parse(localStorage.getItem('brandColors') || '[]');
       const brandFonts = JSON.parse(localStorage.getItem('brandFonts') || '[]');
       
-      // Load from Production Room assets first
-      const productionAssets = JSON.parse(localStorage.getItem('productionAssets') || '[]');
+      // Load from Production Room assets first - BUT filter out generic suggestions
+      const rawProductionAssets = JSON.parse(localStorage.getItem('productionAssets') || '[]');
       const lastUsername = localStorage.getItem('lastScannedUsername');
+      
+      // CRITICAL: Filter out generic suggestions that match the old template pattern
+      const productionAssets = rawProductionAssets.filter((asset: ContentAsset) => {
+        if (!asset.title) return false;
+        const titleLower = asset.title.toLowerCase();
+        // Reject generic templates
+        const isGeneric = 
+          titleLower.includes('why') && titleLower.includes('matters now') ||
+          titleLower.includes('hot take on') ||
+          titleLower.includes('what i\'ve learned') ||
+          titleLower.includes('explained') ||
+          titleLower.includes('you finally get') ||
+          titleLower.includes('deep dive:') ||
+          (titleLower.includes('content creation') && !lastUsername) ||
+          (titleLower.includes('brand building') && !lastUsername);
+        return !isGeneric;
+      });
       
       setUsername(lastUsername);
       
@@ -413,11 +430,10 @@ const ContentHubView: React.FC = () => {
           };
         });
         
-        // Merge with existing production assets (prioritize brand-specific)
-        const existingNonSuggested = productionAssets.filter((a: ContentAsset) => a.status !== 'suggested');
-        const newAssets = [...brandSpecificAssets, ...existingNonSuggested];
-        setAssets(newAssets);
-        localStorage.setItem('productionAssets', JSON.stringify(newAssets));
+        // ONLY use brand-specific assets from backend - DO NOT merge with old productionAssets
+        // This ensures we never show generic suggestions
+        setAssets(brandSpecificAssets);
+        localStorage.setItem('productionAssets', JSON.stringify(brandSpecificAssets));
         
         // Dispatch event to notify other components that content hub was updated
         console.log('📡 Content Hub: Dispatching contentHubUpdated event');
@@ -434,10 +450,18 @@ const ContentHubView: React.FC = () => {
       
       // CRITICAL: NEVER use generic fallback suggestions - only show real content ideas from backend
       // If no content ideas available, show empty state or wait for scan to complete
-      console.warn('⚠️ Content Hub: No content ideas from scan - waiting for backend to generate them');
-      // Clear any old generic suggestions
+      console.warn('⚠️ Content Hub: No content ideas from scan - clearing ALL assets including old productionAssets');
+      
+      // Clear ALL assets - including any old generic suggestions in productionAssets
       setAssets([]);
       localStorage.removeItem('productionAssets');
+      
+      // Also clear any generic suggestions that might be in productionAssets
+      const oldProductionAssets = JSON.parse(localStorage.getItem('productionAssets') || '[]');
+      if (oldProductionAssets.length > 0) {
+        console.warn('⚠️ Content Hub: Found old productionAssets, clearing them');
+        localStorage.removeItem('productionAssets');
+      }
     } catch (e) {
       console.error('Error loading content:', e);
       setAssets([]);
