@@ -57,7 +57,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
     // Listen for new scan started - clear all state
     const handleNewScanStarted = (event: CustomEvent) => {
       console.log('🧹 Dashboard: New scan started, clearing all state');
-      const { username } = event.detail;
+      const { username, isRescan } = event.detail;
       
       // Clear all dashboard state
       setStrategicInsights([]);
@@ -67,9 +67,21 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
       setAnalytics(null);
       setScanUsername(null);
       
-      // Clear localStorage cache
+      // Clear ALL localStorage cache (comprehensive)
       localStorage.removeItem('lastScanResults');
       localStorage.removeItem('lastScanId');
+      localStorage.removeItem('lastScanTimestamp');
+      localStorage.removeItem('productionAssets');
+      localStorage.removeItem('strategyPlans');
+      localStorage.removeItem('activeContentStrategy');
+      localStorage.removeItem('brandMaterials');
+      localStorage.removeItem('brandProfile');
+      localStorage.removeItem('brandVoice');
+      localStorage.removeItem('brandColors');
+      localStorage.removeItem('brandFonts');
+      localStorage.removeItem('contentPreferences');
+      
+      console.log('✅ Dashboard: All cache cleared for', isRescan ? 'rescan' : 'new scan');
       
       // Reload data for new scan - will be handled by existing loadScanData effect
       // Just trigger a reload by clearing and letting the effect handle it
@@ -2270,7 +2282,52 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
               <button
                 onClick={() => {
                   setShowRescanWarning(false);
+                  
+                  // CRITICAL: Clear ALL cache BEFORE navigating
+                  console.log('🧹 RESCAN: Clearing ALL cache before rescan');
+                  
+                  // Clear ALL scan-related cache
+                  localStorage.removeItem('lastScanResults');
+                  localStorage.removeItem('lastScanId');
+                  localStorage.removeItem('lastScanTimestamp');
+                  
+                  // Clear ALL component-specific caches
+                  localStorage.removeItem('productionAssets');
+                  localStorage.removeItem('strategyPlans');
+                  localStorage.removeItem('activeContentStrategy');
+                  localStorage.removeItem('brandMaterials');
+                  localStorage.removeItem('brandProfile');
+                  localStorage.removeItem('brandVoice');
+                  localStorage.removeItem('brandColors');
+                  localStorage.removeItem('brandFonts');
+                  localStorage.removeItem('contentPreferences');
+                  
+                  // Clear dashboard state
+                  setStrategicInsights([]);
+                  setCompetitorIntelligence([]);
+                  setBrandDNA(null);
+                  setMarketShare(null);
+                  setAnalytics(null);
+                  setScanUsername(null);
+                  
                   const lastUsername = localStorage.getItem('lastScannedUsername');
+                  
+                  // Dispatch event to notify all components to clear state IMMEDIATELY
+                  window.dispatchEvent(new CustomEvent('newScanStarted', {
+                    detail: { 
+                      username: lastUsername || '', 
+                      timestamp: Date.now(),
+                      isRescan: true
+                    }
+                  }));
+                  
+                  // Update timestamp to force cache invalidation
+                  if (lastUsername) {
+                    localStorage.setItem('lastScanTimestamp', Date.now().toString());
+                  }
+                  
+                  console.log('✅ RESCAN: Cache cleared, navigating to audit');
+                  
                   if (lastUsername) {
                     onNavigate(ViewState.AUDIT);
                   } else {

@@ -208,10 +208,13 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
       setUsername(domain);
       
       // CRITICAL: HARD RESET - Clear ALL cache IMMEDIATELY when starting a new scan
-      // This ensures fresh data for each scan, even on same browser/login
-      console.log('🧹 HARD RESET: Clearing ALL cache for new scan:', domain);
+      // ALWAYS clear cache - even for same company, we want fresh data
+      const previousUsername = localStorage.getItem('lastScannedUsername');
+      const isNewCompany = !previousUsername || previousUsername.toLowerCase() !== domain.toLowerCase();
       
-      // Clear ALL scan-related cache
+      console.log('🧹 HARD RESET: Clearing ALL cache for new scan:', domain, isNewCompany ? '(NEW COMPANY)' : '(RESCAN)');
+      
+      // Clear ALL scan-related cache (ALWAYS, regardless of previous username)
       localStorage.removeItem('lastScanResults');
       localStorage.removeItem('lastScanId');
       localStorage.removeItem('lastScanTimestamp');
@@ -239,7 +242,11 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
       
       // Dispatch event to notify all components to clear state IMMEDIATELY
       window.dispatchEvent(new CustomEvent('newScanStarted', {
-        detail: { username: domain, timestamp: Date.now() }
+        detail: { 
+          username: domain, 
+          timestamp: Date.now(),
+          isRescan: !isNewCompany
+        }
       }));
       
       console.log('✅ Cache cleared and event dispatched for:', domain);
