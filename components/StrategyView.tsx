@@ -55,8 +55,9 @@ const StrategyView: React.FC = () => {
       setBrandDNA(null);
       setCompetitorIntelligence([]);
       setScanUsername(null);
-      setMessages([]);
+      setMessages([]); // Clear conversation history
       setStrategyPlans([]);
+      setInput(''); // Clear any pending input
       
       // Clear ALL localStorage cache (comprehensive)
       localStorage.removeItem('lastScanResults');
@@ -64,6 +65,8 @@ const StrategyView: React.FC = () => {
       localStorage.removeItem('lastScanTimestamp');
       localStorage.removeItem('activeContentStrategy');
       localStorage.removeItem('strategyPlans');
+      localStorage.removeItem('strategyConversation'); // Clear saved conversation
+      localStorage.removeItem('strategyMessages'); // Clear any saved messages
       
       console.log('✅ Strategy: All cache cleared for', isRescan ? 'rescan' : 'new scan');
       
@@ -355,6 +358,19 @@ const StrategyView: React.FC = () => {
           appliedAt: new Date().toISOString()
         });
         parsed.lastUpdated = Date.now();
+        
+        // CRITICAL: Also update contentIdeas to reflect new strategy
+        // This ensures Content Hub shows strategy-aligned ideas
+        if (parsed.contentIdeas && Array.isArray(parsed.contentIdeas)) {
+          parsed.contentIdeas = parsed.contentIdeas.map((idea: any) => ({
+            ...idea,
+            strategyContext: plan.type,
+            strategyPriority: plan.type === 'competitor_focus' ? 'competitor-aligned' : 
+                             plan.type === 'brand_building' ? 'brand-focused' : 'balanced',
+            lastStrategyUpdate: Date.now()
+          }));
+        }
+        
         localStorage.setItem('lastScanResults', JSON.stringify(parsed));
       } catch (e) {
         console.error('Error updating scan results:', e);
@@ -367,18 +383,25 @@ const StrategyView: React.FC = () => {
       appliedAt: new Date().toISOString(),
       affectsContentGeneration: true,
       brandDNA,
-      scanUsername
+      scanUsername,
+      // Include context for content regeneration
+      contentDirection: plan.type === 'competitor_focus' ? 
+        `Focus content on competing with ${plan.title.replace('Focus on ', '')}` :
+        plan.type === 'brand_building' ? 
+        'Focus on brand building and thought leadership' :
+        plan.description
     };
     localStorage.setItem('activeContentStrategy', JSON.stringify(activeStrategy));
     
-    // Dispatch events to notify ALL components
-    console.log('📡 Strategy: Dispatching strategyUpdated event');
+    // Dispatch events to notify ALL components - with forceRegenerate flag
+    console.log('📡 Strategy: Dispatching strategyUpdated event with forceRegenerate');
     window.dispatchEvent(new CustomEvent('strategyUpdated', {
       detail: { 
         strategy: plan,
         activeStrategy,
         timestamp: Date.now(),
-        source: 'StrategyView'
+        source: 'StrategyView',
+        forceContentRegenerate: true // Tell Content Hub to regenerate
       }
     }));
     
@@ -388,9 +411,20 @@ const StrategyView: React.FC = () => {
         eventType: 'strategyUpdated',
         timestamp: Date.now(),
         source: 'StrategyView',
-        data: plan
+        data: plan,
+        forceContentRegenerate: true
       }
     }));
+    
+    // Force Content Hub update by dispatching scanComplete event
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('scanComplete', {
+        detail: {
+          source: 'strategyUpdate',
+          timestamp: Date.now()
+        }
+      }));
+    }, 100);
   };
 
   const handleSend = async () => {

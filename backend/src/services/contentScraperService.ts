@@ -123,21 +123,67 @@ async function scrapePlatformContent(
         });
       } else if (platform === 'instagram') {
         // @ts-ignore - document is available in browser context
-        const postElements = document.querySelectorAll('article > div > div > div > a');
+        // Try to extract real engagement data from Instagram posts
+        const postElements = document.querySelectorAll('article a[href*="/p/"], article a[href*="/reel/"]');
         postElements.forEach((el: any, idx: number) => {
-          if (idx < 12) { // Last 12 posts
+          if (idx < 12) {
             const href = el.getAttribute('href') || '';
-            posts.push({
-              id: `ig-${idx}`,
-              content: `Instagram post ${idx + 1}`,
-              timestamp: new Date(now.getTime() - idx * 24 * 60 * 60 * 1000).toISOString(),
-              url: `https://www.instagram.com${href}`,
-              engagement: {
-                likes: Math.floor(Math.random() * 1000) + 100,
+            // Try to extract like count from nearby elements
+            const article = el.closest('article');
+            let likes = 0;
+            let comments = 0;
+            
+            if (article) {
+              // Look for engagement metrics in the article
+              const likeSection = article.querySelector('section');
+              if (likeSection) {
+                const likeText = likeSection.textContent || '';
+                const likeMatch = likeText.match(/(\d+[\d,]*)\s*likes?/i);
+                if (likeMatch) {
+                  likes = parseInt(likeMatch[1].replace(/,/g, ''));
+                }
               }
-            });
+              // Try to get alt text for engagement hints
+              const img = article.querySelector('img');
+              if (img) {
+                const alt = img.getAttribute('alt') || '';
+                posts.push({
+                  id: `ig-${idx}`,
+                  content: alt.length > 10 ? alt : `Instagram post from ${platform}`,
+                  timestamp: new Date(now.getTime() - idx * 12 * 60 * 60 * 1000).toISOString(), // Spread over 12 hours each
+                  url: `https://www.instagram.com${href}`,
+                  engagement: {
+                    likes: likes || 0, // Use 0 if we couldn't extract, NOT random
+                    comments: comments || 0
+                  }
+                });
+              }
+            }
           }
         });
+        
+        // If no posts extracted, try alternate selector
+        if (posts.length === 0) {
+          // @ts-ignore
+          const gridPosts = document.querySelectorAll('main article, main a[href*="/p/"]');
+          gridPosts.forEach((el: any, idx: number) => {
+            if (idx < 12) {
+              const href = el.getAttribute('href') || el.querySelector('a')?.getAttribute('href') || '';
+              const img = el.querySelector('img');
+              const alt = img?.getAttribute('alt') || '';
+              posts.push({
+                id: `ig-${idx}`,
+                content: alt.length > 10 ? alt : 'Instagram content',
+                timestamp: new Date(now.getTime() - idx * 12 * 60 * 60 * 1000).toISOString(),
+                url: href.startsWith('http') ? href : `https://www.instagram.com${href}`,
+                engagement: {
+                  likes: 0, // Real data only - no fake numbers
+                  comments: 0
+                }
+              });
+            }
+          });
+        }
       }
 
       return posts;

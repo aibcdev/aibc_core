@@ -53,10 +53,62 @@ const ContentHubView: React.FC = () => {
       enhanceContentIdeas();
     };
     
-    // Listen for strategy updates
-    const handleStrategyUpdate = (event: CustomEvent) => {
+    // Listen for strategy updates - CRITICAL: Force content regeneration via backend
+    const handleStrategyUpdate = async (event: CustomEvent) => {
       console.log('📥 Strategy updated - regenerating content ideas...', event.detail);
-      enhanceContentIdeas();
+      const { forceContentRegenerate, activeStrategy, strategy } = event.detail;
+      
+      if (forceContentRegenerate && (activeStrategy || strategy)) {
+        console.log('🔄 Content Hub: Force regenerating content from backend based on new strategy');
+        // Clear current assets first
+        setAssets([]);
+        localStorage.removeItem('productionAssets');
+        
+        try {
+          // Call backend to regenerate content based on strategy
+          const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+          const cachedResults = localStorage.getItem('lastScanResults');
+          const parsed = cachedResults ? JSON.parse(cachedResults) : {};
+          
+          const response = await fetch(`${API_BASE_URL}/api/analytics/regenerate-content`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              strategy: strategy || activeStrategy,
+              brandDNA: parsed.brandDNA,
+              competitorIntelligence: parsed.competitorIntelligence,
+              currentContentIdeas: parsed.contentIdeas,
+              scanUsername: localStorage.getItem('lastScannedUsername')
+            })
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.contentIdeas) {
+              console.log(`✅ Content Hub: Received ${result.contentIdeas.length} strategy-aligned ideas`);
+              
+              // Update localStorage with new ideas
+              parsed.contentIdeas = result.contentIdeas;
+              parsed.lastStrategyUpdate = Date.now();
+              localStorage.setItem('lastScanResults', JSON.stringify(parsed));
+              
+              // Update UI
+              await loadContent();
+            }
+          } else {
+            console.error('Failed to regenerate content from backend');
+            await loadContent();
+          }
+        } catch (error) {
+          console.error('Error calling regenerate-content:', error);
+          await loadContent();
+        }
+        
+        // Also enhance with strategy context
+        await enhanceContentIdeas();
+      } else {
+        await enhanceContentIdeas();
+      }
     };
     
     // Listen for competitor updates

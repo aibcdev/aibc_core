@@ -184,28 +184,47 @@ export const updateCompetitor = (competitor: any, action: 'add' | 'update' | 're
 
 /**
  * Clear all cached data for a fresh scan
+ * COMPREHENSIVE - clears everything except user auth and integrations
  */
 export const clearAllCachedData = () => {
   const keysToRemove = [
+    // Core scan data
     'lastScanResults',
     'lastScanId',
     'lastScanTimestamp',
     'lastScannedUsername',
     'lastScanType',
+    
+    // Content and production
     'productionAssets',
+    'contentPreferences',
+    
+    // Strategy data - including conversation history
     'strategyPlans',
     'activeContentStrategy',
+    'strategyConversation',
+    'strategyMessages',
+    'strategyHistory',
+    
+    // Brand assets
     'brandMaterials',
     'brandProfile',
     'brandVoice',
     'brandColors',
     'brandFonts',
-    'contentPreferences'
+    
+    // Analytics
+    'analyticsCache',
+    'previousInsightsCount',
+    
+    // Inbox and calendar
+    'inboxItems',
+    'calendarEvents',
   ];
   
   keysToRemove.forEach(key => localStorage.removeItem(key));
   
-  dispatchSyncEvent('newScanStarted', { cleared: true }, 'DataSync');
+  dispatchSyncEvent('newScanStarted', { cleared: true, isRescan: true }, 'DataSync');
 };
 
 /**

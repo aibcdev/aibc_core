@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, AlertCircle, ArrowRight, Instagram, Facebook, Linkedin, Mail, FileText, Music, Check } from 'lucide-react';
+import { Loader2, AlertCircle, ArrowRight, Instagram, Facebook, Linkedin, Mail, FileText, Music, Check, TrendingUp, Sparkles } from 'lucide-react';
 
 interface PlatformData {
   platform: string;
@@ -16,9 +16,34 @@ interface AnalyticsData {
   error?: string;
 }
 
+interface CompetitiveComparison {
+  companyMetrics: {
+    estimatedEngagementRate: string;
+    postingFrequency: string;
+    topPlatform: string;
+    contentStrength: string;
+  };
+  competitorComparison: Array<{
+    competitor: string;
+    engagementComparison: string;
+    frequencyComparison: string;
+    platformOverlap: string[];
+    theyWinAt: string;
+    youWinAt: string;
+  }>;
+  overallRanking: {
+    position: number;
+    totalCompetitors: number;
+    trend: string;
+  };
+  recommendations: string[];
+}
+
 const AnalyticsView: React.FC = () => {
   const [analytics, setAnalytics] = useState<AnalyticsData>({ platforms: [], isLoading: true });
   const [userName, setUserName] = useState<string>('');
+  const [competitiveData, setCompetitiveData] = useState<CompetitiveComparison | null>(null);
+  const [loadingCompetitive, setLoadingCompetitive] = useState(false);
 
   useEffect(() => {
     // Get user name from localStorage
@@ -35,6 +60,7 @@ const AnalyticsView: React.FC = () => {
     }
 
     loadAnalyticsData();
+    loadCompetitiveComparison();
     
     // Listen for new scan started - clear all state
     const handleNewScanStarted = (event: CustomEvent) => {
@@ -232,7 +258,7 @@ const AnalyticsView: React.FC = () => {
     } catch (error: any) {
       console.error('Error loading analytics:', error);
       
-      // Last resort: Try to generate from any available scan data
+      // Try to generate from any available scan data
       const lastScanResults = localStorage.getItem('lastScanResults');
       if (lastScanResults) {
         try {
@@ -246,24 +272,73 @@ const AnalyticsView: React.FC = () => {
           setAnalytics({
             platforms: platformData,
             isLoading: false,
-            error: 'Using scan data. Run a new scan for latest insights.'
+            error: platformData.length === 0 ? 'No platform data found. Run a new scan for insights.' : undefined
           });
         } catch (e) {
-          // Only use mock data as absolute last resort
-          const mockPlatforms = generateMockPlatformData();
+          // NO MOCK DATA - show empty state with clear message
           setAnalytics({
-            platforms: mockPlatforms,
+            platforms: [],
             isLoading: false,
-            error: 'No scan data available. Run a digital footprint scan first.'
+            error: 'Unable to load analytics. Run a digital footprint scan first.'
           });
         }
       } else {
+        // NO MOCK DATA - clear message to run scan
         setAnalytics({
           platforms: [],
           isLoading: false,
-          error: 'No scan data available. Run a digital footprint scan first.'
+          error: 'No scan data available. Run a digital footprint scan to see your analytics.'
         });
       }
+    }
+  };
+
+  const loadCompetitiveComparison = async () => {
+    try {
+      setLoadingCompetitive(true);
+      
+      const lastScanResults = localStorage.getItem('lastScanResults');
+      const lastUsername = localStorage.getItem('lastScannedUsername');
+      
+      if (!lastScanResults || !lastUsername) {
+        setLoadingCompetitive(false);
+        return;
+      }
+      
+      const scanData = JSON.parse(lastScanResults);
+      const competitors = scanData.competitorIntelligence || [];
+      
+      if (competitors.length === 0) {
+        setLoadingCompetitive(false);
+        return;
+      }
+      
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      
+      const response = await fetch(`${API_BASE_URL}/api/analytics/competitive-comparison`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company: {
+            name: lastUsername,
+            username: lastUsername,
+            postCount: scanData.extractedContent?.posts?.length || 0,
+            platforms: Object.keys(scanData.socialLinks || {})
+          },
+          competitors: competitors.slice(0, 5)
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.comparison) {
+          setCompetitiveData(result.comparison);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading competitive comparison:', error);
+    } finally {
+      setLoadingCompetitive(false);
     }
   };
 
@@ -474,57 +549,10 @@ const AnalyticsView: React.FC = () => {
     return improvements[platform] || ['Increase engagement', 'Better visuals', 'More consistent posting'];
   };
 
-  const generateMockPlatformData = (): PlatformData[] => {
-    return [
-      {
-        platform: 'Instagram',
-        performance: 14,
-        whatsWorking: ['Captions with local expertise', 'Videos in social posts', 'Specific hashtags'],
-        areasForImprovement: ['More focus on pain points', 'Better images', 'Shorter text overlays'],
-        icon: <Instagram className="w-5 h-5" />,
-        iconColor: 'bg-gradient-to-br from-orange-500 to-pink-500'
-      },
-      {
-        platform: 'Facebook',
-        performance: 10,
-        whatsWorking: ['Longer stories with emotional connection', 'Community-focused posts'],
-        areasForImprovement: ['Outdated creative', 'Respond faster', 'Shorten long paragraphs'],
-        icon: <Facebook className="w-5 h-5" />,
-        iconColor: 'bg-blue-600'
-      },
-      {
-        platform: 'LinkedIn',
-        performance: 23,
-        whatsWorking: ['Share expert-led, insight-rich content', 'Videos in social posts'],
-        areasForImprovement: ['Overly promotional', 'Diversify post formats', 'Improve consistency'],
-        icon: <Linkedin className="w-5 h-5" />,
-        iconColor: 'bg-blue-700'
-      },
-      {
-        platform: 'TikTok',
-        performance: 7,
-        whatsWorking: ['Raw, unpolished videos', 'Trending audio', '"Before/after" moments'],
-        areasForImprovement: ['Improve lighting and audio', 'Stronger hooks', 'Overly polished content'],
-        icon: <Music className="w-5 h-5" />,
-        iconColor: 'bg-black'
-      },
-      {
-        platform: 'Blog',
-        performance: 1,
-        whatsWorking: ['Strong hook in the first 2-3 sentences', 'Clear subheadings', 'Expert quotes'],
-        areasForImprovement: ['SEO structure', 'Overly dense paragraphs', 'Improve internal linking'],
-        icon: <FileText className="w-5 h-5" />,
-        iconColor: 'bg-green-600'
-      },
-      {
-        platform: 'Email',
-        performance: 2,
-        whatsWorking: ['Short subject lines', 'Intros based on user behavior', 'One primary CTA'],
-        areasForImprovement: ['More focus on pain points', 'Better images', 'Shorter text overlays'],
-        icon: <Mail className="w-5 h-5" />,
-        iconColor: 'bg-black'
-      }
-    ];
+  // NO MOCK DATA - Only generate from real scan data or show empty state
+  const generateEmptyPlatformData = (): PlatformData[] => {
+    // Return empty array - we don't want to show fake data
+    return [];
   };
 
   return (
@@ -604,8 +632,96 @@ const AnalyticsView: React.FC = () => {
           </div>
         )}
 
+        {/* Competitive Comparison Section */}
+        {competitiveData && (
+          <div className="mt-8">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-blue-400" />
+              Competitive Analysis
+            </h2>
+            
+            {/* Your Metrics vs Market */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-4">
+                <p className="text-xs text-white/40 uppercase mb-1">Engagement Rate</p>
+                <p className="text-2xl font-bold text-green-400">{competitiveData.companyMetrics?.estimatedEngagementRate || 'N/A'}</p>
+              </div>
+              <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-4">
+                <p className="text-xs text-white/40 uppercase mb-1">Posting Frequency</p>
+                <p className="text-2xl font-bold text-white">{competitiveData.companyMetrics?.postingFrequency || 'N/A'}</p>
+              </div>
+              <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-4">
+                <p className="text-xs text-white/40 uppercase mb-1">Top Platform</p>
+                <p className="text-2xl font-bold text-blue-400">{competitiveData.companyMetrics?.topPlatform || 'N/A'}</p>
+              </div>
+              <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-4">
+                <p className="text-xs text-white/40 uppercase mb-1">Market Rank</p>
+                <p className="text-2xl font-bold text-amber-400">
+                  #{competitiveData.overallRanking?.position || '?'} of {competitiveData.overallRanking?.totalCompetitors || '?'}
+                </p>
+              </div>
+            </div>
+            
+            {/* Competitor Comparison Table */}
+            {competitiveData.competitorComparison && competitiveData.competitorComparison.length > 0 && (
+              <div className="bg-[#0A0A0A] border border-white/10 rounded-xl overflow-hidden mb-6">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="text-left text-xs text-white/40 uppercase p-4">Competitor</th>
+                      <th className="text-left text-xs text-white/40 uppercase p-4">Engagement vs You</th>
+                      <th className="text-left text-xs text-white/40 uppercase p-4">They Win At</th>
+                      <th className="text-left text-xs text-white/40 uppercase p-4">You Win At</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {competitiveData.competitorComparison.map((comp, idx) => (
+                      <tr key={idx} className="border-b border-white/5">
+                        <td className="p-4 text-white font-medium">{comp.competitor}</td>
+                        <td className="p-4">
+                          <span className={`text-sm font-bold ${comp.engagementComparison?.startsWith('+') ? 'text-green-400' : comp.engagementComparison?.startsWith('-') ? 'text-red-400' : 'text-white/60'}`}>
+                            {comp.engagementComparison || 'N/A'}
+                          </span>
+                        </td>
+                        <td className="p-4 text-sm text-red-400/80">{comp.theyWinAt || 'N/A'}</td>
+                        <td className="p-4 text-sm text-green-400/80">{comp.youWinAt || 'N/A'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            
+            {/* AI Recommendations */}
+            {competitiveData.recommendations && competitiveData.recommendations.length > 0 && (
+              <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+                <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  AI Recommendations
+                </h3>
+                <ul className="space-y-2">
+                  {competitiveData.recommendations.map((rec, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm text-white/70">
+                      <Check className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                      {rec}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Loading Competitive Data */}
+        {loadingCompetitive && (
+          <div className="mt-8 flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 text-white/40 animate-spin mr-2" />
+            <span className="text-white/40 text-sm">Loading competitive analysis...</span>
+          </div>
+        )}
+
         {/* Strategic Recommendations Section */}
-        {!analytics.isLoading && analytics.platforms.length > 0 && (
+        {!analytics.isLoading && analytics.platforms.length > 0 && !competitiveData && (
           <div className="mt-8">
             <h2 className="text-xl font-bold text-white mb-4">Strategic Recommendations</h2>
             <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">

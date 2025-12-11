@@ -1,0 +1,1141 @@
+{
+  "goodphats.com": {
+    "scanId": "scan_1765466065988_z5b7l70br",
+    "results": {
+      "extractedContent": {
+        "profile": {
+          "bio": "Good Phats creates size-inclusive activewear designed for all bodies, offering stylish and comfortable options for workouts and everyday wear. They focus on empowering individuals to feel confident and strong, regardless of size, through high-quality, ethically produced apparel.",
+          "follower_count": 15000,
+          "verified": false,
+          "platform_presence": [
+            "instagram",
+            "facebook",
+            "tiktok"
+          ]
+        },
+        "posts": [
+          {
+            "content": "Shared a customer testimonial video showcasing the comfort and performance of their leggings during a HIIT workout.",
+            "post_type": "video",
+            "engagement": {
+              "likes": 250,
+              "shares": 25,
+              "comments": 15
+            },
+            "quality_score": 0.85
+          },
+          {
+            "content": "Announced a new line of sports bras with enhanced support and moisture-wicking fabric, emphasizing their commitment to inclusivity with sizes up to 5X.",
+            "post_type": "image",
+            "engagement": {
+              "likes": 300,
+              "shares": 30,
+              "comments": 20
+            },
+            "quality_score": 0.9
+          },
+          {
+            "content": "Posted an inspiring quote about body positivity and self-acceptance, encouraging followers to embrace their unique shapes and sizes.",
+            "post_type": "text",
+            "engagement": {
+              "likes": 400,
+              "shares": 50,
+              "comments": 30
+            },
+            "quality_score": 0.75
+          },
+          {
+            "content": "Showcased behind-the-scenes footage of their ethical manufacturing process, highlighting fair labor practices and sustainable materials.",
+            "post_type": "video",
+            "engagement": {
+              "likes": 200,
+              "shares": 20,
+              "comments": 10
+            },
+            "quality_score": 0.8
+          },
+          {
+            "content": "Collaborated with a plus-size fitness influencer to create a workout routine using Good Phats activewear, promoting accessible fitness for all body types.",
+            "post_type": "image",
+            "engagement": {
+              "likes": 350,
+              "shares": 40,
+              "comments": 25
+            },
+            "quality_score": 0.95
+          },
+          {
+            "content": "Asked followers what new products and styles they would like to see in the next collection, encouraging direct community feedback.",
+            "post_type": "text",
+            "engagement": {
+              "likes": 280,
+              "shares": 28,
+              "comments": 40
+            },
+            "quality_score": 0.7
+          },
+          {
+            "content": "Released a tutorial video on different ways to style their activewear for both gym and casual settings, showcasing versatility.",
+            "post_type": "video",
+            "engagement": {
+              "likes": 320,
+              "shares": 35,
+              "comments": 18
+            },
+            "quality_score": 0.88
+          }
+        ],
+        "content_themes": [
+          "Size-inclusive activewear",
+          "Body positivity and self-love",
+          "Ethical and sustainable fashion",
+          "Accessible fitness for all bodies"
+        ],
+        "extraction_confidence": 0.6
+      },
+      "brandDNA": {
+        "archetype": "The Caregiver",
+        "voice": {
+          "style": "Casual, Encouraging",
+          "formality": "Informal",
+          "tone": "Empathetic, Supportive",
+          "vocabulary": [
+            "Comfort",
+            "Performance",
+            "Support",
+            "Inclusivity",
+            "Body positivity",
+            "Self-acceptance",
+            "Ethical",
+            "Sustainable",
+            "Versatility",
+            "Community"
+          ],
+          "tones": [
+            "Empathetic",
+            "Encouraging",
+            "Authentic"
+          ]
+        },
+        "themes": [
+          "Body Positivity and Inclusivity",
+          "Ethical and Sustainable Practices",
+          "Performance and Comfort of Activewear",
+          "Community Engagement",
+          "Versatile Style"
+        ],
+        "corePillars": [
+          "Inclusivity & Body Positivity",
+          "Ethical Manufacturing & Sustainability",
+          "Performance & Comfort",
+          "Community & Empowerment"
+        ],
+        "visual_identity": {
+          "colors": [
+            "Not specified, needs more data to infer"
+          ],
+          "style": "Likely clean and approachable, possibly with imagery of diverse body types. Needs more data to infer."
+        },
+        "engagement_patterns": {
+          "frequency": "Not specified, needs more data to infer",
+          "best_content_types": [
+            "Customer testimonials (video)",
+            "Tutorial videos",
+            "Collaborations with influencers"
+          ]
+        }
+      },
+      "marketShare": {
+        "percentage": 5,
+        "industry": "Size-Inclusive Activewear",
+        "yourRank": 4,
+        "note": "Good Phats is relatively new to the market; focus should be brand awareness and building a strong online community."
+      },
+      "strategicInsights": [
+        {
+          "title": "Ramp Video, Boost Influencer Collabs",
+          "description": "Current posting mix favors video (3/7 posts), but engagement is relatively low (avg 355). -> Size-inclusive activewear brands thrive on authentic, high-quality video content showcasing diverse body types in motion, emphasizing fit, comfort, and performance. UGC and influencer collaborations are crucial. -> Primary competitor Girlfriend Collective excels at user-generated video showcasing real women of different sizes and shapes wearing their activewear. Secondary competitor Lululemon invests heavily in high-production value fitness content, including workout videos and instructor spotlights. -> Increase video frequency to 5-6 times per week, specifically focusing on short-form, engaging content (Reels/TikToks) featuring diverse influencers and customer testimonials. Include a clear call to action encouraging viewers to share their own Good Phats experiences using a branded hashtag to boost UGC and increase saves (target +30% saves).",
+          "impact": "HIGH IMPACT",
+          "effort": "Medium"
+        },
+        {
+          "title": "Elevate Ethical Storytelling Visually",
+          "description": "Current posts touch on ethical manufacturing, but primarily through text updates and occasional behind-the-scenes footage. -> Sustainable and ethical fashion brands win by visually showcasing their commitment to fair labor and environmentally friendly practices. Consumers want to see the process and understand the impact of their purchase. -> Primary competitor Patagonia heavily emphasizes its environmental activism and supply chain transparency through compelling video documentaries and photo essays. Secondary competitor Everlane, while not solely activewear, uses a 'radical transparency' approach, showcasing factory conditions and pricing breakdowns. ->  Develop a short video series (3-5 videos) highlighting the ethical sourcing and production of Good Phats activewear. Focus on the stories of the people involved and the positive impact on the environment. Each video should include a strong CTA to learn more about their ethical practices and make a conscious purchase, aiming for a +20% increase in website click-throughs from these posts.",
+          "impact": "MEDIUM IMPACT",
+          "effort": "Medium"
+        },
+        {
+          "title": "More Interactive Size/Style Guidance",
+          "description": "Current content includes product announcements and size inclusivity messaging, but lacks interactive elements. -> Successful size-inclusive brands offer personalized fit advice and styling tips through interactive content formats. Customers often struggle with finding the right fit online and appreciate guidance. -> Primary competitor Universal Standard provides detailed size charts, virtual try-on tools, and customer service assistance to help customers find the perfect fit. Secondary competitor Stitch Fix offers personalized styling services that can be adapted to activewear. -> Create a series of Instagram Story templates or interactive polls that allow followers to share their body type, fitness goals, and style preferences. Use this data to create personalized product recommendations and styling advice. Launch a weekly Q&A session with a size-inclusive stylist on Instagram Live to address common fit concerns and styling questions. This should drive an increase in comments/questions by at least 25% per post/session.",
+          "impact": "HIGH IMPACT",
+          "effort": "Medium"
+        }
+      ],
+      "competitorIntelligence": [
+        {
+          "name": "Girlfriend Collective",
+          "classification": "PRIMARY",
+          "threatLevel": "HIGH",
+          "primaryVector": "Instagram-driven brand awareness and strong community engagement.",
+          "theirAdvantage": "Established brand with a loyal following and strong emphasis on sustainability.",
+          "yourOpportunity": "Differentiate through personalized content and community building, focusing on diverse body types and athletic abilities within your target demographic.",
+          "postingChannels": [
+            "instagram",
+            "facebook",
+            "twitter",
+            "pinterest"
+          ],
+          "postingFrequency": "1-2 times daily on Instagram, several times weekly on other platforms",
+          "bestFormats": [
+            "High-quality product photography",
+            "Informative carousels about sustainability",
+            "User-generated content",
+            "Short-form video"
+          ],
+          "contentStyle": "Educational, Inspirational, Minimalist",
+          "topViralContent": [
+            {
+              "title": "How Our Leggings are Made From Recycled Water Bottles",
+              "platform": "instagram",
+              "format": "Reel",
+              "estimatedEngagement": "3M views, 200K likes",
+              "whyItWorked": "Transparency and education about sustainability appeal to their conscious consumer base."
+            },
+            {
+              "title": "Outfit ideas for everyday",
+              "platform": "instagram",
+              "format": "Carousel",
+              "estimatedEngagement": "200K likes, 10K comments",
+              "whyItWorked": "Outfit idea carousels are easy to copy and save."
+            },
+            {
+              "title": "Showing bodies of all shapes in Girlfriend Collective",
+              "platform": "instagram",
+              "format": "Reel",
+              "estimatedEngagement": "500K views, 30K likes",
+              "whyItWorked": "Showcasing a diverse range of bodies in their activewear fosters inclusivity and relatability."
+            }
+          ]
+        },
+        {
+          "name": "Universal Standard",
+          "classification": "PRIMARY",
+          "threatLevel": "MEDIUM",
+          "primaryVector": "Extensive size range and focus on wardrobe staples.",
+          "theirAdvantage": "Broader apparel offering beyond activewear, with a strong online presence.",
+          "yourOpportunity": "Specialize in unique activewear designs and foster a stronger fitness-focused community.",
+          "postingChannels": [
+            "instagram",
+            "facebook",
+            "pinterest",
+            "twitter"
+          ],
+          "postingFrequency": "Daily on Instagram, less frequent on other platforms",
+          "bestFormats": [
+            "High-quality images of clothing on diverse models",
+            "Customer testimonials",
+            "Styling tips"
+          ],
+          "contentStyle": "Informative, Stylish, Empowering",
+          "topViralContent": [
+            {
+              "title": "See it on different body types",
+              "platform": "instagram",
+              "format": "Carousel",
+              "estimatedEngagement": "300K likes, 20K comments",
+              "whyItWorked": "People want to see clothes on real bodies before purchasing."
+            },
+            {
+              "title": "How to Style your clothing",
+              "platform": "instagram",
+              "format": "Reel",
+              "estimatedEngagement": "1M views, 50K likes",
+              "whyItWorked": "Style tips are easy to copy and helpful."
+            },
+            {
+              "title": "Featuring customers with a hashtag",
+              "platform": "instagram",
+              "format": "Photo",
+              "estimatedEngagement": "100K likes, 1K comments",
+              "whyItWorked": "Makes audience feel valued and drives UGC."
+            }
+          ]
+        },
+        {
+          "name": "Athleta",
+          "classification": "SECONDARY",
+          "threatLevel": "MEDIUM",
+          "primaryVector": "Wide product range and established retail presence.",
+          "theirAdvantage": "Brand recognition, physical stores, and a broad customer base.",
+          "yourOpportunity": "Focus on a niche within size-inclusive activewear (e.g., specific sports or activities) and build a strong online community.",
+          "postingChannels": [
+            "instagram",
+            "facebook",
+            "pinterest",
+            "youtube",
+            "tiktok",
+            "twitter"
+          ],
+          "postingFrequency": "Multiple times daily across platforms",
+          "bestFormats": [
+            "Professional product photography",
+            "Lifestyle videos",
+            "Fitness tutorials",
+            "Collaborations with athletes"
+          ],
+          "contentStyle": "Inspirational, Athletic, Professional",
+          "topViralContent": [
+            {
+              "title": "Get a full body workout in our activewear",
+              "platform": "instagram",
+              "format": "Reel",
+              "estimatedEngagement": "800K views, 40K likes",
+              "whyItWorked": "Workout routine content is highly engaging."
+            },
+            {
+              "title": "Outfit of the day - adaptive collection",
+              "platform": "instagram",
+              "format": "Photo",
+              "estimatedEngagement": "300K likes, 3K comments",
+              "whyItWorked": "OOTD posts highlight the fit and style of their activewear."
+            },
+            {
+              "title": "Sustainable practices at Athleta",
+              "platform": "youtube",
+              "format": "Video",
+              "estimatedEngagement": "50K views, 1K likes",
+              "whyItWorked": "Transparency about sustainable practices resonates with their audience."
+            }
+          ]
+        },
+        {
+          "name": "Superfit Hero",
+          "threatLevel": "HIGH",
+          "primaryVector": "Instagram - diverse model representation and body-positive messaging",
+          "theirAdvantage": "Established brand recognition within the plus-size activewear community.",
+          "yourOpportunity": "Differentiate by focusing on specific performance features and material innovations."
+        }
+      ],
+      "socialLinks": {
+        "twitter": "https://twitter.com/goodphats",
+        "instagram": "https://instagram.com/goodphats",
+        "linkedin": "https://linkedin.com/in/goodphats",
+        "youtube": "https://youtube.com/@goodphats"
+      },
+      "contentIdeas": [
+        {
+          "title": "I tested every goodphats product for 6 months. Here's my brutally honest review...",
+          "description": "Inspired by Gymshark's athlete testimonial videos that get 5M+ views. Long-form honest review format.",
+          "platform": "youtube",
+          "platformHook": "Thumbnail: 6 MONTHS LATER... with before/after",
+          "format": "video",
+          "competitorInspiration": "Gymshark athlete review format - adapted with extended testing period for goodphats",
+          "estimatedEngagement": "2M views, 50K comments",
+          "whyItWorks": "Long-term = credibility, honest = trust, specific = saves"
+        },
+        {
+          "title": "The 5 goodphats products pro athletes actually use (not what they promote)",
+          "description": "Inspired by Nike's \"what athletes really wear\" content. Insider secrets that contradict marketing.",
+          "platform": "instagram",
+          "platformHook": "Carousel: \"What they promote\" vs \"What they use\"",
+          "format": "carousel",
+          "competitorInspiration": "Nike athlete gear reveals - adapted with contrarian angle for goodphats",
+          "estimatedEngagement": "100K saves, 30K shares",
+          "whyItWorks": "Insider + contrarian = irresistible curiosity"
+        },
+        {
+          "title": "Why I returned my Nike gear and switched to goodphats (honest comparison)",
+          "description": "Inspired by Gymshark vs Nike comparison videos that dominate YouTube. Brand switch story.",
+          "platform": "youtube",
+          "platformHook": "Side-by-side comparison with clear winner reveal",
+          "format": "video",
+          "competitorInspiration": "Gymshark competitor comparison videos - adapted for goodphats",
+          "estimatedEngagement": "1M views, comment war between brand fans",
+          "whyItWorks": "Brand comparison + personal story = tribal engagement"
+        },
+        {
+          "title": "POV: Training with a goodphats athlete for 24 hours...",
+          "description": "Inspired by Under Armour's \"Day with an athlete\" content. Immersive aspirational format.",
+          "platform": "tiktok",
+          "platformHook": "POV: with trending workout sound",
+          "format": "reel",
+          "competitorInspiration": "Under Armour athlete day-in-the-life - adapted for TikTok format",
+          "estimatedEngagement": "3M views, 200K saves",
+          "whyItWorks": "Aspirational + immersive = high watch time"
+        },
+        {
+          "title": "The workout routine goodphats athletes won't tell you about...",
+          "description": "Inspired by Nike Training Club's secret workout threads. Insider training secrets.",
+          "platform": "twitter",
+          "platformHook": "Thread with workout splits revealed",
+          "format": "thread",
+          "competitorInspiration": "Nike athlete training reveals - adapted with exclusivity angle",
+          "estimatedEngagement": "500K impressions, 20K saves",
+          "whyItWorks": "Secret + actionable = massive save rate"
+        }
+      ]
+    },
+    "review": {
+      "grades": {
+        "Brand DNA": 70,
+        "Strategic Insights": 90,
+        "Content Themes": 85,
+        "Competitor Intel": 90,
+        "Content Ideas": 60,
+        "Market Position": 80,
+        "Social Discovery": 90,
+        "Content Extraction": 90
+      },
+      "overallGrade": 82,
+      "issues": [
+        "Content ideas lack viral hooks/engagement triggers"
+      ],
+      "successes": [
+        "2 high-impact insights identified",
+        "Specific, niche-relevant themes",
+        "Detailed competitor analysis with strategies"
+      ],
+      "verdict": "✅ EXCELLENT - Ready for production"
+    },
+    "timestamp": "2025-12-11T15:16:51.239Z"
+  },
+  "lululemon.com": {
+    "scanId": "scan_1765466216247_obdzva7jm",
+    "results": {
+      "extractedContent": {
+        "profile": {
+          "bio": "lululemon athletica inc. is a Canadian multinational athletic apparel retailer headquartered in Vancouver. It was founded in 1998 as a design studio and retailer of yoga apparel.",
+          "follower_count": 0,
+          "verified": false,
+          "platform_presence": [
+            "twitter",
+            "instagram",
+            "linkedin",
+            "youtube"
+          ]
+        },
+        "posts": [
+          {
+            "content": "Introducing the FURTHER race kits | lululemon - Created playlists",
+            "post_type": "video",
+            "engagement": {
+              "views": 0
+            },
+            "quality_score": 0.7
+          },
+          {
+            "content": "lululemon Gifts for Him | Reviews with Kelly Yager - 134K views",
+            "post_type": "video",
+            "engagement": {
+              "views": 134000
+            },
+            "quality_score": 0.75
+          },
+          {
+            "content": "lululemon Gifts for Him | Reviews with Kelly Yager - 134K views",
+            "post_type": "video",
+            "engagement": {
+              "views": 134000
+            },
+            "quality_score": 0.75
+          },
+          {
+            "content": "lululemon Winter Haul | Reviews with Kelly Yager - 119K views",
+            "post_type": "video",
+            "engagement": {
+              "views": 119000
+            },
+            "quality_score": 0.75
+          },
+          {
+            "content": "lululemon Bestsellers | Reviews with Kelly Yager - 328K views",
+            "post_type": "video",
+            "engagement": {
+              "views": 328000
+            },
+            "quality_score": 0.75
+          },
+          {
+            "content": "lululemon Best Selling Shorts | Reviews with Kelly Yager - 2.5M views",
+            "post_type": "video",
+            "engagement": {
+              "views": 2500000
+            },
+            "quality_score": 0.8
+          },
+          {
+            "content": "SHOPPING AT LULULEMON WITH MY ROOMMATES - 43K views",
+            "post_type": "video",
+            "engagement": {
+              "views": 43000
+            },
+            "quality_score": 0.7
+          },
+          {
+            "content": "HUGE LULULEMON HAUL! - 54K views",
+            "post_type": "video",
+            "engagement": {
+              "views": 54000
+            },
+            "quality_score": 0.7
+          }
+        ],
+        "content_themes": [
+          "Yoga and fitness apparel",
+          "Product reviews and hauls",
+          "Yoga and workout tutorials",
+          "Gifts and seasonal collections"
+        ],
+        "extraction_confidence": 0.8
+      },
+      "brandDNA": {
+        "archetype": "The Hero",
+        "voice": {
+          "style": "Casual and conversational",
+          "formality": "Informal",
+          "tone": "Enthusiastic and relatable",
+          "vocabulary": [
+            "lululemon",
+            "haul",
+            "reviews",
+            "bestsellers",
+            "gifts",
+            "winter",
+            "shorts",
+            "race",
+            "roommates",
+            "shopping"
+          ],
+          "tones": [
+            "Energetic",
+            "Helpful",
+            "Authentic"
+          ]
+        },
+        "themes": [
+          "Product reviews and recommendations",
+          "Gift ideas",
+          "Seasonal collections",
+          "Community experiences",
+          "Shopping hauls"
+        ],
+        "corePillars": [
+          "Performance Apparel",
+          "Community",
+          "Product Innovation",
+          "Lifestyle Enhancement"
+        ],
+        "visual_identity": {
+          "colors": [
+            "Not explicitly stated, but often features neutral tones and pops of color"
+          ],
+          "style": "Clean and modern"
+        },
+        "engagement_patterns": {
+          "frequency": "Variable, depends on the platform",
+          "best_content_types": [
+            "Product reviews",
+            "Shopping hauls",
+            "Gift guides"
+          ]
+        }
+      },
+      "marketShare": {
+        "percentage": 5,
+        "industry": "Athletic Apparel",
+        "yourRank": 4,
+        "note": "Lululemon faces competition from established brands and emerging direct-to-consumer players."
+      },
+      "strategicInsights": [
+        {
+          "title": "Elevate Haul Content into Tutorials",
+          "description": "Current video hauls with moderate engagement -> Winning apparel content blends product showcases with practical tutorials and styling tips, driving higher engagement and purchase intent -> Primary competitor Athleta features 'Style With' videos alongside product spotlights. Secondary competitor Outdoor Voices uses UGC to showcase active lifestyles -> Transform existing haul content into mini-tutorials demonstrating how to wear and style items for different activities (yoga, running, everyday wear). Add on-screen text highlighting key features and benefits. Target +20% saves on these videos compared to regular hauls.",
+          "impact": "HIGH IMPACT",
+          "effort": "Medium lift"
+        },
+        {
+          "title": "Introduce Influencer-Led Challenge Series",
+          "description": "Current low engagement despite consistent posting -> Winning fitness brands leverage influencer-led challenges and workout series to foster community and drive consistent engagement -> Primary competitor Alo Yoga partners with fitness influencers for dedicated series. Secondary competitor Peloton uses instructors to build loyalty and engagement -> Launch a monthly influencer-led challenge series focused on different fitness activities (e.g., 30-day yoga challenge, 2-week running program). Promote across all channels and encourage user participation using a branded hashtag. Track hashtag usage and UGC submissions to measure success. Aim for 500+ UGC submissions per challenge.",
+          "impact": "MEDIUM IMPACT",
+          "effort": "High lift"
+        },
+        {
+          "title": "Optimize for Short-Form Video Cadence",
+          "description": "Current unknown cadence with primarily video content -> Winning brands in the athletic apparel space maintain a consistent presence with a higher frequency of short-form video content, focusing on quick tips and product highlights -> Primary competitor Nike posts multiple times daily on TikTok and Instagram Reels. Secondary competitor Gymshark utilizes short, engaging videos highlighting fitness achievements and community events -> Increase short-form video posting frequency to 3-4 times per week (Reels/TikTok). Focus on quick tips, product demos, and behind-the-scenes glimpses. A/B test different hooks and CTAs to optimize for views and engagement. Monitor competitor performance to identify trending sounds and formats. Target a 10% increase in follower growth within the first month.",
+          "impact": "HIGH IMPACT",
+          "effort": "Medium lift"
+        }
+      ],
+      "competitorIntelligence": [
+        {
+          "name": "Nike",
+          "classification": "PRIMARY",
+          "threatLevel": "HIGH",
+          "primaryVector": "Brand recognition and product diversification.",
+          "theirAdvantage": "Established brand, global reach, and diverse product offerings.",
+          "yourOpportunity": "Focus on niche communities (yoga, running) and personalized experiences.",
+          "postingChannels": [
+            "instagram",
+            "tiktok",
+            "youtube",
+            "twitter",
+            "facebook"
+          ],
+          "postingFrequency": "Multiple times daily across platforms.",
+          "bestFormats": [
+            "Short-form video (reels, TikToks)",
+            "Carousel posts featuring athletes",
+            "Behind-the-scenes content",
+            "Product launches"
+          ],
+          "contentStyle": "Inspirational, aspirational, product-focused, athlete-endorsed.",
+          "topViralContent": [
+            {
+              "title": "Nike: You Can't Stop Us",
+              "platform": "YouTube",
+              "format": "Video",
+              "estimatedEngagement": "140M+ views",
+              "whyItWorked": "Powerful message of unity and perseverance, timely release during the pandemic, high production quality."
+            },
+            {
+              "title": "LeBron James - You Can’t Be Stopped",
+              "platform": "Instagram",
+              "format": "Reel",
+              "estimatedEngagement": "20M+ views, 2M+ likes",
+              "whyItWorked": "Features a well-known and inspirational athlete. Simple and direct messaging."
+            },
+            {
+              "title": "Nike Air Max Day posts",
+              "platform": "Instagram",
+              "format": "Carousel",
+              "estimatedEngagement": "500k+ likes per post",
+              "whyItWorked": "Leverages a recurring brand event and limited edition product release to boost demand."
+            }
+          ]
+        },
+        {
+          "name": "Athleta",
+          "classification": "PRIMARY",
+          "threatLevel": "MEDIUM",
+          "primaryVector": "Direct competitor in women's activewear.",
+          "theirAdvantage": "More inclusive sizing and a focus on sustainability.",
+          "yourOpportunity": "Emphasize community building and unique product design.",
+          "postingChannels": [
+            "instagram",
+            "facebook",
+            "pinterest"
+          ],
+          "postingFrequency": "Daily",
+          "bestFormats": [
+            "Carousel posts",
+            "Lifestyle photography",
+            "Customer testimonials",
+            "Reels"
+          ],
+          "contentStyle": "Empowering, inclusive, community-focused.",
+          "topViralContent": [
+            {
+              "title": "Power of She campaign",
+              "platform": "Instagram",
+              "format": "Carousel",
+              "estimatedEngagement": "10K-20K likes",
+              "whyItWorked": "Features diverse women and promotes a positive body image."
+            },
+            {
+              "title": "Athleta Sustainable Style Series",
+              "platform": "Instagram",
+              "format": "Reel",
+              "estimatedEngagement": "50K+ views",
+              "whyItWorked": "Addresses consumer concerns about sustainability and showcases eco-friendly products."
+            },
+            {
+              "title": "New Arrivals Product Launch",
+              "platform": "Instagram",
+              "format": "Image Post",
+              "estimatedEngagement": "15K+ likes",
+              "whyItWorked": "Classic marketing of new styles."
+            }
+          ]
+        },
+        {
+          "name": "Adidas",
+          "classification": "PRIMARY",
+          "threatLevel": "HIGH",
+          "primaryVector": "Global brand with a wide range of products.",
+          "theirAdvantage": "Strong brand reputation and partnerships with high-profile athletes.",
+          "yourOpportunity": "Focus on specific niche within the yoga/fitness community.",
+          "postingChannels": [
+            "instagram",
+            "tiktok",
+            "youtube",
+            "twitter",
+            "facebook"
+          ],
+          "postingFrequency": "Multiple times daily.",
+          "bestFormats": [
+            "Video content (short-form and long-form)",
+            "Product showcases",
+            "Athlete spotlights",
+            "Behind-the-scenes content"
+          ],
+          "contentStyle": "Sporty, innovative, trend-setting.",
+          "topViralContent": [
+            {
+              "title": "Impossible Is Nothing campaign",
+              "platform": "YouTube",
+              "format": "Video",
+              "estimatedEngagement": "5M+ views",
+              "whyItWorked": "Inspirational message and high production quality."
+            },
+            {
+              "title": "Stella McCartney x Adidas collection",
+              "platform": "Instagram",
+              "format": "Carousel",
+              "estimatedEngagement": "200K+ likes",
+              "whyItWorked": "Collaboration with a well-known designer."
+            },
+            {
+              "title": "Adidas Ultraboost product launch",
+              "platform": "Instagram",
+              "format": "Reel",
+              "estimatedEngagement": "3M+ views",
+              "whyItWorked": "Showcases the product's features and benefits in a visually appealing way."
+            }
+          ]
+        },
+        {
+          "name": "Outdoor Voices",
+          "classification": "PRIMARY",
+          "threatLevel": "MEDIUM",
+          "primaryVector": "Recreational activewear and community focus.",
+          "theirAdvantage": "Emphasis on accessibility and inclusivity.",
+          "yourOpportunity": "Highlight technical performance and premium materials.",
+          "postingChannels": [
+            "instagram",
+            "tiktok",
+            "facebook"
+          ],
+          "postingFrequency": "Daily.",
+          "bestFormats": [
+            "User-generated content",
+            "Lifestyle photography",
+            "Community events",
+            "Reels"
+          ],
+          "contentStyle": "Playful, approachable, community-driven.",
+          "topViralContent": [
+            {
+              "title": "#DoingThings campaign",
+              "platform": "Instagram",
+              "format": "User-generated content",
+              "estimatedEngagement": "Varies widely, but high overall engagement due to community participation.",
+              "whyItWorked": "Encourages customers to share their experiences with the brand."
+            },
+            {
+              "title": "New product launch Reels",
+              "platform": "Instagram",
+              "format": "Reel",
+              "estimatedEngagement": "10k-30k views.",
+              "whyItWorked": "Easy to digest and fun."
+            },
+            {
+              "title": "Community events",
+              "platform": "Instagram",
+              "format": "Event promotion",
+              "estimatedEngagement": "High local engagement.",
+              "whyItWorked": "Creates a sense of community."
+            }
+          ]
+        },
+        {
+          "name": "Under Armour",
+          "threatLevel": "MEDIUM",
+          "primaryVector": "Athletic wear",
+          "theirAdvantage": "Strong focus on performance apparel",
+          "yourOpportunity": "Leverage brand community and lifestyle to drive customer loyalty"
+        }
+      ],
+      "socialLinks": {
+        "twitter": "https://twitter.com/lululemon",
+        "instagram": "https://instagram.com/lululemon",
+        "linkedin": "https://linkedin.com/in/lululemon",
+        "youtube": "https://youtube.com/@lululemon"
+      },
+      "contentIdeas": [
+        {
+          "title": "I tested every lululemon product for 6 months. Here's my brutally honest review...",
+          "description": "Inspired by Gymshark's athlete testimonial videos that get 5M+ views. Long-form honest review format.",
+          "platform": "youtube",
+          "platformHook": "Thumbnail: 6 MONTHS LATER... with before/after",
+          "format": "video",
+          "competitorInspiration": "Gymshark athlete review format - adapted with extended testing period for lululemon",
+          "estimatedEngagement": "2M views, 50K comments",
+          "whyItWorks": "Long-term = credibility, honest = trust, specific = saves"
+        },
+        {
+          "title": "The 5 lululemon products pro athletes actually use (not what they promote)",
+          "description": "Inspired by Nike's \"what athletes really wear\" content. Insider secrets that contradict marketing.",
+          "platform": "instagram",
+          "platformHook": "Carousel: \"What they promote\" vs \"What they use\"",
+          "format": "carousel",
+          "competitorInspiration": "Nike athlete gear reveals - adapted with contrarian angle for lululemon",
+          "estimatedEngagement": "100K saves, 30K shares",
+          "whyItWorks": "Insider + contrarian = irresistible curiosity"
+        },
+        {
+          "title": "Why I returned my Nike gear and switched to lululemon (honest comparison)",
+          "description": "Inspired by Gymshark vs Nike comparison videos that dominate YouTube. Brand switch story.",
+          "platform": "youtube",
+          "platformHook": "Side-by-side comparison with clear winner reveal",
+          "format": "video",
+          "competitorInspiration": "Gymshark competitor comparison videos - adapted for lululemon",
+          "estimatedEngagement": "1M views, comment war between brand fans",
+          "whyItWorks": "Brand comparison + personal story = tribal engagement"
+        },
+        {
+          "title": "POV: Training with a lululemon athlete for 24 hours...",
+          "description": "Inspired by Under Armour's \"Day with an athlete\" content. Immersive aspirational format.",
+          "platform": "tiktok",
+          "platformHook": "POV: with trending workout sound",
+          "format": "reel",
+          "competitorInspiration": "Under Armour athlete day-in-the-life - adapted for TikTok format",
+          "estimatedEngagement": "3M views, 200K saves",
+          "whyItWorks": "Aspirational + immersive = high watch time"
+        },
+        {
+          "title": "The workout routine lululemon athletes won't tell you about...",
+          "description": "Inspired by Nike Training Club's secret workout threads. Insider training secrets.",
+          "platform": "twitter",
+          "platformHook": "Thread with workout splits revealed",
+          "format": "thread",
+          "competitorInspiration": "Nike athlete training reveals - adapted with exclusivity angle",
+          "estimatedEngagement": "500K impressions, 20K saves",
+          "whyItWorks": "Secret + actionable = massive save rate"
+        }
+      ]
+    },
+    "review": {
+      "grades": {
+        "Brand DNA": 70,
+        "Strategic Insights": 90,
+        "Content Themes": 85,
+        "Competitor Intel": 90,
+        "Content Ideas": 60,
+        "Market Position": 80,
+        "Social Discovery": 90,
+        "Content Extraction": 90
+      },
+      "overallGrade": 82,
+      "issues": [
+        "Content ideas lack viral hooks/engagement triggers"
+      ],
+      "successes": [
+        "2 high-impact insights identified",
+        "Specific, niche-relevant themes",
+        "Detailed competitor analysis with strategies"
+      ],
+      "verdict": "✅ EXCELLENT - Ready for production"
+    },
+    "timestamp": "2025-12-11T15:19:16.485Z"
+  },
+  "airbnb.com": {
+    "scanId": "scan_1765466361496_lxemkufcp",
+    "results": {
+      "extractedContent": {
+        "profile": {
+          "bio": "Airbnb: Experience travel beyond the ordinary. Find unique stays and immersive experiences worldwide. Connect with local hosts. 3M+ LinkedIn followers.",
+          "follower_count": 3118269,
+          "verified": false,
+          "platform_presence": [
+            "twitter",
+            "instagram",
+            "linkedin",
+            "youtube",
+            "website",
+            "website"
+          ]
+        },
+        "posts": [
+          {
+            "content": "K-Pop Style | Airbnb Experiences",
+            "post_type": "video",
+            "engagement": {
+              "views": 5100000
+            },
+            "quality_score": 0.9
+          },
+          {
+            "content": "Stay Grounded | Introducing Airbnb Services",
+            "post_type": "video",
+            "engagement": {
+              "views": 8600000
+            },
+            "quality_score": 0.9
+          },
+          {
+            "content": "Don’t just see Venice, experience it on Airbnb",
+            "post_type": "video",
+            "engagement": {
+              "views": 92000
+            },
+            "quality_score": 0.8
+          },
+          {
+            "content": "Don’t just see Tokyo, experience it on Airbnb.",
+            "post_type": "video",
+            "engagement": {
+              "views": 300000
+            },
+            "quality_score": 0.8
+          },
+          {
+            "content": "Don’t just see Seoul, experience it on Airbnb",
+            "post_type": "video",
+            "engagement": {
+              "views": 103000
+            },
+            "quality_score": 0.8
+          },
+          {
+            "content": "Don’t just see São Paulo, experience it on Airbnb",
+            "post_type": "video",
+            "engagement": {
+              "views": 75000
+            },
+            "quality_score": 0.8
+          },
+          {
+            "content": "Don’t just see Rome, experience it on Airbnb",
+            "post_type": "video",
+            "engagement": {
+              "views": 180000
+            },
+            "quality_score": 0.8
+          },
+          {
+            "content": "Don’t just see Milan, experience it on Airbnb",
+            "post_type": "video",
+            "engagement": {
+              "views": 6700
+            },
+            "quality_score": 0.7
+          }
+        ],
+        "content_themes": [
+          "Travel Experiences",
+          "Cultural Immersion",
+          "Local Exploration",
+          "Unique Accommodations",
+          "Hosting Tools"
+        ],
+        "extraction_confidence": 0.8
+      },
+      "brandDNA": {
+        "archetype": "The Explorer",
+        "voice": {
+          "style": "Empathetic and Concise",
+          "formality": "Casual",
+          "tone": "Inspirational and Empowering",
+          "vocabulary": [
+            "Experience",
+            "Discover",
+            "Grounded",
+            "K-Pop Style",
+            "See",
+            "Venice",
+            "Tokyo",
+            "Seoul",
+            "São Paulo",
+            "Rome",
+            "Milan"
+          ],
+          "tones": [
+            "Inspirational",
+            "Empowering",
+            "Inviting"
+          ]
+        },
+        "themes": [
+          "Travel",
+          "Culture",
+          "Local Experiences",
+          "Unique Stays"
+        ],
+        "corePillars": [
+          "Experiential Travel",
+          "Cultural Immersion",
+          "Local Connection"
+        ],
+        "visual_identity": {
+          "colors": [
+            "Not explicitly stated, but likely uses warm, inviting colors and imagery related to travel destinations."
+          ],
+          "style": "Visually driven, showcasing unique homes and experiences. Likely vibrant and authentic."
+        },
+        "engagement_patterns": {
+          "frequency": "Not applicable from given data.",
+          "best_content_types": [
+            "Experiences",
+            "Listings featuring unique cultural aspects."
+          ]
+        }
+      },
+      "marketShare": {
+        "percentage": 5,
+        "industry": "Vacation Rentals",
+        "yourRank": 4,
+        "note": "Estimated based on publicly available data and expert analysis of brand reach."
+      },
+      "strategicInsights": [
+        {
+          "title": "Show, Don't Just Tell",
+          "description": "Current format/cadence -> Airbnb's current content relies heavily on generalized destination promotions with minimal engagement. Winning Airbnb content showcases unique accommodations and authentic guest experiences, often through user-generated content (UGC) and immersive video tours. -> Primary competitors like Vrbo and Booking.com actively feature user reviews and property walk-through videos. Secondary competitors like Marriott Bonvoy highlight loyalty member experiences and exclusive property access. -> Shift from promotional content to featuring authentic guest stories via short-form video (Reels/TikToks) and UGC. Aim for a 300% increase in comments by asking direct questions in captions (e.g., 'What's the most unique Airbnb you've ever stayed in?'). Create dedicated hashtag to encourage UGC and track performance.",
+          "impact": "HIGH IMPACT",
+          "effort": "Medium"
+        },
+        {
+          "title": "Hosting Hacks, Not Just Homes",
+          "description": "Current format/cadence -> Airbnb mentions 'Hosting Tools' but provides limited practical advice, resulting in low engagement. Winning content provides actionable tips and strategies for hosts, addressing common pain points and highlighting platform benefits, ideally in thread format. -> Primary competitors don't focus on this, but sites like BiggerPockets (secondary competitor) have a strong community around real estate and property management. -> Create weekly LinkedIn threads addressing common host challenges (e.g., 'Optimizing your listing for higher occupancy'). Each thread should offer 3-5 actionable tips. Target a +50% increase in saves/shares by providing checklists and templates in the thread.",
+          "impact": "MEDIUM IMPACT",
+          "effort": "Medium"
+        },
+        {
+          "title": "Local Immersion, Deeper Dive",
+          "description": "Current format/cadence -> Airbnb promotes 'Local Exploration' but content lacks depth and fails to capture the essence of local culture. Winning travel content emphasizes immersive experiences, showcasing hidden gems, local artisans, and authentic cultural practices through high-quality video. -> Primary competitors Vrbo and Booking focus on breadth of properties. Secondary competitors like Intrepid Travel and G Adventures highlight authentic cultural experiences. -> Produce 1-2 long-form (8–10 minute) videos per month focusing on unique cultural experiences in different regions (e.g., 'A Day in the Life of a [Local Artisan] in [Destination]'). Increase video views by +40% by partnering with local influencers who are genuinely embedded in the communities featured.",
+          "impact": "HIGH IMPACT",
+          "effort": "High"
+        }
+      ],
+      "competitorIntelligence": [
+        {
+          "name": "Booking",
+          "classification": "PRIMARY",
+          "threatLevel": "HIGH",
+          "primaryVector": "Marketplace reach & conversion",
+          "theirAdvantage": "Large supply and paid acquisition scale",
+          "yourOpportunity": "Differentiate via verified stays, host quality, and local storytelling"
+        },
+        {
+          "name": "Expedia",
+          "classification": "PRIMARY",
+          "threatLevel": "HIGH",
+          "primaryVector": "Marketplace reach & conversion",
+          "theirAdvantage": "Large supply and paid acquisition scale",
+          "yourOpportunity": "Differentiate via verified stays, host quality, and local storytelling"
+        },
+        {
+          "name": "Tripadvisor",
+          "classification": "PRIMARY",
+          "threatLevel": "HIGH",
+          "primaryVector": "Marketplace reach & conversion",
+          "theirAdvantage": "Large supply and paid acquisition scale",
+          "yourOpportunity": "Differentiate via verified stays, host quality, and local storytelling"
+        },
+        {
+          "name": "Agoda",
+          "classification": "PRIMARY",
+          "threatLevel": "HIGH",
+          "primaryVector": "Marketplace reach & conversion",
+          "theirAdvantage": "Large supply and paid acquisition scale",
+          "yourOpportunity": "Differentiate via verified stays, host quality, and local storytelling"
+        },
+        {
+          "name": "VRBO",
+          "threatLevel": "HIGH",
+          "primaryVector": "Platform - similar rental platform",
+          "theirAdvantage": "Established brand, wide selection of vacation rentals",
+          "yourOpportunity": "Focus on unique experiences, personalized service"
+        },
+        {
+          "name": "Booking.com",
+          "threatLevel": "MEDIUM",
+          "primaryVector": "Platform - broad travel booking site",
+          "theirAdvantage": "Large user base, diverse offerings (hotels, flights, etc.)",
+          "yourOpportunity": "Highlight unique homes, local neighborhoods"
+        }
+      ],
+      "socialLinks": {
+        "twitter": "https://twitter.com/Airbnb",
+        "instagram": "https://instagram.com/airbnb",
+        "linkedin": "https://linkedin.com/company/airbnb",
+        "facebook": "https://facebook.com/airbnb",
+        "youtube": "https://youtube.com/@Airbnb",
+        "tiktok": "https://www.tiktok.com/@airbnb"
+      },
+      "contentIdeas": [
+        {
+          "title": "I stayed at 50 airbnb properties. Here's what the best hosts all do differently...",
+          "description": "Inspired by Booking.com's user review threads that get 500K+ views. Data-driven insider content.",
+          "platform": "instagram",
+          "platformHook": "Carousel with swipe-to-reveal data points",
+          "format": "carousel",
+          "competitorInspiration": "Booking.com user reviews format - adapted for ${brandName} host insights",
+          "estimatedEngagement": "80K saves, 15K shares (based on Booking.com benchmarks)",
+          "whyItWorks": "Curiosity + insider value = high save rate"
+        },
+        {
+          "title": "The $50K/month airbnb host told me her 5 secrets (thread)",
+          "description": "Inspired by VRBO's superhost success stories that drive massive engagement. Insider secrets format.",
+          "platform": "twitter",
+          "platformHook": "Thread format with numbered secrets",
+          "format": "thread",
+          "competitorInspiration": "VRBO superhost interviews - adapted with specific revenue numbers",
+          "estimatedEngagement": "200K impressions, 5K retweets",
+          "whyItWorks": "Specific money numbers + secrets = irresistible"
+        },
+        {
+          "title": "Why I stopped booking hotels forever after this airbnb stay...",
+          "description": "Inspired by TripAdvisor's \"hotel vs alternative\" debates that get 1M+ views. Contrarian take.",
+          "platform": "youtube",
+          "platformHook": "Thumbnail: Hotel ❌ vs ${brandName} ✅",
+          "format": "video",
+          "competitorInspiration": "TripAdvisor comparison content - adapted as personal transformation story",
+          "estimatedEngagement": "500K views, 20K comments debating",
+          "whyItWorks": "Contrarian + personal story = comment war"
+        },
+        {
+          "title": "POV: You just discovered the most hidden airbnb gem in [destination]",
+          "description": "Inspired by Expedia's \"hidden gems\" reels that average 2M views. Immersive discovery format.",
+          "platform": "tiktok",
+          "platformHook": "POV: format with trending sound",
+          "format": "reel",
+          "competitorInspiration": "Expedia hidden destination content - adapted for ${brandName} properties",
+          "estimatedEngagement": "1M views, 100K saves",
+          "whyItWorks": "POV immersion + exclusivity = high share rate"
+        },
+        {
+          "title": "The truth about being a airbnb host that nobody talks about...",
+          "description": "Inspired by VRBO host community content. Truth reveal format sparks debate.",
+          "platform": "instagram",
+          "platformHook": "Carousel with \"truth bombs\" on each slide",
+          "format": "carousel",
+          "competitorInspiration": "VRBO host testimonials - adapted with controversial truths",
+          "estimatedEngagement": "50K comments, 30K shares",
+          "whyItWorks": "Controversy + insider truth = engagement"
+        }
+      ]
+    },
+    "review": {
+      "grades": {
+        "Brand DNA": 70,
+        "Strategic Insights": 90,
+        "Content Themes": 85,
+        "Competitor Intel": 90,
+        "Content Ideas": 85,
+        "Market Position": 80,
+        "Social Discovery": 90,
+        "Content Extraction": 90
+      },
+      "overallGrade": 85,
+      "issues": [],
+      "successes": [
+        "2 high-impact insights identified",
+        "Specific, niche-relevant themes",
+        "Detailed competitor analysis with strategies",
+        "3 ideas with viral hooks"
+      ],
+      "verdict": "✅ EXCELLENT - Ready for production"
+    },
+    "timestamp": "2025-12-11T15:21:41.776Z"
+  }
+}

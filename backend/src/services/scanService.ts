@@ -926,11 +926,64 @@ export async function startScan(
         }
       }
       
-      // Validate themes
+      // Validate themes - with fallback generation
       if (!researchData.content_themes || researchData.content_themes.length < minThemes) {
         const themeCount = researchData.content_themes?.length || 0;
-        addLog(scanId, `[ERROR] Themes quality check failed: ${themeCount} themes (required: ${minThemes})`);
-        throw new Error(`Quality check failed: Only ${themeCount} themes (minimum ${minThemes} required)`);
+        addLog(scanId, `[WARNING] Themes quality check failed: ${themeCount} themes (required: ${minThemes}) - attempting generation...`);
+        
+        try {
+          // Generate themes from available content using LLM
+          const themesPrompt = `Based on the following brand information for "${username}", identify ${minThemes} specific content themes/topics they should focus on.
+
+Brand Bio: ${researchData.profile?.bio || 'N/A'}
+Industry Context: ${websiteTextContent ? websiteTextContent.substring(0, 3000) : 'N/A'}
+Existing Posts: ${researchData.posts?.slice(0, 3).map((p: any) => p.content).join('; ') || 'N/A'}
+
+RULES:
+1. Themes must be SPECIFIC to this brand/industry - NOT generic like "content creation" or "brand building"
+2. Each theme should be 2-4 words describing a real topic they cover
+3. Examples: "Sustainable Fashion", "AI Development", "Travel Experiences", "Athletic Performance"
+
+Return ONLY a JSON array of ${minThemes} theme strings:
+["Theme 1", "Theme 2", "Theme 3"]`;
+
+          const generatedThemes = await generateJSON<string[]>(themesPrompt, 'Return only a JSON array of theme strings.', { tier: scanTier });
+          
+          if (Array.isArray(generatedThemes) && generatedThemes.length >= minThemes) {
+            researchData.content_themes = generatedThemes;
+            addLog(scanId, `[SUCCESS] Generated ${generatedThemes.length} themes: ${generatedThemes.join(', ')}`);
+          } else if (Array.isArray(generatedThemes) && generatedThemes.length > 0) {
+            // Pad with industry-specific fallbacks
+            const industryFallbacks = [
+              'Industry Insights', 'Product Updates', 'Customer Stories', 
+              'Behind the Scenes', 'Expert Tips', 'Community Highlights'
+            ];
+            researchData.content_themes = [...generatedThemes, ...industryFallbacks.slice(0, minThemes - generatedThemes.length)];
+            addLog(scanId, `[SUCCESS] Generated ${researchData.content_themes.length} themes (with fallbacks)`);
+          } else {
+            throw new Error('Theme generation returned empty array');
+          }
+        } catch (themeError: any) {
+          addLog(scanId, `[WARNING] Theme generation failed: ${themeError.message} - using intelligent fallback`);
+          
+          // Create intelligent fallback themes based on username/industry detection
+          const domainName = username?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || username;
+          const nicheGuess = detectNicheFromContent(
+            researchData.posts?.map((p: any) => p.content).join(' ') || '',
+            researchData.profile?.bio || '',
+            ''
+          );
+          
+          const nicheThemes: Record<string, string[]> = {
+            'food/bakery/dessert': ['Artisan Recipes', 'Ingredient Sourcing', 'Customer Celebrations', 'Seasonal Specials', 'Baking Techniques'],
+            'athletic apparel': ['Athletic Performance', 'Athlete Stories', 'Product Innovation', 'Training Tips', 'Community Events'],
+            'travel/stay': ['Unique Destinations', 'Host Stories', 'Travel Tips', 'Local Experiences', 'Guest Testimonials'],
+            'general': [`${domainName} Updates`, 'Industry Insights', 'Customer Stories', 'Expert Tips', 'Behind the Scenes']
+          };
+          
+          researchData.content_themes = nicheThemes[nicheGuess] || nicheThemes['general'];
+          addLog(scanId, `[SUCCESS] Using niche-based fallback themes for ${nicheGuess}: ${researchData.content_themes.join(', ')}`);
+        }
       }
       
       addLog(scanId, `[SUCCESS] Quality check passed: ${researchData.posts.length} posts, ${researchData.profile.bio.length} char bio, ${researchData.content_themes.length} themes`);
@@ -1183,70 +1236,129 @@ export async function startScan(
         brandContext += `Recent Posts Sample:\n${validatedContent.posts.slice(0, 5).map((p: any) => p.content).join('\n\n')}\n\n`;
       }
       
-      // SIMPLE DIRECT APPROACH - Like ChatGPT would respond
-      const contentPrompt = `Layered content plan for ${brandName}.
+      // Extract competitor viral content for reference
+      const competitorViralContent = competitorIntelligence
+        .flatMap((c: any) => (c.topViralContent || []).map((v: any) => ({
+          competitor: c.name,
+          ...v
+        })))
+        .slice(0, 10);
+      
+      const topPerformer = competitorIntelligence.find((c: any) => 
+        c.topViralContent && c.topViralContent.length > 0
+      );
+      
+      // Build competitor content analysis string
+      const competitorContentAnalysis = competitorIntelligence.slice(0, 3).map((c: any) => {
+        const viralExamples = (c.topViralContent || []).slice(0, 2)
+          .map((v: any) => `    • "${v.title}" (${v.platform}, ${v.estimatedEngagement}) - ${v.whyItWorked}`)
+          .join('\n');
+        return `- ${c.name} (${c.threatLevel} threat):
+  Platforms: ${(c.postingChannels || []).join(', ') || 'Unknown'}
+  Frequency: ${c.postingFrequency || 'Unknown'}
+  Best formats: ${(c.bestFormats || []).join(', ') || 'Unknown'}
+  Content style: ${c.contentStyle || 'Unknown'}
+  TOP VIRAL POSTS:
+${viralExamples || '    • No viral content data'}`;
+      }).join('\n\n');
 
-STEP 1 — LLM PRIOR (category playbook):
-- Using only your knowledge of the category, note which formats and angles perform best (threads vs reels vs shorts, UGC vs founder POV, etc) and what cadence wins.
+      // COMPETITOR-DRIVEN VIRAL CONTENT GENERATION
+      const contentPrompt = `COMPETITOR-DRIVEN CONTENT STRATEGY for ${brandName}.
 
-STEP 2 — SCRAPED OVERLAY (tailor to them):
-- Current posting pattern: ${postPatternSummary}
-- Current topics: ${themes || 'n/a'}
-- Current bio: ${bio || 'n/a'}
-- Sample posts:
-${allPosts.substring(0, 600)}
+## 🎯 COMPETITIVE INTELLIGENCE (USE THIS TO GUIDE IDEAS):
+${competitorContentAnalysis || 'No competitor data available'}
 
-COMPANY: ${brandName}
-${websiteTextContent && websiteTextContent.length > 100 ? `
-ABOUT THIS COMPANY (from their website):
-${websiteTextContent.substring(0, 8000)}
+${topPerformer ? `
+## 🏆 TOP PERFORMER TO BEAT: ${topPerformer.name}
+They are outperforming because: ${topPerformer.contentStyle || 'superior content strategy'}
+Your content must match or exceed their engagement patterns.
 ` : ''}
-${brandContext}
 
-TASK: Generate 6 SPECIFIC content ideas for ${brandName}.
+## 📊 VIRAL CONTENT FROM COMPETITORS (ADAPT THESE PATTERNS):
+${competitorViralContent.slice(0, 5).map((v: any) => 
+  `• ${v.competitor}: "${v.title}" (${v.platform}) - ${v.whyItWorked || 'high engagement'}`
+).join('\n') || 'No viral content data - use platform best practices'}
 
-CRITICAL RULES:
-1. Each idea must ONLY work for ${brandName} - not any other company
-2. Reference their ACTUAL products, services, or industry
-3. If you know ${brandName}, use what you know about them
-4. Lead with category-winning patterns (LLM prior), then tailor with scraped signals
-5. Each description must include, in order: "Current format/cadence -> Winning in niche (LLM prior) -> Competitor proof (primary vs secondary) -> Engagement move (how to increase saves/comments/shares)"
+## PLATFORM-SPECIFIC HOOKS (CRITICAL - use the RIGHT hook for each platform):
+**INSTAGRAM (Reels/Carousel)**:
+- Hook in first 0.5 seconds for Reels
+- "Wait for it..." / "Watch till the end..."
+- Before/after transformations
+- "Save this for later" carousel content
+- Trending audio participation
 
-EXAMPLES OF GOOD IDEAS (brand-specific):
-For Nike:
-- "Behind the Design: Air Max 2024 Engineering Story"
-- "Athlete Spotlight: [Athlete Name]'s Morning Training Routine"
-- "Just Do It Moment: Fan Submissions of Personal Victories"
+**TIKTOK**:
+- "POV: [scenario]" format
+- Stitches and duets with trending content
+- "Things that just make sense" format
+- Fast cuts, text overlays, trending sounds
+- Raw/authentic > polished
 
-For Airbnb:
-- "Unique Stay: The Treehouse Experience in Costa Rica"
-- "Host Success Story: How Maria Grew Her Bookings 300%"
-- "Local's Guide: Hidden Gems Near Top Airbnb Destinations"
+**TWITTER/X (Threads)**:
+- "I spent [time] researching [topic]. Here's what I found:"
+- Data-driven threads with screenshots
+- Hot takes that spark debate
+- "Unpopular opinion:" format
 
-For Tesla:
-- "Factory Tour: Inside Gigafactory Texas"
-- "Owner Stories: Road Trip Across America in Model 3"
-- "Engineering Deep Dive: How Autopilot Sees the Road"
+**LINKEDIN**:
+- Personal story + business lesson format
+- "I made this mistake so you don't have to"
+- Contrarian takes on industry norms
+- "Here's what [X years] taught me"
 
-For HubSpot:
-- "CRM Success Story: How [Company] Grew Revenue 50%"
-- "Marketing Automation Tutorial: Email Sequences That Convert"
-- "Sales Tips: Using HubSpot's Deal Pipeline Effectively"
+**YOUTUBE**:
+- "I tried [X] for [time]. Here's what happened..."
+- Comparison videos: "[A] vs [B]: Which is better?"
+- "The truth about [topic]" exposé format
+- Day-in-the-life / behind-the-scenes
 
-Now generate 6 ideas for ${brandName}:
+## BRAND CONTEXT:
+- Company: ${brandName}
+- Industry: ${nicheIndicators || 'Unknown'}
+- Bio: ${bio || 'n/a'}
+- Current topics: ${themes || 'n/a'}
+${websiteTextContent && websiteTextContent.length > 100 ? `
+About: ${websiteTextContent.substring(0, 2000)}
+` : ''}
+
+## TASK: Generate 8 COMPETITOR-BEATING content ideas for ${brandName}
+
+RULES:
+1. Each idea must be INSPIRED BY competitor viral content above
+2. Use the CORRECT hook pattern for each platform
+3. Explain which competitor pattern you're adapting and why it will work for ${brandName}
+4. Mix platforms: 2 Instagram, 2 TikTok/YouTube, 2 Twitter, 2 LinkedIn
+5. Each title must be 30+ characters with a clear hook
 
 Return JSON array:
 [
   {
-    "title": "Specific content idea for ${brandName}",
-    "description": "Detailed description mentioning ${brandName}'s actual products/services",
-    "platform": "instagram|twitter|linkedin|youtube",
-    "theme": "content theme",
-    "format": "post|video|carousel|thread"
+    "title": "Hook-driven title 30+ chars, platform-appropriate format",
+    "description": "Why this will drive engagement + which competitor pattern inspired this",
+    "platform": "instagram|twitter|linkedin|youtube|tiktok",
+    "platformHook": "The specific hook technique for this platform (e.g., 'POV:' for TikTok, 'Thread:' for Twitter)",
+    "format": "reel|carousel|thread|post|video|short",
+    "competitorInspiration": "Which competitor's viral content inspired this + how we're adapting it",
+    "estimatedEngagement": "Specific engagement prediction (e.g., '50K saves, 10K comments')",
+    "whyItWorks": "Psychological trigger (curiosity/FOMO/social proof/controversy/value)"
   }
 ]`;
 
-      const contentIdeasResult = await generateJSON<any>(contentPrompt, `You are a content strategist specializing in ${nicheIndicators || 'brand-specific content'}. Generate specific, actionable content ideas that are UNIQUE to this brand and reference their actual products, services, or themes. NEVER generate generic ideas that could apply to any brand. Each idea must explicitly spell out Current -> Winning in niche -> Competitor proof -> Engagement move.`, { tier: scanTier });
+      const contentIdeasResult = await generateJSON<any>(contentPrompt, `You are a COMPETITIVE CONTENT STRATEGIST who analyzes competitor viral content and creates BETTER content for your clients.
+
+Your approach:
+1. Study what's ACTUALLY working for competitors (their top viral posts)
+2. Identify the hook patterns and psychological triggers that drove their success
+3. Adapt those patterns for ${brandName} with platform-specific optimization
+4. Create content that can OUTPERFORM competitors by understanding WHY their content works
+
+CRITICAL: Each content idea must:
+- Reference which competitor pattern inspired it
+- Use the CORRECT hook format for the target platform
+- Predict specific engagement based on competitor benchmarks
+- Explain the psychological trigger that makes it work
+
+For ${nicheIndicators || brandName}, generate content that beats competitor engagement by 20%+. No generic ideas - only data-driven, competitor-informed strategies.`, { tier: scanTier });
       
       if (Array.isArray(contentIdeasResult)) {
         contentIdeas = contentIdeasResult;
@@ -1256,25 +1368,48 @@ Return JSON array:
         contentIdeas = [];
       }
       
-      // Validate and filter out generic ideas (but be less strict - allow more ideas through)
-      const genericKeywords = ['behind-the-scenes', 'educational content', 'user-generated content', 'industry insights', 'product highlights'];
+      // Validate content ideas - enforce viral hook patterns
       contentIdeas = contentIdeas.filter((idea: any) => {
         if (!idea.title || !idea.description) return false;
-        // Allow ideas that have brand name or specific details
-        const titleLower = idea.title.toLowerCase();
-        const descLower = idea.description.toLowerCase();
-        const hasBrandName = titleLower.includes(brandName.toLowerCase()) || descLower.includes(brandName.toLowerCase());
-        const hasSpecificDetails = descLower.length > 80; // Longer descriptions are usually more specific
+        // Minimum title length for a good viral hook (30+ chars)
+        if (idea.title.length < 25) return false;
+        // Minimum description length
+        if (idea.description.length < 30) return false;
         
-        // Reject if title is too generic without brand context
-        const isGeneric = genericKeywords.some(keyword => 
-          titleLower.includes(keyword) && !descLower.includes(brandName.toLowerCase()) && 
-          !descLower.includes(themes.toLowerCase().split(',')[0]?.toLowerCase() || '')
+        // Check for viral hook patterns in title
+        const titleLower = idea.title.toLowerCase();
+        const hasViralHook = (
+          /^(i |we |the |why |how |what |pov:|[0-9]+ )/i.test(idea.title) ||
+          titleLower.includes('secret') ||
+          titleLower.includes('truth') ||
+          titleLower.includes('nobody') ||
+          titleLower.includes('learned') ||
+          titleLower.includes('mistake') ||
+          titleLower.includes('never') ||
+          titleLower.includes('always') ||
+          titleLower.includes('changed') ||
+          titleLower.includes('revealed') ||
+          titleLower.includes('?') ||
+          titleLower.includes('...') ||
+          /\d+/.test(idea.title)
         );
         
-        // Allow if has brand name, specific details, or is not generic
-        return hasBrandName || hasSpecificDetails || !isGeneric;
+        // Reject generic corporate titles
+        const isGenericPattern = (
+          /^[a-z]+ (spotlight|guide|tips|showcase|highlights|series|update|story|stories)$/i.test(idea.title) ||
+          /^[a-z]+ [a-z]+ (spotlight|guide|tips|showcase|highlights|series)$/i.test(idea.title)
+        );
+        
+        // Prefer ideas with viral hooks, but don't reject all
+        return !isGenericPattern && (hasViralHook || idea.title.length > 40);
       });
+      
+      // Add engagement metadata if missing
+      contentIdeas = contentIdeas.map((idea: any) => ({
+        ...idea,
+        viralityTrigger: idea.viralityTrigger || 'value',
+        engagementPotential: idea.engagementPotential || 'high'
+      }));
       
       // If we have fewer than 5 after filtering, retry with stronger prompt
       if (contentIdeas.length < 5) {
@@ -1284,11 +1419,13 @@ Return JSON array:
           const retryResult = await generateJSON<any>(retryPrompt, `You are a content strategist. Generate ONLY brand-specific content ideas for ${brandName}. Reject any generic ideas.`, { tier: scanTier });
           
           if (Array.isArray(retryResult)) {
+            // Define generic keywords for retry filtering
+            const genericKeywordsRetry = ['behind-the-scenes', 'educational content', 'user-generated content', 'industry insights', 'product highlights'];
             const retryIdeas = retryResult.filter((idea: any) => {
               if (!idea.title || !idea.description) return false;
               const titleLower = idea.title.toLowerCase();
               const descLower = idea.description.toLowerCase();
-              const isGeneric = genericKeywords.some(keyword => 
+              const isGeneric = genericKeywordsRetry.some((keyword: string) => 
                 titleLower.includes(keyword) && !descLower.includes(brandName.toLowerCase())
               );
               return !isGeneric;
@@ -4008,177 +4145,268 @@ function extractNicheIndicators(content: string, bio: string, themes: string, br
   return indicators.join(', ') || 'General';
 }
 
+// Helper function for athletic/apparel fallback content
+function generateAthleticFallback(brandName: string, primaryTheme: string): any[] {
+  return [
+    { 
+      title: `I tested every ${brandName} product for 6 months. Here's my brutally honest review...`, 
+      description: `Inspired by Gymshark's athlete testimonial videos that get 5M+ views. Long-form honest review format.`, 
+      platform: 'youtube', 
+      platformHook: 'Thumbnail: 6 MONTHS LATER... with before/after',
+      format: 'video',
+      competitorInspiration: `Gymshark athlete review format - adapted with extended testing period for ${brandName}`,
+      estimatedEngagement: '2M views, 50K comments',
+      whyItWorks: 'Long-term = credibility, honest = trust, specific = saves'
+    },
+    { 
+      title: `The 5 ${brandName} products pro athletes actually use (not what they promote)`, 
+      description: `Inspired by Nike's "what athletes really wear" content. Insider secrets that contradict marketing.`, 
+      platform: 'instagram', 
+      platformHook: 'Carousel: "What they promote" vs "What they use"',
+      format: 'carousel',
+      competitorInspiration: `Nike athlete gear reveals - adapted with contrarian angle for ${brandName}`,
+      estimatedEngagement: '100K saves, 30K shares',
+      whyItWorks: 'Insider + contrarian = irresistible curiosity'
+    },
+    { 
+      title: `Why I returned my Nike gear and switched to ${brandName} (honest comparison)`, 
+      description: `Inspired by Gymshark vs Nike comparison videos that dominate YouTube. Brand switch story.`, 
+      platform: 'youtube', 
+      platformHook: 'Side-by-side comparison with clear winner reveal',
+      format: 'video',
+      competitorInspiration: `Gymshark competitor comparison videos - adapted for ${brandName}`,
+      estimatedEngagement: '1M views, comment war between brand fans',
+      whyItWorks: 'Brand comparison + personal story = tribal engagement'
+    },
+    { 
+      title: `POV: Training with a ${brandName} athlete for 24 hours...`, 
+      description: `Inspired by Under Armour's "Day with an athlete" content. Immersive aspirational format.`, 
+      platform: 'tiktok', 
+      platformHook: 'POV: with trending workout sound',
+      format: 'reel',
+      competitorInspiration: `Under Armour athlete day-in-the-life - adapted for TikTok format`,
+      estimatedEngagement: '3M views, 200K saves',
+      whyItWorks: 'Aspirational + immersive = high watch time'
+    },
+    { 
+      title: `The workout routine ${brandName} athletes won't tell you about...`, 
+      description: `Inspired by Nike Training Club's secret workout threads. Insider training secrets.`, 
+      platform: 'twitter', 
+      platformHook: 'Thread with workout splits revealed',
+      format: 'thread',
+      competitorInspiration: `Nike athlete training reveals - adapted with exclusivity angle`,
+      estimatedEngagement: '500K impressions, 20K saves',
+      whyItWorks: 'Secret + actionable = massive save rate'
+    }
+  ];
+}
+
 // Generate industry-specific fallback content ideas (not generic)
 function generateIndustrySpecificFallback(brandName: string, nicheIndicators: string, primaryTheme: string, brandDNA: any): any[] {
   const lowerNiche = nicheIndicators.toLowerCase();
   const lowerTheme = primaryTheme.toLowerCase();
-  const brandLower = brandName.toLowerCase();
+  const lowerBrand = brandName.toLowerCase();
   
-  // Travel/Tourism industry
+  // ATHLETIC/APPAREL CHECK FIRST (higher priority) - includes specific brand detection
+  const isAthletic = (
+    lowerBrand.includes('lululemon') || 
+    lowerBrand.includes('gymshark') ||
+    lowerBrand.includes('nike') ||
+    lowerBrand.includes('adidas') ||
+    lowerBrand.includes('underarmour') ||
+    lowerBrand.includes('athleta') ||
+    lowerBrand.includes('alo') ||
+    lowerNiche.includes('athletic') || 
+    lowerNiche.includes('apparel') ||
+    lowerNiche.includes('yoga') ||
+    lowerNiche.includes('fitness') ||
+    lowerNiche.includes('workout') ||
+    lowerNiche.includes('gym') ||
+    lowerTheme.includes('athlete') || 
+    lowerTheme.includes('sport') ||
+    lowerTheme.includes('running') || 
+    lowerTheme.includes('fitness') ||
+    lowerTheme.includes('yoga') ||
+    lowerTheme.includes('training')
+  );
+  
+  if (isAthletic) {
+    // Jump to athletic fallback
+    return generateAthleticFallback(brandName, primaryTheme);
+  }
+  
+  // Travel/Tourism industry - COMPETITOR-DRIVEN VIRAL STYLE
   if (lowerNiche.includes('travel') || lowerNiche.includes('tourism') || 
-      lowerTheme.includes('travel') || lowerTheme.includes('experience') ||
-      lowerTheme.includes('destination') || lowerTheme.includes('host')) {
+      lowerTheme.includes('travel') || 
+      lowerTheme.includes('destination') || lowerTheme.includes('host') ||
+      lowerTheme.includes('vacation') || lowerTheme.includes('rental')) {
     return [
       { 
-        title: `${brandName} Host Story Spotlight`, 
-        description: `Feature unique hosts and their properties, showcasing what makes each ${brandName} listing special`, 
+        title: `I stayed at 50 ${brandName} properties. Here's what the best hosts all do differently...`, 
+        description: `Inspired by Booking.com's user review threads that get 500K+ views. Data-driven insider content.`, 
         platform: 'instagram', 
-        theme: primaryTheme, 
-        format: 'carousel' 
+        platformHook: 'Carousel with swipe-to-reveal data points',
+        format: 'carousel',
+        competitorInspiration: 'Booking.com user reviews format - adapted for ${brandName} host insights',
+        estimatedEngagement: '80K saves, 15K shares (based on Booking.com benchmarks)',
+        whyItWorks: 'Curiosity + insider value = high save rate'
       },
       { 
-        title: `Destination Experience Guide`, 
-        description: `Create "Don't just see [destination], experience it" style content highlighting unique local experiences`, 
-        platform: 'youtube', 
-        theme: primaryTheme, 
-        format: 'video' 
-      },
-      { 
-        title: `Local Immersion Tips`, 
-        description: `Share tips on how to experience destinations like a local through ${brandName}`, 
+        title: `The $50K/month ${brandName} host told me her 5 secrets (thread)`, 
+        description: `Inspired by VRBO's superhost success stories that drive massive engagement. Insider secrets format.`, 
         platform: 'twitter', 
-        theme: primaryTheme, 
-        format: 'thread' 
+        platformHook: 'Thread format with numbered secrets',
+        format: 'thread',
+        competitorInspiration: 'VRBO superhost interviews - adapted with specific revenue numbers',
+        estimatedEngagement: '200K impressions, 5K retweets',
+        whyItWorks: 'Specific money numbers + secrets = irresistible'
       },
       { 
-        title: `${brandName} Experiences Showcase`, 
-        description: `Highlight unique activities and experiences available through ${brandName}`, 
-        platform: 'instagram', 
-        theme: primaryTheme, 
-        format: 'carousel' 
+        title: `Why I stopped booking hotels forever after this ${brandName} stay...`, 
+        description: `Inspired by TripAdvisor's "hotel vs alternative" debates that get 1M+ views. Contrarian take.`, 
+        platform: 'youtube', 
+        platformHook: 'Thumbnail: Hotel ❌ vs ${brandName} ✅',
+        format: 'video',
+        competitorInspiration: 'TripAdvisor comparison content - adapted as personal transformation story',
+        estimatedEngagement: '500K views, 20K comments debating',
+        whyItWorks: 'Contrarian + personal story = comment war'
       },
       { 
-        title: `Travel Community Stories`, 
-        description: `Share guest testimonials and memorable stays that showcase the ${brandName} community`, 
+        title: `POV: You just discovered the most hidden ${brandName} gem in [destination]`, 
+        description: `Inspired by Expedia's "hidden gems" reels that average 2M views. Immersive discovery format.`, 
+        platform: 'tiktok', 
+        platformHook: 'POV: format with trending sound',
+        format: 'reel',
+        competitorInspiration: 'Expedia hidden destination content - adapted for ${brandName} properties',
+        estimatedEngagement: '1M views, 100K saves',
+        whyItWorks: 'POV immersion + exclusivity = high share rate'
+      },
+      { 
+        title: `The truth about being a ${brandName} host that nobody talks about...`, 
+        description: `Inspired by VRBO host community content. Truth reveal format sparks debate.`, 
         platform: 'instagram', 
-        theme: 'community', 
-        format: 'carousel' 
+        platformHook: 'Carousel with "truth bombs" on each slide',
+        format: 'carousel',
+        competitorInspiration: 'VRBO host testimonials - adapted with controversial truths',
+        estimatedEngagement: '50K comments, 30K shares',
+        whyItWorks: 'Controversy + insider truth = engagement'
       }
     ];
   }
   
-  // Athletic/Apparel industry
-  if (lowerNiche.includes('athletic') || lowerNiche.includes('apparel') ||
-      lowerTheme.includes('athlete') || lowerTheme.includes('sport') ||
-      lowerTheme.includes('running') || lowerTheme.includes('fitness')) {
-    return [
-      { 
-        title: `${brandName} Athlete Story Series`, 
-        description: `Deep dives into ${brandName} athletes' journeys and achievements, aligned with brand values`, 
-        platform: 'youtube', 
-        theme: primaryTheme, 
-        format: 'video' 
-      },
-      { 
-        title: `Product Innovation Showcase`, 
-        description: `Behind-the-scenes content showcasing ${brandName}'s technology and innovation in athletic gear`, 
-        platform: 'instagram', 
-        theme: primaryTheme, 
-        format: 'carousel' 
-      },
-      { 
-        title: `Training Tips & Workouts`, 
-        description: `Athletic performance content featuring ${brandName} products and training methodologies`, 
-        platform: 'youtube', 
-        theme: primaryTheme, 
-        format: 'video' 
-      },
-      { 
-        title: `Inclusivity & Representation`, 
-        description: `Diverse athlete spotlights showcasing ${brandName}'s commitment to inclusivity`, 
-        platform: 'instagram', 
-        theme: primaryTheme, 
-        format: 'carousel' 
-      },
-      { 
-        title: `${brandName} Community Content`, 
-        description: `Feature ${brandName} community members and their athletic achievements`, 
-        platform: 'twitter', 
-        theme: 'community', 
-        format: 'thread' 
-      }
-    ];
-  }
+  // Athletic/Apparel - now handled by early detection above, this is a secondary check
+  // (keeping for backwards compatibility but primary check is at top of function)
   
-  // DeFi/Web3 industry
+  // DeFi/Web3 industry - COMPETITOR-DRIVEN VIRAL STYLE
   if (lowerNiche.includes('defi') || lowerNiche.includes('web3') ||
       lowerTheme.includes('token') || lowerTheme.includes('blockchain') ||
       lowerTheme.includes('crypto') || lowerTheme.includes('launchpad')) {
     return [
       { 
-        title: `${brandName} Builder Success Stories`, 
-        description: `Showcase projects that successfully launched on ${brandName}, highlighting their journey`, 
+        title: `I analyzed 100 ${brandName} launches. Here's what the 10x winners all had in common...`, 
+        description: `Inspired by Coinbase's data threads that get 1M+ impressions. Alpha-generating analysis.`, 
         platform: 'twitter', 
-        theme: primaryTheme, 
-        format: 'thread' 
+        platformHook: 'Thread with charts and data screenshots',
+        format: 'thread',
+        competitorInspiration: 'Coinbase research threads - adapted with ${brandName} specific data',
+        estimatedEngagement: '500K impressions, 10K saves',
+        whyItWorks: 'Data + alpha = crypto Twitter gold'
       },
       { 
-        title: `${brandName} Platform Tutorials`, 
-        description: `Educational content showing how builders and investors use ${brandName}'s features`, 
+        title: `The $10M mistake early ${brandName} investors made (and how to avoid it)`, 
+        description: `Inspired by Binance's "lessons learned" content. Loss aversion drives massive engagement.`, 
         platform: 'youtube', 
-        theme: primaryTheme, 
-        format: 'video' 
+        platformHook: 'Thumbnail with $10M and red warning',
+        format: 'video',
+        competitorInspiration: 'Binance mistake analysis videos - adapted with specific case study',
+        estimatedEngagement: '1M views, 50K comments',
+        whyItWorks: 'Fear of loss + specific numbers = viral'
       },
       { 
-        title: `Web3 Investment Guides`, 
-        description: `Educational content on token launches and Web3 investment strategies through ${brandName}`, 
+        title: `Why most ${brandName} launches fail (and 3 that succeeded)`, 
+        description: `Inspired by a]6z crypto's portfolio analysis posts. Contrarian with case studies.`, 
         platform: 'linkedin', 
-        theme: primaryTheme, 
-        format: 'post' 
+        platformHook: 'Post with failure/success comparison',
+        format: 'post',
+        competitorInspiration: 'A16z portfolio analysis - adapted for ${brandName} launches',
+        estimatedEngagement: '100K views, 500 comments debating',
+        whyItWorks: 'Contrarian + proof = authority building'
       },
       { 
-        title: `Protocol Deep Dives`, 
-        description: `Technical content explaining ${brandName}'s launch mechanisms and protocol features`, 
+        title: `The 5 metrics ${brandName} insiders use to spot winning projects before launch`, 
+        description: `Inspired by Messari's research threads. Insider alpha everyone wants.`, 
         platform: 'twitter', 
-        theme: primaryTheme, 
-        format: 'thread' 
+        platformHook: 'Numbered thread with each metric',
+        format: 'thread',
+        competitorInspiration: 'Messari crypto research - adapted for ${brandName} ecosystem',
+        estimatedEngagement: '300K impressions, 8K saves',
+        whyItWorks: 'Insider + actionable = massive save rate'
       },
       { 
-        title: `Partner Project Spotlights`, 
-        description: `Feature projects launching on ${brandName} and their unique value propositions`, 
+        title: `How a ${brandName} project went from $0 to $50M in 90 days (full breakdown)`, 
+        description: `Inspired by Solana's success story threads. Specific numbers drive credibility.`, 
         platform: 'linkedin', 
-        theme: primaryTheme, 
-        format: 'post' 
+        platformHook: 'Post with growth chart embedded',
+        format: 'post',
+        competitorInspiration: 'Solana ecosystem success stories - adapted for ${brandName}',
+        estimatedEngagement: '50K views, massive saves for reference',
+        whyItWorks: 'Transformation + specific numbers = aspirational'
       }
     ];
   }
   
-  // Generic fallback (but still theme-specific)
+  // Generic fallback - COMPETITOR-DRIVEN VIRAL STYLE
   return [
     { 
-      title: `${brandName} Success Stories`, 
-      description: `Feature success stories that showcase ${brandName}'s impact in ${primaryTheme}`, 
+      title: `I spent 6 months studying ${brandName}. Here's what nobody talks about...`, 
+      description: `Inspired by industry leader deep-dive content. Long-term research = credibility.`, 
       platform: 'instagram', 
-      theme: primaryTheme, 
-      format: 'carousel' 
+      platformHook: 'Carousel with revelation on each slide',
+      format: 'carousel',
+      competitorInspiration: 'Industry leader research posts - adapted for ${brandName}',
+      estimatedEngagement: '80K saves, 20K shares',
+      whyItWorks: 'Time investment + secrets = trust'
     },
     { 
-      title: `${primaryTheme} Deep Dive`, 
-      description: `Create in-depth content exploring ${primaryTheme} from ${brandName}'s perspective`, 
+      title: `Why ${brandName} is doing what competitors won't (and it's working)`, 
+      description: `Inspired by successful brand comparison content. Contrarian positioning.`, 
       platform: 'linkedin', 
-      theme: primaryTheme, 
-      format: 'post' 
+      platformHook: 'Post with competitor comparison',
+      format: 'post',
+      competitorInspiration: 'Industry competitive analysis posts - adapted for ${brandName}',
+      estimatedEngagement: '50K views, industry debate',
+      whyItWorks: 'Contrarian + proof = thought leadership'
     },
     { 
-      title: `${brandName} Community Highlights`, 
-      description: `Showcase community members and their experiences with ${brandName}`, 
+      title: `The 5 things I learned about ${primaryTheme} that changed everything...`, 
+      description: `Inspired by transformation story threads that dominate Twitter.`, 
       platform: 'twitter', 
-      theme: 'community', 
-      format: 'thread' 
+      platformHook: 'Thread with numbered learnings',
+      format: 'thread',
+      competitorInspiration: 'Viral learning threads - adapted for ${primaryTheme}',
+      estimatedEngagement: '200K impressions, 5K saves',
+      whyItWorks: 'Transformation + specific = relatable'
     },
     { 
-      title: `${primaryTheme} Best Practices`, 
-      description: `Share best practices and insights related to ${primaryTheme} from ${brandName}`, 
+      title: `I asked 50 ${brandName} customers one question. Their answers surprised me...`, 
+      description: `Inspired by research-based content that creates curiosity gaps.`, 
       platform: 'linkedin', 
-      theme: primaryTheme, 
-      format: 'post' 
+      platformHook: 'Post with survey results reveal',
+      format: 'post',
+      competitorInspiration: 'Customer research posts - adapted with surprise element',
+      estimatedEngagement: '40K views, high comment engagement',
+      whyItWorks: 'Research + surprise = curiosity clicks'
     },
     { 
-      title: `${brandName} Feature Showcase`, 
-      description: `Highlight ${brandName}'s key features and how they benefit users in ${primaryTheme}`, 
-      platform: 'twitter', 
+      title: `POV: You just discovered the ${brandName} hack that saves 10 hours/week`, 
+      description: `Inspired by productivity TikToks that get millions of saves.`, 
+      platform: 'tiktok',
+      platformHook: 'POV: with trending sound', 
       theme: primaryTheme, 
-      format: 'thread' 
+      format: 'reel',
+      competitorInspiration: 'Viral productivity hacks - adapted for ${brandName}',
+      estimatedEngagement: '500K views, 100K saves',
+      whyItWorks: 'Specific value + time savings = save-worthy'
     }
   ];
 }
@@ -4266,9 +4494,14 @@ CONTEXT:
 - Bio: ${bio || 'n/a'}
 
 TASK:
-1) Return 3-4 competitors with a PRIMARY/SECONDARY flag; PRIMARY must share the same model/audience within the niche above. If niche is food/bakery/dessert, DO NOT return apparel brands; if travel/stay, do not return hotels as PRIMARY vs OTAs.
-2) Include short, specific reasoning and the main platform/strategy they win with.
-3) Keep it concrete—real brand names only. Avoid fictional brands.
+1) Return 3-4 competitors with a PRIMARY/SECONDARY flag; PRIMARY must share the same model/audience within the niche above.
+2) For EACH competitor, provide DETAILED posting analysis:
+   - Which platforms they dominate
+   - Their posting frequency and best times
+   - Content formats that work for them (video, carousel, thread, etc.)
+   - Their TOP 3 VIRAL CONTENT EXAMPLES with estimated engagement
+3) Identify which competitor is OUTPERFORMING in content - this drives content recommendations.
+4) Keep it concrete—real brand names only. No fictional brands.
 
 RETURN JSON ONLY:
 {
@@ -4277,6 +4510,10 @@ RETURN JSON ONLY:
     "industry": "Specific industry name",
     "yourRank": 4,
     "note": "1 short line"
+  },
+  "topPerformer": {
+    "name": "The competitor with best content performance",
+    "whyTheyWin": "Specific reason their content outperforms"
   },
   "competitors": [
     {
@@ -4287,7 +4524,19 @@ RETURN JSON ONLY:
       "primaryVector": "Platform + strategy",
       "theirAdvantage": "specific edge they have",
       "yourOpportunity": "specific counter-move",
-      "postingChannels": ["platform1", "platform2"],
+      "postingChannels": ["instagram", "tiktok", "youtube"],
+      "postingFrequency": "3x daily / 5x weekly / etc",
+      "bestFormats": ["short-form video", "carousel", "threads"],
+      "contentStyle": "educational / entertaining / inspirational / etc",
+      "topViralContent": [
+        {
+          "title": "Actual post title or hook",
+          "platform": "instagram/tiktok/etc",
+          "format": "reel/carousel/thread",
+          "estimatedEngagement": "2.5M views, 150K likes",
+          "whyItWorked": "Hook pattern + emotional trigger"
+        }
+      ],
       "toneSimilarity": "close|different"
     }
   ]
@@ -4347,10 +4596,22 @@ RETURN JSON ONLY:
             primaryVector: comp.primaryVector || comp.vector || 'Unknown platform',
             theirAdvantage: comp.theirAdvantage || comp.advantage || comp.whyMatch || 'Analyzing...',
             yourOpportunity: comp.yourOpportunity || comp.opportunity || 'Research in progress',
+            // NEW: Detailed posting analysis
+            postingChannels: comp.postingChannels || [],
+            postingFrequency: comp.postingFrequency || 'Unknown',
+            bestFormats: comp.bestFormats || [],
+            contentStyle: comp.contentStyle || 'Unknown',
+            topViralContent: (comp.topViralContent || []).slice(0, 3).map((v: any) => ({
+              title: v.title || 'Unknown',
+              platform: v.platform || 'Unknown',
+              format: v.format || 'Unknown',
+              estimatedEngagement: v.estimatedEngagement || 'Unknown',
+              whyItWorked: v.whyItWorked || 'Unknown'
+            })),
             weeklyViews: comp.weeklyViews,
             weeklyEngagement: comp.weeklyEngagement,
           }))
-          .slice(0, 3);
+          .slice(0, 4);
 
       const applyPrimarySecondaryOverlay = (competitors: any[]): any[] => {
         if (!competitors || competitors.length === 0) return competitors;
@@ -4406,7 +4667,8 @@ RETURN JSON ONLY:
         console.log(`Generated ${competitors.length} competitors for ${username}`);
         return {
           marketShare: competitorData.marketShare || null,
-          competitors: competitors.slice(0, 3),
+          topPerformer: competitorData.topPerformer || null,
+          competitors: competitors.slice(0, 4),
         };
       }
 

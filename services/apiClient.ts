@@ -51,21 +51,44 @@ function clearScanCache(username?: string) {
     return;
   }
 
+  // COMPREHENSIVE cache clear - remove ALL scan-related data
   const keysToRemove = [
+    // Core scan data
     'lastScanResults',
     'lastScanId',
     'lastScanTimestamp',
     'lastScannedUsername',
     'lastScanType',
+    
+    // Content and production
     'productionAssets',
+    'contentPreferences',
+    
+    // Strategy data - CRITICAL for rescan
     'strategyPlans',
     'activeContentStrategy',
+    'strategyConversation',
+    'strategyMessages',
+    'strategyHistory',
+    
+    // Brand assets
     'brandMaterials',
     'brandProfile',
     'brandVoice',
     'brandColors',
     'brandFonts',
-    'contentPreferences',
+    
+    // Analytics cache
+    'analyticsCache',
+    'previousInsightsCount',
+    
+    // Inbox and calendar
+    'inboxItems',
+    'calendarEvents',
+    
+    // Integrations remain (they're account-linked, not scan-linked)
+    // 'integrations', // Keep this
+    // 'connectedAccounts', // Keep this
   ];
 
   keysToRemove.forEach((key) => localStorage.removeItem(key));
@@ -78,7 +101,12 @@ function clearScanCache(username?: string) {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(
       new CustomEvent('newScanStarted', {
-        detail: { username: username || null, timestamp: Date.now() },
+        detail: { 
+          username: username || null, 
+          timestamp: Date.now(),
+          isRescan: false,
+          clearAll: true
+        },
       })
     );
   }

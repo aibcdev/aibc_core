@@ -2263,14 +2263,17 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
               <strong className="text-white">Warning:</strong> Rescanning your digital footprint will completely replace all existing data including:
             </p>
             <ul className="text-sm text-white/60 mb-6 ml-4 space-y-1 list-disc">
-              <li>Strategic insights</li>
+              <li>Strategic insights and AI recommendations</li>
               <li>Brand DNA analysis</li>
               <li>Competitor intelligence (auto-generated)</li>
               <li>Market share estimates</li>
               <li>Content themes and voice patterns</li>
+              <li><strong className="text-orange-400">Strategy conversations</strong> (all chat history)</li>
+              <li><strong className="text-orange-400">Content Hub ideas</strong> (all generated content)</li>
+              <li>Production room drafts and edits</li>
             </ul>
             <p className="text-sm text-white/70 mb-6 leading-relaxed">
-              <strong className="text-orange-400">Note:</strong> Manually added competitors will be preserved, but all other data will be overwritten with new scan results.
+              <strong className="text-orange-400">⚠️ Warning:</strong> This action is irreversible. All data will be permanently deleted and replaced with new scan results.
             </p>
             <div className="flex gap-3">
               <button
@@ -2302,6 +2305,19 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                   localStorage.removeItem('brandFonts');
                   localStorage.removeItem('contentPreferences');
                   
+                  // CRITICAL: Clear strategy conversation history
+                  localStorage.removeItem('strategyConversation');
+                  localStorage.removeItem('strategyMessages');
+                  localStorage.removeItem('strategyHistory');
+                  
+                  // Clear inbox and calendar data
+                  localStorage.removeItem('inboxItems');
+                  localStorage.removeItem('calendarEvents');
+                  
+                  // Clear any analytics cache
+                  localStorage.removeItem('analyticsCache');
+                  localStorage.removeItem('previousInsightsCount');
+                  
                   // Clear dashboard state
                   setStrategicInsights([]);
                   setCompetitorIntelligence([]);
@@ -2312,27 +2328,24 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                   
                   const lastUsername = localStorage.getItem('lastScannedUsername');
                   
+                  // ALSO clear the username if doing a full rescan
+                  // This forces a fresh start
+                  localStorage.removeItem('lastScannedUsername');
+                  
                   // Dispatch event to notify all components to clear state IMMEDIATELY
                   window.dispatchEvent(new CustomEvent('newScanStarted', {
                     detail: { 
                       username: lastUsername || '', 
                       timestamp: Date.now(),
-                      isRescan: true
+                      isRescan: true,
+                      clearAll: true // Signal to clear everything
                     }
                   }));
                   
-                  // Update timestamp to force cache invalidation
-                  if (lastUsername) {
-                    localStorage.setItem('lastScanTimestamp', Date.now().toString());
-                  }
+                  console.log('✅ RESCAN: Complete cache cleared, navigating to scan');
                   
-                  console.log('✅ RESCAN: Cache cleared, navigating to audit');
-                  
-                  if (lastUsername) {
-                    onNavigate(ViewState.AUDIT);
-                  } else {
-                    onNavigate(ViewState.INGESTION);
-                  }
+                  // Always navigate to ingestion for a fresh start
+                  onNavigate(ViewState.INGESTION);
                 }}
                 className="flex-1 px-4 py-2 bg-orange-500 rounded-lg text-sm font-bold text-white hover:bg-orange-600 transition-colors"
               >
@@ -2727,7 +2740,7 @@ const generateStrategicInsightsFromData = (
   return insights.slice(0, 5); // Return top 5 insights
 };
 
-const StrategicInsightCard = ({ insight }: { insight: any }) => {
+const StrategicInsightCard: React.FC<{ insight: any }> = ({ insight }) => {
     // Handle both "HIGH IMPACT" and just "HIGH" formats
     const impactLevel = insight.impact?.toUpperCase() || 'MEDIUM';
     const isHigh = impactLevel.includes('HIGH');
@@ -2758,7 +2771,7 @@ const StrategicInsightCard = ({ insight }: { insight: any }) => {
 };
 
 /* --- Forensic Competitor Card - MATCHING SCREENSHOT EXACTLY --- */
-const ForensicCompetitorCard = ({ competitor, onRemove }: { competitor: any; onRemove?: () => void }) => {
+const ForensicCompetitorCard: React.FC<{ competitor: any; onRemove?: () => void }> = ({ competitor, onRemove }) => {
     // Handle both "HIGH" and "HIGH THREAT" formats
     const threatLevel = competitor.threatLevel?.toUpperCase() || 'MEDIUM';
     const isHigh = threatLevel.includes('HIGH');
