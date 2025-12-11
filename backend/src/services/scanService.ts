@@ -165,6 +165,122 @@ async function isUrlReachable(url: string): Promise<boolean> {
       return false;
   }
 }
+
+// Known handle overrides for popular domains (fallback when site blocks scraping)
+function getKnownSocialHandles(domain: string): Record<string, string> {
+  const known: Record<string, Record<string, string>> = {
+    'airbnb.com': {
+      twitter: 'https://twitter.com/Airbnb',
+      instagram: 'https://instagram.com/airbnb',
+      youtube: 'https://youtube.com/@Airbnb',
+      linkedin: 'https://linkedin.com/company/airbnb',
+      facebook: 'https://facebook.com/airbnb',
+      tiktok: 'https://www.tiktok.com/@airbnb',
+    },
+    // Add more verified domains/handles here as needed
+  };
+
+  return known[domain] || {};
+}
+
+// Merge multiple LLM research results into a single baseline
+function mergeResearchResults(results: any[]): any | null {
+  if (!results || results.length === 0) return null;
+  const merged: any = {
+    profile: {},
+    posts: [],
+    content_themes: new Set<string>(),
+    brand_voice: null,
+    competitors: [],
+    socialLinks: {},
+    extraction_confidence: 0,
+  };
+
+  for (const r of results) {
+    if (!r) continue;
+    if (r.profile?.bio) {
+      if (!merged.profile.bio || r.profile.bio.length > (merged.profile.bio?.length || 0)) {
+        merged.profile = r.profile;
+      }
+    }
+    if (Array.isArray(r.posts)) {
+      merged.posts = merged.posts.length >= r.posts.length ? merged.posts : r.posts;
+    }
+    if (Array.isArray(r.content_themes)) {
+      r.content_themes.forEach((t: string) => merged.content_themes.add(t));
+    }
+    if (r.brand_voice && !merged.brand_voice) merged.brand_voice = r.brand_voice;
+    if (Array.isArray(r.competitors)) {
+      // union by name
+      const existing = new Set(merged.competitors.map((c: any) => (c.name || '').toLowerCase()));
+      r.competitors.forEach((c: any) => {
+        if (c?.name && !existing.has(c.name.toLowerCase())) {
+          merged.competitors.push(c);
+          existing.add(c.name.toLowerCase());
+        }
+      });
+    }
+    if (r.socialLinks && typeof r.socialLinks === 'object') {
+      Object.entries(r.socialLinks).forEach(([k, v]) => {
+        if (v && !merged.socialLinks[k]) merged.socialLinks[k] = v as string;
+      });
+    }
+    if (typeof r.extraction_confidence === 'number') {
+      merged.extraction_confidence += r.extraction_confidence;
+    }
+  }
+
+  merged.extraction_confidence = merged.extraction_confidence / results.length;
+  merged.content_themes = Array.from(merged.content_themes);
+  return merged;
+}
+
+// Detect niche from text/bio/themes to constrain competitor generation
+function detectNicheFromContent(content: string, bio: string, themes: string): string {
+  const lower = `${content} ${bio} ${themes}`.toLowerCase();
+  if (lower.match(/cookie|cookies|bakery|bake|dessert|confection|sweet|chocolate|treat|cake|pastry|bread|gourmet/)) {
+    return 'food/bakery/dessert';
+  }
+  if (lower.match(/apparel|athletic|sportswear|sneaker|fitness|running/)) {
+    return 'athletic apparel';
+  }
+  if (lower.match(/travel|stay|host|booking|airbnb|hotel|vacation/)) {
+    return 'travel/stay';
+  }
+  return 'general';
+}
+
+// LLM-based social handle backfill for domains when scraping misses links
+async function backfillSocialLinksWithLLM(
+  domain: string,
+  existing: Record<string, string>,
+  platforms: string[],
+  scanId?: string
+): Promise<Record<string, string>> {
+  const results: Record<string, string> = { ...existing };
+  const targetPlatforms = platforms.length > 0 ? platforms : ['twitter', 'instagram', 'linkedin', 'youtube', 'facebook', 'tiktok'];
+
+  for (const platform of targetPlatforms) {
+    const key = platform.toLowerCase().replace('x', 'twitter');
+    if (results[key]) continue;
+
+    try {
+      const handle = await discoverSocialHandlesWithLLM(domain, key, scanId);
+      if (handle && typeof handle === 'string' && handle.trim().length > 1) {
+        const url = getProfileUrl(handle, key) || '';
+        if (url) {
+          results[key] = url;
+          if (scanId) addLog(scanId, `[DISCOVERY] LLM backfill found ${key}: ${url}`);
+        }
+      }
+    } catch (e: any) {
+      if (scanId) addLog(scanId, `[DISCOVERY] LLM backfill failed for ${key}: ${e?.message || e}`);
+    }
+  }
+
+  return results;
+}
+
 // Load environment variables
 dotenv.config();
 
@@ -189,6 +305,7 @@ export async function startScan(
     console.error(`Scan ${scanId} not found in storage`);
     return;
   }
+  const domainLower = username.replace(/^https?:\/\//, '').replace(/^www\./, '').toLowerCase();
 
   try {
     storage.updateScan(scanId, { status: 'scanning', progress: 0 });
@@ -218,17 +335,20 @@ export async function startScan(
       }
       
       addLog(scanId, `[VALIDATION] Checking if URL is reachable: ${urlToValidate}`);
-      const reachable = await isUrlReachable(urlToValidate);
-      if (!reachable) {
-        addLog(scanId, `[ERROR] URL is not reachable: ${urlToValidate}`);
-        storage.updateScan(scanId, {
-          status: 'error',
-          error: `Website not reachable: ${username}. The website does not exist or is not accessible. Please check the URL and try again.`,
-          progress: 100
-        });
-        return;
+      let reachable = await isUrlReachable(urlToValidate);
+      if (!reachable && urlToValidate.startsWith('https://') && !urlToValidate.includes('www.')) {
+        const wwwUrl = urlToValidate.replace('https://', 'https://www.');
+        addLog(scanId, `[VALIDATION] Retry with www: ${wwwUrl}`);
+        reachable = await isUrlReachable(wwwUrl);
+        if (reachable) {
+          addLog(scanId, `[VALIDATION] URL reachable via www prefix`);
+        }
       }
-      addLog(scanId, `[VALIDATION] URL is valid and reachable`);
+      if (!reachable) {
+        addLog(scanId, `[WARNING] URL not reachable (${urlToValidate}) - continuing with LLM-only + constructed URLs`);
+      } else {
+        addLog(scanId, `[VALIDATION] URL is valid and reachable`);
+      }
     }
     
     if (connectedAccounts && Object.keys(connectedAccounts).length > 0) {
@@ -250,10 +370,26 @@ export async function startScan(
     const scrapedData: Array<{ platform: string; content: { html: string; text: string; url: string; images?: string[]; videos?: string[] } }> = [];
     const verifiedPlatforms: string[] = [];
     
-    // STEP 1: Discover social media links
+    // STEP 1: LLM-first baseline (handles + profile + themes/competitors)
     let discoveredSocialLinks: Record<string, string> = {};
-    // Store website content for competitor analysis (declared at function scope)
     let websiteTextContent: string = '';
+    let baselineResearch: any = null;
+    try {
+      const scanTierBaseline = getScanTier(scanType);
+      const baselineAttempts: any[] = [];
+      baselineAttempts.push(await researchBrandWithLLM(username, platforms, scanTierBaseline));
+      baselineAttempts.push(await researchBrandWithLLM(`${username} brand`, platforms, scanTierBaseline));
+      baselineResearch = mergeResearchResults(baselineAttempts);
+      if (baselineResearch?.socialLinks) {
+        discoveredSocialLinks = { ...baselineResearch.socialLinks };
+        addLog(scanId, `[DISCOVERY] LLM baseline provided ${Object.keys(discoveredSocialLinks).length} social links`);
+      }
+      if (baselineResearch?.posts || baselineResearch?.content_themes) {
+        addLog(scanId, `[DISCOVERY] LLM baseline seeded profile/posts/themes before scraping`);
+      }
+    } catch (e: any) {
+      addLog(scanId, `[DISCOVERY] LLM baseline failed/skipped: ${e?.message || e}`);
+    }
     
     // First, check if username is a social media URL (e.g., instagram.com/username, twitter.com/username)
     const socialMediaUrlPatterns: Record<string, RegExp[]> = {
@@ -332,9 +468,17 @@ export async function startScan(
     const websiteUrl = isWebsite 
       ? (username.startsWith('http') ? username : `https://${username.replace(/^www\./, '')}`)
       : getProfileUrl(username, 'website');
+    const domainLower = username.replace(/^https?:\/\//, '').replace(/^www\./, '').toLowerCase();
     
     if (websiteUrl && (websiteUrl.includes('http://') || websiteUrl.includes('https://'))) {
         addLog(scanId, `[DISCOVERY] CRITICAL: Scanning website for social media links: ${websiteUrl}`);
+
+        // Preload known handles for popular domains (helps when HTML blocks scraping)
+        const knownHandles = getKnownSocialHandles(domainLower);
+        if (Object.keys(knownHandles).length > 0) {
+          discoveredSocialLinks = { ...knownHandles, ...discoveredSocialLinks };
+          addLog(scanId, `[DISCOVERY] Using known handles for ${domainLower}: ${Object.keys(knownHandles).join(', ')}`);
+        }
       try {
         storage.updateScan(scanId, { progress: 22 });
         
@@ -483,6 +627,17 @@ export async function startScan(
       }
     }
     
+    // Final LLM backfill for missing social links (use domain knowledge)
+    try {
+      const backfilled = await backfillSocialLinksWithLLM(domainLower, discoveredSocialLinks, platforms, scanId);
+      if (Object.keys(backfilled).length > Object.keys(discoveredSocialLinks).length) {
+        addLog(scanId, `[DISCOVERY] LLM backfill added ${Object.keys(backfilled).length - Object.keys(discoveredSocialLinks).length} links`);
+        discoveredSocialLinks = backfilled;
+      }
+    } catch (e: any) {
+      addLog(scanId, `[DISCOVERY] LLM backfill skipped/failed: ${e?.message || e}`);
+    }
+
     // STEP 2: Scrape all platforms, using discovered links when available
     addLog(scanId, `[DISCOVERY] Available discovered links: ${JSON.stringify(Object.keys(discoveredSocialLinks))}`);
     addLog(scanId, `[DISCOVERY] Discovered links details: ${JSON.stringify(discoveredSocialLinks)}`);
@@ -820,10 +975,22 @@ export async function startScan(
       }
     }
 
-    // Final validation - ensure we have real data
+    // Final validation - ensure we have real data (use LLM baseline if nothing else)
     if (allExtractedContent.length === 0) {
+      if (baselineResearch) {
+        addLog(scanId, `[FALLBACK] Using LLM baseline content because no scraped content was extracted`);
+        allExtractedContent.push({
+          profile: baselineResearch.profile || { bio: '' },
+          posts: baselineResearch.posts || [],
+          content_themes: baselineResearch.content_themes || [],
+          extraction_confidence: baselineResearch.extraction_confidence || 0.6,
+          brand_voice: baselineResearch.brand_voice,
+          competitors: baselineResearch.competitors
+        });
+      } else {
       addLog(scanId, `[ERROR] No content extracted - scan failed`);
       throw new Error('Scan failed: No content extracted');
+      }
     }
 
     storage.updateScan(scanId, { progress: 85 });
@@ -892,6 +1059,11 @@ export async function startScan(
     storage.updateScan(scanId, { progress: 98 });
     let competitorIntelligence: any[] = [];
     let marketShare: any = null;
+    const nicheHint = detectNicheFromContent(
+      (validatedContent.posts || []).map((p: any) => p.content).join(' '),
+      validatedContent.profile?.bio || '',
+      (validatedContent.content_themes || []).join(', ')
+    );
     
     // ALWAYS generate competitors - don't rely on extraction alone
     // First check if we have competitors from the research data (use as supplement)
@@ -900,7 +1072,7 @@ export async function startScan(
     // ALWAYS call generateCompetitorIntelligence to ensure we have competitors
     // Use LLM knowledge base (no dependency on scraping)
     try {
-      const competitorData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier, platforms, websiteTextContent);
+      const competitorData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier, platforms, websiteTextContent, nicheHint);
       
       // Handle new format with marketShare
       if (competitorData && competitorData.competitors && Array.isArray(competitorData.competitors)) {
@@ -927,7 +1099,7 @@ export async function startScan(
         addLog(scanId, `[WARNING] Only ${competitorIntelligence.length} competitors found (minimum ${minCompetitors}) - retrying...`);
         // Retry with more explicit prompt
         try {
-          const retryData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier, platforms, websiteTextContent);
+          const retryData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier, platforms, websiteTextContent, nicheHint);
           if (retryData && retryData.competitors && Array.isArray(retryData.competitors) && retryData.competitors.length >= minCompetitors) {
             competitorIntelligence = retryData.competitors;
             marketShare = retryData.marketShare;
@@ -3567,7 +3739,7 @@ function summarizePostPatterns(posts: any[]): string {
 
   const timestamps = posts
     .map((p: any) => (p.timestamp ? new Date(p.timestamp).getTime() : null))
-    .filter((t: any) => t && !isNaN(t))
+    .filter((t: number | null): t is number => typeof t === 'number' && !isNaN(t))
     .sort((a: number, b: number) => a - b);
 
   let cadence = 'unknown';
@@ -4017,7 +4189,8 @@ async function generateCompetitorIntelligence(
   username?: string,
   scanTier: ScanTier = 'basic',
   platforms: string[] = [],
-  websiteTextContent?: string
+  websiteTextContent?: string,
+  nicheHint?: string
 ): Promise<any> {
   // Always try to generate competitors - even with minimal data, we can use LLM knowledge
   const hasRealContent = validatedContent.posts && validatedContent.posts.length > 0;
@@ -4068,6 +4241,8 @@ async function generateCompetitorIntelligence(
     const brandName =
       username?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || username || 'this brand';
 
+    const nicheContext = nicheHint || nicheIndicators || 'general';
+
     const prompt = `Layered competitor map for ${brandName}.
 
 STEP 1 — LLM PRIOR (knowledge only):
@@ -4076,7 +4251,7 @@ STEP 1 — LLM PRIOR (knowledge only):
 
 STEP 2 — SCRAPED OVERLAY (apply to their signals):
 - Website cues: ${websiteTextContent ? websiteTextContent.substring(0, 500) : 'none'}
-- Niche indicators: ${nicheIndicators || 'unknown'}
+- Niche indicators: ${nicheContext}
 - Bio: ${bio || 'n/a'}
 - Post pattern: ${postPatternSummary}
 - Themes: ${themes || 'unknown'}
@@ -4091,7 +4266,7 @@ CONTEXT:
 - Bio: ${bio || 'n/a'}
 
 TASK:
-1) Return 3-4 competitors with a PRIMARY/SECONDARY flag; PRIMARY must share the same model/audience. Avoid calling hotels PRIMARY for a rental marketplace; they are SECONDARY.
+1) Return 3-4 competitors with a PRIMARY/SECONDARY flag; PRIMARY must share the same model/audience within the niche above. If niche is food/bakery/dessert, DO NOT return apparel brands; if travel/stay, do not return hotels as PRIMARY vs OTAs.
 2) Include short, specific reasoning and the main platform/strategy they win with.
 3) Keep it concrete—real brand names only. Avoid fictional brands.
 

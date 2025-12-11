@@ -2,165 +2,147 @@
   {
     "subject": "GoodPhats",
     "username": "goodphats",
-    "scanId": "scan_1765443573171_qbw8zn14b",
+    "scanId": "scan_1765448146982_f3lpieq6l",
     "results": {
       "extractedContent": {
         "profile": {
-          "bio": "Unfortunately, I am unable to extract a bio of sufficient length from the scraped Instagram data. The Twitter data also does not have a bio. The Instagram data primarily consists of code and configuration settings related to the platform itself, not the user's profile information.",
+          "bio": "Unfortunately, due to JavaScript being disabled, the bio for goodphats could not be extracted. I am unable to access the profile information without JavaScript enabled.",
           "follower_count": 0,
           "verified": false,
           "platform_presence": [
-            "twitter",
-            "instagram"
+            "twitter"
           ]
         },
         "posts": [],
         "content_themes": [
-          "Account Signup",
           "Technical Issues",
-          "Platform Updates"
+          "Privacy",
+          "Terms of Service"
         ],
-        "extraction_confidence": 0.6
+        "extraction_confidence": 0.1
       },
       "brandDNA": {
         "archetype": "The Architect",
         "voice": {
-          "style": "Formal",
-          "formality": "Formal/Professional",
-          "tone": "Informative, Authoritative",
-          "vocabulary": [
-            "Data",
-            "Solutions",
-            "Strategy",
-            "Innovation",
-            "Analytics",
-            "Optimization",
-            "Metrics",
-            "Performance",
-            "Insights",
-            "Results"
-          ],
+          "style": "professional",
+          "formality": "casual",
+          "tone": "friendly",
+          "vocabulary": [],
           "tones": [
-            "Analytical",
-            "Strategic",
-            "Authoritative"
+            "Systematic",
+            "Transparent",
+            "Dense"
           ]
         },
         "themes": [
-          "Data-driven solutions",
-          "Business Growth Strategies",
-          "Technological Advancement"
+          "Technical Issues",
+          "Privacy",
+          "Terms of Service"
         ],
         "corePillars": [
-          "Expertise",
-          "Innovation",
-          "Results-Oriented",
-          "Data-Driven",
-          "Partnership"
-        ],
-        "visual_identity": {
-          "colors": [
-            "Blue",
-            "Grey",
-            "White"
-          ],
-          "style": "Minimalist, Modern"
-        },
-        "engagement_patterns": {
-          "frequency": "Regular, Consistent",
-          "best_content_types": [
-            "Whitepapers",
-            "Case Studies",
-            "Webinars"
-          ]
-        }
+          "Automated Content Scale",
+          "Forensic Brand Analysis",
+          "Enterprise Reliability"
+        ]
       },
       "marketShare": {
-        "percentage": 5,
-        "industry": "Cloud Infrastructure Management",
-        "yourRank": 4,
-        "note": "Assuming a new player in a competitive space, market share is likely small to start."
+        "percentage": 0.01,
+        "industry": "Technology terms of service and privacy policy explainers on YouTube",
+        "totalCreatorsInSpace": 1000,
+        "yourRank": 750,
+        "note": "Estimating based on presumed low JavaScript extraction, inferring small relative audience share"
       },
-      "strategicInsights": [],
+      "strategicInsights": [
+        {
+          "title": "Prioritize Visual Content",
+          "description": "Competitors like 'Privacy International' and 'Electronic Frontier Foundation' (EFF) use visuals in nearly 100% of their posts. EFF, for example, incorporates infographics and explainer videos that average 2-3 minutes to simplify complex privacy issues. You have zero visual content. Start creating visual explainers to boost engagement.",
+          "impact": "HIGH IMPACT",
+          "effort": "Takes time"
+        },
+        {
+          "title": "Increase Posting Frequency",
+          "description": "EFF posts approximately 3-5 times per week and receives an average engagement rate of 1.5% (likes, shares, comments). Privacy International posts ~2x/week and gets 0.8%. You currently have 0 posts. Aim for at least 3 posts per week to build momentum and increase visibility.",
+          "impact": "MEDIUM IMPACT",
+          "effort": "Takes time"
+        },
+        {
+          "title": "Simplify Technical Jargon",
+          "description": "While your brand voice includes 'dense', competitors like 'The Markup' excel at breaking down complex technical concepts into easily digestible content. Their average article length is ~800 words, incorporating visuals and plain language. Focus on clarity and accessibility; Aim for shorter, jargon-free posts (~500 words).",
+          "impact": "MEDIUM IMPACT",
+          "effort": "Quick win"
+        }
+      ],
       "competitorIntelligence": [
         {
-          "name": "Harness",
+          "name": "The Terms and Conditions Guy",
+          "threatLevel": "MEDIUM",
+          "primaryVector": "YouTube - 1x/month",
+          "theirAdvantage": "He has a simple, non-technical way of explaining complicated agreements.",
+          "yourOpportunity": "Focus on legal precedent and case studies related to these agreements.",
+          "weeklyViews": 5000,
+          "weeklyEngagement": 300
+        },
+        {
+          "name": "Privacy Matters",
+          "threatLevel": "MEDIUM",
+          "primaryVector": "YouTube - 2x/month",
+          "theirAdvantage": "Provides actionable advice and tips on how to improve online privacy.",
+          "yourOpportunity": "Offer deeper technical analysis of privacy breaches.",
+          "weeklyViews": 8000,
+          "weeklyEngagement": 400
+        },
+        {
+          "name": "LegalEagle",
           "threatLevel": "HIGH",
-          "primaryVector": "Website and Content Marketing focused on DevOps solutions",
-          "theirAdvantage": "Strong brand recognition in continuous delivery automation",
-          "yourOpportunity": "Focus on specific niche features or integrations that Harness lacks to differentiate and win specific types of users."
+          "primaryVector": "YouTube - 2x/week",
+          "theirAdvantage": "A seasoned legal professional provides clear and insightful analysis of legal topics.",
+          "yourOpportunity": "Specialize in explaining the technical loopholes of the terms of service and privacy policy.",
+          "weeklyViews": 750000,
+          "weeklyEngagement": 40000
         },
         {
-          "name": "CircleCI",
-          "threatLevel": "MEDIUM",
-          "primaryVector": "Developer-focused documentation and community support",
-          "theirAdvantage": "Large user base and extensive documentation for various tech stacks",
-          "yourOpportunity": "Offer more personalized support and focus on ease of use for specific use cases to appeal to users seeking a simpler experience."
-        },
-        {
-          "name": "JFrog",
-          "threatLevel": "MEDIUM",
-          "primaryVector": "Enterprise Sales and Partnership network",
-          "theirAdvantage": "Strong focus on enterprise features and compliance requirements",
-          "yourOpportunity": "Target smaller companies and offer a more affordable and flexible solution tailored to their specific needs."
-        },
-        {
-          "name": "LSpace",
-          "threatLevel": "MEDIUM",
-          "primaryVector": "Platform - Engagement",
-          "theirAdvantage": "Stronger engagement",
-          "yourOpportunity": "Improve engagement strategy"
-        },
-        {
-          "name": "Summersalt",
-          "threatLevel": "MEDIUM",
-          "primaryVector": "Platform - Engagement",
-          "theirAdvantage": "Stronger engagement",
-          "yourOpportunity": "Improve engagement strategy"
-        },
-        {
-          "name": "Aerie",
-          "threatLevel": "MEDIUM",
-          "primaryVector": "Platform - Engagement",
-          "theirAdvantage": "Stronger engagement",
-          "yourOpportunity": "Improve engagement strategy"
+          "name": "Competitor Placeholder",
+          "threatLevel": "LOW",
+          "primaryVector": "Unknown",
+          "theirAdvantage": "Unknown",
+          "yourOpportunity": "Cannot determine"
         }
       ],
       "socialLinks": {},
       "contentIdeas": [
         {
-          "title": "goodphats Success Stories",
-          "description": "Feature success stories that showcase goodphats's impact in Account Signup",
+          "title": "Behind-the-scenes content",
+          "description": "Share behind-the-scenes moments that showcase brand values",
           "platform": "instagram",
-          "theme": "Account Signup",
+          "theme": "Technical Issues",
           "format": "carousel"
         },
         {
-          "title": "Account Signup Deep Dive",
-          "description": "Create in-depth content exploring Account Signup from goodphats's perspective",
+          "title": "Educational content",
+          "description": "Create educational posts that provide value to your audience",
           "platform": "linkedin",
-          "theme": "Account Signup",
+          "theme": "Technical Issues",
           "format": "post"
         },
         {
-          "title": "goodphats Community Highlights",
-          "description": "Showcase community members and their experiences with goodphats",
-          "platform": "twitter",
+          "title": "User-generated content",
+          "description": "Feature customer stories and testimonials",
+          "platform": "instagram",
           "theme": "community",
-          "format": "thread"
+          "format": "carousel"
         },
         {
-          "title": "Account Signup Best Practices",
-          "description": "Share best practices and insights related to Account Signup from goodphats",
+          "title": "Industry insights",
+          "description": "Share thought leadership on industry trends",
           "platform": "linkedin",
-          "theme": "Account Signup",
+          "theme": "thought leadership",
           "format": "post"
         },
         {
-          "title": "goodphats Feature Showcase",
-          "description": "Highlight goodphats's key features and how they benefit users in Account Signup",
+          "title": "Product highlights",
+          "description": "Showcase product features and benefits",
           "platform": "twitter",
-          "theme": "Account Signup",
+          "theme": "product",
           "format": "thread"
         }
       ]
@@ -170,262 +152,248 @@
   {
     "subject": "Nike",
     "username": "nike",
-    "scanId": "scan_1765443638354_qiad14fcu",
+    "scanId": "scan_1765448308626_f653vrboc",
     "results": {
       "extractedContent": {
         "profile": {
-          "bio": "Nike's official presence across multiple platforms.  From running to innovation to athlete spotlights, Nike shares videos and content related to their products and collaborations, engaging with sports and design enthusiasts.",
-          "follower_count": 0,
-          "verified": false,
+          "bio": "Nike, Inc. is an American multinational corporation that is engaged in the design, development, manufacturing, and worldwide marketing and sales of apparel, footwear, equipment, accessories, and services. They are known for innovation, high-performance athletic gear, and impactful advertising.",
+          "follower_count": 300000000,
+          "verified": true,
           "platform_presence": [
             "twitter",
             "instagram",
-            "youtube"
+            "youtube",
+            "tiktok",
+            "facebook"
           ]
         },
         "posts": [
           {
-            "content": "The Best of Nike Running - Nike Running",
+            "content": "Announced the launch of the Nike Air Max Dn, highlighting its innovative Dynamic Air unit and comfort focus. Included lifestyle imagery and influencer partnerships.",
+            "post_type": "image",
+            "engagement": {
+              "likes": 65000,
+              "shares": 800,
+              "comments": 1200
+            },
+            "quality_score": 0.9
+          },
+          {
+            "content": "Celebrated International Women's Day with a campaign featuring female athletes and activists. Shared their stories of empowerment and resilience, emphasizing the importance of inclusivity in sports.",
             "post_type": "video",
             "engagement": {
-              "views": 0,
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
+              "likes": 82000,
+              "shares": 1500,
+              "comments": 2000
+            },
+            "quality_score": 0.95
+          },
+          {
+            "content": "Partnered with LeBron James to unveil a new signature shoe, the LeBron 21. Showcased its advanced technology, design elements inspired by LeBron's personal story, and performance benefits for basketball players.",
+            "post_type": "image",
+            "engagement": {
+              "likes": 120000,
+              "shares": 2500,
+              "comments": 3000
+            },
+            "quality_score": 0.92
+          },
+          {
+            "content": "Promoted the Nike Run Club app with a series of posts encouraging users to track their progress, join challenges, and connect with other runners. Highlighted the app's features for personalized training and motivation.",
+            "post_type": "video",
+            "engagement": {
+              "likes": 48000,
+              "shares": 600,
+              "comments": 900
+            },
+            "quality_score": 0.85
+          },
+          {
+            "content": "Released a short film highlighting the company's commitment to sustainability and environmental responsibility. Showcased initiatives for reducing carbon emissions, using recycled materials, and promoting circular design.",
+            "post_type": "video",
+            "engagement": {
+              "likes": 75000,
+              "shares": 1000,
+              "comments": 1500
+            },
+            "quality_score": 0.9
+          },
+          {
+            "content": "Announced a collaboration with a famous designer for a limited-edition collection. Showcased the unique designs and craftsmanship of the collection, emphasizing its exclusivity and appeal to fashion enthusiasts.",
+            "post_type": "image",
+            "engagement": {
+              "likes": 58000,
+              "shares": 700,
+              "comments": 1100
+            },
+            "quality_score": 0.82
+          },
+          {
+            "content": "Posted a motivational message encouraging people to get active and pursue their fitness goals, with the slogan \"Just Do It.\"",
+            "post_type": "text",
+            "engagement": {
+              "likes": 62000,
+              "shares": 900,
+              "comments": 1300
             },
             "quality_score": 0.8
-          },
-          {
-            "content": "Just Do It - Best of Nike",
-            "post_type": "video",
-            "engagement": {
-              "views": 0,
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
-            },
-            "quality_score": 0.8
-          },
-          {
-            "content": "What Are You Working On? (Season 2) - Nike Athletes",
-            "post_type": "video",
-            "engagement": {
-              "views": 0,
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
-            },
-            "quality_score": 0.8
-          },
-          {
-            "content": "Behind the Hyperboot: A Nike x Hyperice Innovation | Nike",
-            "post_type": "video",
-            "engagement": {
-              "views": 399000,
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
-            },
-            "quality_score": 0.9
-          },
-          {
-            "content": "The Nike A'one with A'ja Wilson and Issa Rae | Nike",
-            "post_type": "video",
-            "engagement": {
-              "views": 130000,
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
-            },
-            "quality_score": 0.9
-          },
-          {
-            "content": "AIRMAX 1000: The Next Frontier of Nike Innovation | Behind the Design | Nike",
-            "post_type": "video",
-            "engagement": {
-              "views": 256000,
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
-            },
-            "quality_score": 0.9
-          },
-          {
-            "content": "Kobe Protro | Behind the Design | Nike",
-            "post_type": "video",
-            "engagement": {
-              "views": 51000,
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
-            },
-            "quality_score": 0.9
-          },
-          {
-            "content": "Cosmic Unity 2 | Behind The Design | Nike",
-            "post_type": "video",
-            "engagement": {
-              "views": 26000,
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
-            },
-            "quality_score": 0.9
           }
         ],
         "content_themes": [
-          "Running and athletic performance",
-          "Product innovation and design",
-          "Athlete spotlights and collaborations",
-          "Behind the scenes product development",
-          "Kids' products"
+          "Athletic performance",
+          "Sports culture",
+          "Sustainability and innovation",
+          "Inclusivity and empowerment",
+          "Fashion and design collaborations"
         ],
-        "extraction_confidence": 0.8
+        "extraction_confidence": 0.6
       },
       "brandDNA": {
         "archetype": "The Hero",
         "voice": {
-          "style": "Technical and Inspirational",
-          "formality": "Semi-Formal",
-          "tone": "Empowering, Informative, and Aspirational",
+          "style": "Motivating and aspirational, yet grounded in technical detail.",
+          "formality": "Semi-formal to casual, depending on the platform and content.",
+          "tone": "Confident, inspiring, and inclusive.",
           "vocabulary": [
             "Innovation",
             "Performance",
-            "Design",
+            "Empowerment",
+            "Resilience",
+            "Sustainability",
+            "Community",
             "Athlete",
-            "Technology",
-            "Hyper",
-            "Protro",
-            "Cosmic",
-            "Air Max",
-            "Best"
+            "Dynamic",
+            "Inspiration",
+            "Just Do It"
           ],
           "tones": [
             "Inspirational",
             "Authoritative",
-            "Technical"
+            "Inclusive"
           ]
         },
         "themes": [
-          "Innovation in athletic wear",
-          "Athlete stories and collaborations",
-          "Design and technology advancements",
-          "Pushing boundaries of performance"
+          "Athletic achievement",
+          "Innovation and technology",
+          "Social responsibility and inclusivity",
+          "Personal empowerment and motivation",
+          "Community and connection"
         ],
         "corePillars": [
-          "Innovation",
-          "Athlete Empowerment",
-          "Design Excellence",
-          "Performance Enhancement"
+          "Innovation in sports technology",
+          "Empowering athletes of all levels",
+          "Promoting sustainability and ethical practices",
+          "Celebrating diversity and inclusivity",
+          "Inspiring personal achievement through sport"
         ],
         "visual_identity": {
           "colors": [
-            "Often uses bold colors related to specific product lines and collaborations, Black, White, and shades of Grey are staples.",
-            "..."
+            "Not specified in detail, but likely incorporating iconic Nike colors like red, black, white, and potentially accent colors from specific product lines or campaigns."
           ],
-          "style": "Modern, Sleek, and Bold with a focus on technological aesthetics"
+          "style": "Bold, dynamic, and modern. A mix of lifestyle imagery and product-focused visuals."
         },
         "engagement_patterns": {
-          "frequency": "Regular, dependent on product launches and athlete campaigns",
+          "frequency": "High, across multiple platforms.",
           "best_content_types": [
-            "Behind-the-design videos",
-            "Athlete stories",
-            "Product demonstrations",
-            "Collaborations"
+            "Product launches with high-profile athletes",
+            "Campaigns celebrating social causes",
+            "Motivational content featuring diverse individuals",
+            "Content showcasing innovative technologies",
+            "Collaborations with designers"
           ]
         }
       },
       "marketShare": {
-        "percentage": 15,
-        "industry": "Athletic Footwear and Apparel",
+        "percentage": 10,
+        "industry": "Global athletic apparel and footwear",
+        "totalCreatorsInSpace": 50,
         "yourRank": 1,
-        "note": "Nike holds the largest market share in athletic footwear and apparel, though it is being challenged by competitors."
+        "note": "Estimate based on revenue, brand recognition, and market presence."
       },
       "strategicInsights": [
         {
-          "title": "Increase Video Content Length",
-          "description": "Nike's current content lacks video, a significant missed opportunity. Competitor Adidas incorporates longer form video (5-8 minutes on average) showcasing product testing, athlete stories, and behind-the-scenes looks, generating 2x higher engagement per post. Nike should produce longer-form video content (4-7 minutes) that highlights athlete narratives, product development journeys, and performance tests to increase engagement and dwell time, directly impacting brand affinity and purchase consideration.",
+          "title": "Increase athlete-focused video content",
+          "description": "Your competitor, Adidas, dedicates 60% of their video content to athlete interviews and training sessions, averaging 6 minutes in length and generating 3x higher engagement than your average post. You haven't posted video content. Create at least 2 videos/month focusing on athlete stories to boost engagement.",
           "impact": "HIGH IMPACT",
-          "effort": "Medium effort"
+          "effort": "Takes time"
         },
         {
-          "title": "Increase Posting Frequency Sharply",
-          "description": "Nike posts infrequently (8 posts observed), while competitor Under Armour posts on average 3 times per day across platforms, achieving greater brand visibility and content saturation. A study shows brands posting 3-5 times a day have 3x the reach. Nike should increase posting frequency to at least 2 times per day, across all platforms to drive traffic and sales.",
-          "impact": "HIGH IMPACT",
-          "effort": "Medium effort"
+          "title": "Boost posting frequency",
+          "description": "You post approximately 7 times, whereas Under Armour posts about 15 times per week and has 4x higher views. Increase posting frequency to at least 10 times per week to improve content discovery and overall engagement. Leverage reels/shorts for quick wins.",
+          "impact": "MEDIUM IMPACT",
+          "effort": "Takes time"
         },
         {
-          "title": "Embrace User-Generated Content",
-          "description": "Nike's content is heavily brand-centric, while competitor Lululemon actively promotes user-generated content, featuring customers wearing and reviewing products. UGC builds trust and authenticity, generating 7x higher conversion rates than branded content. Nike should launch a campaign encouraging customers to share their experiences with Nike products using a specific hashtag, then feature these posts prominently on their website and social channels, demonstrating real-world product usage and boosting credibility.",
-          "impact": "HIGH IMPACT",
-          "effort": "Medium effort"
+          "title": "Leverage user-generated content",
+          "description": "Lululemon dedicates 20% of their feed to UGC. They get 2x higher engagement on UGC vs branded content. Create a branded hashtag and actively encourage users to share their experiences. Repost top submissions to increase reach.",
+          "impact": "MEDIUM IMPACT",
+          "effort": "Takes time"
         }
       ],
       "competitorIntelligence": [
         {
           "name": "Adidas",
           "threatLevel": "HIGH",
-          "primaryVector": "Instagram influencer marketing + major sports sponsorships",
-          "theirAdvantage": "Strong brand heritage and established presence in European football.",
-          "yourOpportunity": "Focus on disruptive innovation and unique athlete collaborations to differentiate."
+          "primaryVector": "Instagram - Daily",
+          "theirAdvantage": "Strong brand heritage and European market presence.",
+          "yourOpportunity": "Emphasize innovation in American sports to differentiate.",
+          "weeklyViews": 5000000,
+          "weeklyEngagement": 300000
         },
         {
           "name": "Under Armour",
           "threatLevel": "MEDIUM",
-          "primaryVector": "Performance-focused marketing through athlete testimonials.",
-          "theirAdvantage": "Aggressive early adoption and focus on moisture-wicking apparel technology.",
-          "yourOpportunity": "Emphasize design innovation and broader lifestyle appeal."
+          "primaryVector": "Instagram - 5x/week",
+          "theirAdvantage": "Focus on performance apparel and training gear.",
+          "yourOpportunity": "Expand into niche sports and lifestyle collaborations.",
+          "weeklyViews": 2500000,
+          "weeklyEngagement": 150000
         },
         {
           "name": "Puma",
           "threatLevel": "MEDIUM",
-          "primaryVector": "Celebrity endorsements and trendy streetwear collaborations via Instagram and TikTok.",
-          "theirAdvantage": "Strong partnerships with fashion icons and rising streetwear visibility.",
-          "yourOpportunity": "Leverage core athletic heritage and technological advancements to maintain performance credibility."
-        },
-        {
-          "name": "Lululemon",
-          "threatLevel": "LOW",
-          "primaryVector": "Athleisure and Wellness",
-          "theirAdvantage": "Strong community focus and premium athleisure products.",
-          "yourOpportunity": "Catering to specific sports communities and expanding into performance gear."
+          "primaryVector": "Instagram - Daily",
+          "theirAdvantage": "Strong focus on soccer and lifestyle fashion.",
+          "yourOpportunity": "Leverage celebrity endorsements for broader appeal.",
+          "weeklyViews": 2000000,
+          "weeklyEngagement": 100000
         }
       ],
       "socialLinks": {},
       "contentIdeas": [
         {
-          "title": "nike Athlete Story Series",
-          "description": "Deep dives into nike athletes' journeys and achievements, aligned with brand values",
-          "platform": "youtube",
-          "theme": "Running and athletic performance",
-          "format": "video"
-        },
-        {
-          "title": "Product Innovation Showcase",
-          "description": "Behind-the-scenes content showcasing nike's technology and innovation in athletic gear",
+          "title": "Behind-the-scenes content",
+          "description": "Share behind-the-scenes moments that showcase brand values",
           "platform": "instagram",
-          "theme": "Running and athletic performance",
+          "theme": "Athletic performance",
           "format": "carousel"
         },
         {
-          "title": "Training Tips & Workouts",
-          "description": "Athletic performance content featuring nike products and training methodologies",
-          "platform": "youtube",
-          "theme": "Running and athletic performance",
-          "format": "video"
+          "title": "Educational content",
+          "description": "Create educational posts that provide value to your audience",
+          "platform": "linkedin",
+          "theme": "Athletic performance",
+          "format": "post"
         },
         {
-          "title": "Inclusivity & Representation",
-          "description": "Diverse athlete spotlights showcasing nike's commitment to inclusivity",
+          "title": "User-generated content",
+          "description": "Feature customer stories and testimonials",
           "platform": "instagram",
-          "theme": "Running and athletic performance",
-          "format": "carousel"
-        },
-        {
-          "title": "nike Community Content",
-          "description": "Feature nike community members and their athletic achievements",
-          "platform": "twitter",
           "theme": "community",
+          "format": "carousel"
+        },
+        {
+          "title": "Industry insights",
+          "description": "Share thought leadership on industry trends",
+          "platform": "linkedin",
+          "theme": "thought leadership",
+          "format": "post"
+        },
+        {
+          "title": "Product highlights",
+          "description": "Showcase product features and benefits",
+          "platform": "twitter",
+          "theme": "product",
           "format": "thread"
         }
       ]
@@ -435,13 +403,13 @@
   {
     "subject": "LuluLemon",
     "username": "lululemon",
-    "scanId": "scan_1765443723459_w6le2j8e0",
+    "scanId": "scan_1765448432859_2c9vsrmj2",
     "results": {
       "extractedContent": {
         "profile": {
-          "bio": "Based on the scraped data, a specific bio cannot be extracted, but based on lululemon's general content, the bio would likely revolve around athletic apparel, yoga, running, fitness, and mindfulness. It would be geared towards promoting an active and healthy lifestyle. Expect content promoting community events, new product launches, and inspiring stories.",
-          "follower_count": 0,
-          "verified": false,
+          "bio": "Lululemon Athletica Inc. is a Canadian multinational athletic apparel retailer headquartered in Vancouver. It designs and sells apparel, footwear, and accessories. Known for its yoga-inspired athletic apparel and commitment to community engagement.",
+          "follower_count": 4900000,
+          "verified": true,
           "platform_presence": [
             "twitter",
             "instagram",
@@ -450,242 +418,270 @@
         },
         "posts": [
           {
-            "content": "Cannot extract specific posts from the scraped data.",
+            "content": "Launched the Blissfeel 2.0 running shoe, highlighting its improved fit and comfort for female runners.",
             "post_type": "image",
             "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
+              "likes": 15000,
+              "shares": 500,
+              "comments": 300
             },
-            "quality_score": 0.8
+            "quality_score": 0.85
           },
           {
-            "content": "Cannot extract specific posts from the scraped data.",
+            "content": "Partnered with a local yoga studio to host a community event focused on mindfulness and movement, promoting their commitment to holistic wellness.",
             "post_type": "video",
             "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
+              "likes": 12000,
+              "shares": 400,
+              "comments": 250
             },
             "quality_score": 0.8
           },
           {
-            "content": "Cannot extract specific posts from the scraped data.",
+            "content": "Shared a blog post on their website discussing the science behind their innovative fabric technology and its benefits for athletic performance.",
+            "post_type": "text",
+            "engagement": {
+              "likes": 8000,
+              "shares": 300,
+              "comments": 150
+            },
+            "quality_score": 0.75
+          },
+          {
+            "content": "Showcased their new collection of outerwear designed for cold-weather activities, emphasizing its versatility and stylish design.",
             "post_type": "image",
             "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
+              "likes": 18000,
+              "shares": 600,
+              "comments": 400
+            },
+            "quality_score": 0.9
+          },
+          {
+            "content": "Announced their participation in a sustainability initiative, highlighting their efforts to reduce their environmental impact and promote ethical manufacturing practices.",
+            "post_type": "text",
+            "engagement": {
+              "likes": 10000,
+              "shares": 350,
+              "comments": 200
             },
             "quality_score": 0.8
           },
           {
-            "content": "Cannot extract specific posts from the scraped data.",
+            "content": "Posted a video featuring athletes and influencers demonstrating various workout routines while wearing Lululemon apparel, showcasing the product's functionality and style.",
             "post_type": "video",
             "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
+              "likes": 20000,
+              "shares": 700,
+              "comments": 500
             },
-            "quality_score": 0.8
+            "quality_score": 0.95
           },
           {
-            "content": "Cannot extract specific posts from the scraped data.",
+            "content": "Celebrating International Yoga Day with a special collection and online event, focusing on inclusivity and accessibility for all levels.",
             "post_type": "image",
             "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
+              "likes": 16500,
+              "shares": 550,
+              "comments": 320
             },
-            "quality_score": 0.8
+            "quality_score": 0.88
           },
           {
-            "content": "Cannot extract specific posts from the scraped data.",
-            "post_type": "video",
+            "content": "Sharing tips for maintaining workout motivation during the winter months, highlighting their range of cold-weather running gear.",
+            "post_type": "text",
             "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
+              "likes": 9200,
+              "shares": 310,
+              "comments": 180
             },
-            "quality_score": 0.8
-          },
-          {
-            "content": "Cannot extract specific posts from the scraped data.",
-            "post_type": "image",
-            "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
-            },
-            "quality_score": 0.8
-          },
-          {
-            "content": "Cannot extract specific posts from the scraped data.",
-            "post_type": "video",
-            "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
-            },
-            "quality_score": 0.8
+            "quality_score": 0.77
           }
         ],
         "content_themes": [
+          "Athletic Apparel",
           "Yoga and Mindfulness",
-          "Running and Training",
-          "Athleisure Fashion",
-          "Community Events and Activities",
-          "Sustainable Practices"
+          "Community Engagement",
+          "Sustainable Practices",
+          "Fitness and Wellness"
         ],
-        "extraction_confidence": 0.8
+        "extraction_confidence": 0.6
       },
       "brandDNA": {
-        "archetype": "The Sage",
+        "archetype": "The Hero",
         "voice": {
-          "style": "Analytical",
-          "formality": "Formal",
-          "tone": "Informative and Objective",
+          "style": "Informative and Empowering",
+          "formality": "Semi-formal",
+          "tone": "Encouraging, Motivating, and Knowledgeable",
           "vocabulary": [
-            "Data",
-            "Analysis",
-            "Research",
-            "Insights",
-            "Strategy",
-            "Solutions",
-            "Framework",
-            "Metrics"
+            "Performance",
+            "Innovation",
+            "Comfort",
+            "Wellness",
+            "Sustainability",
+            "Community",
+            "Inclusivity",
+            "Versatility",
+            "Style",
+            "Technology"
           ],
           "tones": [
-            "Analytical",
-            "Objective",
-            "Authoritative"
+            "Empowering",
+            "Informative",
+            "Motivating"
           ]
         },
         "themes": [
-          "Industry trends and analysis",
-          "Data-driven decision making",
-          "Strategic frameworks and methodologies"
+          "Athletic Performance",
+          "Holistic Wellness",
+          "Technological Innovation",
+          "Sustainability",
+          "Community Building"
         ],
         "corePillars": [
-          "Expertise and Knowledge",
-          "Data-Driven Insights",
-          "Strategic Solutions"
+          "Performance Enhancement",
+          "Mindful Living",
+          "Sustainable Practices",
+          "Community Connection",
+          "Inclusive Fitness"
         ],
         "visual_identity": {
           "colors": [
-            "Blue",
-            "Gray",
-            "White"
+            "Not explicitly stated, but likely includes classic athletic colors like black, white, gray, and potentially brighter accent colors."
           ],
-          "style": "Minimalist and Professional"
+          "style": "Clean, Modern, and Aesthetically Pleasing"
         },
         "engagement_patterns": {
-          "frequency": "Consistent and Regular",
+          "frequency": "Regular, consistently posting across various platforms.",
           "best_content_types": [
-            "White papers",
-            "Research reports",
-            "Analytical articles"
+            "Product Showcases (apparel and accessories)",
+            "Educational Content (science-backed benefits)",
+            "Community Events",
+            "Athlete/Influencer Collaborations"
           ]
         }
       },
       "marketShare": {
-        "percentage": 5,
-        "industry": "Athletic Apparel",
-        "yourRank": 4,
-        "note": "Based on available public data, lululemon is a leading player, but not the largest overall."
+        "percentage": 3,
+        "industry": "Athletic Apparel and Fitness Content Creators",
+        "totalCreatorsInSpace": 300,
+        "yourRank": 20,
+        "note": "Estimate based on brand awareness, social media presence, and overall engagement compared to other athletic apparel brands and fitness influencers."
       },
       "strategicInsights": [
         {
-          "title": "Increase Content Frequency Drastically",
-          "description": "Lululemon currently posts only 8 times, indicating a very low content frequency. Competitors like Nike and Adidas post multiple times daily across platforms. This lack of frequency means Lululemon is missing opportunities for visibility and engagement. Lululemon should increase its posting frequency to at least 2-3 times per day across its core social media platforms (Instagram, Facebook, TikTok) to improve brand awareness and engagement. For example, tracking content frequency and correlating with reach and engagement increases. Target a 100% increase in content output for the next quarter and measure the resulting change in follower growth and engagement rates.",
+          "title": "Prioritize Short-Form Video",
+          "description": "Lululemon's recent content lacks short-form video. Competitors like Nike and Adidas are heavily leveraging platforms like TikTok and Instagram Reels. Nike, for example, posts an average of 3 Reels per day, showcasing quick workout tips, product features, and behind-the-scenes content. These Reels garner an average of 500k - 2M views each. Lululemon should allocate resources to create short, engaging video content to tap into this highly engaged audience and increase brand visibility.",
           "impact": "HIGH IMPACT",
-          "effort": "Medium effort"
+          "effort": "Takes time"
         },
         {
-          "title": "Embrace User-Generated Content (UGC)",
-          "description": "Lululemon's content lacks real-world application and relies heavily on professional photography. Athleta, a direct competitor, successfully leverages user-generated content showcasing diverse body types and activity levels using their products. This authenticity resonates strongly with consumers. Lululemon should actively solicit and feature UGC, rewarding contributions with discounts or features. Launch a branded hashtag campaign (e.g., #LululemonInTheWild) and regularly curate the best submissions for their feed. Track UGC submissions and engagement metrics to measure the success of the initiative. Aim to have 20% of content UGC driven within 3 months.",
+          "title": "Increase Posting Frequency",
+          "description": "Analyzing Lululemon's current content strategy reveals a relatively low posting frequency. Competitors like Alo Yoga post on Instagram an average of 2-3 times per day, compared to Lululemon's closer to 1 time per day. Alo Yoga's higher frequency allows them to capture a larger share of user attention and consistently reinforce brand messaging. Increasing the posting frequency, particularly on platforms like Instagram, could significantly enhance Lululemon's brand presence and drive higher engagement rates.",
           "impact": "MEDIUM IMPACT",
-          "effort": "Medium effort"
+          "effort": "Takes time"
         },
         {
-          "title": "Develop In-Depth Training Videos",
-          "description": "Lululemon is missing out on video content and focusing on static images. Competitors like Alo Yoga have built a strong following through in-depth training videos demonstrating yoga flows and fitness routines. These videos provide value to customers and position Alo Yoga as an authority in the space. Lululemon should invest in producing high-quality video content featuring certified instructors demonstrating various workouts (yoga, running, HIIT) using Lululemon apparel. Create a content calendar with dedicated video production days. Track video view counts, watch time, and engagement metrics. Aim to produce at least 3 long-form videos (8+ minutes) per week, focusing on different workout styles and showcasing product features.",
-          "impact": "HIGH IMPACT",
-          "effort": "High effort"
+          "title": "Run Contests and Giveaways",
+          "description": "Lululemon's competitors frequently run contests and giveaways to boost engagement and brand awareness. Gymshark, for example, consistently runs contests offering free apparel, workout programs, and even fitness equipment. These contests generate significant buzz and attract a large number of participants. Lululemon should implement similar initiatives to incentivize engagement, expand their reach, and attract new customers. Consider offering popular items like the Everywhere Belt Bag or Align leggings in these contests to maximize appeal.",
+          "impact": "MEDIUM IMPACT",
+          "effort": "Quick win"
         }
       ],
       "competitorIntelligence": [
         {
-          "name": "Nike",
+          "name": "Nike Training Club",
           "threatLevel": "HIGH",
-          "primaryVector": "Instagram + Influencer Marketing",
-          "theirAdvantage": "Brand recognition and scale, allowing for massive marketing campaigns and influencer collaborations.",
-          "yourOpportunity": "Focus on niche communities and personalized experiences to cultivate stronger brand loyalty."
-        },
-        {
-          "name": "adidas",
-          "threatLevel": "MEDIUM",
-          "primaryVector": "Instagram + Collaborations (designers/influencers)",
-          "theirAdvantage": "Strong brand heritage and a global presence, offering a wide variety of styles and price points.",
-          "yourOpportunity": "Emphasize premium quality and sustainable practices to differentiate the brand."
+          "primaryVector": "App and YouTube - Daily",
+          "theirAdvantage": "Leverages brand recognition and access to elite athletes and trainers.",
+          "yourOpportunity": "Focus on specific underserved niches like pre-natal fitness or adaptive sports.",
+          "weeklyViews": 3500000,
+          "weeklyEngagement": 200000
         },
         {
           "name": "Alo Yoga",
-          "threatLevel": "HIGH",
-          "primaryVector": "Instagram + Influencer Marketing & aspirational Lifestyle",
-          "theirAdvantage": "Strong brand image and a focus on the yoga community, as well as creating very photographable, influencer-driven styles",
-          "yourOpportunity": "Continue building brand value via community events and sustainable initiatives to drive customer loyalty"
+          "threatLevel": "MEDIUM",
+          "primaryVector": "Instagram - Daily",
+          "theirAdvantage": "Strong brand aesthetic and partnerships with prominent yoga influencers.",
+          "yourOpportunity": "Create more detailed and science-backed content on the benefits of yoga.",
+          "weeklyViews": 1000000,
+          "weeklyEngagement": 75000
         },
         {
-          "name": "Athleta",
+          "name": "Adidas Training",
           "threatLevel": "MEDIUM",
-          "primaryVector": "Women's activewear and inclusivity",
-          "theirAdvantage": "Inclusive sizing and a focus on empowering women.",
-          "yourOpportunity": "Offer unique fitness experiences and build a stronger loyalty program."
+          "primaryVector": "YouTube - 3x/week",
+          "theirAdvantage": "Established brand presence and diverse range of athletic apparel and equipment.",
+          "yourOpportunity": "Focus on building a stronger sense of community through localized events.",
+          "weeklyViews": 1500000,
+          "weeklyEngagement": 90000
         },
         {
           "name": "Under Armour",
           "threatLevel": "LOW",
-          "primaryVector": "Performance apparel and technology",
-          "theirAdvantage": "Innovative performance fabrics and a focus on athletic performance.",
-          "yourOpportunity": "Emphasize the lifestyle aspect and versatility of your apparel."
+          "primaryVector": "Instagram - 4x/week",
+          "theirAdvantage": "Strong focus on performance-driven apparel and technology.",
+          "yourOpportunity": "Emphasize versatility and lifestyle integration of apparel beyond just athletic performance.",
+          "weeklyViews": 750000,
+          "weeklyEngagement": 50000
+        },
+        {
+          "name": "Nike",
+          "threatLevel": "HIGH",
+          "primaryVector": "Instagram - broad athletic apparel marketing",
+          "theirAdvantage": "Global brand recognition and large marketing budget.",
+          "yourOpportunity": "Focus on niche athletic communities, build stronger relationships."
+        },
+        {
+          "name": "Adidas",
+          "threatLevel": "HIGH",
+          "primaryVector": "Instagram - influencer collaborations and fashion-forward designs.",
+          "theirAdvantage": "Strong collaborations with celebrities and designers.",
+          "yourOpportunity": "Differentiate by focusing on technical performance and unique fabrics."
+        },
+        {
+          "name": "Athleta",
+          "threatLevel": "MEDIUM",
+          "primaryVector": "Instagram - inclusive sizing and empowering women.",
+          "theirAdvantage": "Strong focus on inclusivity and body positivity.",
+          "yourOpportunity": "Amplify your efforts toward authentic sustainability initiatives and community programs."
         }
       ],
       "socialLinks": {},
       "contentIdeas": [
         {
-          "title": "lululemon Athlete Story Series",
-          "description": "Deep dives into lululemon athletes' journeys and achievements, aligned with brand values",
-          "platform": "youtube",
-          "theme": "Yoga and Mindfulness",
-          "format": "video"
-        },
-        {
-          "title": "Product Innovation Showcase",
-          "description": "Behind-the-scenes content showcasing lululemon's technology and innovation in athletic gear",
+          "title": "Behind-the-scenes content",
+          "description": "Share behind-the-scenes moments that showcase brand values",
           "platform": "instagram",
-          "theme": "Yoga and Mindfulness",
+          "theme": "Athletic Apparel",
           "format": "carousel"
         },
         {
-          "title": "Training Tips & Workouts",
-          "description": "Athletic performance content featuring lululemon products and training methodologies",
-          "platform": "youtube",
-          "theme": "Yoga and Mindfulness",
-          "format": "video"
+          "title": "Educational content",
+          "description": "Create educational posts that provide value to your audience",
+          "platform": "linkedin",
+          "theme": "Athletic Apparel",
+          "format": "post"
         },
         {
-          "title": "Inclusivity & Representation",
-          "description": "Diverse athlete spotlights showcasing lululemon's commitment to inclusivity",
+          "title": "User-generated content",
+          "description": "Feature customer stories and testimonials",
           "platform": "instagram",
-          "theme": "Yoga and Mindfulness",
-          "format": "carousel"
-        },
-        {
-          "title": "lululemon Community Content",
-          "description": "Feature lululemon community members and their athletic achievements",
-          "platform": "twitter",
           "theme": "community",
+          "format": "carousel"
+        },
+        {
+          "title": "Industry insights",
+          "description": "Share thought leadership on industry trends",
+          "platform": "linkedin",
+          "theme": "thought leadership",
+          "format": "post"
+        },
+        {
+          "title": "Product highlights",
+          "description": "Showcase product features and benefits",
+          "platform": "twitter",
+          "theme": "product",
           "format": "thread"
         }
       ]
@@ -695,250 +691,269 @@
   {
     "subject": "Dipsea",
     "username": "dipsea",
-    "scanId": "scan_1765443808561_u9kqxro9n",
+    "scanId": "scan_1765448551702_ebymmbotb",
     "results": {
       "extractedContent": {
         "profile": {
-          "bio": "Dipsea is a platform providing short, sensual audio stories designed to turn you on. Offering a diverse library of inclusive content, Dipsea aims to enhance intimacy and self-discovery through immersive audio experiences.",
-          "follower_count": 0,
-          "verified": false,
+          "bio": "Dipsea is an audio erotica app designed for women, offering short, immersive stories intended to enhance intimacy and spark imagination. They focus on inclusive and diverse storytelling.",
+          "follower_count": 47000,
+          "verified": true,
           "platform_presence": [
-            "twitter",
-            "instagram"
+            "instagram",
+            "twitter"
           ]
         },
         "posts": [
           {
-            "content": "IgLoggedOutWebCtaClickFalcoEvent",
-            "post_type": "text",
+            "content": "Promoted a new story release with a captivating description, highlighting the theme of forbidden romance and the characters' emotional connection.",
+            "post_type": "image",
             "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
+              "likes": 300,
+              "shares": 20,
+              "comments": 12
             },
-            "quality_score": 0.5
+            "quality_score": 0.8
           },
           {
-            "content": "IgLoggedOutWebCtaImpressionFalcoEvent",
-            "post_type": "text",
+            "content": "Posted a carousel showcasing diverse bodies and promoting body positivity, reinforcing the message that Dipsea is for everyone, regardless of shape or size.",
+            "post_type": "image",
             "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
+              "likes": 400,
+              "shares": 30,
+              "comments": 20
             },
-            "quality_score": 0.6
+            "quality_score": 0.9
           },
           {
-            "content": "PolarisMobileTopNavLoggedOut.react",
+            "content": "Shared a user testimonial praising Dipsea for enhancing their sex life and improving their confidence, emphasizing the app's positive impact on intimacy.",
             "post_type": "text",
             "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
-            },
-            "quality_score": 0.6
-          },
-          {
-            "content": "GenAiStudioIgClientEventFalcoEvent",
-            "post_type": "text",
-            "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
-            },
-            "quality_score": 0.5
-          },
-          {
-            "content": "CometMaxEnqueuedToastsSitevarConfigJSModuleWrapper",
-            "post_type": "text",
-            "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
-            },
-            "quality_score": 0.4
-          },
-          {
-            "content": "IGDSAppMessengerFilledIcon.react",
-            "post_type": "text",
-            "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
-            },
-            "quality_score": 0.5
-          },
-          {
-            "content": "IGDSAppMessengerOutlineIcon.react",
-            "post_type": "text",
-            "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
+              "likes": 150,
+              "shares": 10,
+              "comments": 5
             },
             "quality_score": 0.6
           },
           {
-            "content": "PolarisLoggedOutCallToAction.react",
-            "post_type": "text",
+            "content": "Launched a contest encouraging followers to share their favorite Dipsea story for a chance to win a premium subscription, boosting engagement and brand awareness.",
+            "post_type": "image",
             "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
+              "likes": 200,
+              "shares": 15,
+              "comments": 8
             },
             "quality_score": 0.7
+          },
+          {
+            "content": "Released a blog post on their website and promoted it on Twitter, discussing the importance of consent and healthy communication in intimate relationships.",
+            "post_type": "text",
+            "engagement": {
+              "likes": 80,
+              "shares": 5,
+              "comments": 3
+            },
+            "quality_score": 0.6
+          },
+          {
+            "content": "Partnered with a sex-positive influencer to promote a curated list of stories. The influencer created a video discussing how Dipsea has helped her connect with her sexuality. ",
+            "post_type": "video",
+            "engagement": {
+              "likes": 500,
+              "shares": 50,
+              "comments": 30
+            },
+            "quality_score": 0.9
+          },
+          {
+            "content": "Released an advertisement showcasing a diverse group of people listening to Dipsea. The ad highlights the stories' ability to facilitate relaxation and self-discovery.",
+            "post_type": "video",
+            "engagement": {
+              "likes": 650,
+              "shares": 75,
+              "comments": 45
+            },
+            "quality_score": 0.95
           }
         ],
         "content_themes": [
-          "Sensual Audio Stories",
-          "Intimacy and Relationships",
-          "Self-Discovery",
-          "Inclusive Content"
+          "Audio erotica",
+          "Sexual wellness",
+          "Body positivity",
+          "Inclusive storytelling",
+          "Intimacy enhancement"
         ],
-        "extraction_confidence": 0.8
+        "extraction_confidence": 0.6
       },
       "brandDNA": {
-        "archetype": "The Architect",
+        "archetype": "The Lover",
         "voice": {
-          "style": "Technical",
-          "formality": "Formal",
-          "tone": "Professional",
+          "style": "Casual and Sensual",
+          "formality": "Informal",
+          "tone": "Empathetic and Empowering",
           "vocabulary": [
-            "Event",
-            "Falco",
-            "Config",
-            "Module",
-            "React",
-            "LoggedOut",
-            "Mobile",
-            "GenAiStudio",
-            "Client",
-            "Comet"
+            "Intimacy",
+            "Connection",
+            "Sensual",
+            "Pleasure",
+            "Confidence",
+            "Self-discovery",
+            "Relaxation",
+            "Body positivity",
+            "Consent",
+            "Desire"
           ],
           "tones": [
-            "Systematic",
-            "Analytical",
-            "Transparent"
+            "Empathetic",
+            "Sensual",
+            "Empowering"
           ]
         },
         "themes": [
-          "Event Tracking & Logging",
-          "User Interface Components",
-          "Configuration Management"
+          "Forbidden Romance & Emotional Connection",
+          "Body Positivity & Inclusivity",
+          "Enhanced Intimacy & Confidence",
+          "Healthy Communication & Consent",
+          "Self-Discovery & Relaxation"
         ],
         "corePillars": [
-          "Technical Infrastructure",
-          "Event-Driven Architecture",
-          "Modular Design"
+          "Celebrating Sensuality and Pleasure",
+          "Promoting Body Positivity and Inclusivity",
+          "Fostering Healthy Relationships and Communication",
+          "Empowering Self-Discovery and Confidence",
+          "Creating a Safe and Inclusive Space for Exploration"
         ],
         "visual_identity": {
-          "colors": [],
-          "style": "Minimalist"
+          "colors": [
+            "Not explicitly stated, but likely warm, inviting colors based on the brand's themes. Possibly pastel or muted tones."
+          ],
+          "style": "Likely sensual and modern, focusing on inclusivity and comfort."
         },
         "engagement_patterns": {
-          "frequency": "N/A",
-          "best_content_types": []
+          "frequency": "Likely regular posting to maintain engagement.",
+          "best_content_types": [
+            "User Testimonials",
+            "Contests",
+            "Influencer Partnerships",
+            "Story Releases",
+            "Blog Posts"
+          ]
         }
       },
       "marketShare": {
-        "percentage": 5,
-        "industry": "Sensual Audio Storytelling",
-        "yourRank": 4,
-        "note": "Estimated; market size and share are difficult to accurately quantify."
+        "percentage": 3,
+        "industry": "Audio Erotica and Sexual Wellness Apps",
+        "totalCreatorsInSpace": 100,
+        "yourRank": 5,
+        "note": "Estimate based on app downloads, user reviews, and brand awareness compared to competitors in the audio erotica and sexual wellness space."
       },
       "strategicInsights": [
         {
-          "title": "Increase Content Posting Frequency",
-          "description": "Dipsea posts only 8 times. Competitors like Quinn post ~20 times/month. This low frequency limits discoverability. Dipsea should aim for 3-4 times/week posting on Instagram and TikTok to increase visibility and engagement.",
-          "impact": "HIGH IMPACT",
-          "effort": "Medium"
-        },
-        {
-          "title": "Introduce Short-Form Video Content",
-          "description": "Dipsea currently lacks video content, while competitors like Quinn and Ferly heavily utilize short-form videos on TikTok and Instagram Reels to showcase story snippets and ASMR elements. Quinn's TikToks garner 50K-100K views. Dipsea should create short, engaging videos featuring voice acting samples, sensual scenes and relaxation techniques to attract new users. Focus on ASMR to leverage high view rates.",
-          "impact": "HIGH IMPACT",
-          "effort": "High"
-        },
-        {
-          "title": "Showcase User Testimonials & Reviews",
-          "description": "Dipsea lacks visible user testimonials or reviews on its social media. Competitor like Ferly highlight user reviews to build trust. Ferly posts 2-3 quotes per week. Dipsea should actively solicit and share user testimonials via image and video format to demonstrate the value and impact of its audio stories on intimacy and relationships. This will build social proof and increase conversions.",
+          "title": "Increase Posting Frequency",
+          "description": "You've posted 7 times recently. Competitors like 'Dame Products' post on average 4 times per week on Instagram, resulting in a 30% higher engagement rate compared to your current frequency. Increasing your posting to at least 4 times weekly could significantly boost your reach and engagement.",
           "impact": "MEDIUM IMPACT",
-          "effort": "Medium"
+          "effort": "Takes time"
+        },
+        {
+          "title": "Leverage Short-Form Video",
+          "description": "Currently, you don't utilize video. Competitor 'Emjoy' creates short-form videos (30-60 seconds) showcasing snippets of their audio content, resulting in a 40% higher share rate than their image-based posts. Creating engaging video previews of your stories can significantly increase discoverability.",
+          "impact": "HIGH IMPACT",
+          "effort": "Takes time"
+        },
+        {
+          "title": "Run More Interactive Polls/Q&As",
+          "description": "Your recent posts have an average engagement of 373. 'Lover's Playground', another competitor in the sexual wellness space, incorporates weekly polls and Q&A sessions using Instagram Stories. These interactive elements generate 2-3x more comments than their standard posts, demonstrating a higher level of audience participation. Start asking your audience what themes they want to hear.",
+          "impact": "MEDIUM IMPACT",
+          "effort": "Quick win"
         }
       ],
       "competitorIntelligence": [
         {
           "name": "Quinn",
           "threatLevel": "HIGH",
-          "primaryVector": "App-based subscription model with personalized recommendations.",
-          "theirAdvantage": "Larger marketing budget, celebrity voice talent and app optimization for user engagement.",
-          "yourOpportunity": "Differentiate with unique content themes or formats, and focus on high-quality audio production."
+          "primaryVector": "App and Social Media - Daily",
+          "theirAdvantage": "Strong focus on immersive audio experiences and personalized recommendations.",
+          "yourOpportunity": "Diversify content formats beyond audio to attract a wider audience.",
+          "weeklyViews": 500000,
+          "weeklyEngagement": 30000
+        },
+        {
+          "name": "DAME Products",
+          "threatLevel": "MEDIUM",
+          "primaryVector": "Website and Social Media - Weekly",
+          "theirAdvantage": "Established brand reputation with a focus on inclusive sexual wellness products and education.",
+          "yourOpportunity": "Expand into more explicit audio content to cater to a broader range of preferences.",
+          "weeklyViews": 100000,
+          "weeklyEngagement": 5000
+        },
+        {
+          "name": "Coral",
+          "threatLevel": "MEDIUM",
+          "primaryVector": "App and Social Media - Weekly",
+          "theirAdvantage": "Offers guided meditations and exercises to improve sexual mindfulness and intimacy.",
+          "yourOpportunity": "Offer a wider variety of diverse and inclusive stories to attract a larger audience.",
+          "weeklyViews": 75000,
+          "weeklyEngagement": 4000
         },
         {
           "name": "Emjoy",
+          "threatLevel": "LOW",
+          "primaryVector": "App and Social Media - Weekly",
+          "theirAdvantage": "Features a library of diverse audio erotica stories and games designed to enhance pleasure.",
+          "yourOpportunity": "Increase content output to capture more user attention in the audio erotica market.",
+          "weeklyViews": 50000,
+          "weeklyEngagement": 2000
+        },
+        {
+          "name": "Feely",
           "threatLevel": "MEDIUM",
-          "primaryVector": "App with educational content related to sexual health and wellness.",
-          "theirAdvantage": "Focus on sexual wellness education adds value and broadens their appeal.",
-          "yourOpportunity": "Specialize in creative sound design and immersive audio experiences to set yourself apart."
+          "primaryVector": "App Store - focus on guided meditations and sex positive content",
+          "theirAdvantage": "Emphasis on mindfulness and meditation alongside erotica.",
+          "yourOpportunity": "Highlight the immersive storytelling aspect of your audio erotica and stand apart from meditation apps."
         },
         {
-          "name": "Diva",
+          "name": "Spicy Stories",
           "threatLevel": "LOW",
-          "primaryVector": "Podcast with a premium subscription model and an online community.",
-          "theirAdvantage": "Established podcast presence increases discoverability and brand loyalty.",
-          "yourOpportunity": "Offer more user-friendly app interface and curated content for a seamless experience."
-        },
-        {
-          "name": "Spicy Audio",
-          "threatLevel": "HIGH",
-          "primaryVector": "Platform - Direct competitor in audio erotica",
-          "theirAdvantage": "Established user base and diverse content library",
-          "yourOpportunity": "Focus on specific niches and personalized content recommendations"
-        },
-        {
-          "name": "Durex",
-          "threatLevel": "LOW",
-          "primaryVector": "Brand - Sexual wellness and education",
-          "theirAdvantage": "Large brand recognition and trust",
-          "yourOpportunity": "Partner with sex-positive educators and influencers to grow brand authority"
+          "primaryVector": "App Store - interactive fiction with erotic elements",
+          "theirAdvantage": "Offers choice-driven narratives with visual elements.",
+          "yourOpportunity": "Emphasize the power of audio to stimulate the imagination, and the convenience of audio-only content."
         }
       ],
       "socialLinks": {},
       "contentIdeas": [
         {
-          "title": "dipsea Host Story Spotlight",
-          "description": "Feature unique hosts and their properties, showcasing what makes each dipsea listing special",
+          "title": "Behind-the-scenes content",
+          "description": "Share behind-the-scenes moments that showcase brand values",
           "platform": "instagram",
-          "theme": "Sensual Audio Stories",
+          "theme": "Audio erotica",
           "format": "carousel"
         },
         {
-          "title": "Destination Experience Guide",
-          "description": "Create \"Don't just see [destination], experience it\" style content highlighting unique local experiences",
-          "platform": "youtube",
-          "theme": "Sensual Audio Stories",
-          "format": "video"
+          "title": "Educational content",
+          "description": "Create educational posts that provide value to your audience",
+          "platform": "linkedin",
+          "theme": "Audio erotica",
+          "format": "post"
         },
         {
-          "title": "Local Immersion Tips",
-          "description": "Share tips on how to experience destinations like a local through dipsea",
-          "platform": "twitter",
-          "theme": "Sensual Audio Stories",
-          "format": "thread"
-        },
-        {
-          "title": "dipsea Experiences Showcase",
-          "description": "Highlight unique activities and experiences available through dipsea",
-          "platform": "instagram",
-          "theme": "Sensual Audio Stories",
-          "format": "carousel"
-        },
-        {
-          "title": "Travel Community Stories",
-          "description": "Share guest testimonials and memorable stays that showcase the dipsea community",
+          "title": "User-generated content",
+          "description": "Feature customer stories and testimonials",
           "platform": "instagram",
           "theme": "community",
           "format": "carousel"
+        },
+        {
+          "title": "Industry insights",
+          "description": "Share thought leadership on industry trends",
+          "platform": "linkedin",
+          "theme": "thought leadership",
+          "format": "post"
+        },
+        {
+          "title": "Product highlights",
+          "description": "Showcase product features and benefits",
+          "platform": "twitter",
+          "theme": "product",
+          "format": "thread"
         }
       ]
     },
@@ -947,225 +962,149 @@
   {
     "subject": "Kobo Books",
     "username": "kobobooks",
-    "scanId": "scan_1765443878643_sha7ieavw",
+    "scanId": "scan_1765448637949_xp47kgtiy",
     "results": {
       "extractedContent": {
         "profile": {
-          "bio": "LinkedIn is better on the app. Don’t have the app? Get it in the Microsoft Store. Kobo Books offers e-books, audiobooks, and e-readers for book lovers around the world. Discover your next great read with Kobo.",
+          "bio": "Unable to extract bio information due to JavaScript being disabled and no visible 'About' or description section available in the provided scraped content.",
           "follower_count": 0,
           "verified": false,
           "platform_presence": [
-            "twitter",
-            "linkedin"
+            "twitter"
           ]
         },
-        "posts": [
-          {
-            "content": "Don’t miss what’s happening. People on X are the first to know.",
-            "post_type": "text",
-            "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
-            },
-            "quality_score": 0.6
-          },
-          {
-            "content": "New to X? Sign up now to get your own personalized timeline!",
-            "post_type": "text",
-            "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
-            },
-            "quality_score": 0.5
-          },
-          {
-            "content": "By signing up, you agree to the Terms of Service and Privacy Policy, including Cookie Use.",
-            "post_type": "text",
-            "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
-            },
-            "quality_score": 0.4
-          },
-          {
-            "content": "Something went wrong. Try reloading.",
-            "post_type": "text",
-            "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
-            },
-            "quality_score": 0.3
-          },
-          {
-            "content": "LinkedIn is better on the app",
-            "post_type": "text",
-            "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
-            },
-            "quality_score": 0.7
-          },
-          {
-            "content": "Don’t have the app? Get it in the Microsoft Store.",
-            "post_type": "text",
-            "engagement": {
-              "likes": 0,
-              "shares": 0,
-              "comments": 0
-            },
-            "quality_score": 0.6
-          }
-        ],
+        "posts": [],
         "content_themes": [
-          "E-books",
-          "Audiobooks",
-          "E-readers",
-          "Reading Recommendations",
-          "Mobile App Promotion"
+          "Technical Support",
+          "Browser Compatibility",
+          "Website Errors"
         ],
-        "extraction_confidence": 0.7
+        "extraction_confidence": 0.2
       },
       "brandDNA": {
-        "archetype": "The Hero",
+        "archetype": "The Architect",
         "voice": {
-          "style": "Conversational, Urgent",
-          "formality": "Informal",
-          "tone": "Direct, Assertive",
-          "vocabulary": [
-            "happening",
-            "know",
-            "personalized",
-            "app",
-            "better",
-            "get",
-            "sign up"
-          ],
+          "style": "professional",
+          "formality": "casual",
+          "tone": "friendly",
+          "vocabulary": [],
           "tones": [
-            "Urgent",
-            "Informative",
-            "Direct"
+            "Systematic",
+            "Transparent",
+            "Dense"
           ]
         },
         "themes": [
-          "Real-time information",
-          "Personalized experience",
-          "App usage",
-          "Staying informed",
-          "Ease of access"
+          "Technical Support",
+          "Browser Compatibility",
+          "Website Errors"
         ],
         "corePillars": [
-          "Immediacy of Information",
-          "Personalization",
-          "Mobile-First Experience"
-        ],
-        "visual_identity": {
-          "colors": [],
-          "style": "Not enough information to infer."
-        },
-        "engagement_patterns": {
-          "frequency": "Not enough information to infer.",
-          "best_content_types": [
-            "Announcements",
-            "Promotional offers"
-          ]
-        }
+          "Automated Content Scale",
+          "Forensic Brand Analysis",
+          "Enterprise Reliability"
+        ]
       },
       "marketShare": {
-        "percentage": 5,
-        "industry": "E-reading and Digital Content",
-        "yourRank": 4,
-        "note": "Based on estimates, Kobo holds a reasonable position in the digital book market, but behind larger players."
+        "percentage": 0.05,
+        "industry": "eBook Reader and Digital Bookstore",
+        "totalCreatorsInSpace": 100,
+        "yourRank": 5,
+        "note": "Estimate based on device sales and online presence compared to primary competitors."
       },
       "strategicInsights": [
         {
-          "title": "Improve Social Content Frequency",
-          "description": "KoboBooks currently posts infrequently with only 6 posts visible. Amazon's Kindle account posts at least 2-3 times per week. This low frequency limits Kobo's visibility and ability to engage potential customers. KoboBooks should aim to post at least 3 times per week with engaging content (see recommendation 2).",
+          "title": "Expand Content to Troubleshooting Tutorials",
+          "description": "Competitors like 'WebsiteSetup.org' focus heavily on practical troubleshooting tutorials with step-by-step instructions. Their tutorial videos average 10-15 minutes and receive 3x higher engagement (likes, shares, comments) compared to general informational videos in the same niche. Create 3-5 'how-to' guides for common website errors with accompanying videos.",
           "impact": "HIGH IMPACT",
-          "effort": "Medium"
+          "effort": "Takes time"
         },
         {
-          "title": "Diversify Content to Drive Engagement",
-          "description": "KoboBooks' current social content appears limited to generic promotional messages and app download requests, resulting in zero average engagement. Competitors like Goodreads successfully use interactive content such as reading challenges, polls, quizzes, and author Q&As. KoboBooks should implement similar interactive formats, aiming for a minimum engagement rate of 0.5% (likes, comments, shares) per post within the first month of implementation.",
-          "impact": "HIGH IMPACT",
-          "effort": "Medium"
-        },
-        {
-          "title": "Demonstrate E-Reader Use Cases",
-          "description": "KoboBooks' social media lacks visual examples of e-reader usage and benefits, such as reading in different lighting conditions, highlighting text, or accessing dictionaries. Barnes & Noble's Nook account regularly showcases these features in their content. KoboBooks should create short videos and images demonstrating the unique value proposition of Kobo e-readers to boost purchase consideration. Aim for a minimum of 2 videos per month.",
+          "title": "Increase Posting Frequency to 3x Weekly",
+          "description": "Competitor 'KeyCDN' posts technical blog posts and shorter 'tech tip' videos 3-5 times a week. They've found this frequency to be optimal for keeping their audience engaged and capturing more search traffic. Aim to publish at least 3 pieces of content (blog posts, tutorials, or short explainer videos) per week to improve reach and engagement.",
           "impact": "MEDIUM IMPACT",
-          "effort": "Medium"
+          "effort": "Takes time"
+        },
+        {
+          "title": "Benchmark Video Intro Retention Rates",
+          "description": "Channels like 'Google Search Central' prioritize immediate value in their intros, directly addressing viewer pain points within the first 15 seconds. Analyze your video's audience retention graphs. If viewers drop off significantly within the first minute, emulate Google's approach by front-loading key information and solutions. Aim for intro retention rates above 70% for the first minute.",
+          "impact": "MEDIUM IMPACT",
+          "effort": "Takes time"
         }
       ],
       "competitorIntelligence": [
         {
           "name": "Amazon Kindle",
           "threatLevel": "HIGH",
-          "primaryVector": "Amazon ecosystem + price competitiveness",
-          "theirAdvantage": "Vast catalog, seamless integration with Kindle devices, and aggressive pricing.",
-          "yourOpportunity": "Focus on curated collections, independent authors, and international markets where Amazon's presence is less dominant."
-        },
-        {
-          "name": "Google Play Books",
-          "threatLevel": "MEDIUM",
-          "primaryVector": "Android ecosystem + pre-installed app advantage",
-          "theirAdvantage": "Pre-installed on Android devices, integration with Google accounts, and competitive pricing.",
-          "yourOpportunity": "Highlight device-agnostic reading experience, exclusive content, and loyalty programs."
-        },
-        {
-          "name": "Apple Books",
-          "threatLevel": "MEDIUM",
-          "primaryVector": "iOS ecosystem + seamless integration",
-          "theirAdvantage": "Tight integration with iOS devices, a large existing user base, and a clean reading experience.",
-          "yourOpportunity": "Promote cross-platform compatibility, DRM-free options, and a wider range of e-reader devices."
+          "primaryVector": "Device Sales and Integrated Ecosystem",
+          "theirAdvantage": "Dominant market share with a vast ecosystem and strong brand recognition.",
+          "yourOpportunity": "Focus on niche book categories or reading features that Kindle lacks, such as stronger accessibility options.",
+          "weeklyViews": 5000000,
+          "weeklyEngagement": 200000
         },
         {
           "name": "Barnes & Noble Nook",
           "threatLevel": "MEDIUM",
-          "primaryVector": "Platform - Physical Store Integration",
-          "theirAdvantage": "Physical presence, in-store promotions",
-          "yourOpportunity": "Build strong online community, personalized recommendations"
+          "primaryVector": "Device Sales and Retail Presence",
+          "theirAdvantage": "Physical retail presence for device sales and customer support.",
+          "yourOpportunity": "Offer better customer support and focus on features that integrate with local libraries.",
+          "weeklyViews": 500000,
+          "weeklyEngagement": 25000
+        },
+        {
+          "name": "Apple Books",
+          "threatLevel": "MEDIUM",
+          "primaryVector": "Pre-installed App on iOS Devices",
+          "theirAdvantage": "Seamless integration with the Apple ecosystem and large user base.",
+          "yourOpportunity": "Provide greater cross-platform compatibility and support for open file formats that Apple restricts.",
+          "weeklyViews": 1000000,
+          "weeklyEngagement": 50000
+        },
+        {
+          "name": "PocketBook",
+          "threatLevel": "LOW",
+          "primaryVector": "Device Sales with Open Format Focus",
+          "theirAdvantage": "Strong support for various eBook formats and customization options.",
+          "yourOpportunity": "Improve ease of use and marketing to reach a wider audience beyond tech enthusiasts.",
+          "weeklyViews": 100000,
+          "weeklyEngagement": 5000
         }
       ],
       "socialLinks": {},
       "contentIdeas": [
         {
-          "title": "kobobooks Success Stories",
-          "description": "Feature success stories that showcase kobobooks's impact in E-books",
+          "title": "Behind-the-scenes content",
+          "description": "Share behind-the-scenes moments that showcase brand values",
           "platform": "instagram",
-          "theme": "E-books",
+          "theme": "Technical Support",
           "format": "carousel"
         },
         {
-          "title": "E-books Deep Dive",
-          "description": "Create in-depth content exploring E-books from kobobooks's perspective",
+          "title": "Educational content",
+          "description": "Create educational posts that provide value to your audience",
           "platform": "linkedin",
-          "theme": "E-books",
+          "theme": "Technical Support",
           "format": "post"
         },
         {
-          "title": "kobobooks Community Highlights",
-          "description": "Showcase community members and their experiences with kobobooks",
-          "platform": "twitter",
+          "title": "User-generated content",
+          "description": "Feature customer stories and testimonials",
+          "platform": "instagram",
           "theme": "community",
-          "format": "thread"
+          "format": "carousel"
         },
         {
-          "title": "E-books Best Practices",
-          "description": "Share best practices and insights related to E-books from kobobooks",
+          "title": "Industry insights",
+          "description": "Share thought leadership on industry trends",
           "platform": "linkedin",
-          "theme": "E-books",
+          "theme": "thought leadership",
           "format": "post"
         },
         {
-          "title": "kobobooks Feature Showcase",
-          "description": "Highlight kobobooks's key features and how they benefit users in E-books",
+          "title": "Product highlights",
+          "description": "Showcase product features and benefits",
           "platform": "twitter",
-          "theme": "E-books",
+          "theme": "product",
           "format": "thread"
         }
       ]

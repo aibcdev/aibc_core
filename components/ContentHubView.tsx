@@ -399,7 +399,7 @@ const ContentHubView: React.FC = () => {
         return hitsGeneric && missingBrand;
       };
       contentIdeasFromScan = contentIdeasFromScan.filter((idea) => !isGenericIdea(idea));
-
+      
       // Enhance content ideas with brand assets, strategy, and competitor context
       const enhancedIdeas = await enhanceContentIdeasWithContext(contentIdeasFromScan, {
         brandMaterials,
@@ -498,7 +498,7 @@ const ContentHubView: React.FC = () => {
 
   const handleRegenerate = async () => {
     try {
-      setIsRegenerating(true);
+    setIsRegenerating(true);
       
       // Force-fetch latest scan results to refresh cache before reloading
       const lastScanId = localStorage.getItem('lastScanId');
@@ -525,9 +525,9 @@ const ContentHubView: React.FC = () => {
         console.warn('Content Hub: No lastScanId found; running cached refresh only');
       }
 
-      await loadContent();
+    await loadContent();
     } finally {
-      setIsRegenerating(false);
+    setIsRegenerating(false);
     }
   };
 

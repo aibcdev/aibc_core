@@ -1,223 +1,233 @@
 {
-  "scanId": "scan_1765395041588_qn0ufg04i",
-  "timestamp": "2025-12-10T19:32:23.807Z",
+  "scanId": "scan_1765458086220_4ord44ago",
+  "timestamp": "2025-12-11T13:05:15.022Z",
   "results": {
     "extractedContent": {
       "profile": {
-        "bio": "Airbnb connects millions of people to unique travel experiences and places to stay around the world. A community built on connection, belonging, and unforgettable adventures.",
-        "follower_count": 3117453,
+        "bio": "Airbnb is a community based on connection and belonging. Every day, hosts offer unique stays, experiences and services that make it possible for guests to connect with communities in a more authentic way.",
+        "follower_count": 3118122,
         "verified": false,
         "platform_presence": [
           "twitter",
           "instagram",
           "linkedin",
           "youtube",
+          "website",
           "website"
         ]
       },
       "posts": [
         {
-          "content": "K-Pop Style | Airbnb Experiences",
-          "post_type": "video",
+          "content": "“The world is just endlessly interesting.” — Hiroki Asai , Airbnb Chief Experience Officer\n\nAirbnb has long believed that creativity and design can profoundly shape how people connect and experience the world. On the latest episode of COOL HUNTING 's Design Tangents, Hiroki joins hosts Josh Rubin and Evan Orensten at our San Francisco HQ to share how that philosophy guides everything we do. Watch the episode here: https://lnkd.in/e9RX43dZ …more",
+          "post_type": "text",
           "engagement": {
-            "views": 5100000
+            "likes": 279,
+            "shares": 23,
+            "comments": 0
           },
           "quality_score": 0.9
         },
         {
-          "content": "Stay Grounded | Introducing Airbnb Services",
+          "content": "What’s one piece of advice every new Airbnb employee should hear? Guillaume Golsong's answer came after an unforgettable moment with CEO Brian Chesky . 🎥 Watch now. …more",
           "post_type": "video",
           "engagement": {
-            "views": 8600000
+            "likes": 490,
+            "shares": 61,
+            "comments": 0
+          },
+          "quality_score": 0.85
+        },
+        {
+          "content": "Our hearts are with everyone affected by Hurricane Melissa. To support those impacted, Airbnb.org is currently providing free, emergency housing to first responders. They’re also working with local nonprofit partners and government officials to offer additional housing support to displaced people once the storm passes and damage has been assessed. Stays are completely free for guests and are funded by donations to Airbnb.org and the generosity of Airbnb hosts. Stay updated and learn how to get involved here: https://lnkd.in/gZqHF6ra",
+          "post_type": "text",
+          "engagement": {
+            "likes": 1189,
+            "shares": 49,
+            "comments": 0
+          },
+          "quality_score": 0.95
+        },
+        {
+          "content": "Today we launched 65 new features based on feedback from our community. Now in the app, you’ll find new social tools for guest-to-guest connections, smarter search and improved maps, more flexible payments, and AI-powered support. Read more: https://lnkd.in/eX7mCJV6 ‘I want it to be a community’: Brian Chesky on Airbnb’s AI and social reinvention fastcompany.com",
+          "post_type": "text",
+          "engagement": {
+            "likes": 856,
+            "shares": 66,
+            "comments": 0
           },
           "quality_score": 0.9
         },
         {
-          "content": "Don’t just see Venice, experience it on Airbnb",
-          "post_type": "video",
+          "content": "\"The problem with politics—I don’t have a better system, but it’s 50-plus-one. You have to divide them and get plus one. And it is inherently a divisive thing, and Airbnb’s mission is inherently unifying. Do you know the number of Trump supporters who stayed in a house of a Kamala Harris supporter over the course of the election? Millions. Do you know the number of Democrats, Republicans that live together and don’t even know they’re Democrats and Republicans? When you travel, it’s one of the few times in your life that you’re truly open-minded.” - Brian Chesky Airbnb CEO Brian Chesky on the difference between a business decision and a principle decision fastcompany.com",
+          "post_type": "text",
           "engagement": {
-            "views": 92000
+            "likes": 220,
+            "shares": 26,
+            "comments": 0
           },
           "quality_score": 0.8
         },
         {
-          "content": "Don’t just see Tokyo, experience it on Airbnb.",
-          "post_type": "video",
+          "content": "Across Japan’s countryside, approximately 9 million homes sit quietly, steeped in history but standing empty. By 2033, one in three rural homes could be vacant. To help change that, we launched the Akiya Design Project with the Japan Kominka Association and cultural icons Kiko Mizuhara and Rola. Together, we restored traditional kominka homes in Kyoto and Ibaraki, transforming them into spaces where travelers can experience authentic Japanese culture firsthand. This project isn’t just about beautiful design. It's about reviving rural tourism, preserving cultural heritage, and supporting local communities. These kominka may be off the beaten path, but their deep history and sense of place make them destinations in their own right. A reminder that sometimes, the most meaningful travel experiences lie far from the familiar.",
+          "post_type": "text",
           "engagement": {
-            "views": 300000
+            "likes": 674,
+            "shares": 55,
+            "comments": 0
+          },
+          "quality_score": 0.9
+        },
+        {
+          "content": "Next year’s FIFA World Cup 26™ will bring 104 matches, 48 nations, and 16 host cities. But the real story is what it means for the people and neighborhoods that make the world’s game possible. That’s why this week in Brooklyn, we joined FIFA World Cup 26™ New York New Jersey , Olympic champion Carli Lloyd , and local leaders to announce Airbnb’s $1M+ community investment across New York and New Jersey.",
+          "post_type": "text",
+          "engagement": {
+            "likes": 323,
+            "shares": 21,
+            "comments": 0
           },
           "quality_score": 0.8
         },
         {
-          "content": "Don’t just see Seoul, experience it on Airbnb",
-          "post_type": "video",
+          "content": "We’re rolling out a new water safety feature to help guests feel more confident and prepared 🌊🛟 The feature detects when a booking includes water amenities and then: 💧 Shares in-app water safety tips 💬 Suggests smart questions to ask the host 📱 Adds helpful info to the reservation details page 📨 Prompts important conversations right in the messaging thread All designed to support safe, informed travel decisions before check-in. https://lnkd.in/eK-Syqnt",
+          "post_type": "text",
           "engagement": {
-            "views": 103000
+            "likes": 362,
+            "shares": 86,
+            "comments": 0
           },
-          "quality_score": 0.8
-        },
-        {
-          "content": "Don’t just see São Paulo, experience it on Airbnb",
-          "post_type": "video",
-          "engagement": {
-            "views": 75000
-          },
-          "quality_score": 0.8
-        },
-        {
-          "content": "Sidekick | Airbnb It",
-          "post_type": "video",
-          "engagement": {
-            "views": 32000
-          },
-          "quality_score": 0.7
-        },
-        {
-          "content": "New Hosting Tools for Airbnb Experiences",
-          "post_type": "video",
-          "engagement": {
-            "views": 8400
-          },
-          "quality_score": 0.7
+          "quality_score": 0.9
         }
       ],
       "content_themes": [
-        "Travel Experiences",
-        "Hosting Services",
-        "Destination Spotlights (Tokyo, Seoul, Venice)",
-        "New Hosting Tools",
-        "Airbnb It Campaign"
+        "Community Connection & Belonging",
+        "Travel Experiences & Services",
+        "Host Support and Empowerment",
+        "Innovation and New Features",
+        "Community Investment and Social Impact"
       ],
-      "extraction_confidence": 0.8
+      "extraction_confidence": 0.9
     },
     "brandDNA": {
-      "archetype": "The Explorer",
+      "archetype": "The Caregiver",
       "voice": {
-        "style": "Conversational",
-        "formality": "Informal",
-        "tone": "Encouraging, aspirational",
+        "style": "Casual and informative",
+        "formality": "Informal to Semi-formal",
+        "tone": "Empathetic, optimistic, and community-focused",
         "vocabulary": [
+          "Community",
+          "Connect",
           "Experience",
-          "See",
-          "Grounded",
-          "Hosting",
-          "Airbnb",
-          "Sidekick",
-          "K-Pop",
-          "Services",
-          "Tools"
+          "Support",
+          "Travel",
+          "Authentic",
+          "Innovation",
+          "Safety",
+          "Heritage",
+          "Belonging"
         ],
         "tones": [
-          "Inspirational",
-          "Friendly",
-          "Empowering"
+          "Empathetic",
+          "Innovative",
+          "Community-focused"
         ]
       },
       "themes": [
-        "Travel",
-        "Experiences over Sightseeing",
-        "Hosting",
-        "Community",
-        "Authenticity"
+        "Community building and connection",
+        "Design and creativity in travel experiences",
+        "Social impact and disaster relief",
+        "Innovation and technology for improved user experience",
+        "Cultural preservation and promotion of authentic travel"
       ],
       "corePillars": [
-        "Experiential Travel",
-        "Local Immersion",
-        "Empowering Hosts",
-        "Unique Discoveries"
+        "Creating community and belonging through travel",
+        "Empowering hosts and guests through innovative technology",
+        "Supporting communities and preserving cultural heritage",
+        "Promoting safe and responsible travel",
+        "Providing unique and authentic travel experiences"
       ],
       "visual_identity": {
         "colors": [
-          "Not discernable from text alone"
+          "Not explicitly mentioned in the text but often uses warm, inviting colors",
+          "likely blues (for water safety)"
         ],
-        "style": "Likely emphasizes authentic visuals from diverse locations"
+        "style": "Clean, modern, and approachable, with a focus on showcasing unique homes and experiences. Focuses on photography and videography of real people and places."
       },
       "engagement_patterns": {
-        "frequency": "Not discernable from text alone",
+        "frequency": "Regular, consistent posting schedule",
         "best_content_types": [
-          "Experiences, Destination highlights, Hosting tips"
+          "Stories about hosts and guests",
+          "Updates on new features and initiatives",
+          "Content highlighting social impact and community support",
+          "Design-focused content showcasing unique properties",
+          "Partnership announcements",
+          "Video Content"
         ]
       }
     },
     "marketShare": {
-      "percentage": 30,
-      "industry": "Travel Experiences & Homestay Platform",
-      "totalCreatorsInSpace": 20,
-      "yourRank": 1,
-      "note": "Estimate based on brand recognition, global reach, and website traffic compared to other platforms offering similar services."
+      "percentage": 5,
+      "industry": "Vacation Rentals",
+      "yourRank": 4,
+      "note": "Estimate, Airbnb is dominant but fragmented market."
     },
     "strategicInsights": [
       {
-        "title": "Prioritize Video Content Over Text",
-        "description": "While Airbnb's content is primarily text-based, competitors like GetYourGuide and Viator heavily leverage video. GetYourGuide, for example, showcases visually stunning destination videos averaging 2-3 minutes, often featuring customer testimonials, which see engagement rates 3x higher than Airbnb's text-based posts. Incorporating short, engaging videos highlighting unique Airbnb Experiences or host stories can significantly boost engagement.",
+        "title": "Showcase Authentic Guest Experiences",
+        "description": "Current format/cadence: Text-heavy posts with limited visuals, low engagement -> Category winners: UGC-driven content and authentic travel stories are highly engaging, showcasing real experiences over polished marketing. -> Primary competitors: Vrbo/Booking.com leverage user reviews and photos prominently, building trust and social proof. Secondary competitors: Travel influencers and bloggers gain traction with raw, unfiltered travel content. -> Engagement move: Launch a campaign encouraging guests to share their Airbnb experiences with photos/videos, offering incentives for the best submissions. Repost top UGC content daily, aiming for a +40% increase in saves and shares due to increased authenticity.",
         "impact": "HIGH IMPACT",
-        "effort": "Takes time"
+        "effort": "Medium effort"
       },
       {
-        "title": "Increase Posting Frequency to 3x/Week",
-        "description": "Currently, the posting frequency is not discernable, but competitor data shows a positive correlation between consistent posting and engagement. Both Culture Trip and Lonely Planet post an average of 3-5 times per week across their social media platforms. Culture Trip achieves an average engagement rate of 2.5% with this frequency, compared to the current estimated engagement of 0%. Aiming for a minimum of 3 posts per week focusing on diverse experiences, host spotlights, and travel tips will help increase overall visibility and engagement.",
-        "impact": "MEDIUM IMPACT",
-        "effort": "Takes time"
+        "title": "Boost Host-Focused Video Content",
+        "description": "Current format/cadence: Limited video content, primarily featuring Airbnb executives or promotional material. -> Category winners: 'Day in the life' style videos featuring hosts, property tours, and tips are popular, fostering community and trust. -> Primary competitors: Vrbo offers host onboarding videos and guides. Secondary competitors: Real estate channels and home design influencers create engaging property-related video content. -> Engagement move: Produce a series of short (60-90 second) Reels and TikToks featuring diverse hosts and unique properties. Aim for a 3x/week posting cadence. Include interactive elements like polls and Q&As in the comments to boost engagement and increase shares by +50% within the first month.",
+        "impact": "HIGH IMPACT",
+        "effort": "Medium effort"
       },
       {
-        "title": "Optimize Content for Visual Platforms",
-        "description": "Airbnb's current content doesn't appear to focus on strong visuals. Competitors like Conde Nast Traveler prioritize visually rich content on platforms like Instagram and Pinterest, with professional photography and short videos. Conde Nast Traveler's Instagram posts, featuring stunning travel photography, generate 5x more engagement compared to text-based updates. Repurposing existing text-based content into visually compelling formats (e.g., infographics, carousel posts with high-quality images) will likely improve engagement.",
+        "title": "Amplify Community Impact Stories",
+        "description": "Current format/cadence: Occasional mentions of Airbnb.org. -> Category winners: Brands that genuinely showcase their positive social impact resonate with audiences. -> Primary competitors: Booking.com highlights its sustainability initiatives. Secondary competitors: B Corporations gain trust through verified social responsibility. -> Engagement move: Create a monthly 'Community Spotlight' series, featuring stories of how Airbnb hosts and guests are making a positive impact (e.g., supporting local businesses, promoting cultural exchange, or providing emergency housing). Use carousel posts with compelling visuals and data points to illustrate the impact. Aim for a +20% increase in comments focused on positive community impact and an increase in shares/saves due to alignment with user values.",
         "impact": "MEDIUM IMPACT",
-        "effort": "Quick win"
+        "effort": "Medium effort"
       }
     ],
     "competitorIntelligence": [
       {
-        "name": "Booking.com",
+        "name": "Booking",
+        "classification": "PRIMARY",
         "threatLevel": "HIGH",
-        "primaryVector": "Website/App - Continuous Updates",
-        "theirAdvantage": "Largest inventory of hotels and traditional accommodations, with a focus on ease of booking.",
-        "yourOpportunity": "Emphasize unique experiences and homestays to differentiate further.",
-        "weeklyViews": 50000000,
-        "weeklyEngagement": 2000000
-      },
-      {
-        "name": "Vrbo",
-        "threatLevel": "HIGH",
-        "primaryVector": "Website/App - Continuous Updates",
-        "theirAdvantage": "Strong focus on vacation rentals and whole-house properties, attracting families and groups.",
-        "yourOpportunity": "Target individual travelers and smaller groups with unique, curated experiences.",
-        "weeklyViews": 25000000,
-        "weeklyEngagement": 1000000
+        "primaryVector": "Marketplace reach & conversion",
+        "theirAdvantage": "Large supply and paid acquisition scale",
+        "yourOpportunity": "Differentiate via verified stays, host quality, and local storytelling"
       },
       {
         "name": "Expedia",
-        "threatLevel": "MEDIUM",
-        "primaryVector": "Website/App - Continuous Updates",
-        "theirAdvantage": "Comprehensive travel booking platform with flights, hotels, and car rentals, offering bundled deals.",
-        "yourOpportunity": "Focus on localized, authentic experiences rather than broad travel packages.",
-        "weeklyViews": 30000000,
-        "weeklyEngagement": 1200000
-      },
-      {
-        "name": "Marriott Bonvoy Homes & Villas",
-        "threatLevel": "MEDIUM",
-        "primaryVector": "Website/App - Continuous Updates",
-        "theirAdvantage": "Leverages the Marriott brand and loyalty program to attract a segment of travelers seeking high-quality rentals.",
-        "yourOpportunity": "Highlight the diversity of your offering, showcasing unique and independent properties beyond hotel-affiliated residences.",
-        "weeklyViews": 5000000,
-        "weeklyEngagement": 200000
+        "classification": "PRIMARY",
+        "threatLevel": "HIGH",
+        "primaryVector": "Marketplace reach & conversion",
+        "theirAdvantage": "Large supply and paid acquisition scale",
+        "yourOpportunity": "Differentiate via verified stays, host quality, and local storytelling"
       },
       {
         "name": "Tripadvisor",
-        "threatLevel": "LOW",
-        "primaryVector": "Website - Continuous Updates",
-        "theirAdvantage": "Vast user-generated content including reviews and forums, providing social proof and travel planning resources.",
-        "yourOpportunity": "Improve trust through review moderation, combat fake reviews, and offer more reliable quality assurance for your properties.",
-        "weeklyViews": 40000000,
-        "weeklyEngagement": 1500000
+        "classification": "PRIMARY",
+        "threatLevel": "HIGH",
+        "primaryVector": "Marketplace reach & conversion",
+        "theirAdvantage": "Large supply and paid acquisition scale",
+        "yourOpportunity": "Differentiate via verified stays, host quality, and local storytelling"
       },
       {
-        "name": "Marriott International",
+        "name": "Booking.com",
+        "threatLevel": "HIGH",
+        "primaryVector": "Platform - Aggressive Marketing & Global Reach",
+        "theirAdvantage": "Vast inventory, established brand recognition",
+        "yourOpportunity": "Focus on unique experiences and personalized service to differentiate."
+      },
+      {
+        "name": "Vrbo",
         "threatLevel": "MEDIUM",
-        "primaryVector": "Hospitality - Hotel Chain",
-        "theirAdvantage": "Established brand, loyalty programs, consistent quality",
-        "yourOpportunity": "Highlight personalized experiences and local immersion."
+        "primaryVector": "Platform - Vacation Rentals focus",
+        "theirAdvantage": "Caters to large groups/families, focusing on vacation homes.",
+        "yourOpportunity": "Expand offerings to include curated experiences alongside vacation rental options."
       }
     ],
     "socialLinks": {
@@ -225,51 +235,52 @@
       "instagram": "https://instagram.com/airbnb",
       "linkedin": "https://linkedin.com/company/airbnb",
       "facebook": "https://facebook.com/airbnb",
-      "youtube": "https://youtube.com/@airbnb"
+      "youtube": "https://youtube.com/@Airbnb",
+      "tiktok": "https://www.tiktok.com/@airbnb"
     },
     "contentIdeas": [
       {
-        "title": "Behind-the-scenes content",
-        "description": "Share behind-the-scenes moments that showcase brand values",
+        "title": "airbnb Host Story Spotlight",
+        "description": "Feature unique hosts and their properties, showcasing what makes each airbnb listing special",
         "platform": "instagram",
-        "theme": "Travel Experiences",
+        "theme": "Community Connection & Belonging",
         "format": "carousel"
       },
       {
-        "title": "Educational content",
-        "description": "Create educational posts that provide value to your audience",
-        "platform": "linkedin",
-        "theme": "Travel Experiences",
-        "format": "post"
+        "title": "Destination Experience Guide",
+        "description": "Create \"Don't just see [destination], experience it\" style content highlighting unique local experiences",
+        "platform": "youtube",
+        "theme": "Community Connection & Belonging",
+        "format": "video"
       },
       {
-        "title": "User-generated content",
-        "description": "Feature customer stories and testimonials",
+        "title": "Local Immersion Tips",
+        "description": "Share tips on how to experience destinations like a local through airbnb",
+        "platform": "twitter",
+        "theme": "Community Connection & Belonging",
+        "format": "thread"
+      },
+      {
+        "title": "airbnb Experiences Showcase",
+        "description": "Highlight unique activities and experiences available through airbnb",
+        "platform": "instagram",
+        "theme": "Community Connection & Belonging",
+        "format": "carousel"
+      },
+      {
+        "title": "Travel Community Stories",
+        "description": "Share guest testimonials and memorable stays that showcase the airbnb community",
         "platform": "instagram",
         "theme": "community",
         "format": "carousel"
-      },
-      {
-        "title": "Industry insights",
-        "description": "Share thought leadership on industry trends",
-        "platform": "linkedin",
-        "theme": "thought leadership",
-        "format": "post"
-      },
-      {
-        "title": "Product highlights",
-        "description": "Showcase product features and benefits",
-        "platform": "twitter",
-        "theme": "product",
-        "format": "thread"
       }
     ]
   },
   "assessment": {
     "successes": [
-      "✅ Found 5 social links",
+      "✅ Found 6 social links",
       "✅ Extracted 8 posts",
-      "✅ Profile bio extracted (174 chars)"
+      "✅ Profile bio extracted (204 chars)"
     ],
     "issues": []
   }
