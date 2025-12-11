@@ -1139,7 +1139,8 @@ Return JSON array:
       // FINAL CHECK: If still empty, generate absolute minimum fallback
       if (contentIdeas.length === 0) {
         addLog(scanId, `[CRITICAL] Still no content ideas - generating absolute minimum`);
-      contentIdeas = [
+        const primaryTheme = validatedContent.content_themes[0] || 'brand content';
+        contentIdeas = [
           {
             title: `${brandName} Brand Story`,
             description: `Share ${brandName}'s unique story and mission in the ${nicheIndicators || 'industry'} space`,
