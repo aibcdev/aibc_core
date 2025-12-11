@@ -4207,7 +4207,74 @@ function generateIndustrySpecificFallback(brandName: string, nicheIndicators: st
   const lowerTheme = primaryTheme.toLowerCase();
   const lowerBrand = brandName.toLowerCase();
   
-  // ATHLETIC/APPAREL CHECK FIRST (higher priority) - includes specific brand detection
+  // VIDEO GAME CHECK FIRST (highest priority)
+  const isVideoGame = (
+    lowerBrand.includes('football') && lowerBrand.includes('manager') ||
+    lowerBrand.includes('fifa') ||
+    lowerBrand.includes('game') ||
+    lowerNiche.includes('video game') ||
+    lowerNiche.includes('gaming') ||
+    lowerNiche.includes('simulation') ||
+    lowerTheme.includes('game') ||
+    lowerTheme.includes('gaming')
+  );
+  
+  if (isVideoGame) {
+    return [
+      { 
+        title: `I played ${brandName} for 1000 hours. Here's what they don't tell you...`,
+        description: `Inspired by gaming YouTubers like Sidemen who get 10M+ views with brutally honest game reviews.`,
+        platform: 'youtube',
+        platformHook: 'Thumbnail: 1000 HOURS LATER... with shocked face',
+        format: 'video',
+        competitorInspiration: 'Sidemen/KSI game review format - adapted for dedicated gameplay review',
+        estimatedEngagement: '5M views, 200K comments',
+        whyItWorks: 'Long playtime = credibility, honest = trust, specific hour count = curiosity'
+      },
+      { 
+        title: `The ${brandName} secrets pros use but never share...`,
+        description: `Inspired by esports content creators revealing hidden mechanics and tactics.`,
+        platform: 'tiktok',
+        platformHook: 'POV: Your friend who is suspiciously good at the game',
+        format: 'reel',
+        competitorInspiration: 'Esports tutorial content - adapted with exclusivity angle',
+        estimatedEngagement: '3M views, 500K saves',
+        whyItWorks: 'Secret + actionable tips = massive save rate'
+      },
+      { 
+        title: `Why ${brandName} is about to change forever (insider thread)`,
+        description: `Inspired by gaming leak accounts that drive massive speculation and engagement.`,
+        platform: 'twitter',
+        platformHook: 'Thread starting with "I have information..."',
+        format: 'thread',
+        competitorInspiration: 'Gaming insider accounts - adapted for community speculation',
+        estimatedEngagement: '1M impressions, 50K retweets',
+        whyItWorks: 'Insider info + speculation = viral sharing'
+      },
+      { 
+        title: `${brandName} tier list: Every feature ranked from GOAT to garbage`,
+        description: `Inspired by ranking content that dominates gaming YouTube and TikTok.`,
+        platform: 'youtube',
+        platformHook: 'Thumbnail: Feature grid with big S/F tier markers',
+        format: 'video',
+        competitorInspiration: 'Tier list format that dominates gaming content',
+        estimatedEngagement: '2M views, comment section debate',
+        whyItWorks: 'Rankings + controversy = engagement war in comments'
+      },
+      { 
+        title: `I recreated [real event] in ${brandName} and this happened...`,
+        description: `Inspired by simulation recreation content that goes viral on social media.`,
+        platform: 'instagram',
+        platformHook: 'Carousel showing real vs simulation comparison',
+        format: 'carousel',
+        competitorInspiration: 'Simulation recreation content',
+        estimatedEngagement: '500K saves, 100K shares',
+        whyItWorks: 'Real world comparison = relatable + shareable'
+      }
+    ];
+  }
+  
+  // ATHLETIC/APPAREL CHECK (high priority)
   const isAthletic = (
     lowerBrand.includes('lululemon') || 
     lowerBrand.includes('gymshark') ||
@@ -4586,10 +4653,35 @@ RETURN JSON ONLY:
         return false;
       };
 
-      const normalizeCompetitors = (list: any[]) =>
+      // CRITICAL: Filter out competitors from wrong industries
+      const isWrongIndustryCompetitor = (compName: string, industry: string): boolean => {
+        const compLower = compName.toLowerCase();
+        const industryLower = industry.toLowerCase();
+        
+        // Travel companies that should ONLY appear for travel brands
+        const travelCompanies = ['vrbo', 'booking.com', 'booking', 'expedia', 'tripadvisor', 'agoda', 'hotels.com', 'kayak', 'trivago'];
+        const isTravelCompetitor = travelCompanies.some(t => compLower.includes(t));
+        const isTravelIndustry = industryLower.includes('travel') || industryLower.includes('hotel') || industryLower.includes('booking') || industryLower.includes('rental') || industryLower.includes('hospitality');
+        
+        // If it's a travel competitor but NOT a travel industry, filter it out
+        if (isTravelCompetitor && !isTravelIndustry) return true;
+        
+        // Athletic companies that should ONLY appear for athletic brands
+        const athleticCompanies = ['nike', 'adidas', 'puma', 'under armour', 'lululemon', 'reebok', 'new balance', 'asics'];
+        const isAthleticCompetitor = athleticCompanies.some(a => compLower.includes(a));
+        const isAthleticIndustry = industryLower.includes('athletic') || industryLower.includes('apparel') || industryLower.includes('footwear') || industryLower.includes('sport') || industryLower.includes('fitness');
+        
+        // If it's an athletic competitor but NOT an athletic industry, filter it out
+        if (isAthleticCompetitor && !isAthleticIndustry) return true;
+        
+        return false;
+      };
+
+      const normalizeCompetitors = (list: any[], industry: string = '') =>
         list
           .filter((comp: any) => comp && comp.name && comp.name.length > 0)
           .filter((comp: any) => !isSelfCompetitor(comp.name))
+          .filter((comp: any) => !isWrongIndustryCompetitor(comp.name, industry))
           .map((comp: any) => ({
             name: comp.name,
             classification: comp.classification || comp.class || 'PRIMARY',
@@ -4659,13 +4751,14 @@ RETURN JSON ONLY:
       };
 
       if (competitorData.competitors && Array.isArray(competitorData.competitors)) {
-        const competitors = applyPrimarySecondaryOverlay(normalizeCompetitors(competitorData.competitors));
+        const industry = competitorData.marketShare?.industry || nicheContext || '';
+        const competitors = applyPrimarySecondaryOverlay(normalizeCompetitors(competitorData.competitors, industry));
         if (competitors.length === 0) {
           console.error('No valid competitors after filtering:', competitorData.competitors);
           throw new Error('No valid competitors found in response - all were filtered out');
         }
 
-        console.log(`Generated ${competitors.length} competitors for ${username}`);
+        console.log(`Generated ${competitors.length} competitors for ${username} in ${industry}`);
         return {
           marketShare: competitorData.marketShare || null,
           topPerformer: competitorData.topPerformer || null,
@@ -4674,7 +4767,7 @@ RETURN JSON ONLY:
       }
 
       if (Array.isArray(competitorData)) {
-        const competitors = applyPrimarySecondaryOverlay(normalizeCompetitors(competitorData));
+        const competitors = applyPrimarySecondaryOverlay(normalizeCompetitors(competitorData, nicheContext || ''));
         if (competitors.length === 0) {
           console.error('No valid competitors after filtering array:', competitorData);
           throw new Error('No valid competitors found in array - all were filtered out');
