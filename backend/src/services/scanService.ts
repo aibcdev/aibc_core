@@ -4655,24 +4655,42 @@ RETURN JSON ONLY:
 
       // CRITICAL: Filter out competitors from wrong industries
       const isWrongIndustryCompetitor = (compName: string, industry: string): boolean => {
-        const compLower = compName.toLowerCase();
+        const compLower = compName.toLowerCase().replace(/[^a-z0-9]/g, '');
         const industryLower = industry.toLowerCase();
         
+        console.log(`[FILTER DEBUG] Checking competitor: "${compName}" (normalized: "${compLower}") in industry: "${industry}"`);
+        
         // Travel companies that should ONLY appear for travel brands
-        const travelCompanies = ['vrbo', 'booking.com', 'booking', 'expedia', 'tripadvisor', 'agoda', 'hotels.com', 'kayak', 'trivago'];
+        const travelCompanies = ['vrbo', 'bookingcom', 'booking', 'expedia', 'tripadvisor', 'agoda', 'hotelscom', 'kayak', 'trivago', 'airbnb'];
         const isTravelCompetitor = travelCompanies.some(t => compLower.includes(t));
-        const isTravelIndustry = industryLower.includes('travel') || industryLower.includes('hotel') || industryLower.includes('booking') || industryLower.includes('rental') || industryLower.includes('hospitality');
+        const isTravelIndustry = industryLower.includes('travel') || industryLower.includes('hotel') || industryLower.includes('rental') || industryLower.includes('hospitality') || industryLower.includes('accommodation') || industryLower.includes('vacation');
+        
+        console.log(`[FILTER DEBUG] isTravelCompetitor: ${isTravelCompetitor}, isTravelIndustry: ${isTravelIndustry}`);
         
         // If it's a travel competitor but NOT a travel industry, filter it out
-        if (isTravelCompetitor && !isTravelIndustry) return true;
+        if (isTravelCompetitor && !isTravelIndustry) {
+          console.log(`[FILTER] ✅ REMOVING travel competitor "${compName}" from non-travel industry "${industry}"`);
+          return true;
+        }
         
-        // Athletic companies that should ONLY appear for athletic brands
-        const athleticCompanies = ['nike', 'adidas', 'puma', 'under armour', 'lululemon', 'reebok', 'new balance', 'asics'];
+        // Athletic companies that should ONLY appear for athletic/apparel brands  
+        const athleticCompanies = ['nike', 'adidas', 'puma', 'underarmour', 'lululemon', 'reebok', 'newbalance', 'asics', 'gymshark'];
         const isAthleticCompetitor = athleticCompanies.some(a => compLower.includes(a));
-        const isAthleticIndustry = industryLower.includes('athletic') || industryLower.includes('apparel') || industryLower.includes('footwear') || industryLower.includes('sport') || industryLower.includes('fitness');
+        // Athletic industry = apparel/footwear/fitness, but NOT video games/simulation
+        const isAthleticIndustry = (industryLower.includes('athletic') || industryLower.includes('apparel') || industryLower.includes('footwear') || industryLower.includes('fitness') || industryLower.includes('sportswear'));
+        const isGameIndustry = industryLower.includes('game') || industryLower.includes('simulation') || industryLower.includes('gaming') || industryLower.includes('esport');
         
-        // If it's an athletic competitor but NOT an athletic industry, filter it out
-        if (isAthleticCompetitor && !isAthleticIndustry) return true;
+        // If it's an athletic competitor but the industry is games/simulation (not athletic apparel), filter it out
+        if (isAthleticCompetitor && isGameIndustry) {
+          console.log(`[FILTER] Removing athletic competitor "${compName}" from game industry "${industry}"`);
+          return true;
+        }
+        
+        // If it's an athletic competitor and NOT an athletic industry at all, filter it out
+        if (isAthleticCompetitor && !isAthleticIndustry && !isGameIndustry) {
+          console.log(`[FILTER] Removing athletic competitor "${compName}" from unrelated industry "${industry}"`);
+          return true;
+        }
         
         return false;
       };
@@ -4709,11 +4727,26 @@ RETURN JSON ONLY:
       const applyPrimarySecondaryOverlay = (competitors: any[]): any[] => {
         if (!competitors || competitors.length === 0) return competitors;
 
-        const lowerNiche = (nicheIndicators || '').toLowerCase();
+        // CRITICAL: Only apply travel overlay for ACTUAL travel brands
+        // Don't trigger on general niche indicators that might mention travel casually
         const lowerBrand = (brandName || '').toLowerCase();
-        const isTravel = lowerNiche.includes('travel') || lowerNiche.includes('booking') || lowerBrand.includes('airbnb');
+        const isActuallyTravelBrand = (
+          lowerBrand.includes('airbnb') ||
+          lowerBrand.includes('vrbo') ||
+          lowerBrand.includes('booking') ||
+          lowerBrand.includes('expedia') ||
+          lowerBrand.includes('tripadvisor') ||
+          lowerBrand.includes('hotel') ||
+          lowerBrand.includes('travel')
+        );
 
-        if (!isTravel) return competitors;
+        console.log(`[OVERLAY DEBUG] Brand: "${brandName}", isActuallyTravelBrand: ${isActuallyTravelBrand}`);
+        console.log(`[OVERLAY DEBUG] Incoming competitors: ${competitors.length}, names: ${competitors.map(c => c.name).join(', ')}`);
+
+        if (!isActuallyTravelBrand) {
+          console.log(`[OVERLAY DEBUG] NOT a travel brand - returning ${competitors.length} competitors unchanged`);
+          return competitors;
+        }
 
         const primaryTargets = ['vrbo', 'booking.com', 'booking', 'expedia', 'tripadvisor', 'agoda'];
         const secondaryTargets = ['hilton', 'marriott', 'hyatt', 'ihg', 'accor'];
