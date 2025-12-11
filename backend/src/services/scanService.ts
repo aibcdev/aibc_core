@@ -898,9 +898,9 @@ export async function startScan(
     const researchCompetitors = allExtractedContent.find(ec => ec.competitors && Array.isArray(ec.competitors) && ec.competitors.length > 0)?.competitors;
     
     // ALWAYS call generateCompetitorIntelligence to ensure we have competitors
-    // Pass website content if available (critical for accurate competitor analysis)
+    // Use LLM knowledge base (no dependency on scraping)
     try {
-      const competitorData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier, websiteTextContent);
+      const competitorData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier, platforms);
       
       // Handle new format with marketShare
       if (competitorData && competitorData.competitors && Array.isArray(competitorData.competitors)) {
@@ -921,13 +921,13 @@ export async function startScan(
         addLog(scanId, `[SUCCESS] Merged ${researchCompetitors.length} competitors from research with ${competitorData?.competitors?.length || competitorData?.length || 0} generated`);
       }
       
-      // ENSURE we have at least 3 competitors (basic) or 5 (deep)
-      const minCompetitors = scanTier === 'deep' ? 5 : 3;
+      // ENSURE we have at least 3 competitors (LLM-only mandate)
+      const minCompetitors = 3;
       if (competitorIntelligence.length < minCompetitors) {
         addLog(scanId, `[WARNING] Only ${competitorIntelligence.length} competitors found (minimum ${minCompetitors}) - retrying...`);
         // Retry with more explicit prompt
         try {
-          const retryData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier, websiteTextContent);
+          const retryData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier, platforms);
           if (retryData && retryData.competitors && Array.isArray(retryData.competitors) && retryData.competitors.length >= minCompetitors) {
             competitorIntelligence = retryData.competitors;
             marketShare = retryData.marketShare;
@@ -3958,18 +3958,24 @@ function generateIndustrySpecificFallback(brandName: string, nicheIndicators: st
   ];
 }
 
-async function generateCompetitorIntelligence(validatedContent: any, brandDNA: any, username?: string, scanTier: ScanTier = 'basic', websiteContent?: string): Promise<any> {
+async function generateCompetitorIntelligence(
+  validatedContent: any,
+  brandDNA: any,
+  username?: string,
+  scanTier: ScanTier = 'basic',
+  platforms: string[] = []
+): Promise<any> {
   // Always try to generate competitors - even with minimal data, we can use LLM knowledge
   const hasRealContent = validatedContent.posts && validatedContent.posts.length > 0;
-  const hasRealProfile = validatedContent.profile && validatedContent.profile.bio && 
-                         validatedContent.profile.bio !== 'Sample bio' && 
-                         !validatedContent.profile.bio.includes('Profile for');
+  const hasRealProfile =
+    validatedContent.profile &&
+    validatedContent.profile.bio &&
+    validatedContent.profile.bio !== 'Sample bio' &&
+    !validatedContent.profile.bio.includes('Profile for');
   const hasThemes = validatedContent.content_themes && validatedContent.content_themes.length > 0;
-  
-  // Only skip if we have absolutely nothing to work with
+
   if (!hasRealContent && !hasRealProfile && !hasThemes && !username) {
     console.log('No data available for competitor analysis - using LLM knowledge base');
-    // Still try to generate based on username alone
   }
 
   if (!isLLMConfigured()) {
@@ -3979,124 +3985,89 @@ async function generateCompetitorIntelligence(validatedContent: any, brandDNA: a
 
   try {
     const allPosts = (validatedContent.posts || []).map((p: any) => p.content).join('\n\n');
-    const combinedText = allPosts.substring(0, 40000);
+    const combinedText = allPosts.substring(0, 20000);
     const bio = validatedContent.profile?.bio || '';
     const themes = (validatedContent.content_themes || []).join(', ');
 
-    // Build context - PRIORITIZE website content if available (most accurate for business understanding)
-    let contentContext = '';
-    if (websiteContent && websiteContent.length > 100) {
-      // Website content is the most reliable source for understanding what the business actually does
-      contentContext = `WEBSITE CONTENT (PRIMARY SOURCE - most accurate):\n${websiteContent.substring(0, 15000)}\n\n`;
-    if (combinedText && combinedText.length > 50) {
-        contentContext += `Social Media Posts:\n${combinedText.substring(0, 10000)}\n\n`;
-      }
-      if (bio && bio.length > 20) {
-        contentContext += `Bio: ${bio}\n\n`;
-      }
-    } else if (combinedText && combinedText.length > 50) {
-      contentContext = `Their content: ${combinedText}`;
-    } else if (bio && bio.length > 20) {
-      contentContext = `Their bio: ${bio}`;
-    } else if (themes) {
-      contentContext = `Their topics: ${themes}`;
-    } else {
-      contentContext = `Creator name: ${username || 'Unknown'}`;
-    }
+    // Lightweight channel inference (no scraping)
+    const inferredChannels = new Set<string>();
+    (validatedContent.posts || []).forEach((p: any) => {
+      const type = (p.post_type || '').toLowerCase();
+      if (type === 'video') inferredChannels.add('youtube/tiktok');
+      if (type === 'image') inferredChannels.add('instagram');
+      if (type === 'thread' || type === 'text') inferredChannels.add('x/twitter');
+    });
+    platforms.forEach((p) => inferredChannels.add(p));
+    const primaryChannels = Array.from(inferredChannels);
 
-    // Deep research approach - analyze niche first, then find competitors
-    // This is like ChatGPT's deep research - understand the context deeply before matching
-    
-    // Extract niche indicators from content - PRIORITIZE website content
-    const nicheIndicators = extractNicheIndicators(combinedText, bio, themes, brandDNA, websiteContent);
-    
-    // SIMPLE DIRECT APPROACH - Like ChatGPT
-    // Just ask who the competitors are directly, using LLM's knowledge base
-    const brandName = username?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || username || 'this brand';
-    
-    const prompt = `Who are the main competitors for ${username || brandName}?
+    const voice = brandDNA?.voice || {};
+    const voiceSummary = [
+      voice.style && `style: ${voice.style}`,
+      voice.tone && `tone: ${voice.tone}`,
+      voice.formality && `formality: ${voice.formality}`,
+    ]
+      .filter(Boolean)
+      .join(', ');
 
-COMPANY: ${username || brandName}
-${websiteContent && websiteContent.length > 100 ? `
-ABOUT THIS COMPANY (from their website):
-${websiteContent.substring(0, 8000)}
-` : ''}
-${bio && bio.length > 20 ? `BIO: ${bio}` : ''}
-${themes ? `TOPICS: ${themes}` : ''}
+    const brandName =
+      username?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || username || 'this brand';
 
-TASK: Identify 4-6 REAL competitors for ${brandName}.
+    const prompt = `Identify the 3 closest real competitors for ${brandName}.
 
-CRITICAL RULES:
-1. Use your knowledge base - you know who competes with ${brandName}
-2. If you recognize ${brandName}, list their ACTUAL real-world competitors
-3. If website content is provided, use it to understand their business EXACTLY
-4. Competitors must be in the SAME industry and SAME niche
-5. Be SPECIFIC - not generic industry players
+CONTEXT:
+- Brand voice: ${voiceSummary || 'unknown'}
+- Content themes: ${themes || 'unknown'}
+- How/where they post: ${primaryChannels.length > 0 ? primaryChannels.join(', ') : 'not observed'}
+- Example posts: ${combinedText ? combinedText.substring(0, 800) : 'n/a'}
+- Bio: ${bio || 'n/a'}
 
-EXAMPLES OF GOOD COMPETITOR MATCHING:
-- Nike → Adidas, Puma, Under Armour, New Balance (athletic apparel)
-- Tesla → Rivian, Lucid, BYD, Ford EV (electric vehicles)
-- Airbnb → VRBO, Booking.com, Expedia (vacation rentals)
-- HubSpot → Salesforce, Marketo, ActiveCampaign (marketing automation)
-- Surge.xyz → CoinList, DAO Maker, Polkastarter (Web3 launchpads)
+TASK:
+1) Use only your knowledge base (no web search or scraping) to pick the 3 closest direct competitors for ${brandName}.
+2) Prefer brands/creators with the same audience, format, and product focus.
+3) For each competitor, include short, specific reasoning and the main platform/strategy they win with.
+4) Keep it concrete—real brand names only.
 
-EXAMPLES OF BAD COMPETITOR MATCHING (DON'T DO THIS):
-- Nike → Apple, Google (wrong industry!)
-- Tesla → Toyota, Honda (wrong - not EV focused)
-- Surge.xyz → Coinbase, Binance (wrong - those are exchanges, not launchpads)
-
-For each competitor provide:
-- name: The real company/brand name
-- threatLevel: "HIGH", "MEDIUM", or "LOW"
-- primaryVector: Their main platform and strategy
-- theirAdvantage: What they do better than ${brandName}
-- yourOpportunity: How ${brandName} can compete
-
-Also estimate ${brandName}'s market share in their industry.
-
-Return ONLY valid JSON:
+RETURN JSON ONLY:
 {
   "marketShare": {
     "percentage": 5,
     "industry": "Specific industry name",
-    "totalCreatorsInSpace": 100,
-    "yourRank": 5,
-    "note": "Brief explanation"
+    "yourRank": 4,
+    "note": "1 short line"
   },
   "competitors": [
     {
-      "name": "Real Competitor Name",
-      "threatLevel": "HIGH",
-      "primaryVector": "Platform - strategy",
-      "weeklyViews": 1000000,
-      "weeklyEngagement": 50000,
-      "theirAdvantage": "Specific advantage they have",
-      "yourOpportunity": "Specific action ${brandName} can take"
+      "name": "Real competitor",
+      "whyMatch": "why they directly compete",
+      "threatLevel": "HIGH|MEDIUM|LOW",
+      "primaryVector": "Platform + strategy",
+      "theirAdvantage": "specific edge they have",
+      "yourOpportunity": "specific counter-move",
+      "postingChannels": ["platform1", "platform2"],
+      "toneSimilarity": "close|different"
     }
   ]
 }`;
 
     const { generateJSON } = await import('./llmService');
-    const systemPrompt = scanTier === 'deep'
-      ? 'You are an elite competitive intelligence analyst with deep market knowledge. Provide comprehensive competitor analysis with specific metrics, market positioning, and actionable insights. You MUST identify real competitors by name. Always return valid JSON.'
-      : 'You are a competitive intelligence analyst. You MUST identify real competitors by name (e.g., "Nike", "Adidas", "Tesla"). Provide specific data on competitors. Always return valid JSON.';
-    
+    const systemPrompt =
+      scanTier === 'deep'
+        ? 'You are an elite competitive intelligence analyst. Rely on your knowledge base only. Always return valid JSON.'
+        : 'You are a competitive intelligence analyst. Use knowledge only (no web). Always return valid JSON.';
+
     // Use generateJSON for more reliable parsing
     let competitorData: any;
     try {
       competitorData = await generateJSON(prompt, systemPrompt, { tier: scanTier });
     } catch (jsonError) {
-      // Fallback to text generation if JSON fails
       const { generateText } = await import('./llmService');
       const text = await generateText(prompt, systemPrompt, { tier: scanTier });
-      
-      // Try to parse as object first (new format)
+
       const jsonObjMatch = text.match(/\{[\s\S]*\}/);
       if (jsonObjMatch) {
         try {
           competitorData = JSON.parse(jsonObjMatch[0]);
         } catch (e) {
-          // Try array format
           const jsonArrMatch = text.match(/\[[\s\S]*\]/);
           if (jsonArrMatch) {
             competitorData = { competitors: JSON.parse(jsonArrMatch[0]) };
@@ -4108,78 +4079,59 @@ Return ONLY valid JSON:
         throw new Error('No JSON found in response');
       }
     }
-    
-    // Validate and format the response
+
     if (competitorData) {
-      // Extract the base domain/brand name for self-filtering
-      const brandName = username?.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || '';
+      const brandKey =
+        username?.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || '';
       const brandDomain = username?.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0] || '';
-      
-      // Helper function to check if competitor is self
+
       const isSelfCompetitor = (compName: string): boolean => {
         const compLower = compName.toLowerCase();
-        // Check if competitor name matches brand name or domain
-        if (compLower === brandName || compLower === brandDomain) return true;
-        if (compLower.includes(brandName) && brandName.length > 3) return true;
-        if (brandName.includes(compLower) && compLower.length > 3) return true;
-        // Check for common variations
-        if (compLower.replace(/[^a-z0-9]/g, '') === brandName.replace(/[^a-z0-9]/g, '')) return true;
+        if (compLower === brandKey || compLower === brandDomain) return true;
+        if (compLower.replace(/[^a-z0-9]/g, '') === brandKey.replace(/[^a-z0-9]/g, '')) return true;
         return false;
       };
-      
-      // New format with marketShare and competitors
-      if (competitorData.competitors && Array.isArray(competitorData.competitors)) {
-        const competitors = competitorData.competitors
+
+      const normalizeCompetitors = (list: any[]) =>
+        list
           .filter((comp: any) => comp && comp.name && comp.name.length > 0)
-          .filter((comp: any) => !isSelfCompetitor(comp.name)) // FILTER OUT SELF
+          .filter((comp: any) => !isSelfCompetitor(comp.name))
           .map((comp: any) => ({
             name: comp.name,
             threatLevel: comp.threatLevel || 'MEDIUM',
             primaryVector: comp.primaryVector || comp.vector || 'Unknown platform',
-            theirAdvantage: comp.theirAdvantage || comp.advantage || 'Analyzing...',
+            theirAdvantage: comp.theirAdvantage || comp.advantage || comp.whyMatch || 'Analyzing...',
             yourOpportunity: comp.yourOpportunity || comp.opportunity || 'Research in progress',
             weeklyViews: comp.weeklyViews,
-            weeklyEngagement: comp.weeklyEngagement
+            weeklyEngagement: comp.weeklyEngagement,
           }))
-          .slice(0, scanTier === 'deep' ? 8 : 5); // Deep: 8, Basic: 5
-        
+          .slice(0, 3);
+
+      if (competitorData.competitors && Array.isArray(competitorData.competitors)) {
+        const competitors = normalizeCompetitors(competitorData.competitors);
         if (competitors.length === 0) {
           console.error('No valid competitors after filtering:', competitorData.competitors);
           throw new Error('No valid competitors found in response - all were filtered out');
         }
-        
+
         console.log(`Generated ${competitors.length} competitors for ${username}`);
         return {
           marketShare: competitorData.marketShare || null,
-          competitors: competitors
+          competitors,
         };
       }
-      
-      // If it's an array, wrap it
+
       if (Array.isArray(competitorData)) {
-        const competitors = competitorData
-          .filter((comp: any) => comp && comp.name && comp.name.length > 0)
-          .filter((comp: any) => !isSelfCompetitor(comp.name)) // FILTER OUT SELF
-          .map((comp: any) => ({
-            name: comp.name,
-            threatLevel: comp.threatLevel || 'MEDIUM',
-            primaryVector: comp.primaryVector || comp.vector || 'Unknown platform',
-            theirAdvantage: comp.theirAdvantage || comp.advantage || 'Analyzing...',
-            yourOpportunity: comp.yourOpportunity || comp.opportunity || 'Research in progress',
-            weeklyViews: comp.weeklyViews,
-            weeklyEngagement: comp.weeklyEngagement
-          }))
-          .slice(0, scanTier === 'deep' ? 8 : 5);
-        
+        const competitors = normalizeCompetitors(competitorData);
         if (competitors.length === 0) {
           console.error('No valid competitors after filtering array:', competitorData);
           throw new Error('No valid competitors found in array - all were filtered out');
         }
-        
+
         console.log(`Generated ${competitors.length} competitors from array for ${username}`);
         return {
           marketShare: null,
-          competitors: competitors
+          competitors,
         };
       }
     }
@@ -4193,9 +4145,8 @@ Return ONLY valid JSON:
       hasContent: !!validatedContent.posts?.length,
       hasProfile: !!validatedContent.profile?.bio,
       hasThemes: !!validatedContent.content_themes?.length,
-      errorMessage: error.message
+      errorMessage: error.message,
     });
-    // CRITICAL: Never return empty - this is a required feature
     throw new Error(`Competitor generation failed: ${error.message}. This is a required feature and must be fixed.`);
   }
 }

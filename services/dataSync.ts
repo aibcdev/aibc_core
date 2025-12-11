@@ -190,6 +190,8 @@ export const clearAllCachedData = () => {
     'lastScanResults',
     'lastScanId',
     'lastScanTimestamp',
+    'lastScannedUsername',
+    'lastScanType',
     'productionAssets',
     'strategyPlans',
     'activeContentStrategy',
