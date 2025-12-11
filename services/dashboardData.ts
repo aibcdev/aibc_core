@@ -52,6 +52,9 @@ function calculateContentSuggestions(): number {
     if (!scanResults) return 0;
     
     const data = JSON.parse(scanResults);
+    if (Array.isArray(data.contentIdeas) && data.contentIdeas.length > 0) {
+      return data.contentIdeas.length;
+    }
     const themes = data.extractedContent?.content_themes || [];
     const pillars = data.brandDNA?.corePillars || [];
     const insights = data.strategicInsights || [];
@@ -103,62 +106,19 @@ function calculateBrandVoiceMatch(): number {
  */
 function calculateDashboardKPIs() {
   try {
-    const now = new Date();
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
-    weekStart.setHours(0, 0, 0, 0);
-    
-    const lastWeekStart = new Date(weekStart);
-    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-    const lastWeekEnd = new Date(weekStart);
-    
-    // Get content from localStorage
-    const productionAssets = JSON.parse(localStorage.getItem('productionAssets') || '[]');
-    const calendarEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
     const scanResults = localStorage.getItem('lastScanResults');
+    const scanData = scanResults ? JSON.parse(scanResults) : null;
     
-    // Posts this week (content created this week)
-    const postsThisWeek = productionAssets.filter((asset: any) => {
-      if (!asset.createdAt) return false;
-      const created = new Date(asset.createdAt);
-      return created >= weekStart && created <= now;
-    }).length;
+    const postsThisWeek = scanData?.extractedContent?.posts?.length || 0;
+    const postsThisWeekChange = undefined;
+    const engagementThisWeek =
+      (scanData?.extractedContent?.posts || []).reduce((sum: number, post: any) => {
+        const engagement = post.engagement || {};
+        return sum + (engagement.likes || 0) + (engagement.shares || 0) + (engagement.comments || 0);
+      }, 0) || 0;
+    const engagementThisWeekChange = undefined;
     
-    // Posts last week (for comparison)
-    const postsLastWeek = productionAssets.filter((asset: any) => {
-      if (!asset.createdAt) return false;
-      const created = new Date(asset.createdAt);
-      return created >= lastWeekStart && created < lastWeekEnd;
-    }).length;
-    
-    const postsThisWeekChange = postsLastWeek > 0 
-      ? postsThisWeek - postsLastWeek 
-      : undefined;
-    
-    // Engagement this week (simplified - based on scheduled/published content)
-    const engagementThisWeek = calendarEvents.filter((event: any) => {
-      if (!event.date) return false;
-      const eventDate = new Date(event.date);
-      return eventDate >= weekStart && eventDate <= now;
-    }).length;
-    
-    const engagementLastWeek = calendarEvents.filter((event: any) => {
-      if (!event.date) return false;
-      const eventDate = new Date(event.date);
-      return eventDate >= lastWeekStart && eventDate < lastWeekEnd;
-    }).length;
-    
-    const engagementThisWeekChange = engagementLastWeek > 0
-      ? engagementThisWeek - engagementLastWeek
-      : undefined;
-    
-    // Content pending (items in inbox or pending review)
-    const inboxItems = JSON.parse(localStorage.getItem('inboxItems') || '[]');
-    const pendingInbox = inboxItems.filter((item: any) => item.status === 'pending').length;
-    const pendingAssets = productionAssets.filter((asset: any) => 
-      asset.status === 'draft' || asset.status === 'pending' || asset.status === 'review'
-    ).length;
-    const contentPending = pendingInbox + pendingAssets;
+    const contentPending = (scanData?.contentIdeas || []).length || 0;
     
     // New insights (from scan results - strategic insights count)
     let newInsights = 0;
@@ -170,7 +130,6 @@ function calculateDashboardKPIs() {
         const insights = data.strategicInsights || [];
         newInsights = insights.length;
         
-        // Compare to previous week (simplified - use stored previous count)
         const previousInsights = parseInt(localStorage.getItem('previousInsightsCount') || '0');
         if (previousInsights > 0) {
           newInsightsChange = newInsights - previousInsights;

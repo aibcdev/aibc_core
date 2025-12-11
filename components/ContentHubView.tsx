@@ -555,10 +555,38 @@ const ContentHubView: React.FC = () => {
   };
 
   const handleRegenerate = async () => {
-    setIsRegenerating(true);
-    // Reload content suggestions
-    await loadContent();
-    setIsRegenerating(false);
+    try {
+      setIsRegenerating(true);
+      
+      // Force-fetch latest scan results to refresh cache before reloading
+      const lastScanId = localStorage.getItem('lastScanId');
+      const lastUsername = localStorage.getItem('lastScannedUsername');
+      if (lastScanId) {
+        try {
+          const latest = await getScanResults(lastScanId);
+          if (latest.success && latest.data) {
+            const payload = {
+              ...latest.data,
+              scanId: lastScanId,
+              scanUsername: lastUsername || latest.data?.extractedContent?.username || '',
+              timestamp: Date.now()
+            };
+            localStorage.setItem('lastScanResults', JSON.stringify(payload));
+            if (lastUsername) localStorage.setItem('lastScannedUsername', lastUsername);
+            localStorage.setItem('lastScanTimestamp', Date.now().toString());
+            console.log('✅ Content Hub: Refreshed cache from latest scan results');
+          }
+        } catch (e) {
+          console.warn('Content Hub: Refresh fetch failed, falling back to cached data', e);
+        }
+      } else {
+        console.warn('Content Hub: No lastScanId found; running cached refresh only');
+      }
+
+      await loadContent();
+    } finally {
+      setIsRegenerating(false);
+    }
   };
 
   const getPlatformIcon = (platform: string) => {

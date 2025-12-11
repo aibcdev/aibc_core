@@ -46,6 +46,44 @@ export interface ScanResults {
 /**
  * Start a new scan
  */
+function clearScanCache(username?: string) {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return;
+  }
+
+  const keysToRemove = [
+    'lastScanResults',
+    'lastScanId',
+    'lastScanTimestamp',
+    'lastScannedUsername',
+    'lastScanType',
+    'productionAssets',
+    'strategyPlans',
+    'activeContentStrategy',
+    'brandMaterials',
+    'brandProfile',
+    'brandVoice',
+    'brandColors',
+    'brandFonts',
+    'contentPreferences',
+  ];
+
+  keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+  if (username) {
+    localStorage.setItem('lastScannedUsername', username);
+    localStorage.setItem('lastScanTimestamp', Date.now().toString());
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('newScanStarted', {
+        detail: { username: username || null, timestamp: Date.now() },
+      })
+    );
+  }
+}
+
 export async function startScan(
   username: string,
   platforms: string[],
@@ -53,6 +91,8 @@ export async function startScan(
   connectedAccounts?: Record<string, string>
 ): Promise<ScanResponse> {
   try {
+    clearScanCache(username);
+
     // Get connected accounts from localStorage if not provided
     const accountsToUse = connectedAccounts || (() => {
       try {
