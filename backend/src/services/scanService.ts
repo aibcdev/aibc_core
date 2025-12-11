@@ -4471,11 +4471,12 @@ async function generateCompetitorIntelligence(
 
     const nicheContext = nicheHint || nicheIndicators || 'general';
 
-    const prompt = `Layered competitor map for ${brandName}.
+    const prompt = `Layered competitor map for ${brandName} in the ${nicheContext} industry.
 
 STEP 1 — LLM PRIOR (knowledge only):
-- Identify the closest PRIMARY competitors (same business model) and SECONDARY (adjacent) using your own knowledge base.
-- Prioritize accuracy over volume. Example: for Airbnb/short-term rentals, Vrbo/Booking.com/Expedia are PRIMARY; Hilton/Marriott are SECONDARY.
+- Identify the closest PRIMARY competitors (same business model, same industry: ${nicheContext}) and SECONDARY (adjacent) using your own knowledge base.
+- Prioritize accuracy over volume. CRITICAL: Competitors MUST be in the SAME industry as ${brandName}.
+- DO NOT include examples or competitors from other industries.
 
 STEP 2 — SCRAPED OVERLAY (apply to their signals):
 - Website cues: ${websiteTextContent ? websiteTextContent.substring(0, 500) : 'none'}
