@@ -3571,68 +3571,50 @@ async function generateStrategicInsights(validatedContent: any, brandDNA: any, s
 
     const brandName = scanUsername?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || scanUsername || 'this brand';
     
-    const prompt = `You're a straight-talking content strategist for ${brandName}. Research ${brandName}'s actual competitors and give 2-3 SPECIFIC, BRAND-SPECIFIC, data-driven insights that are UNIQUE to ${brandName} and cannot be applied to other brands.
+    // SIMPLE DIRECT APPROACH - Like ChatGPT would respond
+    const prompt = `What strategic advice would you give ${brandName}?
 
-Company/Brand: ${brandName}
+COMPANY: ${brandName}
 ${scanUsername ? `Website: ${scanUsername}` : ''}
 
-Creator content (${validatedContent.posts.length} posts):
-${combinedText}
-
-Brand DNA: ${JSON.stringify(brandDNA, null, 2)}
+Their current content:
+${combinedText.substring(0, 5000)}
 
 Stats:
-- Posts analyzed: ${validatedContent.posts.length}
+- Posts: ${validatedContent.posts.length}
 - Video content: ${hasVideo ? 'Yes' : 'No'}
-- Image content: ${hasImages ? 'Yes' : 'No'}
 - Avg engagement: ${Math.round(avgEng)}
 - Topics: ${(validatedContent.content_themes || []).join(', ')}
 
+TASK: Give 3 SPECIFIC strategic recommendations for ${brandName}.
+
 CRITICAL RULES:
-1. Research ${brandName}'s ACTUAL competitors in their EXACT industry/niche
-2. Include NUMBERS - video lengths, posting frequency, engagement rates
-3. Tell ${brandName} exactly what to do differently based on competitor data
-4. NO generic advice like "post more" or "be consistent" - must be specific to ${brandName}
-5. Every insight must reference what ${brandName}'s competitors are doing
-6. Insights must be so specific to ${brandName} that they would NOT work for a different brand
+1. Each recommendation must ONLY apply to ${brandName}
+2. Name their ACTUAL competitors and compare
+3. Include SPECIFIC numbers and metrics
+4. Tell them exactly what to change
 
-BAD examples (too generic, don't say these - these apply to ANY brand):
-- "Keep posting and you'll grow" (too generic)
-- "Try short-form video" (too generic - doesn't mention ${brandName})
-- "Engage with your audience more" (too generic)
-- "Increase Posting Frequency" (too generic - must specify ${brandName}'s current frequency vs competitors)
-- "Leverage Short-Form Video" (too generic - must be specific to ${brandName}'s industry)
+EXAMPLES OF GOOD STRATEGIC INSIGHTS:
+For Nike:
+- "Nike posts 2x/week while Adidas posts daily. Nike is losing visibility to Adidas. Increase to 4x/week."
+- "Nike's videos are 3 mins. Under Armour's are 8+ mins and rank higher. Create longer-form content."
 
-CRITICAL: If you generate "Increase Posting Frequency" or "Leverage Short-Form Video", you MUST:
-- Specify ${brandName}'s current posting frequency
-- Name specific competitors and their frequencies
-- Make it so specific that it ONLY applies to ${brandName}
+For Tesla:
+- "Tesla relies on Elon's tweets. Rivian has polished brand videos. Tesla needs professional video content."
+- "Tesla's social engagement is 50K/post. Lucid gets 80K. Focus on video content which drives 2x engagement."
 
-GOOD examples (specific with data, brand-specific - MUST mention brand name):
-- For Nike: "Nike posts 2x/week. Adidas posts daily and gets 3x Nike's views. Nike should post 4x/week minimum to compete with Adidas."
-- For Tesla: "Tesla's videos average 4 mins. Rivian does 8-12 mins and gets 2x watch time. Tesla should create longer videos like Rivian."
-- For HubSpot: "HubSpot's thumbnails are text-heavy. Salesforce uses faces + 3 words max - their CTR is 2x higher than HubSpot's."
+For Airbnb:
+- "Airbnb posts generic travel photos. Booking.com shows real guest experiences. Feature actual guest stories."
 
-CRITICAL REQUIREMENT: Every insight MUST:
-1. Mention ${brandName} by name in the title OR description
-2. Reference ${brandName}'s specific industry/niche (${nicheIndicators || 'their industry'})
-3. Compare ${brandName} to specific named competitors
-4. Include specific numbers/metrics
-5. Be so specific that it would NOT work for a different brand
-
-Generate 2-3 insights SPECIFIC to ${brandName}:
-- Title: 4-6 words, action-focused, MUST mention ${brandName} or their specific industry term
-- Description: MUST include ${brandName}'s name, specific numbers, and named competitors. What ${brandName}'s competitors do vs what ${brandName} does.
-- Impact: "HIGH IMPACT" or "MEDIUM IMPACT"
-- Effort: "Quick win" or "Takes time"
+Now give 3 strategic insights for ${brandName}:
 
 Return ONLY valid JSON:
 [
   {
-    "title": "Make longer videos",
-    "description": "Your videos are 4 mins avg. Top creators do 8-12 mins and get 2x watch time.",
+    "title": "4-6 word action title",
+    "description": "${brandName} does X while [competitor] does Y. This results in Z. ${brandName} should [specific action].",
     "impact": "HIGH IMPACT",
-    "effort": "Takes time"
+    "effort": "Quick win"
   }
 ]`;
 
