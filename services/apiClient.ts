@@ -2,7 +2,27 @@
  * API Client for backend communication
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// Determine API URL: use env var, or detect production vs local
+const getApiBaseUrl = () => {
+  // If env var is set, use it
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // Production detection: if running on Netlify (or any non-localhost domain)
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      // Production - use Cloud Run backend
+      return 'https://aibc-backend-409115133182.us-central1.run.app';
+    }
+  }
+  
+  // Local development
+  return 'http://localhost:3001';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export interface ScanResponse {
   success: boolean;
