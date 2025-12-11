@@ -152,8 +152,8 @@ const StrategyView: React.FC = () => {
   }, [scanUsername]);
 
   useEffect(() => {
+    // Only generate AI message - insights should come from backend strategicInsights via generateInsightsFromData
     if (brandDNA || competitorIntelligence.length > 0) {
-      generateStrategicInsights();
       generateInitialAIMessage();
     }
   }, [brandDNA, competitorIntelligence]);
@@ -217,9 +217,28 @@ const StrategyView: React.FC = () => {
   const generateInsightsFromData = (insights: any[], dna: any, competitors: any[]) => {
     const generated: StrategicInsight[] = [];
     
-    // Generate insights from strategic insights data
+    // CRITICAL: ONLY use insights from backend - reject any generic/dummy insights
     if (insights && insights.length > 0) {
       insights.slice(0, 3).forEach((insight, index) => {
+        // Filter out generic/dummy insights
+        const title = insight.title || insight.recommendation || '';
+        const description = insight.description || insight.summary || insight.recommendation || '';
+        
+        // Reject generic patterns
+        const isGeneric = 
+          title.toLowerCase().includes('nextgen') ||
+          title.toLowerCase().includes('gpt-5') ||
+          title.toLowerCase().includes('ai automation') ||
+          description.toLowerCase().includes('nextgen tech') ||
+          description.toLowerCase().includes('gpt-5 rumors') ||
+          description.toLowerCase().includes('audio quality') ||
+          (!title || title === 'Strategic Insight');
+        
+        if (isGeneric) {
+          console.warn('⚠️ Strategy: Rejecting generic insight:', title);
+          return; // Skip this insight
+        }
+        
         const insightType = insight.type || insight.category || 'opportunity';
         const priority = insight.priority || insight.impact || 'medium';
         
@@ -244,8 +263,8 @@ const StrategyView: React.FC = () => {
         generated.push({
           id: `insight-${index}`,
           type,
-          title: insight.title || insight.recommendation || 'Strategic Insight',
-          description: insight.description || insight.summary || insight.recommendation || '',
+          title: title,
+          description: description,
           timestamp: new Date(Date.now() - (index * 15 * 60 * 1000)), // Stagger timestamps
           priority: priority === 'high' ? 'high' : priority === 'low' ? 'low' : 'medium',
           tag,
@@ -254,80 +273,17 @@ const StrategyView: React.FC = () => {
       });
     }
     
-    // Generate competitor-based insights
-    if (competitors && competitors.length > 0 && generated.length < 3) {
-      const topCompetitor = competitors[0];
-      if (topCompetitor.name) {
-        generated.push({
-          id: 'competitor-signal',
-          type: 'signal',
-          title: `Competitor Activity: ${topCompetitor.name}`,
-          description: topCompetitor.advantage 
-            ? `${topCompetitor.name} has a strong focus on ${topCompetitor.advantage}.`
-            : `Recent activity detected from competitor ${topCompetitor.name}.`,
-          timestamp: new Date(Date.now() - (2 * 60 * 1000)), // 2 minutes ago
-          priority: topCompetitor.threatLevel === 'HIGH' ? 'high' : 'medium',
-          tag: topCompetitor.threatLevel === 'HIGH' ? 'HIGH THREAT' : 'SIGNAL',
-          tagColor: topCompetitor.threatLevel === 'HIGH' ? 'red' : 'blue'
-        });
-      }
-    }
+    // CRITICAL: Do NOT generate fallback insights - only show what backend provides
+    // If no insights from backend, show empty state
     
-    // Generate market share insights if available
-    if (dna && dna.industry && generated.length < 3) {
-      generated.push({
-        id: 'market-shift',
-        type: 'market_shift',
-        title: `Market Activity in ${dna.industry}`,
-        description: `Increased activity detected in the ${dna.industry} sector. Monitor trends closely.`,
-        timestamp: new Date(Date.now() - (15 * 60 * 1000)), // 15 minutes ago
-        priority: 'medium',
-        tag: 'OPPORTUNITY',
-        tagColor: 'green'
-      });
-    }
-    
-    setStrategicInsights(generated.slice(0, 3)); // Max 3 insights
+    setStrategicInsights(generated); // Use all valid insights, no max limit if backend provides them
   };
 
   const generateStrategicInsights = () => {
-    // This will be called after data loads
-    const insights: StrategicInsight[] = [];
-    
-    // Generate from competitor intelligence
-    if (competitorIntelligence.length > 0) {
-      const topCompetitor = competitorIntelligence[0];
-      insights.push({
-        id: 'competitor-1',
-        type: 'signal',
-        title: `Competitor Activity: ${topCompetitor.name || 'Key Competitor'}`,
-        description: topCompetitor.advantage 
-          ? `${topCompetitor.name} has a strong focus on ${topCompetitor.advantage}.`
-          : `Recent activity detected from ${topCompetitor.name || 'a key competitor'}.`,
-        timestamp: new Date(Date.now() - (2 * 60 * 1000)),
-        priority: topCompetitor.threatLevel === 'HIGH' ? 'high' : 'medium',
-        tag: topCompetitor.threatLevel === 'HIGH' ? 'HIGH THREAT' : 'SIGNAL',
-        tagColor: topCompetitor.threatLevel === 'HIGH' ? 'red' : 'blue'
-      });
-    }
-    
-    // Generate from brand DNA
-    if (brandDNA && brandDNA.industry) {
-      insights.push({
-        id: 'market-1',
-        type: 'market_shift',
-        title: `Market Activity in ${brandDNA.industry}`,
-        description: `Trending topics detected in the ${brandDNA.industry} sector.`,
-        timestamp: new Date(Date.now() - (15 * 60 * 1000)),
-        priority: 'medium',
-        tag: 'OPPORTUNITY',
-        tagColor: 'green'
-      });
-    }
-    
-    if (insights.length > 0) {
-      setStrategicInsights(insights);
-    }
+    // CRITICAL: Only use real strategicInsights from backend - NEVER generate generic fallbacks
+    // This function should NOT be used - we should only use generateInsightsFromData with real backend data
+    console.warn('⚠️ Strategy: generateStrategicInsights called - this should not generate generic insights');
+    setStrategicInsights([]);
   };
 
   const generateInitialAIMessage = () => {
