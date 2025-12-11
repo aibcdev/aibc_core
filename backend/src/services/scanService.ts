@@ -979,6 +979,7 @@ export async function startScan(
     }
 
     // Generate Content Ideas based on brand DNA and content themes
+    addLog(scanId, `[DEBUG] ✅ Reached content ideas section - competitor count: ${competitorIntelligence.length}, strategic insights: ${strategicInsights?.length || 0}`);
     addLog(scanId, `[CONTENT] Starting content ideas generation...`);
     storage.updateScan(scanId, { progress: 99 });
     let contentIdeas: any[] = [];
