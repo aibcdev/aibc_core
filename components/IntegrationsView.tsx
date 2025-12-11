@@ -54,9 +54,21 @@ const IntegrationsView: React.FC = () => {
       if (stored) {
         const parsed = JSON.parse(stored);
         // Merge with defaults to ensure all integrations exist
+        // CRITICAL: Always use icon from defaults - icons can't be serialized to JSON
         return defaultIntegrations.map(def => {
-          const stored = parsed.find((p: Integration) => p.id === def.id);
-          return stored ? { ...def, ...stored } : def;
+          const storedIntegration = parsed.find((p: any) => p.id === def.id);
+          if (storedIntegration) {
+            // Only copy serializable properties, keep icon from default
+            return { 
+              ...def, 
+              connected: storedIntegration.connected ?? def.connected,
+              handle: storedIntegration.handle,
+              verifiedName: storedIntegration.verifiedName,
+              verifiedAvatar: storedIntegration.verifiedAvatar
+              // icon is NOT copied from stored - always use default
+            };
+          }
+          return def;
         });
       }
     } catch (e) {
@@ -68,8 +80,10 @@ const IntegrationsView: React.FC = () => {
   const [integrations, setIntegrations] = useState<Integration[]>(loadStoredIntegrations());
   
   // Save integrations to localStorage whenever they change
+  // CRITICAL: Don't save icon property - React elements can't be serialized
   useEffect(() => {
-    localStorage.setItem('integrations', JSON.stringify(integrations));
+    const serializableIntegrations = integrations.map(({ icon, ...rest }) => rest);
+    localStorage.setItem('integrations', JSON.stringify(serializableIntegrations));
   }, [integrations]);
 
   const connectedCount = integrations.filter(i => i.connected).length;

@@ -147,12 +147,12 @@ async function scrapePlatformContent(
               const img = article.querySelector('img');
               if (img) {
                 const alt = img.getAttribute('alt') || '';
-                posts.push({
-                  id: `ig-${idx}`,
+            posts.push({
+              id: `ig-${idx}`,
                   content: alt.length > 10 ? alt : `Instagram post from ${platform}`,
                   timestamp: new Date(now.getTime() - idx * 12 * 60 * 60 * 1000).toISOString(), // Spread over 12 hours each
-                  url: `https://www.instagram.com${href}`,
-                  engagement: {
+              url: `https://www.instagram.com${href}`,
+              engagement: {
                     likes: likes || 0, // Use 0 if we couldn't extract, NOT random
                     comments: comments || 0
                   }
@@ -179,10 +179,10 @@ async function scrapePlatformContent(
                 engagement: {
                   likes: 0, // Real data only - no fake numbers
                   comments: 0
-                }
-              });
-            }
-          });
+              }
+            });
+          }
+        });
         }
       }
 

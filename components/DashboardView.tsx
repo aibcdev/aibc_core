@@ -54,37 +54,57 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
       }
     };
     
-    // Listen for new scan started - clear all state
+    // Listen for new scan started - clear all state IMMEDIATELY and SYNCHRONOUSLY
     const handleNewScanStarted = (event: CustomEvent) => {
-      console.log('🧹 Dashboard: New scan started, clearing all state');
+      console.log('🧹 Dashboard: New scan started, clearing ALL state SYNCHRONOUSLY');
       const { username, isRescan } = event.detail;
       
-      // Clear all dashboard state
+      // CRITICAL: Clear all dashboard state IMMEDIATELY
       setStrategicInsights([]);
       setCompetitorIntelligence([]);
       setBrandDNA(null);
       setMarketShare(null);
       setAnalytics(null);
-      setScanUsername(null);
+      setScanUsername(username || null); // Set to new username immediately
       
-      // Clear ALL localStorage cache (comprehensive)
-      localStorage.removeItem('lastScanResults');
-      localStorage.removeItem('lastScanId');
-      localStorage.removeItem('lastScanTimestamp');
-      localStorage.removeItem('productionAssets');
-      localStorage.removeItem('strategyPlans');
-      localStorage.removeItem('activeContentStrategy');
-      localStorage.removeItem('brandMaterials');
-      localStorage.removeItem('brandProfile');
-      localStorage.removeItem('brandVoice');
-      localStorage.removeItem('brandColors');
-      localStorage.removeItem('brandFonts');
-      localStorage.removeItem('contentPreferences');
+      // CRITICAL: Clear ALL localStorage cache SYNCHRONOUSLY
+      const keysToRemove = [
+        'lastScanResults',
+        'lastScanId', 
+        'lastScanTimestamp',
+        'productionAssets',
+        'strategyPlans',
+        'activeContentStrategy',
+        'brandMaterials',
+        'brandProfile',
+        'brandVoice',
+        'brandColors',
+        'brandFonts',
+        'contentPreferences',
+        'contentIdeas',
+        'strategyConversation',
+        'strategyMessages',
+        'strategyHistory',
+        'inboxItems',
+        'calendarEvents',
+        'analyticsCache',
+        'previousInsightsCount',
+        'integrations',
+        'connectedAccounts'
+      ];
       
-      console.log('✅ Dashboard: All cache cleared for', isRescan ? 'rescan' : 'new scan');
+      keysToRemove.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          console.warn(`Failed to remove ${key}:`, e);
+        }
+      });
       
-      // Reload data for new scan - will be handled by existing loadScanData effect
-      // Just trigger a reload by clearing and letting the effect handle it
+      console.log('✅ Dashboard: All cache cleared for', isRescan ? 'rescan' : 'new scan', '- username:', username);
+      
+      // DO NOT reload data - wait for scanComplete event
+      // The scan is in progress, we should show loading/empty state
     };
     
     window.addEventListener('navigateToPage', handleNavigateToPage as EventListener);
@@ -527,21 +547,30 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
             }
           }
           
-          // Method 2: Try API fetch
+          // Method 2: Try API fetch - CRITICAL: Verify username before using API data
           const storedUsername = localStorage.getItem('lastScannedUsername');
           if (storedUsername) {
             getLatestScanResults(storedUsername)
               .then(async (scanResults) => {
-                console.log('API scan results:', scanResults);
-                console.log('=== FULL API RESPONSE DEBUG ===');
-                console.log('Full scanResults:', JSON.stringify(scanResults, null, 2));
-                console.log('scanResults.data:', scanResults.data);
-                console.log('competitorIntelligence type:', typeof scanResults.data?.competitorIntelligence);
-                console.log('competitorIntelligence value:', scanResults.data?.competitorIntelligence);
-                console.log('Is array?', Array.isArray(scanResults.data?.competitorIntelligence));
-                console.log('Length:', scanResults.data?.competitorIntelligence?.length);
+                // CRITICAL: Re-verify username hasn't changed during async operation
+                const currentUsernameNow = localStorage.getItem('lastScannedUsername');
+                if (currentUsernameNow && currentUsernameNow.toLowerCase() !== storedUsername.toLowerCase()) {
+                  console.log('⚠️ Username changed during API fetch - ignoring stale data');
+                  console.log('Expected:', storedUsername, 'Current:', currentUsernameNow);
+                  return; // Don't use this data, it's for the wrong company
+                }
+                
+                console.log('API scan results for:', storedUsername);
                 
                 if (scanResults.success && scanResults.data) {
+                  // CRITICAL: Verify the API returned data for the CORRECT username
+                  const resultData = scanResults.data as any;
+                  const apiUsername = resultData.scanUsername || resultData.username || '';
+                  if (apiUsername && apiUsername.toLowerCase() !== storedUsername.toLowerCase()) {
+                    console.log('⚠️ API returned data for wrong username - ignoring');
+                    console.log('Expected:', storedUsername, 'Got:', apiUsername);
+                    return; // API returned stale data for different company
+                  }
                   console.log('=== API SCAN RESULTS ===');
                   console.log('Full data object:', scanResults.data);
                   console.log('Data keys:', Object.keys(scanResults.data));
@@ -2345,7 +2374,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                   console.log('✅ RESCAN: Complete cache cleared, navigating to scan');
                   
                   // Always navigate to ingestion for a fresh start
-                  onNavigate(ViewState.INGESTION);
+                    onNavigate(ViewState.INGESTION);
                 }}
                 className="flex-1 px-4 py-2 bg-orange-500 rounded-lg text-sm font-bold text-white hover:bg-orange-600 transition-colors"
               >

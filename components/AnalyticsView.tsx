@@ -396,14 +396,25 @@ const AnalyticsView: React.FC = () => {
       const platformInfo = platformMap[platform] || { name: platform, icon: <FileText className="w-5 h-5" />, color: 'bg-gray-600' };
       
       // Calculate performance based on actual engagement if available
+      // NO FAKE DATA - only use real metrics or show 0
       let performance = 0;
       if (company?.totalEngagement && company?.avgEngagement) {
         // Estimate performance based on engagement metrics
         performance = Math.min(30, Math.max(1, Math.floor(company.avgEngagement / 100)));
-      } else {
-        // Fallback: use a reasonable default
-        performance = Math.floor(Math.random() * 15) + 5; // 5-20% growth
+      } else if (posts.length > 0) {
+        // Calculate from actual posts engagement
+        const platformPosts = posts.filter((p: any) => p.platform === platform);
+        if (platformPosts.length > 0) {
+          const totalEngagement = platformPosts.reduce((sum: number, p: any) => {
+            const likes = p.engagement?.likes || 0;
+            const comments = p.engagement?.comments || 0;
+            const shares = p.engagement?.shares || 0;
+            return sum + likes + comments + shares;
+          }, 0);
+          performance = Math.min(30, Math.max(0, Math.floor(totalEngagement / platformPosts.length / 100)));
+        }
       }
+      // NO RANDOM FALLBACK - if no data, performance stays at 0
       
       // Generate brand-specific insights based on actual content
       const whatsWorking = generateBrandSpecificWhatsWorking(platform, posts, themes, voice, brandDNA);

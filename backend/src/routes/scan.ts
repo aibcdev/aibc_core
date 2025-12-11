@@ -137,13 +137,25 @@ router.get('/user/:username/latest', (req, res) => {
   if (!latestScan || !latestScan.results) {
     return res.json({
       success: true,
-      data: null
+      data: null,
+      requestedUsername: username // Always include requested username for verification
     });
   }
 
+  // CRITICAL: Always include username in response for frontend validation
+  const resultsWithUsername = {
+    ...latestScan.results,
+    scanUsername: latestScan.username,
+    username: latestScan.username,
+    scanId: latestScan.id,
+    scanCompletedAt: latestScan.completedAt,
+    scanCreatedAt: latestScan.createdAt
+  };
+
   res.json({
     success: true,
-    data: latestScan.results
+    data: resultsWithUsername,
+    requestedUsername: username // Include requested username for double-checking
   });
 });
 

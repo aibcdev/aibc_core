@@ -347,7 +347,7 @@ export async function startScan(
       if (!reachable) {
         addLog(scanId, `[WARNING] URL not reachable (${urlToValidate}) - continuing with LLM-only + constructed URLs`);
       } else {
-        addLog(scanId, `[VALIDATION] URL is valid and reachable`);
+      addLog(scanId, `[VALIDATION] URL is valid and reachable`);
       }
     }
     
@@ -637,7 +637,7 @@ export async function startScan(
     } catch (e: any) {
       addLog(scanId, `[DISCOVERY] LLM backfill skipped/failed: ${e?.message || e}`);
     }
-
+    
     // STEP 2: Scrape all platforms, using discovered links when available
     addLog(scanId, `[DISCOVERY] Available discovered links: ${JSON.stringify(Object.keys(discoveredSocialLinks))}`);
     addLog(scanId, `[DISCOVERY] Discovered links details: ${JSON.stringify(discoveredSocialLinks)}`);
@@ -1403,7 +1403,7 @@ For ${nicheIndicators || brandName}, generate content that beats competitor enga
         // Prefer ideas with viral hooks, but don't reject all
         return !isGenericPattern && (hasViralHook || idea.title.length > 40);
       });
-      
+        
       // Add engagement metadata if missing
       contentIdeas = contentIdeas.map((idea: any) => ({
         ...idea,
@@ -3918,7 +3918,7 @@ async function generateStrategicInsights(validatedContent: any, brandDNA: any, s
     const allPosts = (validatedContent.posts || []).map((p: any) => p.content).join('\n\n');
     const combinedText = allPosts.substring(0, 40000);
     const postPatternSummary = summarizePostPatterns(validatedContent.posts || []);
-
+    
     const hasVideo = (validatedContent.posts || []).some((p: any) => 
       p.media_urls?.some((url: string) => url.includes('youtube') || url.includes('video') || url.includes('tiktok'))
     );
@@ -4147,8 +4147,8 @@ function extractNicheIndicators(content: string, bio: string, themes: string, br
 
 // Helper function for athletic/apparel fallback content
 function generateAthleticFallback(brandName: string, primaryTheme: string): any[] {
-  return [
-    { 
+    return [
+      { 
       title: `I tested every ${brandName} product for 6 months. Here's my brutally honest review...`, 
       description: `Inspired by Gymshark's athlete testimonial videos that get 5M+ views. Long-form honest review format.`, 
       platform: 'youtube', 
@@ -4161,7 +4161,7 @@ function generateAthleticFallback(brandName: string, primaryTheme: string): any[
     { 
       title: `The 5 ${brandName} products pro athletes actually use (not what they promote)`, 
       description: `Inspired by Nike's "what athletes really wear" content. Insider secrets that contradict marketing.`, 
-      platform: 'instagram', 
+        platform: 'instagram', 
       platformHook: 'Carousel: "What they promote" vs "What they use"',
       format: 'carousel',
       competitorInspiration: `Nike athlete gear reveals - adapted with contrarian angle for ${brandName}`,
@@ -4171,7 +4171,7 @@ function generateAthleticFallback(brandName: string, primaryTheme: string): any[
     { 
       title: `Why I returned my Nike gear and switched to ${brandName} (honest comparison)`, 
       description: `Inspired by Gymshark vs Nike comparison videos that dominate YouTube. Brand switch story.`, 
-      platform: 'youtube', 
+        platform: 'youtube', 
       platformHook: 'Side-by-side comparison with clear winner reveal',
       format: 'video',
       competitorInspiration: `Gymshark competitor comparison videos - adapted for ${brandName}`,
@@ -4187,8 +4187,8 @@ function generateAthleticFallback(brandName: string, primaryTheme: string): any[
       competitorInspiration: `Under Armour athlete day-in-the-life - adapted for TikTok format`,
       estimatedEngagement: '3M views, 200K saves',
       whyItWorks: 'Aspirational + immersive = high watch time'
-    },
-    { 
+      },
+      { 
       title: `The workout routine ${brandName} athletes won't tell you about...`, 
       description: `Inspired by Nike Training Club's secret workout threads. Insider training secrets.`, 
       platform: 'twitter', 
