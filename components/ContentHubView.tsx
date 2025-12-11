@@ -427,23 +427,12 @@ const ContentHubView: React.FC = () => {
         return;
       }
       
-      // Fallback: Use themes to generate suggestions if no content ideas available
-      const lastScanResults = localStorage.getItem('lastScanResults');
-      if (lastScanResults) {
-        const parsed = JSON.parse(lastScanResults);
-        const themes = parsed.extractedContent?.content_themes || [];
-        
-        if (productionAssets.length === 0 && themes.length > 0) {
-          // Generate initial suggestions if none exist
-          const suggestions = generateInitialSuggestions(themes, lastUsername);
-          setAssets(suggestions);
-          localStorage.setItem('productionAssets', JSON.stringify(suggestions));
-        } else {
-          setAssets(productionAssets);
-        }
-      } else {
-        setAssets(productionAssets);
-      }
+      // CRITICAL: NEVER use generic fallback suggestions - only show real content ideas from backend
+      // If no content ideas available, show empty state or wait for scan to complete
+      console.warn('⚠️ Content Hub: No content ideas from scan - waiting for backend to generate them');
+      // Clear any old generic suggestions
+      setAssets([]);
+      localStorage.removeItem('productionAssets');
     } catch (e) {
       console.error('Error loading content:', e);
       setAssets([]);
