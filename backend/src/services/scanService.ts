@@ -1260,6 +1260,11 @@ Return JSON array:
     
     addLog(scanId, `[FINAL] Content ideas count: ${contentIdeas.length}`);
     
+    // CRITICAL CHECK: Log if contentIdeas is empty
+    if (!contentIdeas || contentIdeas.length === 0) {
+      addLog(scanId, `[CRITICAL ERROR] Content ideas is EMPTY at results assembly! This should never happen.`);
+    }
+    
     const results = {
       extractedContent: validatedContent,
       brandDNA,
