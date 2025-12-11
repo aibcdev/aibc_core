@@ -683,6 +683,9 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
     // Listen for scan completion events
     const handleScanComplete = (event: CustomEvent) => {
       const { username, scanId, results } = event.detail || {};
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:684',message:'handleScanComplete EVENT',data:{username,scanId,hasResults:!!results,currentScanUsername:scanUsername,resultsKeys:results?Object.keys(results):[]},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
       console.log('📥 Scan completed event received - reloading dashboard data...');
       console.log('New scan username:', username);
       console.log('Current scan username:', scanUsername);

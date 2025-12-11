@@ -184,3 +184,4 @@ If built-in service isn't working, set up SendGrid:
 The fact that logs show `/recover | request completed` means Supabase is receiving the request. The issue is likely email delivery (rate limits, spam, or template configuration).
 
 
+

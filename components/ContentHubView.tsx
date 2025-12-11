@@ -311,6 +311,9 @@ const ContentHubView: React.FC = () => {
   };
 
   const loadContent = async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:313',message:'loadContent ENTRY',data:{lastScannedUsername:localStorage.getItem('lastScannedUsername'),lastScanId:localStorage.getItem('lastScanId'),hasLastScanResults:!!localStorage.getItem('lastScanResults')},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
     try {
       // Load brand assets for context
       const brandMaterials = JSON.parse(localStorage.getItem('brandMaterials') || '[]');
@@ -318,7 +321,7 @@ const ContentHubView: React.FC = () => {
       const brandVoice = JSON.parse(localStorage.getItem('brandVoice') || 'null');
       const brandColors = JSON.parse(localStorage.getItem('brandColors') || '[]');
       const brandFonts = JSON.parse(localStorage.getItem('brandFonts') || '[]');
-      
+
       // Load from Production Room assets first - BUT filter out generic suggestions
       const rawProductionAssets = JSON.parse(localStorage.getItem('productionAssets') || '[]');
       const lastUsername = localStorage.getItem('lastScannedUsername');
@@ -355,6 +358,9 @@ const ContentHubView: React.FC = () => {
       if (lastScanId) {
         try {
           const results = await getScanResults(lastScanId);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:360',message:'getScanResults response',data:{lastScanId,success:results.success,hasContentIdeas:!!results.data?.contentIdeas,contentIdeasCount:results.data?.contentIdeas?.length||0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+          // #endregion
           if (results.success && results.data?.contentIdeas && Array.isArray(results.data.contentIdeas)) {
             contentIdeasFromScan = results.data.contentIdeas;
           }
@@ -469,6 +475,9 @@ const ContentHubView: React.FC = () => {
       }
       
       // Convert content ideas to ContentAsset format
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:478',message:'contentIdeasFromScan check',data:{contentIdeasCount:contentIdeasFromScan.length,firstIdea:contentIdeasFromScan[0]?.title||'none'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+      // #endregion
       if (contentIdeasFromScan.length > 0) {
         const brandSpecificAssets = contentIdeasFromScan.map((idea: any, index: number) => {
           // Map platform names

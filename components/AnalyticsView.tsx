@@ -45,6 +45,12 @@ const AnalyticsView: React.FC = () => {
   const [competitiveData, setCompetitiveData] = useState<CompetitiveComparison | null>(null);
   const [loadingCompetitive, setLoadingCompetitive] = useState(false);
 
+  // #region agent log
+  useEffect(() => {
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:42',message:'AnalyticsView MOUNT',data:{analyticsLoading:analytics.isLoading,platformsCount:analytics.platforms.length,hasCompetitiveData:!!competitiveData},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+  }, []);
+  // #endregion
+
   useEffect(() => {
     // Get user name from localStorage
     const userStr = localStorage.getItem('user');

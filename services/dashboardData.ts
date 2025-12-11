@@ -105,9 +105,16 @@ function calculateBrandVoiceMatch(): number {
  * Calculate dashboard KPIs from user activity and content
  */
 function calculateDashboardKPIs() {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboardData.ts:107',message:'calculateDashboardKPIs ENTRY',data:{hasLastScanResults:!!localStorage.getItem('lastScanResults'),lastScannedUsername:localStorage.getItem('lastScannedUsername')},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+  // #endregion
   try {
     const scanResults = localStorage.getItem('lastScanResults');
     const scanData = scanResults ? JSON.parse(scanResults) : null;
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboardData.ts:112',message:'scanData parsed',data:{hasScanData:!!scanData,postsCount:scanData?.extractedContent?.posts?.length||0,contentIdeasCount:scanData?.contentIdeas?.length||0,scanUsername:scanData?.scanUsername||'none'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+    // #endregion
     
     const postsThisWeek = scanData?.extractedContent?.posts?.length || 0;
     const postsThisWeekChange = undefined;

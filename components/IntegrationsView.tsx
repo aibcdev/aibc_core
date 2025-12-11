@@ -25,6 +25,9 @@ interface VerificationResult {
 }
 
 const IntegrationsView: React.FC = () => {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'IntegrationsView.tsx:27',message:'IntegrationsView RENDER',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+  // #endregion
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
   const [inputHandle, setInputHandle] = useState('');

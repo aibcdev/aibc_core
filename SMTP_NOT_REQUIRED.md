@@ -150,3 +150,4 @@ The warning you see is just Supabase suggesting you upgrade to custom SMTP for p
 The warning is just a suggestion - your password reset should work as-is!
 
 
+
