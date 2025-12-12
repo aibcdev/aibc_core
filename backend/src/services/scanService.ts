@@ -1573,12 +1573,19 @@ Return JSON array:
   }
 ]`;
 
-      const contentIdeasResult = await generateJSON<any>(contentPrompt, `You are a VIRAL CONTENT STRATEGIST who creates scroll-stopping, engagement-driving content.
+      const systemPrompt = `You are a VIRAL CONTENT STRATEGIST who creates scroll-stopping, engagement-driving content.
+
+${brandIdentity ? `
+CRITICAL: ${brandIdentity.name} is a ${brandIdentity.industry} company that ${brandIdentity.description}.
+Generate content that is ACCURATE to this brand identity - understand what ${brandIdentity.name} actually does,
+then create viral content that beats competitors in ${brandIdentity.industry}.
+` : ''}
 
 Your ONLY goal: Create content that GOES VIRAL. Every idea must have:
 1. A HOOK that stops the scroll in 0.5 seconds
 2. A PSYCHOLOGICAL TRIGGER that compels action (curiosity, FOMO, controversy, identity)
 3. PLATFORM-NATIVE format (what works on TikTok ≠ what works on LinkedIn)
+4. ACCURACY to what the brand actually IS (from brand identity)
 
 ${creatorInfo.isCreator ? `
 CREATOR FOCUS: This is a creator/influencer brand. Prioritize:
@@ -1601,8 +1608,11 @@ REJECTION CRITERIA - Do NOT generate:
 - Corporate-sounding content that wouldn't get engagement
 - Ideas without a clear hook or trigger
 - Same format repeated across ideas
+- Content that doesn't match what the brand actually does (be ACCURATE)
 
-For ${nicheIndicators || brandName}, generate content that MAXIMIZES VIRALITY. Think like a creator, not a marketer.`, { tier: scanTier });
+For ${nicheIndicators || brandName}, generate content that MAXIMIZES VIRALITY while being ACCURATE to the brand's actual business. Think like a creator, not a marketer.`;
+
+      const contentIdeasResult = await generateJSON<any>(contentPrompt, systemPrompt, { tier: scanTier });
       
       if (Array.isArray(contentIdeasResult)) {
         contentIdeas = contentIdeasResult;
@@ -1612,7 +1622,7 @@ For ${nicheIndicators || brandName}, generate content that MAXIMIZES VIRALITY. T
         contentIdeas = [];
       }
       
-      // Validate content ideas - enforce viral hook patterns
+      // Validate content ideas - enforce viral hook patterns AND brandIdentity accuracy
       contentIdeas = contentIdeas.filter((idea: any) => {
         if (!idea.title || !idea.description) return false;
         // Minimum title length for a good viral hook (25+ chars)
@@ -1622,6 +1632,35 @@ For ${nicheIndicators || brandName}, generate content that MAXIMIZES VIRALITY. T
         
         // Check for viral hook patterns in title
         const titleLower = idea.title.toLowerCase();
+        
+        // ACCURACY CHECK: If brandIdentity exists, ensure content aligns with actual industry
+        if (brandIdentity && brandIdentity.industry) {
+          const descLower = (idea.description || '').toLowerCase();
+          const combinedText = `${titleLower} ${descLower}`;
+          const brandIndustry = brandIdentity.industry.toLowerCase();
+          
+          // Check if content clearly references wrong industry (only if obviously wrong)
+          // Allow hybrid/adjacent industries - just ensure it's not completely off
+          // This is about ACCURACY, not preventing industry mixing
+          const wrongIndustryKeywords: Record<string, string[]> = {
+            'video platform': ['crypto token', 'blockchain', 'defi', 'nft', 'token launch', 'script launch'],
+            'content platform': ['crypto token', 'blockchain', 'defi', 'nft', 'token launch'],
+            'saas': ['physical product', 'ecommerce store', 'retail shop'],
+            'ecommerce': ['saas platform', 'software tool', 'api service'],
+          };
+          
+          // Only filter if content clearly references wrong industry keywords
+          const wrongKeywords = wrongIndustryKeywords[brandIndustry] || [];
+          const hasWrongIndustryRef = wrongKeywords.some(keyword => 
+            combinedText.includes(keyword.toLowerCase())
+          );
+          
+          // If content has wrong industry reference AND doesn't mention brandIdentity industry, filter it
+          if (hasWrongIndustryRef && !combinedText.includes(brandIndustry.split(' ')[0])) {
+            addLog(scanId, `[VALIDATION] Filtered content idea "${idea.title}" - references wrong industry`);
+            return false;
+          }
+        }
         const hasViralHook = (
           // Common viral starters
           /^(i |we |the |why |how |what |this |stop |don't |here's |you |your |[0-9]+ )/i.test(idea.title) ||
