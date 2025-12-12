@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Mic, Image as ImageIcon, Video, ArrowRight, ChevronDown, MoreHorizontal, Loader2, X, Sparkles, RefreshCw, Calendar, Clock, Zap, Play, Download, CheckCircle } from 'lucide-react';
 import { generatePodcast } from '../services/podcastClient';
 import { addToInbox } from '../services/inboxService';
-import { hasEnoughCredits, deductCredits, CREDIT_COSTS, getCreditBalance } from '../services/subscriptionService';
+import { hasEnoughCredits, deductCredits, CREDIT_COSTS, getCreditBalance, hasProductionAccess, getProductionCreditCost, getUserSubscription, SubscriptionTier } from '../services/subscriptionService';
 
 interface ProductionRequest {
   id: string;
@@ -100,18 +100,23 @@ const ProductionRoomView: React.FC = () => {
     }
   }, [productionQueue]);
   
-  // Credit costs based on settings
+  // Credit costs based on settings - uses new tiered system
   const getCreditCost = () => {
-    const baseCost = {
-      'short': 1,
-      'mid': 2,
-      'long': 5
-    };
-    
-    // Video costs more
-    const typeMultiplier = outputType === 'video' ? 2 : outputType === 'audio' ? 1 : 1;
-    
-    return baseCost[duration] * typeMultiplier;
+    return getProductionCreditCost(outputType, duration);
+  };
+  
+  // Check if user has access to the selected output type
+  const hasAccessToOutputType = () => {
+    if (outputType === 'image') return hasProductionAccess('images');
+    if (outputType === 'audio') return hasProductionAccess('audio');
+    if (outputType === 'video') return hasProductionAccess('video');
+    return false;
+  };
+  
+  // Get required tier for output type
+  const getRequiredTier = () => {
+    if (outputType === 'video') return 'Pro+ (Enterprise)';
+    return 'Pro';
   };
   
   // Calculate wallet utilization
@@ -140,15 +145,25 @@ const ProductionRoomView: React.FC = () => {
   const handleRequest = async () => {
     const cost = getCreditCost();
     
+    // Check feature access first
+    if (!hasAccessToOutputType()) {
+      alert(`${outputType.charAt(0).toUpperCase() + outputType.slice(1)} production requires ${getRequiredTier()} subscription. Please upgrade to access this feature.`);
+      return;
+    }
+    
     // Check credits
-    if (!hasEnoughCredits('IMAGE_GENERATION')) {
-      alert(`Insufficient credits. You need ${cost} credits.`);
+    const balance = getCreditBalance();
+    if (balance.credits < cost) {
+      alert(`Insufficient credits. You need ${cost} credits but only have ${balance.credits}.`);
       return;
     }
     
     setIsRequesting(true);
     
     try {
+      // Determine the correct credit action key
+      const creditKey = `${outputType.toUpperCase()}_${duration.toUpperCase()}` as keyof typeof CREDIT_COSTS;
+      
       // Create new request
       const newRequest: ProductionRequest = {
         id: `req_${Date.now()}`,
@@ -158,41 +173,39 @@ const ProductionRoomView: React.FC = () => {
         style: visualStyle,
         aspectRatio: outputType === 'audio' ? 'N/A' : aspectRatio,
         status: 'queued',
-        description: `${duration === 'short' ? 'Short' : duration === 'mid' ? 'Mid-length' : 'Long-form'} ${outputType}, ${visualStyle.toLowerCase()} style...`,
+        description: `${duration === 'short' ? 'Short' : duration === 'mid' ? 'Mid-length' : 'Long-form'} ${outputType}, ${visualStyle.toLowerCase()} style. Cost: ${cost} credits`,
         createdAt: new Date()
       };
       
       // Add to queue
       setProductionQueue(prev => [newRequest, ...prev]);
       
-      // Deduct credits
-      deductCredits('IMAGE_GENERATION');
+      // Deduct credits using the correct key
+      deductCredits(creditKey in CREDIT_COSTS ? creditKey : 'IMAGE_GENERATION');
       
       // Update balance
-      const balance = getCreditBalance();
-      setCreditBalance({ credits: balance.credits, used: (balance.used || 0) + cost });
+      const newBalance = getCreditBalance();
+      setCreditBalance({ credits: newBalance.credits, used: (newBalance.used || 0) + cost });
       
-      // Add to inbox for review
+      // Add to inbox for admin review - THIS IS THE KEY WORKFLOW
+      // Request goes to admin panel, admin completes content, sends back via inbox
       addToInbox({
         type: outputType,
         title: newRequest.title,
-        description: newRequest.description,
+        description: `Production request: ${newRequest.description}. User: ${localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!).email : 'unknown'}`,
         preview: null,
-        cost
+        cost,
+        status: 'pending_review' // Admin will review and complete
       });
       
-      // Simulate processing (in real app, this would call an API)
+      // Show user that request is queued for admin review
+      alert(`Request submitted! Your ${outputType} request has been queued for production. You'll receive it in your inbox once completed. Cost: ${cost} credits.`);
+      
+      // Update status to show it's being processed by team
       setTimeout(() => {
         setProductionQueue(prev => prev.map(item => 
           item.id === newRequest.id ? { ...item, status: 'processing' } : item
         ));
-        
-        // After 5 seconds, mark as completed
-        setTimeout(() => {
-          setProductionQueue(prev => prev.map(item => 
-            item.id === newRequest.id ? { ...item, status: 'completed' } : item
-          ));
-        }, 5000);
       }, 1000);
       
     } catch (error) {

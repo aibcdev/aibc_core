@@ -39,11 +39,49 @@ export const CREDIT_COSTS = {
   CONTENT_GENERATION: 1, // 1 credit = 1 short post
   COMPETITOR_ANALYSIS: 0, // Included in Business tier
   BRAND_DNA_EXTRACTION: 0, // Included in scan
-  AUDIO_GENERATION: 5, // 5 credits = 1 podcast/audio script (matching pricing page)
-  VIDEO_GENERATION: 15, // 15 credits = 1 long video package (matching pricing page)
-  SHORT_VIDEO: 10, // 10 credits = 1 short video package (10-30s) (matching pricing page)
-  LONG_VIDEO: 15, // 15 credits = 1 long video package (30-180s) (matching pricing page)
-  LONG_FORM_CONTENT: 3, // 3 credits = 1 long-form asset (blog, newsletter) (matching pricing page)
+  
+  // Production Room costs - tiered by content type
+  // Images: Cheapest - available from PRO tier
+  IMAGE_SHORT: 2,   // Short image/graphic
+  IMAGE_MID: 3,     // Mid-length image set
+  IMAGE_LONG: 5,    // Full image package
+  
+  // Audio: Medium cost - available from PRO tier
+  AUDIO_SHORT: 3,   // Short audio clip (30s)
+  AUDIO_MID: 5,     // Mid-length audio (1-2 min)
+  AUDIO_LONG: 8,    // Long audio/podcast (3+ min)
+  
+  // Video: Most expensive - requires ENTERPRISE (Pro+)
+  VIDEO_SHORT: 10,  // Short video (15-30s)
+  VIDEO_MID: 15,    // Mid-length video (30-90s)
+  VIDEO_LONG: 25,   // Long video (90s+)
+  
+  // Legacy mappings
+  AUDIO_GENERATION: 5,
+  VIDEO_GENERATION: 15,
+  SHORT_VIDEO: 10,
+  LONG_VIDEO: 15,
+  IMAGE_GENERATION: 3,
+  LONG_FORM_CONTENT: 3,
+} as const;
+
+// Feature access by tier
+export const FEATURE_ACCESS = {
+  [SubscriptionTier.FREE]: {
+    images: false,
+    audio: false,
+    video: false,
+  },
+  [SubscriptionTier.PRO]: {
+    images: true,   // Images available from PRO
+    audio: true,    // Audio available from PRO
+    video: false,   // Video requires ENTERPRISE
+  },
+  [SubscriptionTier.ENTERPRISE]: {
+    images: true,
+    audio: true,
+    video: true,    // Video only for ENTERPRISE (Pro+)
+  },
 } as const;
 
 // Subscription tier limits (matching pricing page)
@@ -187,6 +225,27 @@ export function hasEnoughCredits(action: keyof typeof CREDIT_COSTS): boolean {
   const balance = getCreditBalance();
   const cost = CREDIT_COSTS[action];
   return balance.credits >= cost;
+}
+
+/**
+ * Check if user's tier has access to a production feature
+ * @param feature - 'images' | 'audio' | 'video'
+ */
+export function hasProductionAccess(feature: 'images' | 'audio' | 'video'): boolean {
+  // Admin has full access
+  if (isAdmin()) return true;
+  
+  const subscription = getUserSubscription();
+  const access = FEATURE_ACCESS[subscription.tier];
+  return access?.[feature] ?? false;
+}
+
+/**
+ * Get credit cost for production request
+ */
+export function getProductionCreditCost(type: 'audio' | 'image' | 'video', duration: 'short' | 'mid' | 'long'): number {
+  const costKey = `${type.toUpperCase()}_${duration.toUpperCase()}` as keyof typeof CREDIT_COSTS;
+  return CREDIT_COSTS[costKey] ?? 5; // Default to 5 if not found
 }
 
 /**
