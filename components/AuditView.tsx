@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Network, ArrowRight, CheckCircle, Loader2, AlertCircle, Search, Brain, Database, Target, Sparkles } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
 import { startScan, pollScanStatus } from '../services/apiClient';
+import Navigation from './shared/Navigation';
 
 interface AuditProps extends NavProps {
   username: string;
@@ -488,7 +489,10 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
 
   return (
     <div className="fixed inset-0 z-[80] bg-[#030303] overflow-hidden">
-      <div className="h-full flex flex-col">
+      {/* Navigation - Always visible */}
+      <Navigation onNavigate={onNavigate} />
+      
+      <div className="h-full flex flex-col pt-16">
         
         {/* Top Bar - Fixed - Mobile Optimized */}
         <div className="flex-shrink-0 border-b border-white/5 bg-[#030303]">

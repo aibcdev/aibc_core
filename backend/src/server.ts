@@ -7,6 +7,11 @@ import analyticsRoutes from './routes/analytics';
 import authRoutes from './routes/auth';
 import stripeRoutes from './routes/stripe';
 import adminRoutes from './routes/admin';
+import blogRoutes from './routes/blog';
+import contentGeneratorRoutes from './routes/contentGenerator';
+import sitemapRoutes from './routes/sitemap';
+import seoAnalyticsRoutes from './routes/seoAnalytics';
+import seoOptimizeRoutes from './routes/seoOptimize';
 
 dotenv.config();
 
@@ -49,6 +54,11 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/blog', blogRoutes);
+app.use('/api/blog', contentGeneratorRoutes);
+app.use('/api', sitemapRoutes);
+app.use('/api/seo/analytics', seoAnalyticsRoutes);
+app.use('/api/seo/optimize', seoOptimizeRoutes);
 
 // Verify handle endpoint (quick verification for integrations)
 app.post('/api/verify-handle', async (req, res) => {
@@ -210,6 +220,20 @@ Return JSON: { "response": "your helpful response", "actions": ["action1", "acti
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Initialize content scheduler (generate content at 9 AM daily)
+if (process.env.ENABLE_CONTENT_SCHEDULER !== 'false') {
+  try {
+    const { scheduleDailyContentGeneration } = await import('./cron/seoContentScheduler');
+    scheduleDailyContentGeneration(
+      process.env.CONTENT_GENERATION_TIME || '09:00',
+      process.env.TIMEZONE || 'America/New_York'
+    );
+    console.log('✅ Content scheduler initialized');
+  } catch (error) {
+    console.warn('⚠️ Content scheduler not available (node-cron may not be installed)');
+  }
+}
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);

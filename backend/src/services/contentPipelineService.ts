@@ -1,0 +1,131 @@
+/**
+ * Content Pipeline Service - End-to-end content generation and publishing workflow
+ */
+
+import { getNextKeywordToTarget } from './keywordService';
+import { generateBlogPost, ContentGenerationRequest } from './contentGeneratorService';
+import { addInternalLinks, updatePostWithInternalLinks } from './internalLinkingService';
+import { analyzeContentSEO } from './contentOptimizationService';
+import { updateBlogPost, getBlogPostById } from './seoContentService';
+import { recordPerformance } from './seoAnalyticsService';
+
+export interface PipelineResult {
+  success: boolean;
+  postId?: string;
+  slug?: string;
+  seoScore?: number;
+  error?: string;
+  steps: Array<{ step: string; success: boolean; message?: string }>;
+}
+
+/**
+ * Execute full content pipeline: keyword selection -> generation -> optimization -> publishing
+ */
+export async function executeContentPipeline(): Promise<PipelineResult> {
+  const steps: Array<{ step: string; success: boolean; message?: string }> = [];
+  
+  try {
+    // Step 1: Get next keyword
+    steps.push({ step: 'keyword_selection', success: false });
+    const keyword = await getNextKeywordToTarget();
+    if (!keyword) {
+      return {
+        success: false,
+        error: 'No keywords available to target',
+        steps: [{ step: 'keyword_selection', success: false, message: 'No keywords found' }],
+      };
+    }
+    steps[steps.length - 1] = { step: 'keyword_selection', success: true, message: `Selected: ${keyword.keyword}` };
+
+    // Step 2: Generate content
+    steps.push({ step: 'content_generation', success: false });
+    const generationRequest: ContentGenerationRequest = {
+      keyword: keyword.keyword,
+      category: keyword.keyword.includes('video') ? 'Video Marketing' : 'Content Marketing',
+      target_word_count: 2000,
+    };
+
+    const generated = await generateBlogPost(generationRequest);
+    steps[steps.length - 1] = { step: 'content_generation', success: true, message: `Generated: ${generated.post.slug}` };
+
+    // Step 3: Add internal links
+    steps.push({ step: 'internal_linking', success: false });
+    try {
+      const updatedPost = await updatePostWithInternalLinks(generated.post.id);
+      if (updatedPost) {
+        steps[steps.length - 1] = { step: 'internal_linking', success: true, message: 'Internal links added' };
+      } else {
+        steps[steps.length - 1] = { step: 'internal_linking', success: false, message: 'No related posts found' };
+      }
+    } catch (error: any) {
+      steps[steps.length - 1] = { step: 'internal_linking', success: false, message: error.message };
+    }
+
+    // Step 4: Analyze and optimize
+    steps.push({ step: 'seo_optimization', success: false });
+    const analysis = analyzeContentSEO(generated.post, keyword.keyword);
+    const updatedPost = await updateBlogPost(generated.post.id, {
+      seo_score: analysis.score,
+    });
+    steps[steps.length - 1] = { step: 'seo_optimization', success: true, message: `SEO Score: ${analysis.score}/100` };
+
+    // Step 5: Publish (if score is acceptable)
+    steps.push({ step: 'publishing', success: false });
+    if (analysis.score >= 70) {
+      const published = await updateBlogPost(generated.post.id, {
+        status: 'published',
+        published_at: new Date().toISOString(),
+      });
+      steps[steps.length - 1] = { step: 'publishing', success: true, message: 'Published successfully' };
+    } else {
+      steps[steps.length - 1] = { step: 'publishing', success: false, message: `Score too low (${analysis.score}), keeping as draft` };
+    }
+
+    // Step 6: Record initial performance (zero metrics)
+    try {
+      await recordPerformance(generated.post.id, {
+        organic_views: 0,
+        organic_clicks: 0,
+        impressions: 0,
+      });
+    } catch (error) {
+      // Non-critical, continue
+    }
+
+    return {
+      success: true,
+      postId: generated.post.id,
+      slug: generated.post.slug,
+      seoScore: analysis.score,
+      steps,
+    };
+  } catch (error: any) {
+    console.error('[Content Pipeline] Error:', error);
+    return {
+      success: false,
+      error: error.message,
+      steps,
+    };
+  }
+}
+
+/**
+ * Execute pipeline for multiple posts
+ */
+export async function executeBatchPipeline(count: number = 2): Promise<PipelineResult[]> {
+  const results: PipelineResult[] = [];
+
+  for (let i = 0; i < count; i++) {
+    console.log(`[Content Pipeline] Processing batch ${i + 1}/${count}`);
+    const result = await executeContentPipeline();
+    results.push(result);
+
+    // Wait between generations to avoid rate limits
+    if (i < count - 1) {
+      await new Promise(resolve => setTimeout(resolve, 30000)); // 30 second delay
+    }
+  }
+
+  return results;
+}
+

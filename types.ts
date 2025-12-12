@@ -11,7 +11,9 @@ export enum ViewState {
   DASHBOARD = 'DASHBOARD',
   PRICING = 'PRICING',
   ADMIN = 'ADMIN',
-  INBOX = 'INBOX'
+  INBOX = 'INBOX',
+  BLOG = 'BLOG',
+  BLOG_POST = 'BLOG_POST'
 }
 
 export interface NavProps {

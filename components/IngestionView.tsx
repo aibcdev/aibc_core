@@ -297,6 +297,8 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
 
   return (
     <div id="ingestion-view" className="min-h-screen bg-black text-zinc-300 overflow-hidden flex flex-col items-center justify-center relative selection:bg-orange-500/30 selection:text-orange-100">
+      {/* Navigation - Always visible */}
+      <Navigation onNavigate={onNavigate} />
       
       {/* Rescan Warning Modal */}
       {showRescanWarning && pendingDomain && (
@@ -342,19 +344,8 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
         <div className="absolute bottom-[-10%] left-[50%] -translate-x-1/2 w-[500px] h-[300px] bg-orange-500/[0.03] rounded-full blur-[80px]"></div>
       </div>
 
-      {/* Navigation */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20">
-        <button 
-          onClick={() => onNavigate(ViewState.LOGIN)}
-          className="group flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900/50 border border-white/5 hover:border-white/10 backdrop-blur-md transition-all duration-300"
-        >
-          <ArrowLeft className="w-3 h-3 text-zinc-500 group-hover:text-white transition-colors" />
-          <span className="text-[9px] font-mono font-medium tracking-[0.15em] text-zinc-500 group-hover:text-white transition-colors uppercase">Return</span>
-        </button>
-      </div>
-
       {/* Main Content */}
-      <main className="relative z-10 w-full max-w-3xl mx-auto px-4 flex flex-col items-center justify-center">
+      <main className="relative z-10 w-full max-w-3xl mx-auto px-4 flex flex-col items-center justify-center pt-20">
 
         {/* Compact Typography */}
         <div className="text-center mb-5 leading-none select-none mt-4">

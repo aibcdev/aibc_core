@@ -12,6 +12,8 @@ import DashboardView from './components/DashboardView';
 import PricingView from './components/PricingView';
 import AdminView from './components/AdminView';
 import InboxView from './components/InboxView';
+import BlogView from './components/BlogView';
+import BlogPostView from './components/BlogPostView';
 import { ViewState } from './types';
 import { supabase, isSupabaseConfigured } from './services/supabaseClient';
 
@@ -37,6 +39,7 @@ const URL_TO_VIEW: Record<string, { view: ViewState; page?: string }> = {
   '/settings': { view: ViewState.DASHBOARD, page: 'settings' },
   '/inbox': { view: ViewState.DASHBOARD, page: 'inbox' },
   '/admin': { view: ViewState.ADMIN },
+  '/blog': { view: ViewState.BLOG },
 };
 
 // Page to URL mapping (for navigation)
@@ -60,6 +63,7 @@ function App() {
   const [username, setUsername] = useState<string>('');
   const [scanType, setScanType] = useState<'basic' | 'deep'>('basic');
   const [isInitializing, setIsInitializing] = useState(true); // Start true to prevent flash
+  const [blogSlug, setBlogSlug] = useState<string>('');
 
   // Parse URL on mount to determine initial view
   const getViewFromURL = useCallback(() => {
@@ -67,6 +71,11 @@ function App() {
     const mapping = URL_TO_VIEW[path];
     if (mapping) {
       return mapping;
+    }
+    // Check for blog post route (e.g., /blog/some-post-slug)
+    if (path.startsWith('/blog/')) {
+      const slug = path.replace('/blog/', '');
+      return { view: ViewState.BLOG_POST, slug };
     }
     return { view: ViewState.LANDING };
   }, []);
@@ -82,6 +91,16 @@ function App() {
         
         // Parse URL to see if we should go to a specific page
         const urlMapping = getViewFromURL();
+        
+        // Handle blog routes (public, no auth needed)
+        if (urlMapping.view === ViewState.BLOG || urlMapping.view === ViewState.BLOG_POST) {
+          setView(urlMapping.view);
+          if (urlMapping.view === ViewState.BLOG_POST && 'slug' in urlMapping) {
+            setBlogSlug((urlMapping as any).slug);
+          }
+          setIsInitializing(false);
+          return;
+        }
         
         // If we have a token and user, they're authenticated
         if (authToken && userStr) {
@@ -117,17 +136,30 @@ function App() {
             }
           } else if (urlMapping.view === ViewState.PRICING) {
             setView(ViewState.PRICING);
+          } else if (urlMapping.view === ViewState.BLOG || urlMapping.view === ViewState.BLOG_POST) {
+            setView(urlMapping.view);
+            if (urlMapping.view === ViewState.BLOG_POST && 'slug' in urlMapping) {
+              setBlogSlug((urlMapping as any).slug);
+            }
+          } else if (urlMapping.view === ViewState.INGESTION) {
+            // Only go to ingestion if explicitly navigating to /scan
+            setView(ViewState.INGESTION);
           } else if (lastScanResults) {
             setView(ViewState.DASHBOARD);
             window.history.replaceState(null, '', '/dashboard');
           } else {
-            setView(ViewState.INGESTION);
-            window.history.replaceState(null, '', '/scan');
+            // Default to landing page, not ingestion
+            setView(ViewState.LANDING);
           }
         } else {
           // Not authenticated - only allow public pages
           if (urlMapping.view === ViewState.PRICING) {
             setView(ViewState.PRICING);
+          } else if (urlMapping.view === ViewState.BLOG || urlMapping.view === ViewState.BLOG_POST) {
+            setView(urlMapping.view);
+            if (urlMapping.view === ViewState.BLOG_POST && 'slug' in urlMapping) {
+              setBlogSlug((urlMapping as any).slug);
+            }
           } else if (urlMapping.view === ViewState.LOGIN) {
             setView(ViewState.LOGIN);
           } else if (urlMapping.view === ViewState.SIGNIN) {
@@ -165,6 +197,9 @@ function App() {
       setView(urlMapping.view);
       if (urlMapping.page) {
         setDashboardPage(urlMapping.page);
+      }
+      if (urlMapping.view === ViewState.BLOG_POST && 'slug' in urlMapping) {
+        setBlogSlug((urlMapping as any).slug);
       }
     };
     
@@ -258,6 +293,7 @@ function App() {
     else if (newView === ViewState.AUDIT) newPath = '/audit';
     else if (newView === ViewState.ONBOARDING) newPath = '/onboarding';
     else if (newView === ViewState.ADMIN) newPath = '/admin';
+    else if (newView === ViewState.BLOG) newPath = '/blog';
     else if (newView === ViewState.DASHBOARD) {
       if (page) {
         setDashboardPage(page);
@@ -301,6 +337,8 @@ function App() {
       {currentView === ViewState.PRICING && <PricingView onNavigate={navigate} />}
       {currentView === ViewState.ADMIN && <AdminView onNavigate={navigate} />}
       {currentView === ViewState.INBOX && <InboxView onNavigate={navigate} />}
+      {currentView === ViewState.BLOG && <BlogView onNavigate={navigate} />}
+      {currentView === ViewState.BLOG_POST && <BlogPostView onNavigate={navigate} slug={blogSlug} />}
     </>
   );
 }
