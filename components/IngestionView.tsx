@@ -313,8 +313,8 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
         {/* Description */}
         <div className="text-center mb-6 px-4">
           <p className="font-mono text-[10px] md:text-xs text-zinc-500 leading-relaxed tracking-wide">
-            Enter a domain. Sweep 10 years of public data.<br className="hidden md:block" />
-            Reconstruct brand DNA instantly.
+            Enter a website URL or domain. Our Agentic System will sweep<br className="hidden md:block" />
+            10 years of public data to reconstruct your brand DNA.
           </p>
         </div>
 
@@ -326,7 +326,7 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
             <div className="relative flex items-center h-11 w-full">
               <input 
                 type="text" 
-                placeholder="example.com" 
+                placeholder="example.com or https://example.com" 
                 className="w-full h-full bg-transparent px-3 outline-none font-mono text-sm text-white placeholder:text-zinc-700 transition-colors text-center"
                 value={inputVal}
                 onChange={(e) => {
@@ -338,7 +338,7 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
                 spellCheck="false"
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-2 pointer-events-none">
-                <span className="px-1.5 py-0.5 text-[9px] font-bold text-zinc-600 bg-zinc-900 border border-zinc-800 rounded text-center tracking-wide font-mono">RET</span>
+                <span className="px-1.5 py-0.5 text-[9px] font-bold text-zinc-600 bg-zinc-900 border border-zinc-800 rounded text-center tracking-wide font-mono">ENTER</span>
               </div>
             </div>
           </div>
@@ -433,10 +433,10 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
                   : 'bg-zinc-900/20 border border-white/5 hover:border-white/10'
               }`}
             >
-              {/* 3X DEPTH Badge */}
+              {/* 3X MORE INSIGHTS Badge */}
               <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border border-white/10 z-10">
                 <Sparkles className="w-2.5 h-2.5" />
-                3X DEPTH
+                3X MORE INSIGHTS
               </div>
 
               {selectedScanType === 'deep' && (
@@ -471,16 +471,25 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
               <ul className="space-y-1.5 mb-2">
                 <li className="flex items-center gap-2">
                   <Check className={`w-3 h-3 shrink-0 ${canUseDeepScan ? 'text-purple-400' : 'text-zinc-600'}`} />
-                  <span className={`text-xs ${canUseDeepScan ? 'text-zinc-400' : 'text-zinc-500'}`}>20 posts + strategy</span>
+                  <span className={`text-xs ${canUseDeepScan ? 'text-zinc-400' : 'text-zinc-500'}`}>15-20 posts analyzed</span>
                   <span className="text-[9px] font-bold text-purple-300 bg-purple-500/20 px-1 py-0 rounded">+3x</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className={`w-3 h-3 shrink-0 ${canUseDeepScan ? 'text-purple-400' : 'text-zinc-600'}`} />
-                  <span className={`text-xs ${canUseDeepScan ? 'text-zinc-400' : 'text-zinc-500'}`}>8 competitors</span>
+                  <span className={`text-xs ${canUseDeepScan ? 'text-zinc-400' : 'text-zinc-500'}`}>5-8 competitors</span>
+                  <span className="text-[9px] font-bold text-purple-300 bg-purple-500/20 px-1 py-0 rounded">+2x</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className={`w-3 h-3 shrink-0 ${canUseDeepScan ? 'text-purple-400' : 'text-zinc-600'}`} />
-                  <span className={`text-xs ${canUseDeepScan ? 'text-zinc-400' : 'text-zinc-500'}`}>12 themes & tone</span>
+                  <span className={`text-xs ${canUseDeepScan ? 'text-zinc-400' : 'text-zinc-500'}`}>Advanced voice & tone</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className={`w-3 h-3 shrink-0 ${canUseDeepScan ? 'text-purple-400' : 'text-zinc-600'}`} />
+                  <span className={`text-xs ${canUseDeepScan ? 'text-zinc-400' : 'text-zinc-500'}`}>8-12 themes + sub-themes</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className={`w-3 h-3 shrink-0 ${canUseDeepScan ? 'text-purple-400' : 'text-zinc-600'}`} />
+                  <span className={`text-xs ${canUseDeepScan ? 'text-zinc-400' : 'text-zinc-500'}`}>Market & strategy analysis</span>
                 </li>
               </ul>
 
