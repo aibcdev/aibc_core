@@ -188,13 +188,13 @@ const CalendarView: React.FC = () => {
   return (
     <div className="h-full flex">
       {/* Main Calendar Area */}
-      <div className={`flex-1 overflow-y-auto transition-all duration-300 ${selectedEvent ? 'mr-[420px]' : ''}`}>
-        <div className="max-w-[1400px] mx-auto space-y-6 p-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <div className={`flex-1 overflow-y-auto transition-all duration-300 ${selectedEvent ? 'lg:mr-[420px]' : ''}`}>
+        <div className="max-w-[1400px] mx-auto space-y-6 p-4 sm:p-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-8">
             <div>
-              <h1 className="text-3xl font-black uppercase tracking-tighter text-white mb-2">Schedule</h1>
-              <p className="text-white/40 text-sm uppercase tracking-wider">Content Publication Calendar</p>
+              <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-white mb-1 sm:mb-2">Schedule</h1>
+              <p className="text-white/40 text-xs sm:text-sm uppercase tracking-wider">Content Publication Calendar</p>
             </div>
             <div className="flex items-center gap-4">
               <button 

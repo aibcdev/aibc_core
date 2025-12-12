@@ -47,8 +47,10 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
   useEffect(() => {
     const handleNavigateToPage = (event: CustomEvent) => {
       const { page, assetId } = event.detail;
-      if (page === 'production') {
-        setCurrentPage('production');
+      // Handle all valid dashboard pages
+      const validPages: DashboardPage[] = ['dashboard', 'contentHub', 'strategy', 'production', 'calendar', 'assets', 'integrations', 'competitors', 'analytics', 'settings', 'inbox'];
+      if (validPages.includes(page as DashboardPage)) {
+        setCurrentPage(page as DashboardPage);
         // If assetId is provided, we could select that asset in Production Room
         // This would require passing a callback or using a shared state
       }
@@ -179,6 +181,17 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
   const [competitorIntelligence, setCompetitorIntelligence] = useState<any[]>([]);
   const [marketShare, setMarketShare] = useState<any>(null);
   const [scanUsername, setScanUsername] = useState<string | null>(null);
+  const [scanStats, setScanStats] = useState<{
+    postsAnalyzed: number;
+    competitorsFound: number;
+    themesIdentified: number;
+    contentIdeasGenerated: number;
+    scanTier: string;
+    isDeepScan: boolean;
+  } | null>(null);
+  
+  // Mobile sidebar state
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showAddCompetitor, setShowAddCompetitor] = useState(false);
   const [showRescanWarning, setShowRescanWarning] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -209,6 +222,100 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
     unread: boolean;
   }>>([]);
   const notificationRef = useRef<HTMLDivElement>(null);
+  
+  // Helper to add notification
+  const addNotification = (title: string, message: string) => {
+    const newNotification = {
+      id: Date.now().toString(),
+      title,
+      message,
+      time: 'Just now',
+      unread: true
+    };
+    setNotifications(prev => [newNotification, ...prev.slice(0, 9)]); // Keep max 10
+  };
+  
+  // Listen for events that should trigger notifications
+  useEffect(() => {
+    const handleScanCompleteNotif = (event: CustomEvent) => {
+      const { username } = event.detail || {};
+      if (username) {
+        addNotification('Scan Complete', `Digital footprint scan for ${username} has completed successfully.`);
+      }
+    };
+    
+    const handleStrategyUpdatedNotif = (event: CustomEvent) => {
+      const { strategy } = event.detail || {};
+      if (strategy) {
+        addNotification('Strategy Updated', `AI has processed your strategy: "${strategy.substring(0, 50)}..."`);
+      }
+    };
+    
+    const handleCompetitorAddedNotif = (event: CustomEvent) => {
+      const { competitor } = event.detail || {};
+      if (competitor) {
+        addNotification('Competitor Added', `${competitor.name || competitor} has been added to your competitor tracking.`);
+        
+        // Also update the competitor intelligence state from localStorage
+        const cachedResults = localStorage.getItem('lastScanResults');
+        if (cachedResults) {
+          try {
+            const parsed = JSON.parse(cachedResults);
+            if (parsed.competitorIntelligence && Array.isArray(parsed.competitorIntelligence)) {
+              console.log('📥 Dashboard: Reloading competitors from cache after add', parsed.competitorIntelligence.length);
+              setCompetitorIntelligence(parsed.competitorIntelligence);
+            }
+          } catch (e) {
+            console.error('Error reloading competitors:', e);
+          }
+        }
+      }
+    };
+    
+    const handleContentGeneratedNotif = () => {
+      addNotification('Content Generated', 'New content ideas have been generated for your brand.');
+    };
+    
+    // Handle any data changes (competitors, strategy, etc.)
+    const handleDataChanged = (event: CustomEvent) => {
+      const { eventType, competitor } = event.detail || {};
+      console.log('📥 Dashboard: Data changed event received', eventType);
+      
+      // Reload relevant data from localStorage
+      const cachedResults = localStorage.getItem('lastScanResults');
+      if (cachedResults) {
+        try {
+          const parsed = JSON.parse(cachedResults);
+          
+          // Update competitors if changed
+          if (parsed.competitorIntelligence && Array.isArray(parsed.competitorIntelligence)) {
+            setCompetitorIntelligence(parsed.competitorIntelligence);
+          }
+          
+          // Update strategic insights if available
+          if (parsed.strategicInsights && Array.isArray(parsed.strategicInsights)) {
+            setStrategicInsights(parsed.strategicInsights);
+          }
+        } catch (e) {
+          console.error('Error processing data change:', e);
+        }
+      }
+    };
+    
+    window.addEventListener('scanComplete', handleScanCompleteNotif as EventListener);
+    window.addEventListener('strategyUpdated', handleStrategyUpdatedNotif as EventListener);
+    window.addEventListener('competitorAdded', handleCompetitorAddedNotif as EventListener);
+    window.addEventListener('contentGenerated', handleContentGeneratedNotif);
+    window.addEventListener('dataChanged', handleDataChanged as EventListener);
+    
+    return () => {
+      window.removeEventListener('scanComplete', handleScanCompleteNotif as EventListener);
+      window.removeEventListener('strategyUpdated', handleStrategyUpdatedNotif as EventListener);
+      window.removeEventListener('competitorAdded', handleCompetitorAddedNotif as EventListener);
+      window.removeEventListener('contentGenerated', handleContentGeneratedNotif);
+      window.removeEventListener('dataChanged', handleDataChanged as EventListener);
+    };
+  }, []);
   
   // Close notifications when clicking outside
   useEffect(() => {
@@ -642,6 +749,11 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                   setMarketShare(scanResults.data.marketShare || null);
                   setScanUsername(storedUsername);
                   
+                  // Set scan stats if available
+                  if (scanResults.data.scanStats) {
+                    setScanStats(scanResults.data.scanStats);
+                  }
+
                   // Update cache with merged data - include username for validation
                   const updatedCache = {
                     ...scanResults.data,
@@ -891,9 +1003,22 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
   return (
     <div className="flex h-screen bg-[#050505] text-white overflow-hidden font-sans relative">
       
-      {/* Sidebar */}
-      <aside className="w-64 flex-shrink-0 border-r border-white/10 flex flex-col bg-[#080808]">
-         <div className="h-16 flex items-center px-6 border-b border-white/10">
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      
+      {/* Sidebar - Hidden on mobile by default, shown when sidebarOpen is true */}
+      <aside className={`
+        fixed lg:relative inset-y-0 left-0 z-50
+        w-64 flex-shrink-0 border-r border-white/10 flex flex-col bg-[#080808]
+        transform transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+         <div className="h-16 flex items-center justify-between px-6 border-b border-white/10">
              <div className="flex items-center gap-3">
                 <div className="h-6 w-6 flex items-center justify-center text-white">
                     <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -905,41 +1030,59 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                 </div>
                 <span className="text-lg font-black tracking-tight text-white">AIBC</span>
              </div>
+             {/* Close button for mobile */}
+             <button 
+               className="lg:hidden p-2 text-white/60 hover:text-white"
+               onClick={() => setSidebarOpen(false)}
+             >
+               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+               </svg>
+             </button>
          </div>
 
          <div className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
              <div className="text-[10px] font-bold text-white/30 uppercase tracking-widest px-4 mb-4 mt-2">Platform</div>
-             <SidebarItem label="Dashboard" active={currentPage === 'dashboard'} onClick={() => setCurrentPage('dashboard')} />
-             <SidebarItem label="Content Hub" active={currentPage === 'contentHub'} onClick={() => setCurrentPage('contentHub')} />
-             <SidebarItem label="Strategy" active={currentPage === 'strategy'} onClick={() => setCurrentPage('strategy')} />
-             <SidebarItem label="Production Room" active={currentPage === 'production'} onClick={() => setCurrentPage('production')} />
-             <SidebarItem label="Inbox" active={currentPage === 'inbox'} onClick={() => setCurrentPage('inbox')} />
-             <SidebarItem label="Calendar" active={currentPage === 'calendar'} onClick={() => setCurrentPage('calendar')} />
-             <SidebarItem label="Brand Assets" active={currentPage === 'assets'} onClick={() => setCurrentPage('assets')} />
-             <SidebarItem label="Integrations" active={currentPage === 'integrations'} onClick={() => setCurrentPage('integrations')} />
-             <SidebarItem label="Analytics" active={currentPage === 'analytics'} onClick={() => setCurrentPage('analytics')} />
+             <SidebarItem label="Dashboard" active={currentPage === 'dashboard'} onClick={() => { setCurrentPage('dashboard'); setSidebarOpen(false); }} />
+             <SidebarItem label="Content Hub" active={currentPage === 'contentHub'} onClick={() => { setCurrentPage('contentHub'); setSidebarOpen(false); }} />
+             <SidebarItem label="Strategy" active={currentPage === 'strategy'} onClick={() => { setCurrentPage('strategy'); setSidebarOpen(false); }} />
+             <SidebarItem label="Production Room" active={currentPage === 'production'} onClick={() => { setCurrentPage('production'); setSidebarOpen(false); }} />
+             <SidebarItem label="Inbox" active={currentPage === 'inbox'} onClick={() => { setCurrentPage('inbox'); setSidebarOpen(false); }} />
+             <SidebarItem label="Calendar" active={currentPage === 'calendar'} onClick={() => { setCurrentPage('calendar'); setSidebarOpen(false); }} />
+             <SidebarItem label="Brand Assets" active={currentPage === 'assets'} onClick={() => { setCurrentPage('assets'); setSidebarOpen(false); }} />
+             <SidebarItem label="Integrations" active={currentPage === 'integrations'} onClick={() => { setCurrentPage('integrations'); setSidebarOpen(false); }} />
+             <SidebarItem label="Analytics" active={currentPage === 'analytics'} onClick={() => { setCurrentPage('analytics'); setSidebarOpen(false); }} />
              <div className="mt-4 pt-4 border-t border-white/5">
-               <SidebarItem label="Settings" active={currentPage === 'settings'} onClick={() => setCurrentPage('settings')} />
+               <SidebarItem label="Settings" active={currentPage === 'settings'} onClick={() => { setCurrentPage('settings'); setSidebarOpen(false); }} />
                {isAdmin() && (
                  <SidebarItem 
                    label="Admin Panel" 
                    active={false} 
-                   onClick={() => onNavigate(ViewState.ADMIN)} 
+                   onClick={() => { onNavigate(ViewState.ADMIN); setSidebarOpen(false); }} 
                  />
                )}
              </div>
          </div>
 
          <div className="p-4 border-t border-white/10">
-             <div className="flex items-center gap-3 px-2">
-                <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-xs font-bold border border-white/20">
-                    {userInfo?.initials || 'U'}
+             <button 
+               onClick={() => { setCurrentPage('settings'); setSidebarOpen(false); }}
+               className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-white/5 transition-colors group cursor-pointer"
+             >
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center text-xs font-bold text-white border border-white/20">
+                    {(scanUsername || userInfo?.name || 'U').charAt(0).toUpperCase()}
                 </div>
-                <div className="min-w-0 flex-1">
-                    <div className="text-xs font-bold text-white truncate">{userInfo?.name || 'User'}</div>
-                    <div className="text-[10px] text-white/40 truncate">{userInfo?.email || 'Pro Plan'}</div>
+                <div className="min-w-0 flex-1 text-left">
+                    <div className="text-xs font-bold text-white truncate group-hover:text-orange-400 transition-colors">
+                      {scanUsername || userInfo?.name || 'Your Brand'}
+                    </div>
+                    <div className="text-[10px] text-white/40 truncate">
+                      {getUserSubscription().tier === SubscriptionTier.FREE ? 'Free' : 
+                       getUserSubscription().tier === SubscriptionTier.PRO ? 'Pro' : 
+                       getUserSubscription().tier === SubscriptionTier.ENTERPRISE ? 'Enterprise' : 'Free'} Plan
+                    </div>
                 </div>
-             </div>
+             </button>
          </div>
       </aside>
 
@@ -947,13 +1090,33 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
       <div className="flex-1 flex flex-col min-w-0">
         
         {/* Header */}
-        <header className="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-[#050505]/50 backdrop-blur-sm z-10">
-          <div className="flex items-center gap-4">
+        <header className="h-16 border-b border-white/10 flex items-center justify-between px-3 sm:px-6 bg-[#050505]/50 backdrop-blur-sm z-10">
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* Mobile Menu Button */}
+            <button 
+              className="lg:hidden p-2 text-white/60 hover:text-white"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            
             <div className="flex items-center gap-2 text-xs text-white/40">
-              <Calendar className="w-3 h-3" />
-              <span>{new Date().toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
+              <Calendar className="w-3 h-3 hidden sm:block" />
+              <span className="hidden sm:inline">{new Date().toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
               {scanUsername && (
-                <span className="bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded text-[10px] font-bold">Scan: {scanUsername}</span>
+                <span className="bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded text-[10px] font-bold truncate max-w-[100px] sm:max-w-none">Scan: {scanUsername}</span>
+              )}
+              {scanStats && (
+                <div className="hidden md:flex items-center gap-2 ml-2 border-l border-white/10 pl-2">
+                  <span className="text-[10px] text-white/30">{scanStats.postsAnalyzed} posts</span>
+                  <span className="text-[10px] text-white/30">{scanStats.competitorsFound} competitors</span>
+                  <span className="text-[10px] text-white/30">{scanStats.themesIdentified} themes</span>
+                  {scanStats.isDeepScan && (
+                    <span className="bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded text-[10px] font-bold">DEEP SCAN</span>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -969,8 +1132,14 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
             
             <button
               onClick={() => {
-                // Navigate to IngestionView to start a new scan
-                onNavigate(ViewState.INGESTION);
+                // Check if there's existing scan data - show warning if so
+                const hasExistingData = localStorage.getItem('lastScanResults') || localStorage.getItem('lastScannedUsername');
+                if (hasExistingData) {
+                  setShowRescanWarning(true);
+                } else {
+                  // No existing data, go directly to scan
+                  onNavigate(ViewState.INGESTION);
+                }
               }}
               className="px-3 py-1.5 bg-orange-500 border border-white/10 rounded-lg text-xs font-bold text-white hover:bg-orange-600 transition-all flex items-center gap-2"
             >
@@ -1013,12 +1182,17 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                         setStrategicInsights(insights);
                         setBrandDNA(cached.brandDNA || null);
                         // Ensure competitorIntelligence is always an array
-                        const competitors = Array.isArray(cached.competitorIntelligence) 
-                          ? cached.competitorIntelligence 
+                        const competitors = Array.isArray(cached.competitorIntelligence)
+                          ? cached.competitorIntelligence
                           : [];
                         setCompetitorIntelligence(competitors);
                         setMarketShare(cached.marketShare || null);
                         setScanUsername(storedUsername);
+                        
+                        // Set scan stats if available
+                        if (cached.scanStats) {
+                          setScanStats(cached.scanStats);
+                        }
                       } else {
                         console.log('⚠️ Cache username mismatch - clearing cache');
                         console.log('Stored username:', storedUsername);
@@ -1101,6 +1275,11 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                         setMarketShare(scanResults.data.marketShare || null);
                         setScanUsername(storedUsername);
                         
+                        // Set scan stats if available
+                        if (scanResults.data.scanStats) {
+                          setScanStats(scanResults.data.scanStats);
+                        }
+
                         // Update cache with merged data - include username for validation
                         const updatedCache = {
                           ...scanResults.data,
@@ -1182,13 +1361,6 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
           </div>
 
           <div className="flex items-center gap-4">
-             <div className="flex items-center bg-[#1A1A1A] rounded-full px-3 py-1.5 border border-white/10 hidden lg:flex">
-                <span className="text-xs font-medium text-white/60 mr-4">Day</span>
-                <span className="text-xs font-medium text-white/40 hover:text-white cursor-pointer mr-4">Week</span>
-                <span className="text-xs font-medium text-white/40 hover:text-white cursor-pointer mr-4">Month</span>
-                <span className="text-xs font-medium text-white/40 hover:text-white cursor-pointer">Year</span>
-             </div>
-             
              <div className="relative" ref={notificationRef}>
                 <button 
                   onClick={() => setShowNotifications(!showNotifications)}
@@ -1263,6 +1435,9 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                             {analytics.postsThisWeekChange > 0 ? '+' : ''}{analytics.postsThisWeekChange}
                                         </span>
                                     )}
+                                </div>
+                                <div className="text-[9px] text-white/30 mb-1">
+                                    {analytics?.postsTopPlatform ? `via ${analytics.postsTopPlatform}` : 'Across all platforms'}
                                 </div>
                                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
                                     <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" style={{ width: `${Math.min(((analytics?.postsThisWeek || 0) / 20) * 100, 100)}%` }}></div>
@@ -1394,21 +1569,34 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                           <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-6 mb-6">
                             <div className="flex items-center justify-between mb-4">
                               <h2 className="text-lg font-bold text-white">Market Position</h2>
-                              <span className="text-[10px] text-white/30 bg-white/5 px-2 py-1 rounded">ESTIMATE</span>
+                              <span className="text-[10px] text-white/30 bg-white/5 px-2 py-1 rounded">AI ESTIMATE</span>
                             </div>
                             <div className="flex items-baseline gap-2 mb-2">
-                              <span className="text-4xl font-black text-white">{marketShare.percentage}%</span>
-                              <span className="text-sm text-white/40">of {marketShare.industry}</span>
+                              <span className="text-4xl font-black text-white">{marketShare.percentage || 10}%</span>
+                              <span className="text-sm text-white/40">market share in {marketShare.industry || 'industry'}</span>
                             </div>
                             <div className="h-2 bg-white/5 rounded-full overflow-hidden mb-3">
                               <div 
                                 className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all" 
-                                style={{ width: `${Math.min(marketShare.percentage * 10, 100)}%` }}
+                                style={{ width: `${Math.min((marketShare.percentage || 10) * 3, 100)}%` }}
                               />
                             </div>
-                            <div className="flex justify-between text-xs text-white/40">
-                              <span>Rank #{marketShare.yourRank || '—'} of {marketShare.totalCreatorsInSpace || '—'}</span>
-                              <span className="text-white/30">{marketShare.note}</span>
+                            <div className="flex flex-col gap-1">
+                              {(marketShare.yourRank && marketShare.totalCompetitors) ? (
+                                <span className="text-xs text-white/50">
+                                  Ranked #{marketShare.yourRank} of {marketShare.totalCompetitors} major competitors
+                                </span>
+                              ) : marketShare.yourRank ? (
+                                <span className="text-xs text-white/50">
+                                  Ranked #{marketShare.yourRank} in {marketShare.industry || 'this market'}
+                                </span>
+                              ) : null}
+                              {marketShare.rankingBasis && (
+                                <span className="text-[10px] text-white/30 italic">{marketShare.rankingBasis}</span>
+                              )}
+                              {marketShare.note && (
+                                <span className="text-xs text-white/40 mt-1">{marketShare.note}</span>
+                              )}
                             </div>
                           </div>
                         )}
@@ -1858,54 +2046,82 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                     <div className="col-span-12 lg:col-span-4 space-y-6">
                         {/* Brand DNA */}
                         <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-6 relative overflow-hidden shadow-lg">
-                            <h3 className="text-sm font-bold text-white mb-6">Brand DNA</h3>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-sm font-bold text-white">Brand DNA</h3>
+                                <span className="text-[10px] text-white/30 px-2 py-1 bg-white/5 rounded">AI Extracted</span>
+                            </div>
                             {!brandDNA ? (
                                 <div className="text-center py-12 text-white/40">
                                     <Sparkles className="w-12 h-12 text-white/20 mx-auto mb-4" />
                                     <p className="text-sm mb-2">No brand DNA extracted yet</p>
                                     <p className="text-xs text-white/20">Run a digital footprint scan</p>
-                                    {process.env.NODE_ENV === 'development' && (
-                                        <p className="text-red-400 text-xs mt-2">Debug: brandDNA = {brandDNA ? 'exists' : 'null'}</p>
-                                    )}
                                 </div>
                             ) : (
-                                <div className="space-y-6">
-                                    {/* Archetype */}
-                                    <div>
-                                        <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-2">ARCHETYPE</div>
-                                        <div className="flex items-center gap-2">
+                                <div className="space-y-5">
+                                    {/* Archetype with description */}
+                                    <div className="bg-gradient-to-r from-purple-500/10 to-transparent p-4 rounded-xl border border-purple-500/20">
+                                        <div className="flex items-center gap-2 mb-2">
                                             <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                                            <span className="text-sm text-white">• {brandDNA.archetype || 'The Architect'}</span>
+                                            <span className="text-sm font-bold text-white">{brandDNA.archetype || 'The Architect'}</span>
                                         </div>
+                                        <p className="text-xs text-white/50 leading-relaxed">
+                                            {brandDNA.archetype === 'The Sage' 
+                                                ? 'Your brand positions itself as a trusted knowledge source, emphasizing expertise, truth-seeking, and helping audiences understand complex topics.'
+                                                : brandDNA.archetype === 'The Creator'
+                                                ? 'Your brand thrives on innovation and self-expression, inspiring audiences to create and imagine new possibilities.'
+                                                : brandDNA.archetype === 'The Hero'
+                                                ? 'Your brand embodies courage and determination, motivating audiences to overcome challenges and achieve greatness.'
+                                                : brandDNA.archetype === 'The Rebel'
+                                                ? 'Your brand challenges the status quo, appealing to those who want to disrupt norms and think differently.'
+                                                : brandDNA.archetype === 'The Explorer'
+                                                ? 'Your brand promises adventure and discovery, appealing to those seeking freedom and new experiences.'
+                                                : 'Your brand is methodical and strategic, building frameworks that help audiences achieve structured success.'}
+                                        </p>
                                     </div>
                                     
-                                    {/* Voice Tone */}
+                                    {/* Voice Profile */}
                                     <div>
-                                        <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-3">VOICE TONE</div>
-                                        <div className="flex flex-wrap gap-2">
-                                            {(brandDNA.voice?.tones || ['Systematic', 'Transparent', 'Dense']).map((tone: string, index: number) => (
-                                                <button
-                                                    key={index}
-                                                    className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                                                        index === 0 
-                                                            ? 'bg-white/10 text-white border border-white/20' 
-                                                            : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
-                                                    }`}
-                                                >
-                                                    {tone}
-                                                </button>
+                                        <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-3">COMMUNICATION STYLE</div>
+                                        <p className="text-xs text-white/50 mb-3">How your brand speaks to its audience:</p>
+                                        <div className="space-y-2">
+                                            {(brandDNA.voice?.tones || ['Professional', 'Clear', 'Direct']).slice(0, 3).map((tone: string, index: number) => (
+                                                <div key={index} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg">
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${index === 0 ? 'bg-green-400' : index === 1 ? 'bg-blue-400' : 'bg-orange-400'}`}></span>
+                                                    <span className="text-sm text-white font-medium">{tone}</span>
+                                                    <span className="text-[10px] text-white/30 ml-auto">
+                                                        {tone.toLowerCase().includes('informative') ? 'Educates & explains'
+                                                            : tone.toLowerCase().includes('authoritative') ? 'Commands trust'
+                                                            : tone.toLowerCase().includes('utilitarian') ? 'Practical focus'
+                                                            : tone.toLowerCase().includes('professional') ? 'Business-ready'
+                                                            : tone.toLowerCase().includes('casual') ? 'Approachable'
+                                                            : tone.toLowerCase().includes('bold') ? 'Makes statements'
+                                                            : 'Shapes perception'}
+                                                    </span>
+                                                </div>
                                             ))}
                                         </div>
                                     </div>
                                     
-                                    {/* Core Pillars */}
+                                    {/* Brand Values */}
                                     <div>
-                                        <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-3">CORE PILLARS</div>
-                                        <div className="space-y-2">
-                                            {(brandDNA.corePillars || ['Automated Content Scale', 'Forensic Brand Analysis', 'Enterprise Reliability']).map((pillar: string, index: number) => (
-                                                <div key={index} className="flex items-center gap-2 text-sm text-white">
-                                                    <span className="text-white/40">•</span>
-                                                    <span>{pillar}</span>
+                                        <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-3">BRAND VALUES</div>
+                                        <p className="text-xs text-white/50 mb-3">Core principles driving your content:</p>
+                                        <div className="grid grid-cols-1 gap-2">
+                                            {(brandDNA.corePillars || ['Innovation', 'Quality', 'Trust']).slice(0, 3).map((pillar: string, index: number) => (
+                                                <div key={index} className="flex items-start gap-3 p-3 bg-white/[0.03] rounded-lg border border-white/5">
+                                                    <span className="text-orange-400 text-sm mt-0.5">→</span>
+                                                    <div>
+                                                        <span className="text-sm text-white font-medium block">{pillar}</span>
+                                                        <span className="text-[10px] text-white/40">
+                                                            {pillar.toLowerCase().includes('transparency') ? 'Open communication builds audience trust'
+                                                                : pillar.toLowerCase().includes('safety') ? 'Prioritizing user protection & wellbeing'
+                                                                : pillar.toLowerCase().includes('compliance') ? 'Following industry standards & regulations'
+                                                                : pillar.toLowerCase().includes('innovation') ? 'Pushing boundaries in your space'
+                                                                : pillar.toLowerCase().includes('quality') ? 'Excellence in every piece of content'
+                                                                : pillar.toLowerCase().includes('community') ? 'Building connections with your audience'
+                                                                : 'A key differentiator for your brand'}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -2073,7 +2289,27 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                             <p className="text-white/40 text-sm">Real-time analysis of your top 3 rivals in the <span className="text-white">Generative Content</span> sector.</p>
                         </div>
                         <div className="flex gap-2">
-                             <button className="px-4 py-2 bg-[#1A1A1A] border border-white/10 rounded-lg text-xs font-bold text-white hover:bg-white/5 transition-colors">Export Report</button>
+                             <button 
+                               onClick={() => {
+                                 // Export competitor report as JSON
+                                 const reportData = {
+                                   exportDate: new Date().toISOString(),
+                                   brand: localStorage.getItem('lastScannedUsername') || 'Unknown Brand',
+                                   competitors: competitorIntelligence,
+                                   insights: strategicInsights
+                                 };
+                                 const dataStr = JSON.stringify(reportData, null, 2);
+                                 const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                                 const exportName = `competitor-report-${new Date().toISOString().split('T')[0]}.json`;
+                                 const link = document.createElement('a');
+                                 link.href = dataUri;
+                                 link.download = exportName;
+                                 link.click();
+                               }}
+                               className="px-4 py-2 bg-[#1A1A1A] border border-white/10 rounded-lg text-xs font-bold text-white hover:bg-white/5 transition-colors"
+                             >
+                               Export Report
+                             </button>
                         </div>
                     </div>
 
@@ -2188,7 +2424,14 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
             {currentPage === 'inbox' && <InboxView onNavigate={onNavigate} />}
 
             {/* Settings */}
-            {currentPage === 'settings' && <SettingsView onLogout={() => onNavigate(ViewState.LANDING)} onNavigate={onNavigate} />}
+            {currentPage === 'settings' && <SettingsView onLogout={() => {
+                              // Clear auth state BEFORE navigating to landing
+                              localStorage.removeItem('authToken');
+                              localStorage.removeItem('user');
+                              localStorage.removeItem('refreshToken');
+                              // Now navigate to landing (auth is already cleared)
+                              onNavigate(ViewState.LANDING);
+                            }} onNavigate={onNavigate} />}
 
         </main>
 

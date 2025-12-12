@@ -28,7 +28,7 @@ interface BrandFont {
 }
 
 const BrandAssetsView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'materials' | 'profile' | 'styles' | 'voice' | 'preferences' | 'agent'>('materials');
+  const [activeTab, setActiveTab] = useState<'materials' | 'media' | 'profile' | 'styles' | 'voice' | 'preferences'>('materials');
   const [preferencesCategory, setPreferencesCategory] = useState<'video' | 'image' | 'social' | 'blog' | 'general'>('video');
   
   // Brand DNA State - Load from scan results
@@ -55,6 +55,24 @@ const BrandAssetsView: React.FC = () => {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
+  
+  // Add video input handler
+  const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      Array.from(files).forEach(file => {
+        const newMaterial: BrandAsset = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          name: file.name,
+          type: 'video',
+          fileType: file.name.split('.').pop()?.toUpperCase() || 'VIDEO',
+          addedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          lastUpdated: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        };
+        setMaterials(prev => [...prev, newMaterial]);
+      });
+    }
+  };
 
   // Load Brand DNA from scan results
   useEffect(() => {
@@ -543,68 +561,205 @@ const BrandAssetsView: React.FC = () => {
     alert('Brand voice settings saved! Content Hub will update with new context.');
   };
 
+  // Connected accounts state (loaded from localStorage)
+  const [connectedAccounts, setConnectedAccounts] = useState<Record<string, boolean>>({
+    linkedin: false,
+    instagram: false,
+    facebook: false,
+    x: false,
+    youtube: false,
+    tiktok: false,
+    wordpress: false,
+    email: false
+  });
+  
+  // Load connected accounts
+  useEffect(() => {
+    try {
+      const integrations = JSON.parse(localStorage.getItem('integrations') || '{}');
+      const connected: Record<string, boolean> = {
+        linkedin: integrations.linkedin?.connected || false,
+        instagram: integrations.instagram?.connected || false,
+        facebook: integrations.facebook?.connected || false,
+        x: integrations.x?.connected || integrations.twitter?.connected || false,
+        youtube: integrations.youtube?.connected || false,
+        tiktok: integrations.tiktok?.connected || false,
+        wordpress: integrations.wordpress?.connected || false,
+        email: integrations.email?.connected || false
+      };
+      setConnectedAccounts(connected);
+    } catch (e) {
+      console.error('Error loading integrations:', e);
+    }
+  }, []);
+  
+  const connectedCount = Object.values(connectedAccounts).filter(Boolean).length;
+  const totalAccounts = 8;
+  
+  const navigateToIntegrations = () => {
+    window.dispatchEvent(new CustomEvent('navigateToPage', { detail: { page: 'integrations' } }));
+  };
+  
+  // Get brand name from scan results
+  const getBrandName = () => {
+    try {
+      const scanResults = JSON.parse(localStorage.getItem('lastScanResults') || '{}');
+      return scanResults.brandDNA?.name || localStorage.getItem('lastScannedUsername') || 'Your Brand';
+    } catch (e) {
+      return 'Your Brand';
+    }
+  };
+
   return (
-    <div className="max-w-6xl mx-auto p-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+    <div className="max-w-6xl mx-auto p-4 sm:p-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-black uppercase tracking-tighter text-white mb-2">Brand Assets</h1>
-          <p className="text-white/40 text-sm">Upload your brand materials to enhance AI-generated content</p>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg">
+            {getBrandName().substring(0, 2).toUpperCase()}
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white">{getBrandName()}</h1>
+            <p className="text-white/40 text-sm">Brand Profile & Source Materials</p>
+          </div>
         </div>
-        <button 
-          onClick={() => setShowAddContextModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-500 hover:bg-green-400 text-black text-sm font-bold transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add More Context
-        </button>
-      </div>
-
-      {/* Feature Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-5">
-          <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center mb-3">
-            <Sparkles className="w-5 h-5 text-amber-400" />
-          </div>
-          <h3 className="text-sm font-bold text-white mb-1">Learns from every asset</h3>
-          <p className="text-xs text-white/40">Uploads help AI match your brand perfectly</p>
-        </div>
-        <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-5">
-          <div className="w-10 h-10 rounded-lg bg-pink-500/20 flex items-center justify-center mb-3">
-            <RefreshCw className="w-5 h-5 text-pink-400" />
-          </div>
-          <h3 className="text-sm font-bold text-white mb-1">Auto-refines content</h3>
-          <p className="text-xs text-white/40">Brand voice improves with each upload</p>
-        </div>
-        <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-5 relative overflow-hidden">
-          <div className="absolute top-4 right-4 w-16 h-16 rounded-full border-4 border-green-500/30 flex items-center justify-center">
-            <span className="text-lg font-bold text-white">{materials.length}</span>
-          </div>
-          <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center mb-3">
-            <Check className="w-5 h-5 text-green-400" />
-          </div>
-          <h3 className="text-sm font-bold text-white mb-1">Assets</h3>
-          <p className="text-xs text-white/40">uploaded</p>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={navigateToIntegrations}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white text-sm font-medium transition-colors"
+          >
+            <span className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center text-xs text-green-400">{connectedCount}</span>
+            Connected Integrations
+          </button>
+          <button 
+            onClick={() => setShowAddContextModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-500 hover:bg-green-400 text-black text-sm font-bold transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add More Context
+          </button>
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="flex gap-1 p-1 bg-white/5 rounded-xl mb-6 w-fit">
+      {/* Source Materials Section - Blaze Style */}
+      <div className="mb-8">
+        <h2 className="text-xl font-bold text-white mb-4">Source Materials</h2>
+        
+        {/* Feature Info Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-5">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white mb-1">AIBC learns your brand weekly</h3>
+                <p className="text-xs text-white/40">We scan your site, accounts, and files weekly to keep your brand fresh and content personalized.</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-5">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-lg bg-pink-500/20 flex items-center justify-center flex-shrink-0">
+                <RefreshCw className="w-5 h-5 text-pink-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white mb-1">Keep content fresh</h3>
+                <p className="text-xs text-white/40">Keep adding new materials to stay relevant. AI will refine your Brand Profile and suggest new campaigns.</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-5">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                <Cloud className="w-5 h-5 text-blue-400" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-sm font-bold text-white">Cloud Storage</h3>
+                  <button className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1">
+                    Connect <Link2 className="w-3 h-3" />
+                  </button>
+                </div>
+                <p className="text-xs text-white/40">Bulk import files as documents in Source Materials, and images & videos in Media Library.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Connected Accounts Bar */}
+        <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-4 flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full border-4 border-green-500/30 flex items-center justify-center">
+                <span className="text-xs font-bold text-white">{connectedCount}/{totalAccounts}</span>
+              </div>
+              <span className="text-sm text-white/60">accounts connected</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* LinkedIn */}
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${connectedAccounts.linkedin ? 'bg-blue-500/20' : 'bg-white/5'}`}>
+                <Linkedin className={`w-4 h-4 ${connectedAccounts.linkedin ? 'text-blue-400' : 'text-white/30'}`} />
+              </div>
+              {/* Instagram */}
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${connectedAccounts.instagram ? 'bg-pink-500/20' : 'bg-white/5'}`}>
+                <svg className={`w-4 h-4 ${connectedAccounts.instagram ? 'text-pink-400' : 'text-white/30'}`} fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                </svg>
+              </div>
+              {/* Facebook */}
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${connectedAccounts.facebook ? 'bg-blue-600/20' : 'bg-white/5'}`}>
+                <span className={`font-bold text-sm ${connectedAccounts.facebook ? 'text-blue-500' : 'text-white/30'}`}>f</span>
+              </div>
+              {/* X/Twitter */}
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${connectedAccounts.x ? 'bg-white/10' : 'bg-white/5'}`}>
+                <span className={`font-bold text-sm ${connectedAccounts.x ? 'text-white' : 'text-white/30'}`}>𝕏</span>
+              </div>
+              {/* YouTube */}
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${connectedAccounts.youtube ? 'bg-red-500/20' : 'bg-white/5'}`}>
+                <svg className={`w-4 h-4 ${connectedAccounts.youtube ? 'text-red-500' : 'text-white/30'}`} fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+              </div>
+              {/* TikTok */}
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${connectedAccounts.tiktok ? 'bg-white/10' : 'bg-white/5'}`}>
+                <Music className={`w-4 h-4 ${connectedAccounts.tiktok ? 'text-white' : 'text-white/30'}`} />
+              </div>
+              {/* WordPress */}
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${connectedAccounts.wordpress ? 'bg-blue-400/20' : 'bg-white/5'}`}>
+                <Globe className={`w-4 h-4 ${connectedAccounts.wordpress ? 'text-blue-400' : 'text-white/30'}`} />
+              </div>
+              {/* Email */}
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${connectedAccounts.email ? 'bg-amber-500/20' : 'bg-white/5'}`}>
+                <span className={`text-sm ${connectedAccounts.email ? 'text-amber-400' : 'text-white/30'}`}>✉</span>
+              </div>
+            </div>
+          </div>
+          <button 
+            onClick={navigateToIntegrations}
+            className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors"
+          >
+            Connect Integrations <Link2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Navigation - Blaze Style */}
+      <div className="flex gap-6 border-b border-white/10 mb-6">
         {[
-          { id: 'preferences', label: 'Content Preferences' },
           { id: 'materials', label: 'Source Materials' },
+          { id: 'media', label: 'Images & Video' },
           { id: 'profile', label: 'Brand Profile' },
-          { id: 'styles', label: 'Styles & Colors' },
-          { id: 'voice', label: 'Voice & Tone' },
-          { id: 'agent', label: 'Brand DNA' },
+          { id: 'voice', label: 'Styles & Voice' },
+          { id: 'preferences', label: 'Content Preferences' },
         ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+            className={`pb-3 text-sm font-medium transition-all border-b-2 -mb-[1px] ${
               activeTab === tab.id 
-                ? 'bg-white/10 text-white' 
-                : 'text-white/40 hover:text-white/60'
+                ? 'border-orange-500 text-white' 
+                : 'border-transparent text-white/40 hover:text-white/60'
             }`}
           >
             {tab.label}
@@ -1217,27 +1372,28 @@ const BrandAssetsView: React.FC = () => {
 
       {activeTab === 'materials' && (
         <div className="space-y-6">
-          {/* Materials Table */}
+          {/* Materials Table - Blaze Style */}
           <div className="bg-[#0A0A0A] border border-white/10 rounded-xl overflow-hidden">
             <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-white">Materials</h3>
-                <span className="text-xs text-white/30">{materials.length}</span>
+                <span className="px-2 py-0.5 bg-white/10 rounded text-xs text-white/60">{materials.length}</span>
               </div>
               <button 
                 onClick={() => setShowAddContextModal(true)}
-                className="text-xs text-white/40 hover:text-white flex items-center gap-1 transition-colors"
+                className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1 transition-colors font-medium"
               >
                 <Plus className="w-3 h-3" /> Add More Context
               </button>
             </div>
             
             {/* Table Header */}
-            <div className="grid grid-cols-4 px-5 py-2 border-b border-white/5 text-[10px] font-bold text-white/30 uppercase tracking-wider">
-              <span>Name</span>
-              <span>File Type</span>
-              <span>Added</span>
-              <span>Last Updated</span>
+            <div className="grid grid-cols-12 px-5 py-3 border-b border-white/5 text-xs font-medium text-white/40">
+              <span className="col-span-5">Name</span>
+              <span className="col-span-2">File Type</span>
+              <span className="col-span-2">Last Updated</span>
+              <span className="col-span-2">Added ↑</span>
+              <span className="col-span-1"></span>
             </div>
             
             {/* Table Rows */}
@@ -1249,25 +1405,36 @@ const BrandAssetsView: React.FC = () => {
               </div>
             ) : (
               materials.map((material) => (
-                <div key={material.id} className="grid grid-cols-4 px-5 py-3 border-b border-white/5 hover:bg-white/[0.02] group items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded bg-white/10 flex items-center justify-center">
+                <div key={material.id} className="grid grid-cols-12 px-5 py-3 border-b border-white/5 hover:bg-white/[0.02] group items-center">
+                  <div className="col-span-5 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
                       {getAssetIcon(material.type)}
                     </div>
-                    <span className="text-sm text-white truncate">{material.name}</span>
-                  </div>
-                  <span className="text-xs text-white/40 bg-white/5 rounded px-2 py-0.5 w-fit">{material.fileType}</span>
-                  <span className="text-xs text-white/40">{material.addedAt}</span>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-white/40">{material.lastUpdated}</span>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => handleDeleteMaterial(material.id)}
-                        className="p-1.5 hover:bg-red-500/20 rounded transition-colors"
-                      >
-                        <Trash2 className="w-3 h-3 text-red-400" />
-                      </button>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-sm text-white font-medium truncate">{material.name.split('/').pop() || material.name}</span>
+                      {material.url && (
+                        <span className="text-xs text-white/30 truncate">{material.url}</span>
+                      )}
                     </div>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-xs text-white bg-white/10 rounded-lg px-3 py-1">{material.fileType || 'Website'}</span>
+                  </div>
+                  <span className="col-span-2 text-xs text-white/40">{material.lastUpdated}</span>
+                  <span className="col-span-2 text-xs text-white/40">{material.addedAt}</span>
+                  <div className="col-span-1 flex items-center justify-end gap-1">
+                    <button 
+                      onClick={() => setEditingMaterial(material)}
+                      className="p-1.5 hover:bg-white/10 rounded transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-white/40" />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteMaterial(material.id)}
+                      className="p-1.5 hover:bg-red-500/20 rounded transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-white/40 hover:text-red-400" />
+                    </button>
                   </div>
                 </div>
               ))
@@ -1276,11 +1443,103 @@ const BrandAssetsView: React.FC = () => {
             {/* Add More Row */}
             <button 
               onClick={() => setShowAddContextModal(true)}
-              className="w-full px-5 py-3 text-left flex items-center gap-2 text-white/40 hover:text-white hover:bg-white/[0.02] transition-all"
+              className="w-full px-5 py-3 text-left flex items-center gap-2 text-white/40 hover:text-white hover:bg-white/[0.02] transition-all border-t border-white/5"
             >
               <Plus className="w-4 h-4" />
               <span className="text-sm">Add More</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'media' && (
+        <div className="space-y-6">
+          {/* Images Section */}
+          <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-white">Images</h3>
+              <button 
+                onClick={() => imageInputRef.current?.click()}
+                className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" /> Upload Images
+              </button>
+            </div>
+            
+            {materials.filter(m => m.type === 'image' || m.type === 'logo').length === 0 ? (
+              <div className="border-2 border-dashed border-white/10 rounded-xl p-12 text-center">
+                <ImageIcon className="w-12 h-12 text-white/20 mx-auto mb-3" />
+                <p className="text-sm text-white/40 mb-2">No images uploaded yet</p>
+                <p className="text-xs text-white/30 mb-4">Upload brand images for AI to use in content</p>
+                <button 
+                  onClick={() => imageInputRef.current?.click()}
+                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg transition-colors"
+                >
+                  Upload Images
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-4 gap-4">
+                {materials.filter(m => m.type === 'image' || m.type === 'logo').map((img) => (
+                  <div key={img.id} className="relative group">
+                    <div className="aspect-square bg-white/5 rounded-xl flex items-center justify-center overflow-hidden">
+                      <ImageIcon className="w-8 h-8 text-white/20" />
+                    </div>
+                    <button 
+                      onClick={() => handleDeleteMaterial(img.id)}
+                      className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="w-3 h-3 text-white" />
+                    </button>
+                    <p className="text-xs text-white/40 mt-2 truncate">{img.name}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          {/* Videos Section */}
+          <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-white">Videos</h3>
+              <button 
+                onClick={() => videoInputRef.current?.click()}
+                className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" /> Upload Videos
+              </button>
+            </div>
+            
+            {materials.filter(m => m.type === 'video').length === 0 ? (
+              <div className="border-2 border-dashed border-white/10 rounded-xl p-12 text-center">
+                <Video className="w-12 h-12 text-white/20 mx-auto mb-3" />
+                <p className="text-sm text-white/40 mb-2">No videos uploaded yet</p>
+                <p className="text-xs text-white/30 mb-4">Upload brand videos for AI to use in content</p>
+                <button 
+                  onClick={() => videoInputRef.current?.click()}
+                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg transition-colors"
+                >
+                  Upload Videos
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-4 gap-4">
+                {materials.filter(m => m.type === 'video').map((vid) => (
+                  <div key={vid.id} className="relative group">
+                    <div className="aspect-video bg-white/5 rounded-xl flex items-center justify-center overflow-hidden">
+                      <Video className="w-8 h-8 text-white/20" />
+                    </div>
+                    <button 
+                      onClick={() => handleDeleteMaterial(vid.id)}
+                      className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="w-3 h-3 text-white" />
+                    </button>
+                    <p className="text-xs text-white/40 mt-2 truncate">{vid.name}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1759,7 +2018,8 @@ const BrandAssetsView: React.FC = () => {
 
       {/* Hidden File Inputs */}
       <input ref={fileInputRef} type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'logo')} accept="image/*" />
-      <input ref={imageInputRef} type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'image')} accept="image/*,video/*" />
+      <input ref={imageInputRef} type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'image')} accept="image/*" multiple />
+      <input ref={videoInputRef} type="file" className="hidden" onChange={handleVideoUpload} accept="video/*" multiple />
       <input ref={documentInputRef} type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'document')} accept=".pdf,.doc,.docx,.txt,.ppt,.pptx" />
 
       {/* Add More Context Modal */}

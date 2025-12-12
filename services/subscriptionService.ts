@@ -76,8 +76,19 @@ export const TIER_LIMITS = {
 
 /**
  * Get user subscription from localStorage or API
+ * Admin users get ENTERPRISE tier with full access
  */
 export function getUserSubscription(): Subscription {
+  // ADMIN OVERRIDE: Admin users get full Enterprise access
+  if (isAdmin()) {
+    return {
+      tier: SubscriptionTier.ENTERPRISE,
+      status: 'active',
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
+    };
+  }
+  
   try {
     const stored = localStorage.getItem('userSubscription');
     if (stored) {
@@ -102,8 +113,17 @@ export function getUserSubscription(): Subscription {
 
 /**
  * Get user credit balance with monthly reset logic
+ * Admin users get unlimited credits
  */
 export function getCreditBalance(): CreditBalance {
+  // ADMIN OVERRIDE: Unlimited credits for admin users
+  if (isAdmin()) {
+    return {
+      credits: 99999, // Effectively unlimited
+      lastUpdated: new Date(),
+    };
+  }
+  
   try {
     const subscription = getUserSubscription();
     const limits = TIER_LIMITS[subscription.tier];

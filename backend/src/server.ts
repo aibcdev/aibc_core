@@ -151,6 +151,61 @@ Generate the complete content now (not a template, actual content):`;
   }
 });
 
+// Strategy processing endpoint
+app.post('/api/strategy/process', async (req, res) => {
+  try {
+    const { message, username, brandDNA, competitors } = req.body;
+    
+    if (!message) {
+      return res.status(400).json({ error: 'Message required' });
+    }
+    
+    const { generateJSON, isLLMConfigured } = await import('./services/llmService');
+    
+    if (!isLLMConfigured()) {
+      return res.json({ 
+        response: `Strategy noted: "${message}". I'll adjust content recommendations based on this direction.`,
+        contentUpdates: { strategy: message }
+      });
+    }
+    
+    const prompt = `You are an AI content strategist for ${username || 'a brand'}. The user has requested:
+"${message}"
+
+Brand context:
+- Name: ${brandDNA?.name || username || 'Unknown'}
+- Industry: ${brandDNA?.industry || 'Unknown'}
+- Current competitors being tracked: ${competitors?.join(', ') || 'None'}
+
+TASK: Respond helpfully to their strategy request. If they want to:
+1. Add competitors - acknowledge and confirm
+2. Change content focus - confirm the new direction
+3. Target specific platforms - acknowledge the platform focus
+
+Keep response concise (2-3 sentences). Be actionable.
+
+Return JSON: { "response": "your helpful response", "actions": ["action1", "action2"], "newCompetitors": ["if any new competitors mentioned"], "platformFocus": "if platform mentioned" }`;
+
+    const result = await generateJSON<{ response: string; actions?: string[]; newCompetitors?: string[]; platformFocus?: string }>(prompt, undefined, { tier: 'basic' });
+    
+    res.json({
+      response: result.response || `Strategy noted: "${message}". I'll adjust content recommendations accordingly.`,
+      contentUpdates: {
+        strategy: message,
+        actions: result.actions,
+        newCompetitors: result.newCompetitors,
+        platformFocus: result.platformFocus
+      }
+    });
+  } catch (error: any) {
+    console.error('Strategy processing error:', error);
+    res.json({ 
+      response: `Strategy noted: "${req.body.message}". I'll work on adjusting the content recommendations.`,
+      contentUpdates: { strategy: req.body.message }
+    });
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

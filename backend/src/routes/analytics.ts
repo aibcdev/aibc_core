@@ -214,13 +214,18 @@ router.post('/regenerate-content', async (req, res) => {
       topViralContent: (c.topViralContent || []).slice(0, 2)
     }));
 
+    // Handle both string and object strategies
+    const strategyObj = typeof strategy === 'string' 
+      ? { type: 'user_directed', title: strategy.substring(0, 50), description: strategy }
+      : strategy;
+
     const prompt = `STRATEGY-DRIVEN CONTENT REGENERATION for ${scanUsername}.
 
 ## ACTIVE STRATEGY:
-- Type: ${strategy.type}
-- Title: ${strategy.title}
-- Description: ${strategy.description}
-- Applied: ${strategy.appliedAt || 'Just now'}
+- Type: ${strategyObj.type || 'user_directed'}
+- Title: ${strategyObj.title || 'Custom strategy'}
+- Description: ${strategyObj.description || strategyObj.title || strategy}
+- Applied: ${strategyObj.appliedAt || 'Just now'}
 
 ## BRAND DNA:
 ${brandDNA ? `

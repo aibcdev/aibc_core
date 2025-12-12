@@ -53,17 +53,19 @@ const FeatureLock: React.FC<FeatureLockProps> = ({
           <div className="flex gap-3 justify-center">
             <button
               onClick={() => {
-                if (onNavigate) {
-                  onNavigate(ViewState.DASHBOARD);
-                }
+                // Dispatch event to navigate to dashboard page within DashboardView
+                window.dispatchEvent(new CustomEvent('navigateToPage', { detail: { page: 'dashboard' } }));
               }}
               className="px-6 py-3 bg-white/10 border border-white/20 rounded-lg text-sm font-semibold text-white hover:bg-white/20 transition-all"
             >
-              Ok
+              Go Back
             </button>
             {onNavigate ? (
               <button
-                onClick={() => onNavigate(ViewState.PRICING)}
+                onClick={() => {
+                  // Navigate to pricing page (top-level navigation)
+                  onNavigate(ViewState.PRICING);
+                }}
                 className="px-6 py-3 bg-orange-500 rounded-lg text-sm font-semibold text-white hover:bg-orange-600 transition-all flex items-center gap-2"
               >
                 <Zap className="w-4 h-4" />

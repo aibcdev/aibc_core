@@ -13,6 +13,8 @@ interface Integration {
   description?: string;
   comingSoon?: boolean;
   placeholder?: string;
+  syncStatus?: 'syncing' | 'synced' | 'error';
+  syncStartedAt?: number;
 }
 
 interface VerificationResult {
@@ -67,7 +69,9 @@ const IntegrationsView: React.FC = () => {
               connected: storedIntegration.connected ?? def.connected,
               handle: storedIntegration.handle,
               verifiedName: storedIntegration.verifiedName,
-              verifiedAvatar: storedIntegration.verifiedAvatar
+              verifiedAvatar: storedIntegration.verifiedAvatar,
+              syncStatus: storedIntegration.syncStatus,
+              syncStartedAt: storedIntegration.syncStartedAt
               // icon is NOT copied from stored - always use default
             };
           }
@@ -265,6 +269,7 @@ const IntegrationsView: React.FC = () => {
 
   const handleConfirmConnect = () => {
     if (selectedIntegration && verificationResult?.verified) {
+      const now = Date.now();
       const updatedIntegrations = integrations.map(i => 
         i.id === selectedIntegration.id 
           ? { 
@@ -272,14 +277,16 @@ const IntegrationsView: React.FC = () => {
               connected: true, 
               handle: inputHandle.trim(),
               verifiedName: verificationResult.name,
-              verifiedAvatar: verificationResult.avatar
+              verifiedAvatar: verificationResult.avatar,
+              syncStatus: 'syncing' as const,
+              syncStartedAt: now
             } 
           : i
       );
       setIntegrations(updatedIntegrations);
       
       // Store connected accounts in localStorage for scanning
-      const connectedAccounts: Record<string, string> = {};
+      const connectedAccounts: Record<string, { handle: string; syncStartedAt: number }> = {};
       updatedIntegrations
         .filter(i => i.connected && i.handle)
         .forEach(i => {
@@ -294,10 +301,18 @@ const IntegrationsView: React.FC = () => {
           };
           const platformName = platformMap[i.id] || i.id;
           if (platformName) {
-            connectedAccounts[platformName] = i.handle.replace('@', '').trim();
+            connectedAccounts[platformName] = {
+              handle: i.handle!.replace('@', '').trim(),
+              syncStartedAt: i.syncStartedAt || now
+            };
           }
         });
       localStorage.setItem('connectedAccounts', JSON.stringify(connectedAccounts));
+      
+      // Dispatch event so other components know about the integration
+      window.dispatchEvent(new CustomEvent('integrationChanged', { 
+        detail: { platform: selectedIntegration.id, handle: inputHandle.trim(), action: 'connected' }
+      }));
       
       setShowConnectModal(false);
       setSelectedIntegration(null);
@@ -337,7 +352,7 @@ const IntegrationsView: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-4 sm:p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -601,10 +616,27 @@ const IntegrationRow: React.FC<{
   onConnect: (integration: Integration) => void;
   isFirst?: boolean;
 }> = ({ integration, index, onConnect, isFirst }) => {
+  // Calculate sync time remaining
+  const getSyncStatus = () => {
+    if (!integration.connected) return null;
+    if (!integration.syncStartedAt) return { status: 'synced', text: 'Synced' };
+    
+    const elapsed = Date.now() - integration.syncStartedAt;
+    const fifteenMins = 15 * 60 * 1000;
+    
+    if (elapsed < fifteenMins) {
+      const remaining = Math.ceil((fifteenMins - elapsed) / 60000);
+      return { status: 'syncing', text: `Syncing (~${remaining} min remaining)` };
+    }
+    return { status: 'synced', text: 'Synced' };
+  };
+  
+  const syncInfo = getSyncStatus();
+  
   return (
     <div className={`flex items-center justify-between p-4 rounded-xl transition-all ${
-      isFirst 
-        ? 'bg-purple-500/10 border-2 border-purple-500/30' 
+      isFirst
+        ? 'bg-purple-500/10 border-2 border-purple-500/30'
         : 'bg-white/[0.02] border border-white/10 hover:border-white/20'
     }`}>
       <div className="flex items-center gap-4">
@@ -618,11 +650,21 @@ const IntegrationRow: React.FC<{
         </div>
         <div>
           <span className="text-sm font-medium text-white block">{integration.name}</span>
-          {integration.connected && integration.verifiedName && (
-            <span className="text-xs text-green-400 flex items-center gap-1">
-              <CheckCircle className="w-3 h-3" />
-              @{integration.handle}
-            </span>
+          {integration.connected && integration.handle && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-white/50">@{integration.handle}</span>
+              {syncInfo?.status === 'syncing' ? (
+                <span className="text-xs text-amber-400 flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  {syncInfo.text}
+                </span>
+              ) : (
+                <span className="text-xs text-green-400 flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" />
+                  {syncInfo?.text || 'Connected'}
+                </span>
+              )}
+            </div>
           )}
         </div>
         {isFirst && !integration.connected && (
@@ -637,17 +679,20 @@ const IntegrationRow: React.FC<{
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all ${
             integration.connected
               ? 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30'
-              : 'bg-white/5 text-white border border-white/10 hover:bg-white/10'
+              : 'bg-orange-500 text-white hover:bg-orange-400'
           }`}
         >
-          <Link2 className="w-3 h-3" />
-          {integration.connected ? 'Connected' : 'Connect'}
-        </button>
-        <button 
-          onClick={() => onConnect(integration)}
-          className="p-2 text-white/30 hover:text-white/60 transition-colors"
-        >
-          <HelpCircle className="w-4 h-4" />
+          {integration.connected ? (
+            <>
+              <CheckCircle className="w-3 h-3" />
+              Manage
+            </>
+          ) : (
+            <>
+              <Link2 className="w-3 h-3" />
+              Connect
+            </>
+          )}
         </button>
       </div>
     </div>

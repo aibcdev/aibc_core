@@ -39,11 +39,71 @@ interface CompetitiveComparison {
   recommendations: string[];
 }
 
+// Platform definitions for integration cards
+const platformsToShow = [
+  { id: 'x', name: 'X / Twitter', icon: <span className="text-xl font-bold text-white">𝕏</span>, bgColor: 'bg-black' },
+  { id: 'linkedin', name: 'LinkedIn', icon: <Linkedin className="w-6 h-6 text-white" />, bgColor: 'bg-blue-600' },
+  { id: 'instagram', name: 'Instagram', icon: <Instagram className="w-6 h-6 text-white" />, bgColor: 'bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500' },
+  { id: 'facebook', name: 'Facebook', icon: <Facebook className="w-6 h-6 text-white" />, bgColor: 'bg-blue-500' },
+  { id: 'tiktok', name: 'TikTok', icon: <Music className="w-6 h-6 text-white" />, bgColor: 'bg-black' },
+  { id: 'youtube', name: 'YouTube', icon: <span className="text-xl font-bold text-white">▶</span>, bgColor: 'bg-red-600' },
+];
+
 const AnalyticsView: React.FC = () => {
   const [analytics, setAnalytics] = useState<AnalyticsData>({ platforms: [], isLoading: true });
   const [userName, setUserName] = useState<string>('');
   const [competitiveData, setCompetitiveData] = useState<CompetitiveComparison | null>(null);
   const [loadingCompetitive, setLoadingCompetitive] = useState(false);
+  const [connectedIntegrations, setConnectedIntegrations] = useState<string[]>([]);
+
+  // Load connected integrations from localStorage
+  useEffect(() => {
+    const loadIntegrations = () => {
+      try {
+        const stored = localStorage.getItem('integrations');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          const connected = parsed.filter((i: any) => i.connected).map((i: any) => i.id);
+          setConnectedIntegrations(connected);
+        }
+      } catch (e) {
+        console.error('Error loading integrations:', e);
+      }
+    };
+    loadIntegrations();
+    
+    // Listen for integration changes
+    const handleStorageChange = () => loadIntegrations();
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('integrationChanged', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('integrationChanged', handleStorageChange);
+    };
+  }, []);
+
+  // Handle integrate button - navigate to integrations page
+  const handleIntegrate = (platformId: string) => {
+    window.dispatchEvent(new CustomEvent('navigateToPage', { detail: { page: 'integrations', highlightPlatform: platformId } }));
+  };
+
+  // Handle disconnect
+  const handleDisconnect = (platformId: string) => {
+    try {
+      const stored = localStorage.getItem('integrations');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const updated = parsed.map((i: any) => 
+          i.id === platformId ? { ...i, connected: false, handle: undefined } : i
+        );
+        localStorage.setItem('integrations', JSON.stringify(updated));
+        setConnectedIntegrations(prev => prev.filter(id => id !== platformId));
+        window.dispatchEvent(new CustomEvent('integrationChanged'));
+      }
+    } catch (e) {
+      console.error('Error disconnecting:', e);
+    }
+  };
 
   // #region agent log
   useEffect(() => {
@@ -137,9 +197,12 @@ const AnalyticsView: React.FC = () => {
   }, []);
 
   const loadAnalyticsData = async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:139',message:'loadAnalyticsData ENTRY',data:{hasLastScanResults:!!localStorage.getItem('lastScanResults'),lastScannedUsername:localStorage.getItem('lastScannedUsername')},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+    // #endregion
     try {
       setAnalytics({ platforms: [], isLoading: true });
-      
+
       // Get scan data
       const lastScanResults = localStorage.getItem('lastScanResults');
       const lastUsername = localStorage.getItem('lastScannedUsername');
@@ -210,6 +273,9 @@ const AnalyticsView: React.FC = () => {
       const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       
       try {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:216',message:'Calling analytics API',data:{url:`${API_BASE_URL}/api/analytics/last7days`,lastUsername},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+        // #endregion
         const response = await fetch(`${API_BASE_URL}/api/analytics/last7days`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -219,6 +285,9 @@ const AnalyticsView: React.FC = () => {
             competitors: competitorData
           })
         });
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:230',message:'Analytics API response',data:{ok:response.ok,status:response.status},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+        // #endregion
 
         if (response.ok) {
           const result = await response.json();
@@ -237,10 +306,16 @@ const AnalyticsView: React.FC = () => {
           }
         }
       } catch (apiError) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:250',message:'Analytics API FAILED',data:{error:String(apiError)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+        // #endregion
         console.warn('Analytics API call failed, using scan data:', apiError);
       }
 
       // Fallback: Generate insights from existing scan data
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:258',message:'Fallback generateInsightsFromData',data:{hasScanData:!!scanData,postsCount:scanData?.extractedContent?.posts?.length||0,competitorsCount:competitors.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+      // #endregion
       const platformData = generateInsightsFromData(
         { posts: scanData.extractedContent?.posts || [], totalEngagement: 0, avgEngagement: 0 },
         competitors,
@@ -600,52 +675,62 @@ const AnalyticsView: React.FC = () => {
           </div>
         )}
 
-        {/* Platform Performance Cards */}
-        {!analytics.isLoading && analytics.platforms.length > 0 && (
+        {/* Platform Integration Cards */}
+        {!analytics.isLoading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {analytics.platforms.map((platform, index) => (
-              <div key={index} className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6 hover:border-white/20 transition-all">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 ${platform.iconColor} rounded-lg flex items-center justify-center text-white`}>
-                      {platform.icon}
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-white">{platform.platform}</h3>
-                      <div className="text-lg font-black text-green-400">
-                        +{platform.performance}%
+            {platformsToShow.map((platform, index) => {
+              const isConnected = connectedIntegrations.includes(platform.id);
+              return (
+                <div key={index} className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6 hover:border-white/20 transition-all">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-12 h-12 ${platform.bgColor} rounded-lg flex items-center justify-center`}>
+                        {platform.icon}
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-white">{platform.name}</h3>
+                        {isConnected ? (
+                          <div className="flex items-center gap-1 text-green-400 text-xs">
+                            <Check className="w-3 h-3" />
+                            <span>Connected</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-white/40">Not connected</span>
+                        )}
                       </div>
                     </div>
                   </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2">What's Working</div>
-                    <ul className="space-y-1">
-                      {platform.whatsWorking.map((item, i) => (
-                        <li key={i} className="text-xs text-white/70 flex items-start gap-2">
-                          <Check className="w-3 h-3 text-green-400 mt-0.5 flex-shrink-0" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
                   
-                  <div>
-                    <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2">Areas for Improvement</div>
-                    <ul className="space-y-1">
-                      {platform.areasForImprovement.map((item, i) => (
-                        <li key={i} className="text-xs text-white/70 flex items-start gap-2">
-                          <AlertCircle className="w-3 h-3 text-amber-400 mt-0.5 flex-shrink-0" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  {isConnected ? (
+                    <div className="space-y-3">
+                      <div className="bg-white/5 rounded-lg p-3">
+                        <p className="text-xs text-white/50 mb-2">Analytics coming soon</p>
+                        <p className="text-[10px] text-white/30">Real-time data will appear here once the {platform.name} API is fully connected.</p>
+                      </div>
+                      <button
+                        onClick={() => handleDisconnect(platform.id)}
+                        className="w-full px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-xs font-medium text-red-400 hover:bg-red-500/20 transition-colors"
+                      >
+                        Disconnect
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-xs text-white/50">
+                        Connect your {platform.name} account to see real analytics, performance metrics, and AI-powered insights.
+                      </p>
+                      <button
+                        onClick={() => handleIntegrate(platform.id)}
+                        className="w-full px-4 py-2 bg-orange-500 hover:bg-orange-400 rounded-lg text-xs font-bold text-white transition-colors flex items-center justify-center gap-2"
+                      >
+                        <ArrowRight className="w-3 h-3" />
+                        Integrate {platform.name}
+                      </button>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

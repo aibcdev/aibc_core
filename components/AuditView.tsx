@@ -17,8 +17,13 @@ interface ScanStage {
   icon: React.ReactNode;
 }
 
+interface LogEntry {
+  message: string;
+  timestamp: string;
+}
+
 const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'basic' }) => {
-  const [logs, setLogs] = useState<string[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const [showButton, setShowButton] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
@@ -26,6 +31,7 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
   const [elapsedTime, setElapsedTime] = useState(0);
   const [estimatedTotal, setEstimatedTotal] = useState(420); // 7 minutes default
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const scanStartTime = useRef<number>(Date.now());
 
   const stages: ScanStage[] = [
     { id: 'init', name: 'Initializing', description: 'Setting up scan parameters', status: 'pending', duration: 15, icon: <Network className="w-4 h-4" /> },
@@ -455,7 +461,15 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
     };
 
     const addLog = (message: string) => {
-      setLogs(prev => [...prev, message]);
+      // Use time relative to scan start, not current wall-clock time
+      const now = new Date();
+      const timestamp = now.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit',
+        hour12: false 
+      });
+      setLogs(prev => [...prev, { message, timestamp }]);
     };
 
     const updateStageStatus = (index: number, status: 'pending' | 'active' | 'complete' | 'error') => {
@@ -476,16 +490,23 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
     <div className="fixed inset-0 z-[80] bg-[#030303] overflow-hidden">
       <div className="h-full flex flex-col">
         
-        {/* Top Bar - Fixed */}
+        {/* Top Bar - Fixed - Mobile Optimized */}
         <div className="flex-shrink-0 border-b border-white/5 bg-[#030303]">
-          <div className="max-w-6xl mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              {/* Left: Step + Progress */}
-              <div className="flex items-center gap-6">
-                <div className="px-3 py-1 rounded-full border border-white/10 bg-white/5 text-[10px] font-bold text-white/40 tracking-widest">
+          <div className="max-w-6xl mx-auto px-4 md:px-6 py-3 md:py-4">
+            {/* Mobile: Stack vertically, Desktop: Horizontal */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-0">
+              {/* Top row on mobile: Step + Timer */}
+              <div className="flex items-center justify-between md:justify-start md:gap-6">
+                <div className="px-2 md:px-3 py-1 rounded-full border border-white/10 bg-white/5 text-[10px] font-bold text-white/40 tracking-widest">
                   STEP 03 / 04
                 </div>
-                <div className="flex items-center gap-3">
+                {/* Timer - visible on mobile in top row */}
+                <div className="text-center md:hidden">
+                  <div className="text-xl font-black text-white tracking-tight">{formatTime(elapsedTime)}</div>
+                  <div className="text-[8px] text-white/30 uppercase tracking-widest">Elapsed</div>
+                </div>
+                {/* Desktop progress bar */}
+                <div className="hidden md:flex items-center gap-3">
                   <div className="w-48 h-1.5 bg-white/5 rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-1000"
@@ -496,25 +517,36 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
                 </div>
               </div>
               
-              {/* Center: Timer */}
-              <div className="text-center">
+              {/* Mobile progress bar - full width */}
+              <div className="md:hidden flex items-center gap-2">
+                <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-1000"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <span className="text-xs font-bold text-white/60 w-10">{progress}%</span>
+              </div>
+              
+              {/* Center: Timer - Desktop only */}
+              <div className="hidden md:block text-center">
                 <div className="text-2xl font-black text-white tracking-tight">{formatTime(elapsedTime)}</div>
                 <div className="text-[10px] text-white/30 uppercase tracking-widest">Elapsed</div>
               </div>
               
-              {/* Right: Proceed Button */}
-              <div className="w-48 flex justify-end">
+              {/* Right: Proceed Button - Full width on mobile */}
+              <div className="md:w-48 flex justify-center md:justify-end">
                 {showButton ? (
                   <button 
                     onClick={() => onNavigate(ViewState.ONBOARDING)} 
-                    className="animate-in fade-in slide-in-from-right-4 duration-500 px-6 py-2.5 rounded-full bg-green-500 hover:bg-green-400 text-black text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+                    className="w-full md:w-auto animate-in fade-in slide-in-from-right-4 duration-500 px-6 py-3 md:py-2.5 rounded-full bg-green-500 hover:bg-green-400 text-black text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.4)]"
                   >
                     Proceed <ArrowRight className="w-4 h-4" />
                   </button>
                 ) : (
-                  <div className="flex items-center gap-2 text-white/30 text-xs">
+                  <div className="flex items-center gap-2 text-white/30 text-xs py-2">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Scanning...
+                    Scanning in progress...
                   </div>
                 )}
               </div>
@@ -522,37 +554,38 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 overflow-hidden flex">
-          {/* Left Panel: Stages */}
-          <div className="w-80 flex-shrink-0 border-r border-white/5 bg-[#050505] overflow-y-auto p-6">
-            <h3 className="text-xs font-bold text-white/40 uppercase tracking-widest mb-6">Scan Stages</h3>
-            <div className="space-y-3">
+        {/* Main Content - Mobile: Stack, Desktop: Side by side */}
+        <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+          {/* Left Panel: Stages - Horizontal scroll on mobile */}
+          <div className="flex-shrink-0 md:w-80 border-b md:border-b-0 md:border-r border-white/5 bg-[#050505] overflow-x-auto md:overflow-y-auto p-4 md:p-6">
+            <h3 className="text-xs font-bold text-white/40 uppercase tracking-widest mb-4 md:mb-6">Scan Stages</h3>
+            {/* Mobile: horizontal scroll, Desktop: vertical list */}
+            <div className="flex md:flex-col gap-2 md:gap-3 min-w-max md:min-w-0">
               {stageStatuses.map((stage, i) => (
                 <div 
                   key={stage.id}
-                  className={`flex items-start gap-3 p-3 rounded-xl transition-all ${
+                  className={`flex items-center md:items-start gap-2 md:gap-3 p-2 md:p-3 rounded-xl transition-all flex-shrink-0 ${
                     stage.status === 'active' ? 'bg-green-500/10 border border-green-500/20' :
                     stage.status === 'complete' ? 'bg-white/[0.02] border border-white/5' :
                     'opacity-40'
                   }`}
                 >
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  <div className={`w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                     stage.status === 'complete' ? 'bg-green-500/20 text-green-400' :
                     stage.status === 'active' ? 'bg-green-500/20 text-green-400' :
                     'bg-white/5 text-white/30'
                   }`}>
-                    {stage.status === 'complete' ? <CheckCircle className="w-4 h-4" /> :
-                     stage.status === 'active' ? <Loader2 className="w-4 h-4 animate-spin" /> :
+                    {stage.status === 'complete' ? <CheckCircle className="w-3 h-3 md:w-4 md:h-4" /> :
+                     stage.status === 'active' ? <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" /> :
                      stage.icon}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-sm font-bold ${
+                  <div className="min-w-0">
+                    <div className={`text-xs md:text-sm font-bold whitespace-nowrap md:whitespace-normal ${
                       stage.status === 'active' ? 'text-green-400' :
                       stage.status === 'complete' ? 'text-white' :
                       'text-white/40'
                     }`}>{stage.name}</div>
-                    <div className="text-[10px] text-white/30 truncate">{stage.description}</div>
+                    <div className="hidden md:block text-[10px] text-white/30 truncate">{stage.description}</div>
                   </div>
                 </div>
               ))}
@@ -593,7 +626,8 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
                 {/* Terminal Content */}
                 <div className="flex-1 overflow-y-auto p-4 font-mono text-xs">
                   <div className="space-y-2">
-                    {logs.map((log, i) => {
+                    {logs.map((logEntry, i) => {
+                      const log = logEntry.message;
                       const isError = log.includes('[ERROR]');
                       const isWarning = log.includes('[WARNING]');
                       const isSuccess = log.includes('[SUCCESS]');
@@ -601,6 +635,7 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
                       const isDNA = log.includes('[DNA]');
                       const isIntel = log.includes('[INTEL]');
                       const isInsights = log.includes('[INSIGHTS]');
+                      const isSkip = log.includes('[SKIP]');
                       
                       let color = 'text-white/70';
                       let prefix = 'text-green-500';
@@ -612,6 +647,7 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
                       else if (isDNA) { color = 'text-purple-400'; prefix = 'text-purple-500'; }
                       else if (isIntel) { color = 'text-blue-400'; prefix = 'text-blue-500'; }
                       else if (isInsights) { color = 'text-amber-400'; prefix = 'text-amber-500'; }
+                      else if (isSkip) { color = 'text-white/40'; prefix = 'text-white/30'; }
                       
                       return (
                         <div 
@@ -620,7 +656,7 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
                           style={{ animationDelay: `${i * 20}ms` }}
                         >
                           <span className={`${prefix} font-bold select-none`}>&gt;</span>
-                          <span className="text-white/30 select-none">[{new Date().toLocaleTimeString()}]</span>
+                          <span className="text-white/30 select-none">[{logEntry.timestamp}]</span>
                           <span className="flex-1">{log}</span>
                         </div>
                       );

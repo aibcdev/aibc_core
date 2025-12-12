@@ -116,10 +116,29 @@ function calculateDashboardKPIs() {
     fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboardData.ts:112',message:'scanData parsed',data:{hasScanData:!!scanData,postsCount:scanData?.extractedContent?.posts?.length||0,contentIdeasCount:scanData?.contentIdeas?.length||0,scanUsername:scanData?.scanUsername||'none'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
     // #endregion
     
-    const postsThisWeek = scanData?.extractedContent?.posts?.length || 0;
+    const posts = scanData?.extractedContent?.posts || [];
+    const postsThisWeek = posts.length;
     const postsThisWeekChange = undefined;
+    
+    // Calculate platform breakdown
+    const platformCounts: Record<string, number> = {};
+    posts.forEach((post: any) => {
+      const platform = (post.platform || post.source || 'Unknown').toLowerCase();
+      platformCounts[platform] = (platformCounts[platform] || 0) + 1;
+    });
+    
+    // Find top platform
+    let topPlatform = 'All Platforms';
+    let topPlatformCount = 0;
+    Object.entries(platformCounts).forEach(([platform, count]) => {
+      if (count > topPlatformCount) {
+        topPlatform = platform.charAt(0).toUpperCase() + platform.slice(1);
+        topPlatformCount = count;
+      }
+    });
+    
     const engagementThisWeek =
-      (scanData?.extractedContent?.posts || []).reduce((sum: number, post: any) => {
+      posts.reduce((sum: number, post: any) => {
         const engagement = post.engagement || {};
         return sum + (engagement.likes || 0) + (engagement.shares || 0) + (engagement.comments || 0);
       }, 0) || 0;
@@ -150,6 +169,8 @@ function calculateDashboardKPIs() {
     return {
       postsThisWeek,
       postsThisWeekChange,
+      postsTopPlatform: topPlatform,
+      platformBreakdown: platformCounts,
       engagementThisWeek,
       engagementThisWeekChange,
       contentPending,

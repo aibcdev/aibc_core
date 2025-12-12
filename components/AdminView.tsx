@@ -250,7 +250,26 @@ const AdminView: React.FC<NavProps> = ({ onNavigate }) => {
                 <p className="text-xs text-white/40 mt-1">Manage users, requests, and view analytics</p>
               </div>
               <div className="flex items-center gap-3">
-                <button className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-2">
+                <button 
+                  onClick={() => {
+                    // Export admin data as JSON
+                    const exportData = {
+                      exportDate: new Date().toISOString(),
+                      users,
+                      onboardingData,
+                      kpis,
+                      recentScans
+                    };
+                    const dataStr = JSON.stringify(exportData, null, 2);
+                    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                    const exportName = `admin-data-${new Date().toISOString().split('T')[0]}.json`;
+                    const link = document.createElement('a');
+                    link.href = dataUri;
+                    link.download = exportName;
+                    link.click();
+                  }}
+                  className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-2"
+                >
                   <Download className="w-4 h-4" />
                   Export Data
                 </button>

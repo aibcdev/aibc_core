@@ -148,37 +148,37 @@ const SettingsView: React.FC<{ onLogout?: () => void; onNavigate?: (view: ViewSt
   ];
 
   return (
-    <div className="max-w-5xl mx-auto p-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-black uppercase tracking-tighter text-white mb-2">Settings</h1>
-        <p className="text-white/40 text-sm">Manage your account and preferences</p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-white mb-2">Settings</h1>
+        <p className="text-white/40 text-xs sm:text-sm">Manage your account and preferences</p>
       </div>
 
-      <div className="flex gap-8">
-        {/* Sidebar Navigation */}
-        <div className="w-48 flex-shrink-0">
-          <nav className="space-y-1">
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
+        {/* Sidebar Navigation - Horizontal on mobile, vertical on desktop */}
+        <div className="lg:w-48 flex-shrink-0">
+          <nav className="flex lg:flex-col gap-1 overflow-x-auto pb-2 lg:pb-0 lg:space-y-1 scrollbar-hide">
             {sections.map(section => (
               <button
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all ${
+                className={`flex items-center gap-2 lg:gap-3 px-3 lg:px-4 py-2 lg:py-2.5 rounded-xl text-xs lg:text-sm whitespace-nowrap transition-all ${
                   activeSection === section.id
                     ? 'bg-white/10 text-white font-medium'
                     : 'text-white/40 hover:text-white hover:bg-white/5'
                 }`}
               >
                 {section.icon}
-                {section.label}
+                <span className="hidden sm:inline">{section.label}</span>
               </button>
             ))}
           </nav>
 
-          {/* Logout Button */}
+          {/* Logout Button - Hidden on mobile, shown in a different location */}
           <button
             onClick={onLogout}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-red-400 hover:bg-red-500/10 transition-all mt-8"
+            className="hidden lg:flex w-full items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-red-400 hover:bg-red-500/10 transition-all mt-8"
           >
             <LogOut className="w-4 h-4" />
             Log Out
@@ -186,7 +186,7 @@ const SettingsView: React.FC<{ onLogout?: () => void; onNavigate?: (view: ViewSt
         </div>
 
         {/* Content Area */}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           {/* Profile Section */}
           {activeSection === 'profile' && (
             <div className="space-y-6">
@@ -574,6 +574,17 @@ const SettingsView: React.FC<{ onLogout?: () => void; onNavigate?: (view: ViewSt
             </div>
           )}
         </div>
+      </div>
+      
+      {/* Mobile Logout Button */}
+      <div className="lg:hidden mt-8 pb-4">
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl text-sm text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-all"
+        >
+          <LogOut className="w-4 h-4" />
+          Log Out
+        </button>
       </div>
     </div>
   );

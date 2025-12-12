@@ -1,7 +1,7 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { 
   ArrowRight, Play, TrendingUp, Clock, Sparkles, Zap, Globe, Shield, MessageSquare,
-  BarChart3, Video, FileText, Target, Brain
+  BarChart3, Video, FileText, Target, Brain, X, Heart, RefreshCw
 } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
 import Navigation from './shared/Navigation';
@@ -9,6 +9,21 @@ import Footer from './shared/Footer';
 
 const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
+  
+  // Check if user is authenticated before allowing scan
+  const handleStartScan = useCallback(() => {
+    const authToken = localStorage.getItem('authToken');
+    const user = localStorage.getItem('user');
+    
+    if (authToken && user) {
+      // User is logged in - go to scan
+      onNavigate(ViewState.INGESTION);
+    } else {
+      // User not logged in - go to sign up
+      onNavigate(ViewState.LOGIN);
+    }
+  }, [onNavigate]);
 
   useEffect(() => {
     // Ensure video plays and handle errors
@@ -91,12 +106,15 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <button 
-                  onClick={() => onNavigate(ViewState.INGESTION)}
+                  onClick={handleStartScan}
                   className="px-8 py-4 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 w-fit"
                 >
                   Start free trial <ArrowRight className="w-4 h-4" />
                 </button>
-                <button className="px-8 py-4 bg-black border border-white text-white font-medium rounded-lg hover:bg-black/80 transition-colors flex items-center gap-2 w-fit">
+                <button 
+                  onClick={() => setShowHowItWorks(true)}
+                  className="px-8 py-4 bg-black border border-white text-white font-medium rounded-lg hover:bg-black/80 transition-colors flex items-center gap-2 w-fit"
+                >
                   <Play className="w-4 h-4" /> See how it works
                 </button>
               </div>
@@ -493,8 +511,8 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
             <p className="text-xl text-white/60 mb-8">
               Join thousands of modern marketing teams using AIBC Media today.
             </p>
-            <button 
-              onClick={() => onNavigate(ViewState.INGESTION)}
+            <button
+              onClick={handleStartScan}
               className="px-8 py-4 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors mb-4"
             >
               Start your 7-day free trial
@@ -538,6 +556,169 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
 
         <Footer />
       </main>
+
+      {/* How It Works Modal */}
+      {showHowItWorks && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setShowHowItWorks(false)}
+          />
+          
+          {/* Modal */}
+          <div className="relative bg-[#0A0A0A] border border-white/10 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-300">
+            {/* Gradient accents */}
+            <div className="absolute top-0 left-0 w-64 h-64 bg-emerald-500/20 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/20 rounded-full blur-[100px] translate-x-1/2 -translate-y-1/2" />
+            
+            {/* Close button */}
+            <button 
+              onClick={() => setShowHowItWorks(false)}
+              className="absolute top-4 right-4 p-2 text-white/40 hover:text-white transition-colors z-10"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            
+            {/* Content */}
+            <div className="relative p-8 md:p-12">
+              <div className="text-center mb-12">
+                <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">How AIBC works</h2>
+                <p className="text-white/60 text-lg max-w-xl mx-auto">
+                  Automate your workflow with intelligent generation, seamless adjustments, and data-driven learning.
+                </p>
+              </div>
+              
+              {/* 3 Feature Cards */}
+              <div className="grid md:grid-cols-3 gap-6 mb-12">
+                {/* Card 1: Content Generation */}
+                <div className="bg-[#111111] border border-white/10 rounded-xl p-6 relative overflow-hidden">
+                  <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold mb-6">
+                    1
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Content Generation</h3>
+                  <p className="text-white/50 text-sm mb-6">
+                    Automatically creates tailored posts based on your brand voice.
+                  </p>
+                  {/* Mock calendar UI */}
+                  <div className="bg-[#0A0A0A] rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-white/60 text-xs">Sep 2026</span>
+                      <div className="flex gap-1">
+                        <div className="w-5 h-5 rounded bg-white/5" />
+                        <div className="w-5 h-5 rounded bg-white/5" />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <div className="bg-emerald-500 text-white text-[10px] px-2 py-0.5 rounded mb-2 w-fit">May 5</div>
+                        <div className="bg-[#1a1a1a] rounded-lg p-2 border border-white/5">
+                          <div className="w-full h-12 bg-gradient-to-br from-white/10 to-white/5 rounded" />
+                          <div className="h-1.5 bg-white/20 rounded mt-2 w-3/4" />
+                          <div className="h-1.5 bg-white/10 rounded mt-1 w-1/2" />
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-white/30 text-[10px] mb-2">May 6</div>
+                        <div className="bg-[#1a1a1a] rounded-lg p-2 border border-white/5 h-[72px]" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Card 2: Smart Editor */}
+                <div className="bg-[#111111] border border-white/10 rounded-xl p-6 relative overflow-hidden">
+                  <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold mb-6">
+                    2
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Smart Editor</h3>
+                  <p className="text-white/50 text-sm mb-6">
+                    Powerful tools to refine copy, swap images, and perfect your message.
+                  </p>
+                  {/* Mock editor UI */}
+                  <div className="relative rounded-lg overflow-hidden">
+                    <div className="absolute top-2 left-2 bg-white/10 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-2 text-white text-xs z-10">
+                      <RefreshCw className="w-3 h-3" /> Replace
+                    </div>
+                    <div className="bg-gradient-to-br from-gray-400 to-gray-600 h-32 rounded-lg" />
+                    <div className="absolute bottom-2 left-2 text-white font-medium text-sm">Coaching</div>
+                    <div className="absolute bottom-2 right-2 bg-white rounded-lg p-2 shadow-lg">
+                      <div className="w-10 h-10 bg-cyan-500 rounded" />
+                      <div className="text-[8px] text-gray-500 mt-1">#6147DC</div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Card 3: Adaptive Learning */}
+                <div className="bg-[#111111] border border-white/10 rounded-xl p-6 relative overflow-hidden">
+                  <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center text-white font-bold mb-6">
+                    3
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Adaptive Learning</h3>
+                  <p className="text-white/50 text-sm mb-6">
+                    Continuous analysis optimizes future content for maximum engagement.
+                  </p>
+                  {/* Mock analytics UI */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <BarChart3 className="w-4 h-4 text-white/40" />
+                      <span className="text-white/60 text-sm flex-1">Reach</span>
+                      <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400 w-3/4 rounded-full" />
+                      </div>
+                      <span className="text-green-400 text-xs font-medium">+24%</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Heart className="w-4 h-4 text-white/40" />
+                      <span className="text-white/60 text-sm flex-1">Likes</span>
+                      <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400 w-1/2 rounded-full" />
+                      </div>
+                      <span className="text-green-400 text-xs font-medium">+12%</span>
+                    </div>
+                    {/* Chart mock */}
+                    <div className="h-16 mt-4 flex items-end gap-1">
+                      <svg viewBox="0 0 100 40" className="w-full h-full">
+                        <path 
+                          d="M0 35 Q10 30 20 32 T40 25 T60 28 T80 15 T100 20" 
+                          fill="none" 
+                          stroke="url(#purpleGradient)" 
+                          strokeWidth="2"
+                        />
+                        <defs>
+                          <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#8B5CF6" />
+                            <stop offset="100%" stopColor="#A855F7" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Action buttons */}
+              <div className="flex items-center justify-end gap-4">
+                <button 
+                  onClick={() => setShowHowItWorks(false)}
+                  className="px-6 py-3 text-white/60 hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowHowItWorks(false);
+                    onNavigate(ViewState.LOGIN);
+                  }}
+                  className="px-8 py-3 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  Get Started
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
