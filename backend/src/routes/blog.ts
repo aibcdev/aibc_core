@@ -33,10 +33,26 @@ router.get('/', async (req, res) => {
     };
 
     const result = await listBlogPosts(params);
-    res.json(result);
+    
+    // Ensure we always return the correct structure
+    res.json({
+      posts: result.posts || [],
+      total: result.total || 0,
+      page: result.page || 1,
+      limit: result.limit || 10,
+      totalPages: result.totalPages || 0,
+    });
   } catch (error: any) {
     console.error('Error listing blog posts:', error);
-    res.status(500).json({ error: error.message || 'Failed to list blog posts' });
+    // Return empty result structure instead of error object
+    res.status(500).json({
+      posts: [],
+      total: 0,
+      page: parseInt(req.query.page as string) || 1,
+      limit: parseInt(req.query.limit as string) || 10,
+      totalPages: 0,
+      error: error.message || 'Failed to list blog posts',
+    });
   }
 });
 
