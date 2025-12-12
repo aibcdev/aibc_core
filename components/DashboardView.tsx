@@ -1437,7 +1437,7 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                     )}
                                 </div>
                                 <div className="text-[9px] text-white/30 mb-1">
-                                    {analytics?.postsTopPlatform ? `via ${analytics.postsTopPlatform}` : 'Across all platforms'}
+                                    via {analytics?.postsTopPlatform && analytics.postsTopPlatform !== 'Unknown' ? analytics.postsTopPlatform : 'X, Instagram, LinkedIn'}
                                 </div>
                                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
                                     <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" style={{ width: `${Math.min(((analytics?.postsThisWeek || 0) / 20) * 100, 100)}%` }}></div>
@@ -1456,6 +1456,9 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                             {analytics.engagementThisWeekChange > 0 ? '+' : ''}{analytics.engagementThisWeekChange}
                                         </span>
                                     )}
+                                </div>
+                                <div className="text-[9px] text-white/30 mb-1">
+                                    via {analytics?.engagementTopPlatform && analytics.engagementTopPlatform !== 'Unknown' ? analytics.engagementTopPlatform : 'X, Instagram, LinkedIn'}
                                 </div>
                                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
                                     <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full" style={{ width: `${Math.min(((analytics?.engagementThisWeek || 0) / 15) * 100, 100)}%` }}></div>

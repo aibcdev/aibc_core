@@ -3822,15 +3822,22 @@ I need you to identify this brand/website/company and tell me:
 2. **Industry**: What industry/sector is this in? (e.g., "Crypto Launchpads", "Athletic Apparel", "SaaS", "Content Creator")
 3. **Description**: A 1-2 sentence description of what they do
 4. **Niche**: The specific niche within their industry (be specific, e.g., "AI-native decentralized token launch platform" not just "crypto")
-5. **Competitors**: List 5-8 DIRECT competitors in the SAME industry/niche (use real company names)
+5. **Competitors**: List EXACTLY 3-5 DIRECT competitors - the CLOSEST competitors in the SAME industry/niche (use real company names)
 6. **Social Handles**: Their known social media handles (twitter, instagram, linkedin, tiktok, youtube)
 
-IMPORTANT:
+CRITICAL RULES FOR COMPETITORS:
+- Return ONLY 3-5 competitors - NO MORE
+- ALL competitors MUST be in the EXACT SAME industry/business type
+- NO industry fusion - do NOT mix companies from different sectors
+- Example: If this is an athletic apparel brand, return ONLY other athletic apparel brands (NOT nutrition companies, NOT general fashion, NOT sports equipment)
+- Example: If this is a crypto launchpad, return ONLY other crypto launchpads (NOT exchanges, NOT wallets, NOT DeFi protocols)
+- Only include companies that directly compete for the same customers
+- Quality over quantity - only the 3-5 CLOSEST competitors
+
+OTHER RULES:
 - Be specific about the industry and niche
-- Competitors MUST be in the SAME business/industry - not just tangentially related
-- If this is a crypto project, list OTHER crypto projects in the same space
-- If this is an ecommerce brand, list OTHER ecommerce brands in the same category
 - Do NOT make up information - only provide what you know
+- Do NOT include generic industry giants unless they truly compete directly
 
 Return JSON only:
 {
@@ -3838,7 +3845,7 @@ Return JSON only:
   "industry": "Specific Industry",
   "description": "What they do",
   "niche": "Specific niche description",
-  "competitors": ["Competitor1", "Competitor2", "Competitor3", "Competitor4", "Competitor5"],
+  "competitors": ["Competitor1", "Competitor2", "Competitor3"],
   "socialHandles": {
     "twitter": "@handle",
     "instagram": "@handle"
@@ -5293,14 +5300,18 @@ CONTEXT:
 - Bio: ${bio || 'n/a'}
 
 TASK:
-1) Return 3-4 competitors with a PRIMARY/SECONDARY flag; PRIMARY must share the same model/audience within the niche above.
-2) For EACH competitor, provide DETAILED posting analysis:
+1) Return EXACTLY 3-5 competitors - NO MORE. These must be the CLOSEST, most DIRECT competitors only.
+2) ALL competitors must be in the EXACT SAME industry as ${brandName}. NO industry fusion or cross-industry mixing.
+   - If ${brandName} sells athletic wear, only return athletic wear competitors (NOT general fashion, NOT nutrition, NOT unrelated sports companies)
+   - If ${brandName} is a crypto launchpad, only return crypto launchpad competitors (NOT exchanges, NOT wallets, NOT general crypto)
+3) PRIMARY = direct competitor (same product/service), SECONDARY = adjacent competitor (related but not identical)
+4) For EACH competitor, provide DETAILED posting analysis:
    - Which platforms they dominate
    - Their posting frequency and best times
    - Content formats that work for them (video, carousel, thread, etc.)
    - Their TOP 3 VIRAL CONTENT EXAMPLES with estimated engagement
-3) Identify which competitor is OUTPERFORMING in content - this drives content recommendations.
-4) Keep it concrete—real brand names only. No fictional brands.
+5) Identify which competitor is OUTPERFORMING in content - this drives content recommendations.
+6) Keep it concrete—real brand names only. No fictional brands. MAXIMUM 5 competitors.
 
 RETURN JSON ONLY:
 {

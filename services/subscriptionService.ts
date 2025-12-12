@@ -33,36 +33,37 @@ export interface CreditTransaction {
   metadata?: Record<string, any>;
 }
 
-// Credit costs for different actions (matching pricing page)
+// Credit costs for different actions (matching pricing page EXACTLY)
+// From pricing: 1 credit = short post, 3 = long-form, 5 = audio, 10 = short video, 15 = long video
 export const CREDIT_COSTS = {
   DIGITAL_FOOTPRINT_SCAN: 0, // Scans are included in plan, not charged credits
   CONTENT_GENERATION: 1, // 1 credit = 1 short post
   COMPETITOR_ANALYSIS: 0, // Included in Business tier
   BRAND_DNA_EXTRACTION: 0, // Included in scan
+  LONG_FORM_CONTENT: 3, // 3 credits = 1 long-form asset (blog, newsletter)
   
-  // Production Room costs - tiered by content type
-  // Images: Cheapest - available from PRO tier
-  IMAGE_SHORT: 2,   // Short image/graphic
-  IMAGE_MID: 3,     // Mid-length image set
-  IMAGE_LONG: 5,    // Full image package
+  // Production Room costs - MATCHING PRICING PAGE
+  // Images: 1-3 credits (like posts/long-form) - available from PRO tier
+  IMAGE_SHORT: 1,   // Short image/graphic (like a post)
+  IMAGE_MID: 2,     // Mid-length image set
+  IMAGE_LONG: 3,    // Full image package (like long-form)
   
-  // Audio: Medium cost - available from PRO tier
+  // Audio: 5 credits per pricing page - available from PRO tier
   AUDIO_SHORT: 3,   // Short audio clip (30s)
-  AUDIO_MID: 5,     // Mid-length audio (1-2 min)
+  AUDIO_MID: 5,     // Mid-length audio (1-2 min) - matches pricing
   AUDIO_LONG: 8,    // Long audio/podcast (3+ min)
   
-  // Video: Most expensive - requires ENTERPRISE (Pro+)
-  VIDEO_SHORT: 10,  // Short video (15-30s)
-  VIDEO_MID: 15,    // Mid-length video (30-90s)
-  VIDEO_LONG: 25,   // Long video (90s+)
+  // Video: 10-15 credits per pricing page - requires ENTERPRISE (Pro+)
+  VIDEO_SHORT: 10,  // Short video (10-30s) - matches pricing page
+  VIDEO_MID: 15,    // Mid-length video (30-90s) - matches pricing page  
+  VIDEO_LONG: 15,   // Long video (30-180s) - matches pricing page
   
-  // Legacy mappings
+  // Legacy mappings for backward compatibility
   AUDIO_GENERATION: 5,
   VIDEO_GENERATION: 15,
   SHORT_VIDEO: 10,
   LONG_VIDEO: 15,
-  IMAGE_GENERATION: 3,
-  LONG_FORM_CONTENT: 3,
+  IMAGE_GENERATION: 2,
 } as const;
 
 // Feature access by tier

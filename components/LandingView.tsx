@@ -502,28 +502,7 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
           </div>
         </section>
 
-        {/* CTA Section */}
-        <section className="py-24 bg-gradient-to-br from-purple-900/20 via-blue-900/20 to-orange-900/20 border-t border-white/5">
-          <div className="mx-auto max-w-4xl px-6 lg:px-8 text-center">
-            <h2 className="text-4xl sm:text-5xl font-medium text-white mb-4">
-              Ready to transform your content?
-            </h2>
-            <p className="text-xl text-white/60 mb-8">
-              Join thousands of modern marketing teams using AIBC Media today.
-            </p>
-            <button
-              onClick={handleStartScan}
-              className="px-8 py-4 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors mb-4"
-            >
-              Start your 7-day free trial
-            </button>
-            <p className="text-sm text-white/40">
-              No credit card required. Cancel anytime.
-            </p>
-          </div>
-        </section>
-
-        {/* Powering the Next Generation Section */}
+        {/* Powering the Next Generation Section - Image Grid */}
         <section className="relative py-32 bg-[#050505] border-t border-white/5 overflow-hidden">
           {/* Background Photo Grid */}
           <div className="absolute inset-0 z-0">
@@ -551,6 +530,27 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
                 Powering the next generation of creators and businesses.
               </h2>
             </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-24 bg-gradient-to-br from-purple-900/20 via-blue-900/20 to-orange-900/20 border-t border-white/5">
+          <div className="mx-auto max-w-4xl px-6 lg:px-8 text-center">
+            <h2 className="text-4xl sm:text-5xl font-medium text-white mb-4">
+              Ready to transform your content?
+            </h2>
+            <p className="text-xl text-white/60 mb-8">
+              Join thousands of modern marketing teams using AIBC Media today.
+            </p>
+            <button
+              onClick={handleStartScan}
+              className="px-8 py-4 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors mb-4"
+            >
+              Start your 7-day free trial
+            </button>
+            <p className="text-sm text-white/40">
+              No credit card required. Cancel anytime.
+            </p>
           </div>
         </section>
 
