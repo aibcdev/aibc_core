@@ -1,17 +1,22 @@
 [build]
-  command = "npm run build"
+  command = "npm ci && npm run build"
   publish = "dist"
 
-# Disable secrets scanning for this build
-# Supabase anon keys are intentionally public client-side keys (safe to expose)
-# All other secrets (API keys, Stripe secret keys) are stored in environment variables
-# and never committed to the repository
 [build.environment]
-  # Disable secrets scanner completely - Supabase anon keys are meant to be public
-  # All real secrets are in environment variables, not in code
+  # Force Node 18 for compatibility
+  NODE_VERSION = "18"
+  # Disable Netlify cache to ensure fresh builds
+  NPM_FLAGS = "--prefer-offline=false"
+  # Disable secrets scanner
   SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
-  
-# Alternative: If you want to keep scanning but exclude specific values,
-# uncomment and add your Supabase anon key (the eyJ... value):
-# SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "your-supabase-anon-key-here"
+
+# Clear build cache
+[build.processing]
+  skip_processing = false
+
+# Redirect all routes to index.html for SPA
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 
