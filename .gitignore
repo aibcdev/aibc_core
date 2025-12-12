@@ -55,3 +55,6 @@ credentials.json
 *.sln
 *.sw?
 # Build fixes applied
+
+# Local Netlify folder
+.netlify

@@ -1247,7 +1247,7 @@ Return JSON array of actionable recommendations with metrics:
     // ALWAYS call generateCompetitorIntelligence to ensure we have competitors
     // Use LLM knowledge base (no dependency on scraping)
     try {
-      const competitorData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier, platforms, websiteTextContent, nicheHint);
+      const competitorData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier, platforms, websiteTextContent, nicheHint, identityCompetitors);
       
       // Handle new format with marketShare
       if (competitorData && competitorData.competitors && Array.isArray(competitorData.competitors)) {
@@ -1294,7 +1294,7 @@ Return JSON array of actionable recommendations with metrics:
         addLog(scanId, `[WARNING] Only ${competitorIntelligence.length} competitors found (minimum ${minCompetitors}) - retrying...`);
         // Retry with more explicit prompt
         try {
-          const retryData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier, platforms, websiteTextContent, nicheHint);
+          const retryData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier, platforms, websiteTextContent, nicheHint, identityCompetitors);
           if (retryData && retryData.competitors && Array.isArray(retryData.competitors) && retryData.competitors.length >= minCompetitors) {
             competitorIntelligence = retryData.competitors;
             marketShare = retryData.marketShare;
@@ -5193,7 +5193,8 @@ async function generateCompetitorIntelligence(
   scanTier: ScanTier = 'basic',
   platforms: string[] = [],
   websiteTextContent?: string,
-  nicheHint?: string
+  nicheHint?: string,
+  knownCompetitors?: string[]  // From LLM identity layer - these are verified competitors
 ): Promise<any> {
   // Always try to generate competitors - even with minimal data, we can use LLM knowledge
   const hasRealContent = validatedContent.posts && validatedContent.posts.length > 0;
@@ -5256,13 +5257,24 @@ async function generateCompetitorIntelligence(
     }
     
     const nicheContext = nicheOverride || nicheHint || nicheIndicators || 'general';
+    
+    // If we have known competitors from the identity layer, use them as ground truth
+    const knownCompetitorsList = knownCompetitors && knownCompetitors.length > 0 
+      ? knownCompetitors.join(', ')
+      : '';
 
     const prompt = `Layered competitor map for ${brandName} in the ${nicheContext} industry.
 
+${knownCompetitorsList ? `VERIFIED COMPETITORS (from prior research - USE THESE):
+${knownCompetitorsList}
+
+These competitors have been verified as being in the SAME industry as ${brandName}. Build your analysis around these competitors. You may add 1-2 more if appropriate, but prioritize these known competitors.` : ''}
+
 STEP 1 — LLM PRIOR (knowledge only):
-- Identify the closest PRIMARY competitors (same business model, same industry: ${nicheContext}) and SECONDARY (adjacent) using your own knowledge base.
+- ${knownCompetitorsList ? `Focus on the verified competitors listed above.` : `Identify the closest PRIMARY competitors (same business model, same industry: ${nicheContext}) and SECONDARY (adjacent) using your own knowledge base.`}
 - Prioritize accuracy over volume. CRITICAL: Competitors MUST be in the SAME industry as ${brandName}.
 - DO NOT include examples or competitors from other industries.
+- Industry is: ${nicheContext} - ALL competitors must be in this exact industry.
 
 STEP 2 — SCRAPED OVERLAY (apply to their signals):
 - Website cues: ${websiteTextContent ? websiteTextContent.substring(0, 500) : 'none'}
