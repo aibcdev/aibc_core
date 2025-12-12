@@ -1353,20 +1353,55 @@ Return JSON array of actionable recommendations with metrics:
     try {
       const { generateJSON } = await import('./llmService');
       
-      // Extract industry/niche context for better tailoring - PRIORITIZE website content
+      // Extract industry/niche context - PRIORITIZE brandIdentity from LLM-first layer
       const allPosts = (validatedContent.posts || []).map((p: any) => p.content).join('\n\n');
       const bio = validatedContent.profile?.bio || '';
       const themes = (validatedContent.content_themes || []).join(', ');
-      const nicheIndicators = extractNicheIndicators(allPosts.substring(0, 10000), bio, themes, brandDNA, websiteTextContent);
+      
+      // Use brandIdentity as PRIMARY source, fallback to extracted niche
+      const nicheIndicators = brandIdentity?.niche || 
+                             brandIdentity?.industry || 
+                             extractNicheIndicators(allPosts.substring(0, 10000), bio, themes, brandDNA, websiteTextContent);
       const postPatternSummary = summarizePostPatterns(validatedContent.posts || []);
       
       // Extract brand name from username (handles social media URLs properly)
-      const brandName = extractBrandNameFromInput(username);
+      const brandName = brandIdentity?.name || extractBrandNameFromInput(username);
       
-      // Build context - PRIORITIZE website content
+      // Build brandIdentity context - PRIMARY SOURCE OF TRUTH (LLM-first layer)
+      let brandIdentityContext = '';
+      if (brandIdentity) {
+        brandIdentityContext = `## 🎯 BRAND IDENTITY (LLM-FIRST LAYER - PRIMARY SOURCE OF TRUTH):
+This information comes from direct LLM identification of what this brand IS.
+Use this as the ACCURATE understanding before generating Content Hub suggestions.
+
+- Company: ${brandIdentity.name}
+- Industry: ${brandIdentity.industry}
+- What they do: ${brandIdentity.description}
+- Specific niche: ${brandIdentity.niche}
+
+CRITICAL: ${brandIdentity.name} is a ${brandIdentity.industry} company.
+${brandIdentity.description}
+
+Generate Content Hub suggestions that are ACCURATE to this brand identity.
+Understand what ${brandIdentity.name} actually does, then create viral content
+that beats competitors in their actual market space (${brandIdentity.industry}).
+
+`;
+      }
+      
+      // Build supplementary context - website content, bio, themes (secondary to brandIdentity)
       let brandContext = '';
+      if (brandIdentity) {
+        brandContext = `BRAND IDENTITY (Authoritative - from LLM-first layer):
+- Industry: ${brandIdentity.industry}
+- Description: ${brandIdentity.description}
+- Niche: ${brandIdentity.niche}
+
+SUPPLEMENTARY CONTEXT (from website and social profiles):
+`;
+      }
       if (websiteTextContent && websiteTextContent.length > 100) {
-        brandContext = `WEBSITE CONTENT (PRIMARY SOURCE - most accurate for understanding what this business does):\n${websiteTextContent.substring(0, 10000)}\n\n`;
+        brandContext += `WEBSITE CONTENT:\n${websiteTextContent.substring(0, 10000)}\n\n`;
       }
       if (bio && bio.length > 20) {
         brandContext += `Profile Bio: ${bio}\n\n`;
@@ -1427,7 +1462,8 @@ ${viralExamples || '    • No viral content data'}`;
       }
 
       // COMPETITOR-DRIVEN VIRAL CONTENT GENERATION
-      const contentPrompt = `🔥 VIRAL CONTENT STRATEGY for ${brandName} 🔥
+      // brandIdentityContext is PRIMARY - comes FIRST
+      const contentPrompt = `${brandIdentityContext}🔥 VIRAL CONTENT STRATEGY for ${brandName} 🔥
 
 ## BRAND TYPE ANALYSIS:
 ${platformFocus}
@@ -1489,8 +1525,15 @@ ${competitorViralContent.slice(0, 5).map((v: any) =>
 - Behind-the-scenes/day-in-the-life
 
 ## BRAND CONTEXT:
+${brandIdentity ? `
+- Company: ${brandIdentity.name} (from LLM-first identification)
+- Industry: ${brandIdentity.industry} (PRIMARY - authoritative)
+- What they do: ${brandIdentity.description}
+- Niche: ${brandIdentity.niche}
+` : `
 - Company: ${brandName}
 - Industry: ${nicheIndicators || 'Unknown'}
+`}
 - Bio: ${bio || 'n/a'}
 - Current topics: ${themes || 'n/a'}
 ${websiteTextContent && websiteTextContent.length > 100 ? `
@@ -1631,12 +1674,21 @@ For ${nicheIndicators || brandName}, generate content that MAXIMIZES VIRALITY. T
         engagementPotential: idea.engagementPotential || 'high'
       }));
       
-      // If we have fewer than 5 after filtering, retry with stronger prompt
+      // If we have fewer than 5 after filtering, retry with stronger prompt emphasizing brandIdentity
       if (contentIdeas.length < 5) {
         addLog(scanId, `[WARNING] Only ${contentIdeas.length} brand-specific content ideas after filtering - retrying with stronger prompt`);
         try {
-          const retryPrompt = `${contentPrompt}\n\nIMPORTANT: The previous attempt generated too many generic ideas. Generate ideas that are SPECIFIC to ${brandName} in the ${nicheIndicators || 'their industry'} space. Each idea must reference their actual products, services, themes, or industry-specific concepts.`;
-          const retryResult = await generateJSON<any>(retryPrompt, `You are a content strategist. Generate ONLY brand-specific content ideas for ${brandName}. Reject any generic ideas.`, { tier: scanTier });
+          const brandIdentityEmphasis = brandIdentity ? `
+CRITICAL REMINDER - BRAND IDENTITY (LLM-FIRST LAYER):
+${brandIdentity.name} is a ${brandIdentity.industry} company that ${brandIdentity.description}.
+Generate Content Hub suggestions ACCURATE to this brand identity - ${brandIdentity.industry} and ${brandIdentity.niche}.
+` : '';
+          const retryPrompt = `${contentPrompt}\n\nIMPORTANT: The previous attempt generated inaccurate or generic ideas. 
+${brandIdentityEmphasis}
+Generate ideas that are SPECIFIC and ACCURATE to ${brandName} in the ${nicheIndicators || 'their industry'} space. 
+Each idea must reference their actual products, services, themes, or industry-specific concepts.
+Understand what ${brandName} actually does, then create viral content that beats competitors.`;
+          const retryResult = await generateJSON<any>(retryPrompt, `You are a content strategist. Generate ONLY accurate, brand-specific content ideas for ${brandName} based on what they actually do. Reject any generic or inaccurate ideas.`, { tier: scanTier });
           
           if (Array.isArray(retryResult)) {
             // Define generic keywords for retry filtering
@@ -1664,7 +1716,9 @@ For ${nicheIndicators || brandName}, generate content that MAXIMIZES VIRALITY. T
       if (contentIdeas.length < 5) {
         addLog(scanId, `[WARNING] Only ${contentIdeas.length} brand-specific content ideas - generating industry-specific fallback`);
         const primaryTheme = validatedContent.content_themes[0] || 'brand content';
-        const industryFallback = generateIndustrySpecificFallback(brandName, nicheIndicators, primaryTheme, brandDNA);
+        // Use brandIdentity industry/niche for fallback if available
+        const fallbackIndustry = brandIdentity?.industry || brandIdentity?.niche || nicheIndicators;
+        const industryFallback = generateIndustrySpecificFallback(brandName, fallbackIndustry, primaryTheme, brandDNA);
         contentIdeas = [...contentIdeas, ...industryFallback].slice(0, 8);
         addLog(scanId, `[SUCCESS] Generated ${contentIdeas.length} content ideas (${contentIdeas.length - industryFallback.length} from LLM + ${industryFallback.length} from fallback)`);
       } else {
@@ -1675,7 +1729,9 @@ For ${nicheIndicators || brandName}, generate content that MAXIMIZES VIRALITY. T
       if (contentIdeas.length === 0) {
         addLog(scanId, `[ERROR] No content ideas generated - using emergency fallback`);
         const primaryTheme = validatedContent.content_themes[0] || 'brand content';
-        contentIdeas = generateIndustrySpecificFallback(brandName, nicheIndicators || 'General', primaryTheme, brandDNA);
+        // Use brandIdentity industry/niche for emergency fallback if available
+        const fallbackIndustry = brandIdentity?.industry || brandIdentity?.niche || nicheIndicators || 'General';
+        contentIdeas = generateIndustrySpecificFallback(brandName, fallbackIndustry, primaryTheme, brandDNA);
         addLog(scanId, `[SUCCESS] Emergency fallback generated ${contentIdeas.length} content ideas`);
       }
       
