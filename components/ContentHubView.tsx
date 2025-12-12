@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Filter, RefreshCw, Plus, FileText, Video, Image as ImageIcon, Mic2, Linkedin, Instagram, Music, X, Play, Sparkles, Loader2, ArrowLeft, ArrowRight, Upload, Calendar, Zap, Wand2 } from 'lucide-react';
+import { Filter, RefreshCw, Plus, FileText, Video, Image as ImageIcon, Mic2, Linkedin, Instagram, Music, X, Play, Sparkles, Loader2, ArrowLeft, ArrowRight, Upload, Calendar, Zap, Wand2, Copy, Check, Edit3, Clock, Send } from 'lucide-react';
 import { getScanResults } from '../services/apiClient';
 
 interface ContentAsset {
@@ -29,6 +29,13 @@ const ContentHubView: React.FC = () => {
   const [username, setUsername] = useState<string | null>(null);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [regenerationMessage, setRegenerationMessage] = useState('');
+  
+  // Content Creation Sidebar State
+  const [selectedIdea, setSelectedIdea] = useState<ContentAsset | null>(null);
+  const [generatedContent, setGeneratedContent] = useState<string>('');
+  const [userNotes, setUserNotes] = useState<string>('');
+  const [isCopied, setIsCopied] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState<string>('');
   
   // Content Creation Wizard State
   const [showCreateWizard, setShowCreateWizard] = useState(false);
@@ -76,6 +83,181 @@ const ContentHubView: React.FC = () => {
   };
   
   const totalContentCount = contentTypes.reduce((sum, ct) => sum + ct.count, 0);
+  
+  // Generate content template for selected idea
+  const generateContentTemplate = (asset: ContentAsset) => {
+    const brandName = username || 'your brand';
+    const theme = asset.theme || asset.basedOn || 'your topic';
+    
+    if (asset.type === 'thread') {
+      return `🧵 Thread: ${asset.title}
+
+1/ Let's talk about ${theme}.
+
+Most people get this wrong. Here's what I've learned after years in the game:
+
+2/ The biggest misconception about ${theme} is...
+
+[Your insight here]
+
+3/ Here's what actually works:
+
+• Point 1
+• Point 2
+• Point 3
+
+4/ The key takeaway:
+
+[Your main insight]
+
+5/ If you found this valuable, follow @${brandName} for more insights.
+
+Like + Repost if this helped! 🔄`;
+    } else if (asset.type === 'carousel') {
+      return `📸 Carousel: ${asset.title}
+
+SLIDE 1 (Hook):
+"${asset.title}"
+[Eye-catching visual]
+
+SLIDE 2:
+The Problem
+[Describe the pain point]
+
+SLIDE 3:
+The Solution
+[Your approach]
+
+SLIDE 4-6:
+Key Points
+• Point 1
+• Point 2
+• Point 3
+
+SLIDE 7 (CTA):
+Save this for later!
+Follow @${brandName} for more`;
+    } else if (asset.type === 'reel' || asset.type === 'video') {
+      return `🎬 ${asset.type === 'reel' ? 'Reel' : 'Video'}: ${asset.title}
+
+HOOK (0-3s):
+"${asset.title.split(':')[0] || 'Did you know...'}?"
+
+CONTENT (4-45s):
+[Your main content about ${theme}]
+
+Key points to cover:
+1. [First point]
+2. [Second point]
+3. [Third point]
+
+CTA (45-60s):
+"Follow for more content like this!"
+
+---
+Hashtags: #${theme.replace(/\s+/g, '')} #ContentCreator`;
+    } else if (asset.type === 'podcast' || asset.type === 'audio') {
+      return `🎙️ Podcast Script: ${asset.title}
+
+INTRO:
+"Welcome back to another episode. Today we're diving into ${theme}..."
+
+SEGMENT 1 (2-3 min):
+- Background and context
+- Why this matters now
+
+SEGMENT 2 (3-5 min):
+- Main insights
+- Examples and case studies
+
+SEGMENT 3 (2-3 min):
+- Actionable takeaways
+- How to apply this
+
+OUTRO:
+"Thanks for listening! If you enjoyed this, leave a review and share with someone who needs to hear this."`;
+    } else {
+      return `📝 ${asset.platform.toUpperCase()} Post: ${asset.title}
+
+${asset.description || `Sharing insights about ${theme}...`}
+
+[Your main content here]
+
+Key points:
+• Point 1
+• Point 2
+• Point 3
+
+---
+What do you think? Drop a comment below! 👇
+
+#${theme.replace(/\s+/g, '')} #${brandName.replace(/\s+/g, '')}`;
+    }
+  };
+  
+  // Handle selecting an idea for content creation
+  const handleSelectIdea = (asset: ContentAsset) => {
+    setSelectedIdea(asset);
+    setGeneratedContent(generateContentTemplate(asset));
+    setUserNotes('');
+    setIsCopied(false);
+    setScheduleDate('');
+  };
+  
+  // Handle copy to clipboard
+  const handleCopyContent = async () => {
+    const fullContent = userNotes ? `${generatedContent}\n\n---\nNotes: ${userNotes}` : generatedContent;
+    try {
+      await navigator.clipboard.writeText(fullContent);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+  
+  // Handle save as draft
+  const handleSaveDraft = () => {
+    if (!selectedIdea) return;
+    
+    const updatedAssets = assets.map(a => 
+      a.id === selectedIdea.id ? { ...a, status: 'draft' as const, timeAgo: 'Draft saved' } : a
+    );
+    setAssets(updatedAssets);
+    
+    // Save to localStorage
+    const drafts = JSON.parse(localStorage.getItem('contentDrafts') || '{}');
+    drafts[selectedIdea.id] = {
+      content: generatedContent,
+      notes: userNotes,
+      savedAt: new Date().toISOString()
+    };
+    localStorage.setItem('contentDrafts', JSON.stringify(drafts));
+    
+    setSelectedIdea(null);
+  };
+  
+  // Handle schedule
+  const handleSchedule = () => {
+    if (!selectedIdea || !scheduleDate) return;
+    
+    const updatedAssets = assets.map(a => 
+      a.id === selectedIdea.id ? { ...a, status: 'scheduled' as const, timeAgo: `Scheduled: ${new Date(scheduleDate).toLocaleDateString()}` } : a
+    );
+    setAssets(updatedAssets);
+    
+    // Save to localStorage
+    const scheduled = JSON.parse(localStorage.getItem('scheduledContent') || '{}');
+    scheduled[selectedIdea.id] = {
+      content: generatedContent,
+      notes: userNotes,
+      scheduledFor: scheduleDate,
+      platform: selectedIdea.platform
+    };
+    localStorage.setItem('scheduledContent', JSON.stringify(scheduled));
+    
+    setSelectedIdea(null);
+  };
   
   const resetWizard = () => {
     setWizardStep(1);
@@ -996,11 +1178,7 @@ const ContentHubView: React.FC = () => {
                 <span className="text-[10px] text-white/30">{asset.timeAgo}</span>
                 {asset.status === 'suggested' && (
                   <button 
-                    onClick={() => {
-                      // Navigate to Production Room with this asset selected
-                      const event = new CustomEvent('navigateToPage', { detail: { page: 'production', assetId: asset.id } });
-                      window.dispatchEvent(event);
-                    }}
+                    onClick={() => handleSelectIdea(asset)}
                     className="px-3 py-1.5 bg-orange-500 hover:bg-orange-400 text-white text-xs font-bold rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                   >
                     Start Creating
@@ -1297,6 +1475,143 @@ const ContentHubView: React.FC = () => {
             )}
           </div>
         </div>
+      )}
+      
+      {/* Content Creation Sidebar */}
+      {selectedIdea && (
+        <div className="fixed inset-y-0 right-0 w-full max-w-md bg-[#0A0A0A] border-l border-white/10 shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-300">
+          {/* Header */}
+          <div className="p-4 border-b border-white/10 flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                selectedIdea.platform === 'x' ? 'bg-white/10' :
+                selectedIdea.platform === 'linkedin' ? 'bg-blue-500/20' :
+                selectedIdea.platform === 'instagram' ? 'bg-gradient-to-br from-purple-500/20 to-pink-500/20' :
+                selectedIdea.platform === 'tiktok' ? 'bg-white/10' :
+                selectedIdea.platform === 'youtube' ? 'bg-red-500/20' :
+                'bg-white/10'
+              }`}>
+                {selectedIdea.platform === 'x' && <span className="font-bold text-white">𝕏</span>}
+                {selectedIdea.platform === 'linkedin' && <Linkedin className="w-5 h-5 text-blue-400" />}
+                {selectedIdea.platform === 'instagram' && <Instagram className="w-5 h-5 text-pink-400" />}
+                {selectedIdea.platform === 'tiktok' && <Music className="w-5 h-5 text-white" />}
+                {selectedIdea.platform === 'youtube' && <Play className="w-5 h-5 text-red-500" />}
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white">Create Content</h2>
+                <p className="text-xs text-white/40">{selectedIdea.platform} • {selectedIdea.type}</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setSelectedIdea(null)}
+              className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-white/40" />
+            </button>
+          </div>
+          
+          {/* Title & Theme */}
+          <div className="p-4 border-b border-white/10">
+            <h3 className="text-sm font-bold text-white mb-1">{selectedIdea.title}</h3>
+            {selectedIdea.theme && (
+              <div className="flex items-center gap-1 text-xs text-orange-400">
+                <span className="text-orange-400">#</span>
+                Based on: {selectedIdea.theme}
+              </div>
+            )}
+          </div>
+          
+          {/* Generated Content */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-white/40 uppercase tracking-wider">GENERATED CONTENT</span>
+              <button
+                onClick={handleCopyContent}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-xs text-white/60 hover:text-white transition-colors"
+              >
+                {isCopied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                {isCopied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+            
+            <div className="bg-[#111111] border border-white/10 rounded-xl p-4 mb-6">
+              <pre className="text-sm text-white/80 whitespace-pre-wrap font-mono leading-relaxed">
+                {generatedContent}
+              </pre>
+            </div>
+            
+            {/* User Notes */}
+            <div className="mb-4">
+              <span className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2 block">YOUR NOTES</span>
+              <textarea
+                value={userNotes}
+                onChange={(e) => setUserNotes(e.target.value)}
+                placeholder="Add any notes or modifications..."
+                className="w-full h-24 px-4 py-3 bg-[#111111] border border-white/10 rounded-xl text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-orange-500/50 resize-none"
+              />
+            </div>
+            
+            {/* AI Tips */}
+            <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-4 h-4 text-orange-400" />
+                <span className="text-xs font-bold text-orange-400 uppercase">AI TIPS</span>
+              </div>
+              <ul className="text-xs text-white/60 space-y-1">
+                <li>• Copy this template and paste it into your preferred platform</li>
+                <li>• Customize the placeholders with your specific insights</li>
+                <li>• Add relevant images or media to boost engagement</li>
+                <li>• Schedule for optimal posting times</li>
+              </ul>
+            </div>
+          </div>
+          
+          {/* Footer Actions */}
+          <div className="p-4 border-t border-white/10 space-y-3">
+            {/* Schedule Date Picker */}
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-white/40" />
+              <input
+                type="datetime-local"
+                value={scheduleDate}
+                onChange={(e) => setScheduleDate(e.target.value)}
+                className="flex-1 px-3 py-2 bg-[#111111] border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-orange-500/50"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedIdea(null)}
+                className="flex-1 px-4 py-2.5 border border-white/10 rounded-lg text-white/60 hover:bg-white/5 font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveDraft}
+                className="flex-1 px-4 py-2.5 bg-white/10 hover:bg-white/15 rounded-lg text-white font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <Edit3 className="w-4 h-4" />
+                Save Draft
+              </button>
+              <button
+                onClick={handleSchedule}
+                disabled={!scheduleDate}
+                className="flex-1 px-4 py-2.5 bg-orange-500 hover:bg-orange-400 disabled:bg-white/10 disabled:text-white/30 rounded-lg text-white font-medium transition-colors flex items-center justify-center gap-2 disabled:cursor-not-allowed"
+              >
+                <Send className="w-4 h-4" />
+                Schedule
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Overlay when sidebar is open */}
+      {selectedIdea && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={() => setSelectedIdea(null)}
+        />
       )}
     </div>
   );
