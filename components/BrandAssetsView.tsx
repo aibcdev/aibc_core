@@ -641,6 +641,46 @@ const BrandAssetsView: React.FC = () => {
         </div>
       </div>
 
+      {/* Brand Voice Section - Top of Page */}
+      <div className="mb-8">
+        <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-6">
+          <h2 className="text-xl font-bold text-white mb-4">BRAND VOICE</h2>
+          <div className="bg-[#111111] border border-white/10 rounded-xl p-5">
+            <p className="text-base text-white/80 leading-relaxed">
+              {brandDNA.voice?.description || brandDNA.voice?.summary || (
+                brandDNA.archetype && brandDNA.archetype !== 'Not Scanned' && brandDNA.archetype !== 'Error Loading' ? (
+                  `The brand voice utilizes a '${brandDNA.archetype}' style. ` +
+                  `Communication is characterized by ${brandDNA.voiceTone?.toLowerCase() || 'professional'} messaging ` +
+                  `that drives audience engagement. The tone is direct yet accessible, ` +
+                  `emphasizing ${brandDNA.corePillars?.[0]?.toLowerCase() || 'value'} and ${brandDNA.corePillars?.[1]?.toLowerCase() || 'innovation'}.`
+                ) : 'Run a digital footprint scan to discover your brand voice and communication style.'
+              )}
+            </p>
+          </div>
+          
+          {/* Brand DNA Quick View */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+              <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-2">ARCHETYPE</div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                <span className="text-sm text-white">• {brandDNA.archetype || 'Unknown'}</span>
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-2">VOICE TONE</div>
+              <div className="flex flex-wrap gap-2">
+                {(brandDNA.voice?.tones || [brandDNA.voiceTone || 'Professional']).slice(0, 3).map((tone: string, i: number) => (
+                  <span key={i} className="px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-sm text-white/80">
+                    {tone}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Source Materials Section - Blaze Style */}
       <div className="mb-8">
         <h2 className="text-xl font-bold text-white mb-4">Source Materials</h2>

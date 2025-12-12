@@ -241,26 +241,13 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
                         </div>
                       </div>
 
-                      {/* CopyStream Link */}
+                      {/* Bottom Section - Empty placeholder */}
                       <div className="mt-4 pt-4 border-t border-white/10">
-                        <a 
-                          href="https://copystream.com" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-4 p-3 bg-[#050505] border border-white/10 rounded-lg hover:bg-[#0A0A0A] transition-all group"
-                        >
-                          <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <FileTextIcon className="w-5 h-5 text-white" strokeWidth={2} />
+                        <div className="p-3 bg-[#050505] border border-white/10 rounded-lg">
+                          <div className="text-xs text-white/40 text-center">
+                            More channels coming soon
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-sm font-bold text-white mb-0.5 group-hover:text-blue-400 transition-colors">
-                              CopyStream
-                            </h3>
-                            <p className="text-xs text-white/60">
-                              AI content generation
-                            </p>
-                          </div>
-                        </a>
+                        </div>
                       </div>
                     </div>
                   </div>

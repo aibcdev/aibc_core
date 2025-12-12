@@ -40,8 +40,34 @@ interface Task {
 
 type DashboardPage = 'dashboard' | 'contentHub' | 'strategy' | 'production' | 'calendar' | 'assets' | 'integrations' | 'competitors' | 'analytics' | 'settings' | 'inbox';
 
-const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
-  const [currentPage, setCurrentPage] = useState<DashboardPage>('dashboard');
+// Page to URL mapping
+const PAGE_TO_URL: Record<DashboardPage, string> = {
+  'dashboard': '/dashboard',
+  'contentHub': '/contenthub',
+  'strategy': '/strategy',
+  'production': '/productionroom',
+  'calendar': '/calendar',
+  'assets': '/brandassets',
+  'integrations': '/integrations',
+  'competitors': '/competitors',
+  'analytics': '/analytics',
+  'settings': '/settings',
+  'inbox': '/inbox',
+};
+
+interface DashboardViewProps extends NavProps {
+  initialPage?: string;
+}
+
+const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }) => {
+  const [currentPage, setCurrentPageState] = useState<DashboardPage>((initialPage as DashboardPage) || 'dashboard');
+  
+  // Wrapper to update URL when page changes
+  const setCurrentPage = (page: DashboardPage) => {
+    setCurrentPageState(page);
+    const newPath = PAGE_TO_URL[page] || '/dashboard';
+    window.history.pushState(null, '', newPath);
+  };
   
   // Listen for navigation events from child components
   useEffect(() => {
@@ -2082,25 +2108,29 @@ const DashboardView: React.FC<NavProps> = ({ onNavigate }) => {
                                         </p>
                                     </div>
                                     
-                                    {/* Voice Profile */}
+                                    {/* Brand Voice - Full Description */}
                                     <div>
-                                        <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-3">COMMUNICATION STYLE</div>
-                                        <p className="text-xs text-white/50 mb-3">How your brand speaks to its audience:</p>
-                                        <div className="space-y-2">
-                                            {(brandDNA.voice?.tones || ['Professional', 'Clear', 'Direct']).slice(0, 3).map((tone: string, index: number) => (
-                                                <div key={index} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg">
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${index === 0 ? 'bg-green-400' : index === 1 ? 'bg-blue-400' : 'bg-orange-400'}`}></span>
-                                                    <span className="text-sm text-white font-medium">{tone}</span>
-                                                    <span className="text-[10px] text-white/30 ml-auto">
-                                                        {tone.toLowerCase().includes('informative') ? 'Educates & explains'
-                                                            : tone.toLowerCase().includes('authoritative') ? 'Commands trust'
-                                                            : tone.toLowerCase().includes('utilitarian') ? 'Practical focus'
-                                                            : tone.toLowerCase().includes('professional') ? 'Business-ready'
-                                                            : tone.toLowerCase().includes('casual') ? 'Approachable'
-                                                            : tone.toLowerCase().includes('bold') ? 'Makes statements'
-                                                            : 'Shapes perception'}
-                                                    </span>
-                                                </div>
+                                        <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-3">BRAND VOICE</div>
+                                        <div className="bg-[#111111] border border-white/10 rounded-xl p-4">
+                                            <p className="text-sm text-white/80 leading-relaxed">
+                                                {brandDNA.voice?.description || brandDNA.voiceSummary || (
+                                                    `The brand voice utilizes a '${brandDNA.archetype || 'Strategic'}' style. ` +
+                                                    `Communication is characterized by ${(brandDNA.voice?.tones || ['professional', 'clear']).slice(0, 2).join(' and ').toLowerCase()} messaging ` +
+                                                    `that drives audience engagement. The tone is ${brandDNA.voice?.tones?.[0]?.toLowerCase() || 'direct'} yet accessible, ` +
+                                                    `emphasizing ${(brandDNA.corePillars || ['value', 'trust'])[0]?.toLowerCase() || 'value'} and ${(brandDNA.corePillars || ['innovation'])[1]?.toLowerCase() || 'innovation'}.`
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Voice Tone Tags */}
+                                    <div>
+                                        <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-3">VOICE TONE</div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {(brandDNA.voice?.tones || ['Professional', 'Clear', 'Direct']).slice(0, 4).map((tone: string, index: number) => (
+                                                <span key={index} className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white/80">
+                                                    {tone}
+                                                </span>
                                             ))}
                                         </div>
                                     </div>

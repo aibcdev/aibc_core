@@ -15,11 +15,61 @@ import InboxView from './components/InboxView';
 import { ViewState } from './types';
 import { supabase, isSupabaseConfigured } from './services/supabaseClient';
 
+// URL path to view/page mapping
+const URL_TO_VIEW: Record<string, { view: ViewState; page?: string }> = {
+  '/': { view: ViewState.LANDING },
+  '/pricing': { view: ViewState.PRICING },
+  '/login': { view: ViewState.LOGIN },
+  '/signin': { view: ViewState.SIGNIN },
+  '/reset-password': { view: ViewState.RESET_PASSWORD },
+  '/scan': { view: ViewState.INGESTION },
+  '/audit': { view: ViewState.AUDIT },
+  '/onboarding': { view: ViewState.ONBOARDING },
+  '/dashboard': { view: ViewState.DASHBOARD, page: 'dashboard' },
+  '/contenthub': { view: ViewState.DASHBOARD, page: 'contentHub' },
+  '/strategy': { view: ViewState.DASHBOARD, page: 'strategy' },
+  '/productionroom': { view: ViewState.DASHBOARD, page: 'production' },
+  '/calendar': { view: ViewState.DASHBOARD, page: 'calendar' },
+  '/brandassets': { view: ViewState.DASHBOARD, page: 'assets' },
+  '/integrations': { view: ViewState.DASHBOARD, page: 'integrations' },
+  '/competitors': { view: ViewState.DASHBOARD, page: 'competitors' },
+  '/analytics': { view: ViewState.DASHBOARD, page: 'analytics' },
+  '/settings': { view: ViewState.DASHBOARD, page: 'settings' },
+  '/inbox': { view: ViewState.DASHBOARD, page: 'inbox' },
+  '/admin': { view: ViewState.ADMIN },
+};
+
+// Page to URL mapping (for navigation)
+const PAGE_TO_URL: Record<string, string> = {
+  'dashboard': '/dashboard',
+  'contentHub': '/contenthub',
+  'strategy': '/strategy',
+  'production': '/productionroom',
+  'calendar': '/calendar',
+  'assets': '/brandassets',
+  'integrations': '/integrations',
+  'competitors': '/competitors',
+  'analytics': '/analytics',
+  'settings': '/settings',
+  'inbox': '/inbox',
+};
+
 function App() {
   const [view, setView] = useState<ViewState>(ViewState.LANDING);
+  const [dashboardPage, setDashboardPage] = useState<string>('dashboard');
   const [username, setUsername] = useState<string>('');
   const [scanType, setScanType] = useState<'basic' | 'deep'>('basic');
   const [isInitializing, setIsInitializing] = useState(true); // Start true to prevent flash
+
+  // Parse URL on mount to determine initial view
+  const getViewFromURL = useCallback(() => {
+    const path = window.location.pathname.toLowerCase();
+    const mapping = URL_TO_VIEW[path];
+    if (mapping) {
+      return mapping;
+    }
+    return { view: ViewState.LANDING };
+  }, []);
 
   // Check authentication state on mount and restore session
   useEffect(() => {
@@ -29,6 +79,9 @@ function App() {
         const authToken = localStorage.getItem('authToken');
         const userStr = localStorage.getItem('user');
         const lastScanResults = localStorage.getItem('lastScanResults');
+        
+        // Parse URL to see if we should go to a specific page
+        const urlMapping = getViewFromURL();
         
         // If we have a token and user, they're authenticated
         if (authToken && userStr) {
@@ -56,14 +109,36 @@ function App() {
             }
           }
           
-          // User is authenticated - go to appropriate page
-          if (lastScanResults) {
+          // User is authenticated - check URL first, then fallback
+          if (urlMapping.view === ViewState.DASHBOARD || urlMapping.page) {
             setView(ViewState.DASHBOARD);
+            if (urlMapping.page) {
+              setDashboardPage(urlMapping.page);
+            }
+          } else if (urlMapping.view === ViewState.PRICING) {
+            setView(ViewState.PRICING);
+          } else if (lastScanResults) {
+            setView(ViewState.DASHBOARD);
+            window.history.replaceState(null, '', '/dashboard');
           } else {
             setView(ViewState.INGESTION);
+            window.history.replaceState(null, '', '/scan');
+          }
+        } else {
+          // Not authenticated - only allow public pages
+          if (urlMapping.view === ViewState.PRICING) {
+            setView(ViewState.PRICING);
+          } else if (urlMapping.view === ViewState.LOGIN) {
+            setView(ViewState.LOGIN);
+          } else if (urlMapping.view === ViewState.SIGNIN) {
+            setView(ViewState.SIGNIN);
+          } else if (urlMapping.view === ViewState.RESET_PASSWORD) {
+            setView(ViewState.RESET_PASSWORD);
+          } else {
+            // Stay on landing page
+            setView(ViewState.LANDING);
           }
         }
-        // If no auth token, stay on landing page (default)
       } catch (error) {
         console.error('Auth state check error:', error);
         // Don't log out on errors - preserve auth state
@@ -73,7 +148,7 @@ function App() {
     };
 
     checkAuthState();
-  }, []);
+  }, [getViewFromURL]);
 
   // Load username from localStorage on mount
   useEffect(() => {
@@ -82,6 +157,20 @@ function App() {
       setUsername(savedUsername);
     }
   }, []);
+  
+  // Handle browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlMapping = getViewFromURL();
+      setView(urlMapping.view);
+      if (urlMapping.page) {
+        setDashboardPage(urlMapping.page);
+      }
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [getViewFromURL]);
   
   // Listen for auth state changes (Supabase events)
   useEffect(() => {
@@ -140,7 +229,7 @@ function App() {
     }
   }, []);
 
-  const navigate = useCallback((newView: ViewState) => {
+  const navigate = useCallback((newView: ViewState, page?: string) => {
     // Re-check auth state at navigation time (not from closure)
     const authToken = localStorage.getItem('authToken');
     const user = localStorage.getItem('user');
@@ -152,14 +241,34 @@ function App() {
     if (newView === ViewState.LANDING && isLoggedIn) {
       // Auth still exists - don't go to landing, go to dashboard instead
       setView(ViewState.DASHBOARD);
+      window.history.pushState(null, '', '/dashboard');
       window.scrollTo(0, 0);
       return;
     }
     
     setView(newView);
     
-    // DON'T use window.location.hash for pricing - it can cause auth state issues
-    // Just use React state for navigation
+    // Update URL based on view
+    let newPath = '/';
+    if (newView === ViewState.PRICING) newPath = '/pricing';
+    else if (newView === ViewState.LOGIN) newPath = '/login';
+    else if (newView === ViewState.SIGNIN) newPath = '/signin';
+    else if (newView === ViewState.RESET_PASSWORD) newPath = '/reset-password';
+    else if (newView === ViewState.INGESTION) newPath = '/scan';
+    else if (newView === ViewState.AUDIT) newPath = '/audit';
+    else if (newView === ViewState.ONBOARDING) newPath = '/onboarding';
+    else if (newView === ViewState.ADMIN) newPath = '/admin';
+    else if (newView === ViewState.DASHBOARD) {
+      if (page) {
+        setDashboardPage(page);
+        newPath = PAGE_TO_URL[page] || '/dashboard';
+      } else {
+        newPath = '/dashboard';
+      }
+    }
+    
+    window.history.pushState(null, '', newPath);
+    
     // Scroll to top on navigation
     window.scrollTo(0, 0);
   }, []);
@@ -188,7 +297,7 @@ function App() {
       {currentView === ViewState.AUDIT && <AuditView onNavigate={navigate} username={username} scanType={scanType} />}
       {currentView === ViewState.ONBOARDING && <OnboardingView onNavigate={navigate} />}
       {currentView === ViewState.VECTORS && <VectorsView onNavigate={navigate} />}
-      {currentView === ViewState.DASHBOARD && <DashboardView onNavigate={navigate} />}
+      {currentView === ViewState.DASHBOARD && <DashboardView onNavigate={navigate} initialPage={dashboardPage} />}
       {currentView === ViewState.PRICING && <PricingView onNavigate={navigate} />}
       {currentView === ViewState.ADMIN && <AdminView onNavigate={navigate} />}
       {currentView === ViewState.INBOX && <InboxView onNavigate={navigate} />}
