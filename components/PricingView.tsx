@@ -515,30 +515,39 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
           <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-8">
             <h3 className="text-xl font-bold text-white mb-4">How credits work</h3>
             <p className="text-sm text-white/60 mb-6">
-              AIBC uses credits so you only pay more when the work is heavier. Roughly:
+              AIBC uses credits so you only pay more when the work is heavier. Video is premium content that uses more credits:
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-white mb-1">1 credit</div>
-                <div className="text-xs text-white/60">→ 1 short post (tweet, LinkedIn block, caption)</div>
+                <div className="text-2xl font-bold text-white mb-1">1-3 credits</div>
+                <div className="text-xs text-white/60">→ Images & graphics (social posts, carousels)</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-white mb-1">3 credits</div>
-                <div className="text-xs text-white/60">→ 1 long-form asset (blog, newsletter, landing page section)</div>
+                <div className="text-2xl font-bold text-white mb-1">3-5 credits</div>
+                <div className="text-xs text-white/60">→ Long-form content (blogs, newsletters, articles)</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-white mb-1">5 credits</div>
-                <div className="text-xs text-white/60">→ 1 podcast / audio script</div>
+                <div className="text-2xl font-bold text-white mb-1">5-12 credits</div>
+                <div className="text-xs text-white/60">→ Audio content (podcasts, voice-overs)</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-white mb-1">10 credits</div>
-                <div className="text-xs text-white/60">→ 1 short video package (10–30s script + visual directions)</div>
+                <div className="text-2xl font-bold text-white mb-1">25 credits</div>
+                <div className="text-xs text-white/60">→ Short video (10–30s reels, shorts)</div>
               </div>
             </div>
-            <div className="mt-6 text-center">
-              <div className="text-2xl font-bold text-white mb-1">15 credits</div>
-              <div className="text-xs text-white/60">→ 1 long video package (30–180s)</div>
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 max-w-md mx-auto">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-white mb-1">50 credits</div>
+                <div className="text-xs text-white/60">→ Mid-length video (30–90s)</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-white mb-1">100 credits</div>
+                <div className="text-xs text-white/60">→ Long video package (90s+)</div>
+              </div>
             </div>
+            <p className="text-xs text-white/40 mt-4 text-center">
+              Pro tip: Standard plan (150 credits) = ~6 short videos or 150+ posts per month
+            </p>
             <p className="text-sm text-white/60 mt-6 text-center">
               You generate content inside AIBC, then copy/paste it into your channels. No social logins, no posting automations.
             </p>

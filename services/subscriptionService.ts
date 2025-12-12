@@ -33,8 +33,9 @@ export interface CreditTransaction {
   metadata?: Record<string, any>;
 }
 
-// Credit costs for different actions (matching pricing page EXACTLY)
-// From pricing: 1 credit = short post, 3 = long-form, 5 = audio, 10 = short video, 15 = long video
+// Credit costs for different actions
+// Video should cost ~10% of monthly budget (users afford 5-6 videos/month max)
+// Standard = 150 credits, Pro = 600 credits
 export const CREDIT_COSTS = {
   DIGITAL_FOOTPRINT_SCAN: 0, // Scans are included in plan, not charged credits
   CONTENT_GENERATION: 1, // 1 credit = 1 short post
@@ -42,27 +43,29 @@ export const CREDIT_COSTS = {
   BRAND_DNA_EXTRACTION: 0, // Included in scan
   LONG_FORM_CONTENT: 3, // 3 credits = 1 long-form asset (blog, newsletter)
   
-  // Production Room costs - MATCHING PRICING PAGE
-  // Images: 1-3 credits (like posts/long-form) - available from PRO tier
-  IMAGE_SHORT: 1,   // Short image/graphic (like a post)
+  // Production Room costs
+  // Images: 1-3 credits (cheapest) - available from PRO tier
+  IMAGE_SHORT: 1,   // Short image/graphic
   IMAGE_MID: 2,     // Mid-length image set
-  IMAGE_LONG: 3,    // Full image package (like long-form)
+  IMAGE_LONG: 3,    // Full image package
   
-  // Audio: 5 credits per pricing page - available from PRO tier
-  AUDIO_SHORT: 3,   // Short audio clip (30s)
-  AUDIO_MID: 5,     // Mid-length audio (1-2 min) - matches pricing
-  AUDIO_LONG: 8,    // Long audio/podcast (3+ min)
+  // Audio: 5-10 credits (medium) - available from PRO tier
+  AUDIO_SHORT: 5,   // Short audio clip (30s)
+  AUDIO_MID: 8,     // Mid-length audio (1-2 min)
+  AUDIO_LONG: 12,   // Long audio/podcast (3+ min)
   
-  // Video: 10-15 credits per pricing page - requires ENTERPRISE (Pro+)
-  VIDEO_SHORT: 10,  // Short video (10-30s) - matches pricing page
-  VIDEO_MID: 15,    // Mid-length video (30-90s) - matches pricing page  
-  VIDEO_LONG: 15,   // Long video (30-180s) - matches pricing page
+  // Video: EXPENSIVE - ~10% of monthly budget per video
+  // Standard (150 credits): Can afford 5-6 short videos or 2-3 long videos
+  // Pro (600 credits): Can afford 20+ short videos or 6-8 long videos
+  VIDEO_SHORT: 25,  // Short video (10-30s) - 150/25 = 6 videos for Standard
+  VIDEO_MID: 50,    // Mid-length video (30-90s) - 150/50 = 3 videos for Standard
+  VIDEO_LONG: 100,  // Long video (90s+) - 600/100 = 6 videos for Pro
   
   // Legacy mappings for backward compatibility
-  AUDIO_GENERATION: 5,
-  VIDEO_GENERATION: 15,
-  SHORT_VIDEO: 10,
-  LONG_VIDEO: 15,
+  AUDIO_GENERATION: 8,
+  VIDEO_GENERATION: 50,
+  SHORT_VIDEO: 25,
+  LONG_VIDEO: 100,
   IMAGE_GENERATION: 2,
 } as const;
 
