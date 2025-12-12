@@ -105,16 +105,16 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
               HOME
             </button>
             <button 
-              onClick={() => onNavigate(ViewState.PRICING)}
-              className="text-sm font-bold text-white hover:text-orange-500 transition-colors uppercase"
-            >
-              PRICING
-            </button>
-            <button 
               onClick={() => window.location.href = '/blog'}
               className="text-sm font-bold text-white hover:text-orange-500 transition-colors uppercase"
             >
               BLOG
+            </button>
+            <button 
+              onClick={() => onNavigate(ViewState.PRICING)}
+              className="text-sm font-bold text-white hover:text-orange-500 transition-colors uppercase"
+            >
+              PRICING
             </button>
             {/* AIBC STREAM Dropdown */}
             <div 
