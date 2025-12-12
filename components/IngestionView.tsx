@@ -94,6 +94,8 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
     domain?: string;
     error?: string;
   } | null>(null);
+  const [showRescanWarning, setShowRescanWarning] = useState(false);
+  const [pendingDomain, setPendingDomain] = useState<string | null>(null);
   
   const subscription = getUserSubscription();
   const canUseDeepScan = subscription.tier === SubscriptionTier.PRO || subscription.tier === SubscriptionTier.ENTERPRISE;
@@ -187,37 +189,17 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
     }
   };
 
-  const handleNext = async () => {
-    if (!inputVal.trim()) return;
-    
-    // Validate URL
-    if (!isValidURL(inputVal)) {
-      setError('Please enter a valid URL or domain (e.g., example.com, twitter.com/username)');
-      return;
-    }
-    
-    // Check if URL is verified
-    if (!urlVerification?.verified) {
-      setError('Please wait for URL verification to complete');
-      return;
-    }
-    
-    // Check if deep scan is selected but user doesn't have access
-    if (selectedScanType === 'deep' && !canUseDeepScan) {
-      setError('Deep scan is only available for Pro and Enterprise plans. Upgrade to unlock.');
-      return;
-    }
-    
+  // Proceed with scan after confirmation
+  const proceedWithScan = async (domain: string) => {
+    setShowRescanWarning(false);
+    setPendingDomain(null);
     setIsScanning(true);
     setError(null);
     
     try {
-      // Extract domain/username from URL
-      const domain = extractDomainFromURL(inputVal);
       setUsername(domain);
       
       // CRITICAL: HARD RESET - Clear ALL cache IMMEDIATELY when starting a new scan
-      // ALWAYS clear cache - even for same company, we want fresh data
       const previousUsername = localStorage.getItem('lastScannedUsername');
       const isNewCompany = !previousUsername || previousUsername.toLowerCase() !== domain.toLowerCase();
       
@@ -268,6 +250,45 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
     }
   };
 
+  const handleNext = async () => {
+    if (!inputVal.trim()) return;
+    
+    // Validate URL
+    if (!isValidURL(inputVal)) {
+      setError('Please enter a valid URL or domain (e.g., example.com, twitter.com/username)');
+      return;
+    }
+    
+    // Check if URL is verified
+    if (!urlVerification?.verified) {
+      setError('Please wait for URL verification to complete');
+      return;
+    }
+    
+    // Check if deep scan is selected but user doesn't have access
+    if (selectedScanType === 'deep' && !canUseDeepScan) {
+      setError('Deep scan is only available for Pro and Enterprise plans. Upgrade to unlock.');
+      return;
+    }
+    
+    // Extract domain/username from URL
+    const domain = extractDomainFromURL(inputVal);
+    
+    // Check if this is a rescan of a previously scanned company
+    const previousUsername = localStorage.getItem('lastScannedUsername');
+    const lastScanResults = localStorage.getItem('lastScanResults');
+    
+    if (previousUsername && lastScanResults && previousUsername.toLowerCase() === domain.toLowerCase()) {
+      // Show rescan warning
+      setPendingDomain(domain);
+      setShowRescanWarning(true);
+      return;
+    }
+    
+    // Proceed directly for new scans
+    proceedWithScan(domain);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleNext();
@@ -277,6 +298,44 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
   return (
     <div id="ingestion-view" className="min-h-screen bg-black text-zinc-300 overflow-hidden flex flex-col items-center justify-center relative selection:bg-orange-500/30 selection:text-orange-100">
       
+      {/* Rescan Warning Modal */}
+      {showRescanWarning && pendingDomain && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 max-w-md mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 text-orange-400" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Rescan Warning</h3>
+            </div>
+            <p className="text-sm text-zinc-400 mb-4">
+              You've already scanned <span className="text-white font-semibold">{pendingDomain}</span>. 
+              Running a new scan will replace all existing data including content ideas, strategy, and analytics.
+            </p>
+            <p className="text-xs text-zinc-500 mb-6">
+              This action cannot be undone. Are you sure you want to continue?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowRescanWarning(false);
+                  setPendingDomain(null);
+                }}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-white/10 text-sm font-medium text-zinc-400 hover:text-white hover:border-white/20 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => proceedWithScan(pendingDomain)}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-orange-500 text-sm font-medium text-white hover:bg-orange-600 transition-all"
+              >
+                Rescan Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Background Ambience */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-[-20%] left-[50%] -translate-x-1/2 w-[600px] h-[600px] bg-white/[0.02] rounded-full blur-[100px]"></div>
