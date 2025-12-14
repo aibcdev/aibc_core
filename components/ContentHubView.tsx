@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Filter, RefreshCw, Plus, FileText, Video, Image as ImageIcon, Mic2, Linkedin, Instagram, Music, X, Play, Sparkles, Loader2, ArrowLeft, ArrowRight, Upload, Calendar, Zap, Wand2, Copy, Check, Edit3, Clock, Send } from 'lucide-react';
 import { getScanResults } from '../services/apiClient';
+import { trackApproval, trackEdit, trackDismissal, trackRegeneration, trackScanQuality } from '../services/learningClient';
 
 interface ContentAsset {
   id: string;
@@ -84,11 +85,98 @@ const ContentHubView: React.FC = () => {
   
   const totalContentCount = contentTypes.reduce((sum, ct) => sum + ct.count, 0);
   
-  // Generate content template for selected idea
-  const generateContentTemplate = (asset: ContentAsset) => {
+  // Generate enterprise-level personalized content for selected idea
+  const generateContentTemplate = async (asset: ContentAsset) => {
     const brandName = username || 'your brand';
     const theme = asset.theme || asset.basedOn || 'your topic';
     
+    // Try to get brand context from scan results
+    const lastScanResults = localStorage.getItem('lastScanResults');
+    let brandContext: any = null;
+    let brandDNA: any = null;
+    let competitorIntelligence: any[] = [];
+    
+    if (lastScanResults) {
+      try {
+        const parsed = JSON.parse(lastScanResults);
+        brandDNA = parsed.brandDNA || null;
+        competitorIntelligence = parsed.competitorIntelligence || [];
+        
+        // Extract brand identity if available
+        const brandIdentity = parsed.brandIdentity || null;
+        if (brandIdentity) {
+          brandContext = {
+            name: brandIdentity.name || brandName,
+            industry: brandIdentity.industry,
+            niche: brandIdentity.niche,
+            companySize: brandIdentity.companySize || 'medium',
+            description: brandIdentity.description,
+            brandVoice: brandDNA?.voice || null,
+            themes: parsed.content_themes || [],
+            competitors: competitorIntelligence.map((c: any) => ({
+              name: c.name || c.competitor,
+              advantage: c.advantage,
+              contentStyle: c.contentStyle
+            }))
+          };
+        } else {
+          // Fallback: construct from available data
+          brandContext = {
+            name: brandName,
+            industry: brandDNA?.industry || 'General',
+            niche: brandDNA?.niche,
+            companySize: 'medium',
+            description: parsed.profile?.bio || '',
+            brandVoice: brandDNA?.voice || null,
+            themes: parsed.content_themes || [],
+            competitors: competitorIntelligence.map((c: any) => ({
+              name: c.name || c.competitor,
+              advantage: c.advantage,
+              contentStyle: c.contentStyle
+            }))
+          };
+        }
+      } catch (e) {
+        console.error('Error parsing scan results for brand context:', e);
+      }
+    }
+    
+    // Determine platform
+    const platform = asset.platform?.toLowerCase() || 'twitter';
+    const isLinkedIn = platform === 'linkedin';
+    const isTwitter = platform === 'x' || platform === 'twitter';
+    
+    // For LinkedIn and Twitter, use the new enterprise-level generator
+    if ((isLinkedIn || isTwitter) && brandContext) {
+      try {
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        const response = await fetch(`${API_BASE_URL}/api/social/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            platform: isLinkedIn ? 'linkedin' : 'twitter',
+            topic: theme,
+            format: asset.type === 'thread' ? 'thread' : 'post',
+            brandContext,
+            competitorInsights: competitorIntelligence.map((c: any) => 
+              `${c.name || c.competitor}: ${c.advantage || c.contentStyle || ''}`
+            ).join('; ')
+          })
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.content) {
+            return result.content;
+          }
+        }
+      } catch (error) {
+        console.error('Error generating personalized content:', error);
+        // Fall back to template below
+      }
+    }
+    
+    // Fallback templates for other platforms or if API fails
     if (asset.type === 'thread') {
       return `🧵 Thread: ${asset.title}
 
@@ -196,12 +284,21 @@ What do you think? Drop a comment below! 👇
   };
   
   // Handle selecting an idea for content creation
-  const handleSelectIdea = (asset: ContentAsset) => {
+  const handleSelectIdea = async (asset: ContentAsset) => {
     setSelectedIdea(asset);
-    setGeneratedContent(generateContentTemplate(asset));
+    setGeneratedContent('Generating personalized content...');
     setUserNotes('');
     setIsCopied(false);
     setScheduleDate('');
+    
+    // Generate personalized content
+    try {
+      const content = await generateContentTemplate(asset);
+      setGeneratedContent(content);
+    } catch (error) {
+      console.error('Error generating content:', error);
+      setGeneratedContent('Error generating content. Please try again.');
+    }
   };
   
   // Handle copy to clipboard
@@ -234,6 +331,20 @@ What do you think? Drop a comment below! 👇
     };
     localStorage.setItem('contentDrafts', JSON.stringify(drafts));
     
+    // Track approval for learning
+    const lastScanId = localStorage.getItem('lastScanId');
+    const lastUsername = localStorage.getItem('lastScannedUsername');
+    if (lastScanId && lastUsername && selectedIdea) {
+      trackApproval(
+        lastScanId,
+        lastUsername,
+        selectedIdea.id,
+        selectedIdea.title,
+        selectedIdea.platform,
+        selectedIdea.type
+      ).catch(err => console.error('Failed to track approval:', err));
+    }
+    
     setSelectedIdea(null);
   };
   
@@ -255,6 +366,20 @@ What do you think? Drop a comment below! 👇
       platform: selectedIdea.platform
     };
     localStorage.setItem('scheduledContent', JSON.stringify(scheduled));
+    
+    // Track approval for learning (scheduling = approval)
+    const lastScanId = localStorage.getItem('lastScanId');
+    const lastUsername = localStorage.getItem('lastScannedUsername');
+    if (lastScanId && lastUsername && selectedIdea) {
+      trackApproval(
+        lastScanId,
+        lastUsername,
+        selectedIdea.id,
+        selectedIdea.title,
+        selectedIdea.platform,
+        selectedIdea.type
+      ).catch(err => console.error('Failed to track approval:', err));
+    }
     
     setSelectedIdea(null);
   };
@@ -952,6 +1077,13 @@ What do you think? Drop a comment below! 👇
       // Force-fetch latest scan results to refresh cache before reloading
       const lastScanId = localStorage.getItem('lastScanId');
       const lastUsername = localStorage.getItem('lastScannedUsername');
+      
+      // Track regeneration for learning
+      if (lastScanId && lastUsername) {
+        trackRegeneration(lastScanId, lastUsername, 'User requested content regeneration').catch(err => 
+          console.error('Failed to track regeneration:', err)
+        );
+      }
       if (lastScanId) {
         try {
           const latest = await getScanResults(lastScanId);

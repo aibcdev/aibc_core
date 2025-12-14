@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Getting Started - AIBC Help Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .article-content {
+            max-width: 800px;
+        }
+    </style>
+</head>
+<body class="bg-[#050505] text-zinc-300 antialiased min-h-screen">
+    <!-- Navigation -->
+    <header class="fixed top-0 w-full z-50 border-b border-white/10 bg-[#050505]/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-3">
+                <div class="relative w-8 h-8 flex items-center justify-center">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-8 h-8 text-white">
+                        <circle cx="12" cy="12" r="10" stroke-opacity="0.5"></circle>
+                        <circle cx="12" cy="12" r="6"></circle>
+                        <circle cx="12" cy="12" r="2" fill="white"></circle>
+                    </svg>
+                </div>
+                <span class="text-xl font-bold tracking-tight text-white">AIBC</span>
+            </a>
+            <nav class="hidden md:flex items-center gap-8">
+                <a href="index.html" class="text-sm font-medium text-zinc-400 hover:text-white transition-colors">Help Center</a>
+                <a href="/dashboard" class="text-sm font-medium text-white hover:text-zinc-300 transition-colors">Dashboard</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="pt-32 pb-24 px-6">
+        <div class="max-w-4xl mx-auto">
+            <!-- Breadcrumb -->
+            <div class="flex items-center gap-2 text-sm text-zinc-500 mb-8">
+                <a href="index.html" class="hover:text-white transition-colors">Help Center</a>
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                <span>Getting Started</span>
+            </div>
+
+            <!-- Header -->
+            <div class="mb-12">
+                <div class="w-12 h-12 rounded-lg bg-orange-500/10 flex items-center justify-center mb-6">
+                    <i data-lucide="rocket" class="w-6 h-6 text-orange-500"></i>
+                </div>
+                <h1 class="text-4xl font-semibold text-white mb-4 tracking-tight">Getting Started with AIBC</h1>
+                <p class="text-lg text-zinc-400">Everything you need to know to set up your digital footprint and start scanning.</p>
+            </div>
+
+            <!-- Articles List -->
+            <div class="space-y-4 mb-16">
+                <a href="#setup-digital-footprint" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Setting Up Your Digital Footprint Scan</h3>
+                    <p class="text-zinc-500">Learn how to run your first Brand Scan to extract your brand's voice, tone, and DNA from your digital presence.</p>
+                </a>
+
+                <a href="#understanding-brand-dna" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Understanding Your Brand DNA</h3>
+                    <p class="text-zinc-500">Discover how AIBC analyzes your content to extract your authentic brand voice, visual identity, and communication style.</p>
+                </a>
+
+                <a href="#configuring-brand-kit" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Configuring Your Brand Kit</h3>
+                    <p class="text-zinc-500">Set up source materials, voice settings, and content preferences to ensure AIBC generates content that matches your brand.</p>
+                </a>
+
+                <a href="#first-content-generation" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Generating Your First Content</h3>
+                    <p class="text-zinc-500">Step-by-step guide to creating your first AI-generated content using your Brand DNA.</p>
+                </a>
+
+                <a href="#connecting-platforms" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Connecting Your Platforms</h3>
+                    <p class="text-zinc-500">Connect your social media accounts, blog, and marketing tools to start publishing content directly from AIBC.</p>
+                </a>
+            </div>
+
+            <!-- Detailed Article: Setting Up Digital Footprint -->
+            <article id="setup-digital-footprint" class="article-content mb-16">
+                <h2 class="text-3xl font-semibold text-white mb-6">Setting Up Your Digital Footprint Scan</h2>
+                
+                <div class="prose prose-invert max-w-none">
+                    <p class="text-lg text-zinc-300 mb-6">
+                        The Digital Footprint Scan is the foundation of AIBC. It analyzes your brand's existing content across platforms to understand how you communicate, what you stand for, and how you engage with your audience.
+                    </p>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">What AIBC Scans</h3>
+                    <p class="text-zinc-400 mb-4">
+                        AIBC scans <strong>only your brand's own output</strong> - content you've published yourself. We do NOT collect:
+                    </p>
+                    <ul class="list-disc list-inside text-zinc-400 mb-6 space-y-2 ml-4">
+                        <li>Mentions or discussions about your brand</li>
+                        <li>Third-party content about your brand</li>
+                        <li>User-generated content mentioning your brand</li>
+                        <li>Comments or reactions (unless from your own account)</li>
+                    </ul>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">Platforms Scanned</h3>
+                    <p class="text-zinc-400 mb-4">AIBC scans these platforms:</p>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="glass-panel rounded-lg p-4 text-center">
+                            <i data-lucide="twitter" class="w-6 h-6 text-white mx-auto mb-2"></i>
+                            <p class="text-sm text-zinc-400">Twitter/X</p>
+                        </div>
+                        <div class="glass-panel rounded-lg p-4 text-center">
+                            <i data-lucide="linkedin" class="w-6 h-6 text-blue-400 mx-auto mb-2"></i>
+                            <p class="text-sm text-zinc-400">LinkedIn</p>
+                        </div>
+                        <div class="glass-panel rounded-lg p-4 text-center">
+                            <i data-lucide="instagram" class="w-6 h-6 text-pink-400 mx-auto mb-2"></i>
+                            <p class="text-sm text-zinc-400">Instagram</p>
+                        </div>
+                        <div class="glass-panel rounded-lg p-4 text-center">
+                            <i data-lucide="youtube" class="w-6 h-6 text-red-500 mx-auto mb-2"></i>
+                            <p class="text-sm text-zinc-400">YouTube</p>
+                        </div>
+                    </div>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">How to Run a Scan</h3>
+                    <ol class="list-decimal list-inside text-zinc-400 mb-6 space-y-3 ml-4">
+                        <li class="mb-2">Navigate to the <strong class="text-white">Scan</strong> page from your dashboard</li>
+                        <li class="mb-2">Enter your website URL or social media username</li>
+                        <li class="mb-2">Select which platforms to scan (Twitter, LinkedIn, Instagram, YouTube)</li>
+                        <li class="mb-2">Choose scan type:
+                            <ul class="list-disc list-inside ml-6 mt-2 space-y-1">
+                                <li><strong class="text-white">Standard Scan</strong> (Free/Pro): LLM-powered web scanning, ~$0.10-0.50 per scan</li>
+                                <li><strong class="text-white">Deep Scan</strong> (Enterprise): Official API access with 10-year history, ~$7.00 per scan</li>
+                            </ul>
+                        </li>
+                        <li class="mb-2">Click <strong class="text-white">"Scan Digital Footprint"</strong></li>
+                        <li class="mb-2">Wait for scan to complete (typically under 24 hours for standard scans)</li>
+                    </ol>
+
+                    <div class="glass-panel rounded-xl p-6 my-8 border-l-4 border-orange-500">
+                        <div class="flex items-start gap-4">
+                            <i data-lucide="lightbulb" class="w-6 h-6 text-orange-500 flex-shrink-0 mt-1"></i>
+                            <div>
+                                <h4 class="text-white font-semibold mb-2">Pro Tip</h4>
+                                <p class="text-zinc-400">The more content you have published, the better AIBC understands your brand. If you're just starting out, consider running a Deep Scan (Enterprise tier) to get more comprehensive data.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">What Happens During the Scan</h3>
+                    <p class="text-zinc-400 mb-4">During the scan, AIBC:</p>
+                    <ul class="list-disc list-inside text-zinc-400 mb-6 space-y-2 ml-4">
+                        <li>Extracts all content you've published on selected platforms</li>
+                        <li>Analyzes your writing style, tone, and vocabulary</li>
+                        <li>Identifies your visual identity (colors, imagery, style)</li>
+                        <li>Understands your engagement patterns and content preferences</li>
+                        <li>Extracts your Brand DNA (archetype, voice, core pillars)</li>
+                        <li>Identifies competitors (if enabled)</li>
+                    </ul>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">After the Scan Completes</h3>
+                    <p class="text-zinc-400 mb-4">Once your scan is complete, you'll have:</p>
+                    <ul class="list-disc list-inside text-zinc-400 mb-6 space-y-2 ml-4">
+                        <li><strong class="text-white">Brand DNA</strong> stored in your Brand Kit</li>
+                        <li><strong class="text-white">Strategic insights</strong> about your brand position</li>
+                        <li><strong class="text-white">Content ideas</strong> generated based on your voice</li>
+                        <li><strong class="text-white">Competitor intelligence</strong> (if enabled)</li>
+                    </ul>
+                    <p class="text-zinc-400 mb-6">
+                        You can now start generating content that authentically matches your brand voice!
+                    </p>
+                </div>
+            </article>
+
+            <!-- Back to top / Next section -->
+            <div class="flex items-center justify-between mt-16 pt-8 border-t border-white/10">
+                <a href="index.html" class="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    Back to Help Center
+                </a>
+                <a href="#understanding-brand-dna" class="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors">
+                    Next: Understanding Brand DNA
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
+

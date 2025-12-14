@@ -2,7 +2,7 @@
  * Structured Data Service - Generate JSON-LD structured data for SEO
  */
 
-import { BlogPost } from '../../../types/seo';
+import { BlogPost } from '../types/seo';
 
 /**
  * Get base URL from environment
@@ -53,13 +53,13 @@ export function generateArticleStructuredData(post: BlogPost): object {
 
   // Add keywords if available
   if (post.target_keywords && post.target_keywords.length > 0) {
-    structuredData['keywords'] = post.target_keywords.join(', ');
+    (structuredData as any)['keywords'] = post.target_keywords.join(', ');
   }
 
   // Add article body if needed (for some schema types)
   if (post.content) {
     const textContent = post.content.replace(/<[^>]*>/g, '').substring(0, 500);
-    structuredData['articleBody'] = textContent;
+    (structuredData as any)['articleBody'] = textContent;
   }
 
   return structuredData;

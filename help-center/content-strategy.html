@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Strategy - AIBC Help Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .article-content {
+            max-width: 800px;
+        }
+    </style>
+</head>
+<body class="bg-[#050505] text-zinc-300 antialiased min-h-screen">
+    <!-- Navigation -->
+    <header class="fixed top-0 w-full z-50 border-b border-white/10 bg-[#050505]/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-3">
+                <div class="relative w-8 h-8 flex items-center justify-center">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-8 h-8 text-white">
+                        <circle cx="12" cy="12" r="10" stroke-opacity="0.5"></circle>
+                        <circle cx="12" cy="12" r="6"></circle>
+                        <circle cx="12" cy="12" r="2" fill="white"></circle>
+                    </svg>
+                </div>
+                <span class="text-xl font-bold tracking-tight text-white">AIBC</span>
+            </a>
+            <nav class="hidden md:flex items-center gap-8">
+                <a href="index.html" class="text-sm font-medium text-zinc-400 hover:text-white transition-colors">Help Center</a>
+                <a href="/dashboard" class="text-sm font-medium text-white hover:text-zinc-300 transition-colors">Dashboard</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="pt-32 pb-24 px-6">
+        <div class="max-w-4xl mx-auto">
+            <!-- Breadcrumb -->
+            <div class="flex items-center gap-2 text-sm text-zinc-500 mb-8">
+                <a href="index.html" class="hover:text-white transition-colors">Help Center</a>
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                <span>Content Strategy</span>
+            </div>
+
+            <!-- Header -->
+            <div class="mb-12">
+                <div class="w-12 h-12 rounded-lg bg-zinc-800 flex items-center justify-center mb-6">
+                    <i data-lucide="layers" class="w-6 h-6 text-white"></i>
+                </div>
+                <h1 class="text-4xl font-semibold text-white mb-4 tracking-tight">Content Strategy with AIBC</h1>
+                <p class="text-lg text-zinc-400">Learn how AIBC handles content thinking, audio generation, and video scaling.</p>
+            </div>
+
+            <!-- Articles List -->
+            <div class="space-y-4 mb-16">
+                <a href="#content-thinking" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">How AIBC Thinks About Content</h3>
+                    <p class="text-zinc-500">Understand how AIBC uses your Brand DNA to generate content that matches your authentic voice and style.</p>
+                </a>
+
+                <a href="#audio-generation" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Audio Generation in Production Room</h3>
+                    <p class="text-zinc-500">Create podcast intros, outros, music, and audio content using AIBC's Production Room.</p>
+                </a>
+
+                <a href="#video-scaling" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Video Scaling and Generation</h3>
+                    <p class="text-zinc-500">Generate video content at scale - from shorts and reels to long-form videos, all matching your brand.</p>
+                </a>
+
+                <a href="#content-planning" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Content Planning and Scheduling</h3>
+                    <p class="text-zinc-500">Plan your content strategy, set weekly topics, and schedule content across all your platforms.</p>
+                </a>
+
+                <a href="#improving-content" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Improving Generated Content</h3>
+                    <p class="text-zinc-500">Learn how to refine content, use the Improve Feature, and teach AIBC your preferences.</p>
+                </a>
+            </div>
+
+            <!-- Detailed Article: Content Thinking -->
+            <article id="content-thinking" class="article-content mb-16">
+                <h2 class="text-3xl font-semibold text-white mb-6">How AIBC Thinks About Content</h2>
+                
+                <div class="prose prose-invert max-w-none">
+                    <p class="text-lg text-zinc-300 mb-6">
+                        AIBC doesn't just generate generic content. It uses your Brand DNA - extracted from your Digital Footprint Scan - to create content that authentically matches how you communicate.
+                    </p>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">The Content Generation Process</h3>
+                    <div class="space-y-4 mb-8">
+                        <div class="glass-panel rounded-lg p-6">
+                            <div class="flex items-start gap-4">
+                                <div class="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                                    <span class="text-orange-500 font-semibold">1</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-semibold mb-2">Analyze Your Brand DNA</h4>
+                                    <p class="text-zinc-400">AIBC reviews your Brand DNA extracted from the scan: voice tone, vocabulary, themes, visual identity, and engagement patterns.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <div class="flex items-start gap-4">
+                                <div class="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                                    <span class="text-orange-500 font-semibold">2</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-semibold mb-2">Apply Your Voice Settings</h4>
+                                    <p class="text-zinc-400">Uses your Brand Kit settings: tone preferences, vocabulary, do's and don'ts, content preferences, and topics to avoid.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <div class="flex items-start gap-4">
+                                <div class="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                                    <span class="text-orange-500 font-semibold">3</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-semibold mb-2">Reference Source Materials</h4>
+                                    <p class="text-zinc-400">Learns from your uploaded source materials - your best blog posts, social posts, brand guidelines - to match your writing style.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <div class="flex items-start gap-4">
+                                <div class="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                                    <span class="text-orange-500 font-semibold">4</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-semibold mb-2">Generate Content</h4>
+                                    <p class="text-zinc-400">Creates content that matches your voice, uses your vocabulary, follows your style, and addresses your topics - all while staying on-brand.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">What Makes AIBC Content Different</h3>
+                    <div class="grid md:grid-cols-2 gap-4 mb-8">
+                        <div class="glass-panel rounded-lg p-6">
+                            <i data-lucide="sparkles" class="w-6 h-6 text-orange-500 mb-3"></i>
+                            <h4 class="text-white font-semibold mb-2">Authentic Voice</h4>
+                            <p class="text-zinc-400 text-sm">Content sounds like you wrote it, not like generic AI content.</p>
+                        </div>
+                        <div class="glass-panel rounded-lg p-6">
+                            <i data-lucide="target" class="w-6 h-6 text-orange-500 mb-3"></i>
+                            <h4 class="text-white font-semibold mb-2">On-Brand Topics</h4>
+                            <p class="text-zinc-400 text-sm">Covers topics you actually talk about, avoids what you don't.</p>
+                        </div>
+                        <div class="glass-panel rounded-lg p-6">
+                            <i data-lucide="palette" class="w-6 h-6 text-orange-500 mb-3"></i>
+                            <h4 class="text-white font-semibold mb-2">Visual Consistency</h4>
+                            <p class="text-zinc-400 text-sm">Matches your visual identity - colors, style, imagery preferences.</p>
+                        </div>
+                        <div class="glass-panel rounded-lg p-6">
+                            <i data-lucide="trending-up" class="w-6 h-6 text-orange-500 mb-3"></i>
+                            <h4 class="text-white font-semibold mb-2">Performance Optimized</h4>
+                            <p class="text-zinc-400 text-sm">Learns from your best-performing content to replicate success.</p>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-xl p-6 my-8 border-l-4 border-orange-500">
+                        <div class="flex items-start gap-4">
+                            <i data-lucide="lightbulb" class="w-6 h-6 text-orange-500 flex-shrink-0 mt-1"></i>
+                            <div>
+                                <h4 class="text-white font-semibold mb-2">The More You Teach, The Better It Gets</h4>
+                                <p class="text-zinc-400">Every time you edit content, use the "Update Agent" feature, or add source materials, AIBC learns and improves. Your content quality increases over time.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Audio Generation Article -->
+            <article id="audio-generation" class="article-content mb-16">
+                <h2 class="text-3xl font-semibold text-white mb-6">Audio Generation in Production Room</h2>
+                
+                <div class="prose prose-invert max-w-none">
+                    <p class="text-lg text-zinc-300 mb-6">
+                        AIBC's Production Room lets you generate audio content - from podcast intros and outros to background music - all matching your brand's style and voice.
+                    </p>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">Available Audio Types</h3>
+                    <div class="space-y-4 mb-8">
+                        <div class="glass-panel rounded-lg p-6">
+                            <h4 class="text-white font-semibold mb-2 flex items-center gap-2">
+                                <i data-lucide="mic" class="w-5 h-5 text-orange-500"></i>
+                                Podcast Intros & Outros
+                            </h4>
+                            <p class="text-zinc-400 mb-3">Generate branded podcast introductions and conclusions that match your show's tone and style.</p>
+                            <p class="text-sm text-zinc-500"><strong>Credit cost:</strong> ~15-50 credits depending on length</p>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <h4 class="text-white font-semibold mb-2 flex items-center gap-2">
+                                <i data-lucide="music" class="w-5 h-5 text-orange-500"></i>
+                                Background Music
+                            </h4>
+                            <p class="text-zinc-400 mb-3">Create background music tracks that match your brand's energy and style for videos and presentations.</p>
+                            <p class="text-sm text-zinc-500"><strong>Credit cost:</strong> ~15-50 credits depending on length</p>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <h4 class="text-white font-semibold mb-2 flex items-center gap-2">
+                                <i data-lucide="volume-2" class="w-5 h-5 text-orange-500"></i>
+                                Sound Effects
+                            </h4>
+                            <p class="text-zinc-400 mb-3">Generate custom sound effects and audio elements for your content.</p>
+                            <p class="text-sm text-zinc-500"><strong>Credit cost:</strong> ~10-30 credits depending on complexity</p>
+                        </div>
+                    </div>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">How to Generate Audio</h3>
+                    <ol class="list-decimal list-inside text-zinc-400 mb-6 space-y-3 ml-4">
+                        <li class="mb-2">Navigate to <strong class="text-white">Production Room</strong> from your dashboard</li>
+                        <li class="mb-2">Select <strong class="text-white">"Audio"</strong> as output type</li>
+                        <li class="mb-2">Choose duration: <strong class="text-white">Short</strong> (~15-30s), <strong class="text-white">Mid</strong> (~30-60s), or <strong class="text-white">Long</strong> (60s+)</li>
+                        <li class="mb-2">Select style: Energetic, Professional, Calm, etc.</li>
+                        <li class="mb-2">Add description of what you want (e.g., "Upbeat podcast intro for tech show")</li>
+                        <li class="mb-2">Check credit cost and your balance</li>
+                        <li class="mb-2">Click <strong class="text-white">"Generate"</strong></li>
+                        <li class="mb-2">Audio is added to production queue and will be ready shortly</li>
+                    </ol>
+
+                    <div class="glass-panel rounded-xl p-6 my-8 border-l-4 border-orange-500">
+                        <div class="flex items-start gap-4">
+                            <i data-lucide="info" class="w-6 h-6 text-orange-500 flex-shrink-0 mt-1"></i>
+                            <div>
+                                <h4 class="text-white font-semibold mb-2">Audio Generation Requirements</h4>
+                                <p class="text-zinc-400 mb-2">Audio generation is available on <strong class="text-white">Enterprise tier</strong> only. Pro tier has access to image generation, but audio and video require Enterprise subscription.</p>
+                                <p class="text-zinc-400">Check your credit balance before generating - audio generation uses credits from your monthly allowance.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Video Scaling Article -->
+            <article id="video-scaling" class="article-content mb-16">
+                <h2 class="text-3xl font-semibold text-white mb-6">Video Scaling and Generation</h2>
+                
+                <div class="prose prose-invert max-w-none">
+                    <p class="text-lg text-zinc-300 mb-6">
+                        Scale your video content production with AIBC. Generate videos from shorts and reels to long-form content, all matching your brand's visual identity and style.
+                    </p>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">Video Types You Can Generate</h3>
+                    <div class="grid md:grid-cols-2 gap-4 mb-8">
+                        <div class="glass-panel rounded-lg p-6">
+                            <i data-lucide="film" class="w-6 h-6 text-orange-500 mb-3"></i>
+                            <h4 class="text-white font-semibold mb-2">Short-Form Videos</h4>
+                            <p class="text-zinc-400 text-sm mb-3">15-60 second videos for Instagram Reels, TikTok, YouTube Shorts</p>
+                            <p class="text-xs text-zinc-500"><strong>Credit cost:</strong> ~25 credits</p>
+                        </div>
+                        <div class="glass-panel rounded-lg p-6">
+                            <i data-lucide="video" class="w-6 h-6 text-orange-500 mb-3"></i>
+                            <h4 class="text-white font-semibold mb-2">Mid-Length Videos</h4>
+                            <p class="text-zinc-400 text-sm mb-3">1-5 minute videos for YouTube, LinkedIn, Facebook</p>
+                            <p class="text-xs text-zinc-500"><strong>Credit cost:</strong> ~50 credits</p>
+                        </div>
+                        <div class="glass-panel rounded-lg p-6">
+                            <i data-lucide="play-circle" class="w-6 h-6 text-orange-500 mb-3"></i>
+                            <h4 class="text-white font-semibold mb-2">Long-Form Videos</h4>
+                            <p class="text-zinc-400 text-sm mb-3">5+ minute videos for YouTube, webinars, presentations</p>
+                            <p class="text-xs text-zinc-500"><strong>Credit cost:</strong> ~100 credits</p>
+                        </div>
+                        <div class="glass-panel rounded-lg p-6">
+                            <i data-lucide="layout" class="w-6 h-6 text-orange-500 mb-3"></i>
+                            <h4 class="text-white font-semibold mb-2">Video Templates</h4>
+                            <p class="text-zinc-400 text-sm mb-3">Pre-designed video templates matching your brand style</p>
+                            <p class="text-xs text-zinc-500"><strong>Credit cost:</strong> Varies by template</p>
+                        </div>
+                    </div>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">Video Generation Process</h3>
+                    <p class="text-zinc-400 mb-4">When generating videos, AIBC:</p>
+                    <ul class="list-disc list-inside text-zinc-400 mb-6 space-y-2 ml-4">
+                        <li>Uses your Brand DNA to match visual style (colors, imagery, tone)</li>
+                        <li>Applies your brand's voice and messaging</li>
+                        <li>Matches aspect ratios for target platforms (9:16 for Reels, 16:9 for YouTube, etc.)</li>
+                        <li>Incorporates your brand elements (logos, colors, fonts) when available</li>
+                        <li>Generates content that aligns with your topics and themes</li>
+                    </ul>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">Scaling Video Production</h3>
+                    <p class="text-zinc-400 mb-4">AIBC helps you scale video production by:</p>
+                    <div class="space-y-3 mb-8">
+                        <div class="flex items-start gap-3">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5"></i>
+                            <p class="text-zinc-400"><strong class="text-white">Batch generation:</strong> Create multiple videos at once for campaigns or series</p>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5"></i>
+                            <p class="text-zinc-400"><strong class="text-white">Consistent branding:</strong> All videos match your brand automatically</p>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5"></i>
+                            <p class="text-zinc-400"><strong class="text-white">Platform optimization:</strong> Videos automatically formatted for each platform</p>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5"></i>
+                            <p class="text-zinc-400"><strong class="text-white">Content planning:</strong> Plan and schedule video content alongside other content types</p>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-xl p-6 my-8 border-l-4 border-orange-500">
+                        <div class="flex items-start gap-4">
+                            <i data-lucide="alert-circle" class="w-6 h-6 text-orange-500 flex-shrink-0 mt-1"></i>
+                            <div>
+                                <h4 class="text-white font-semibold mb-2">Video Generation Requirements</h4>
+                                <p class="text-zinc-400">Video generation requires <strong class="text-white">Enterprise tier</strong> subscription. This is the most resource-intensive feature and requires significant computational resources.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Back to top / Next section -->
+            <div class="flex items-center justify-between mt-16 pt-8 border-t border-white/10">
+                <a href="index.html" class="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    Back to Help Center
+                </a>
+                <a href="billing-plans.html" class="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors">
+                    Next: Billing & Plans
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIBC Media Help Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+<body class="bg-[#050505] text-zinc-300 antialiased min-h-screen flex flex-col selection:bg-orange-500/30 selection:text-orange-200">
+
+    <!-- Navigation (Matches AIBC Brand Screenshot) -->
+    <header class="fixed top-0 w-full z-50 border-b border-white/10 bg-[#050505]/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <!-- Logo -->
+            <div class="flex items-center gap-3">
+                <div class="relative w-8 h-8 flex items-center justify-center">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-8 h-8 text-white">
+                        <circle cx="12" cy="12" r="10" stroke-opacity="0.5"></circle>
+                        <circle cx="12" cy="12" r="6"></circle>
+                        <circle cx="12" cy="12" r="2" fill="white"></circle>
+                    </svg>
+                </div>
+                <span class="text-xl font-bold tracking-tight text-white">AIBC</span>
+            </div>
+
+            <!-- Desktop Nav -->
+            <nav class="hidden md:flex items-center gap-8">
+                <a href="/" class="text-sm font-medium text-zinc-400 hover:text-white transition-colors duration-200">HOME</a>
+                <a href="/blog" class="text-sm font-medium text-zinc-400 hover:text-white transition-colors duration-200">BLOG</a>
+                <a href="/pricing" class="text-sm font-medium text-zinc-400 hover:text-white transition-colors duration-200">PRICING</a>
+                <div class="group relative flex items-center gap-1 cursor-pointer text-sm font-medium text-orange-500">
+                    <span>AIBC STREAM</span>
+                    <i data-lucide="chevron-down" class="w-4 h-4 transition-transform group-hover:rotate-180"></i>
+                </div>
+            </nav>
+
+            <!-- Right Actions -->
+            <div class="flex items-center gap-6">
+                <a href="/dashboard" class="hidden sm:flex items-center gap-2 text-sm font-medium text-white hover:text-zinc-300 transition-colors">
+                    Dashboard
+                    <i data-lucide="log-in" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow pt-32 pb-24 px-6 relative overflow-hidden">
+        
+        <!-- Ambient Background Glows -->
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-orange-900/20 rounded-[100%] blur-[120px] pointer-events-none"></div>
+
+        <div class="max-w-4xl mx-auto relative z-10">
+            
+            <!-- Hero Section -->
+            <div class="text-center mb-16">
+                <h1 class="text-4xl md:text-5xl font-semibold text-white tracking-tight mb-6">
+                    Advice and answers <br>from the <span class="text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-400 to-zinc-600">AIBC Team</span>.
+                </h1>
+                <p class="text-lg text-zinc-400 max-w-xl mx-auto mb-10">
+                    Search our knowledge base for answers to your questions about links, content scaling, and integrations.
+                </p>
+
+                <!-- Search Bar -->
+                <div class="relative max-w-2xl mx-auto group">
+                    <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                        <i data-lucide="search" class="w-5 h-5 text-zinc-500 group-focus-within:text-orange-500 transition-colors"></i>
+                    </div>
+                    <input type="text" placeholder="Search for articles..." class="w-full bg-zinc-900/50 border border-zinc-800 text-white text-lg placeholder-zinc-600 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500/50 transition-all shadow-lg">
+                    <div class="absolute inset-y-0 right-4 flex items-center pointer-events-none">
+                        <span class="text-xs text-zinc-600 border border-zinc-800 rounded px-1.5 py-0.5">⌘K</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Categories Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <!-- Category 1: Getting Started -->
+                <a href="getting-started.html" class="group glass-panel rounded-2xl p-6 hover:bg-zinc-900/80 transition-all duration-300 hover:scale-[1.02] hover:border-zinc-700">
+                    <div class="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center mb-6 group-hover:bg-orange-500/20 transition-colors">
+                        <i data-lucide="rocket" class="w-5 h-5 text-orange-500"></i>
+                    </div>
+                    <h3 class="text-xl font-medium text-white mb-2 tracking-tight">Getting Started</h3>
+                    <p class="text-base text-zinc-500 leading-relaxed group-hover:text-zinc-400">
+                        Everything you need to know to set up your digital footprint and start scanning.
+                    </p>
+                </a>
+
+                <!-- Category 2: Content Strategy -->
+                <a href="content-strategy.html" class="group glass-panel rounded-2xl p-6 hover:bg-zinc-900/80 transition-all duration-300 hover:scale-[1.02] hover:border-zinc-700">
+                    <div class="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center mb-6 group-hover:bg-zinc-700 transition-colors">
+                        <i data-lucide="layers" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-medium text-white mb-2 tracking-tight">Content Strategy</h3>
+                    <p class="text-base text-zinc-500 leading-relaxed group-hover:text-zinc-400">
+                        Learn how AIBC handles content thinking, audio generation, and video scaling.
+                    </p>
+                </a>
+
+                <!-- Category 3: Billing & Plans -->
+                <a href="billing-plans.html" class="group glass-panel rounded-2xl p-6 hover:bg-zinc-900/80 transition-all duration-300 hover:scale-[1.02] hover:border-zinc-700">
+                    <div class="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center mb-6 group-hover:bg-zinc-700 transition-colors">
+                        <i data-lucide="credit-card" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-medium text-white mb-2 tracking-tight">Billing & Plans</h3>
+                    <p class="text-base text-zinc-500 leading-relaxed group-hover:text-zinc-400">
+                        Understand credit systems, scaling pricing, and managing your subscriptions.
+                    </p>
+                </a>
+
+                <!-- Category 4: Integrations -->
+                <a href="integrations.html" class="group glass-panel rounded-2xl p-6 hover:bg-zinc-900/80 transition-all duration-300 hover:scale-[1.02] hover:border-zinc-700">
+                    <div class="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center mb-6 group-hover:bg-zinc-700 transition-colors">
+                        <i data-lucide="puzzle" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-medium text-white mb-2 tracking-tight">Integrations</h3>
+                    <p class="text-base text-zinc-500 leading-relaxed group-hover:text-zinc-400">
+                        Connect AIBC to your social channels, CMS, and marketing tools.
+                    </p>
+                </a>
+
+                <!-- Category 5: Team Management -->
+                <a href="team-management.html" class="group glass-panel rounded-2xl p-6 hover:bg-zinc-900/80 transition-all duration-300 hover:scale-[1.02] hover:border-zinc-700">
+                    <div class="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center mb-6 group-hover:bg-zinc-700 transition-colors">
+                        <i data-lucide="users" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-medium text-white mb-2 tracking-tight">Team Management</h3>
+                    <p class="text-base text-zinc-500 leading-relaxed group-hover:text-zinc-400">
+                        Invite collaborators, set permissions, and manage workspace settings.
+                    </p>
+                </a>
+
+                <!-- Category 6: Troubleshooting -->
+                <a href="troubleshooting.html" class="group glass-panel rounded-2xl p-6 hover:bg-zinc-900/80 transition-all duration-300 hover:scale-[1.02] hover:border-zinc-700">
+                    <div class="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center mb-6 group-hover:bg-zinc-700 transition-colors">
+                        <i data-lucide="wrench" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-medium text-white mb-2 tracking-tight">Troubleshooting</h3>
+                    <p class="text-base text-zinc-500 leading-relaxed group-hover:text-zinc-400">
+                        Solutions to common issues with scanning, rendering, or posting content.
+                    </p>
+                </a>
+
+            </div>
+
+            <!-- Quick Links / Popular Articles -->
+            <div class="mt-20">
+                <h2 class="text-xl font-medium text-white mb-8 tracking-tight">Popular Articles</h2>
+                <div class="space-y-3">
+                    <a href="billing-plans.html#credit-system" class="flex items-center justify-between p-4 rounded-lg hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all group">
+                        <div class="flex items-center gap-4">
+                            <i data-lucide="file-text" class="w-5 h-5 text-zinc-600 group-hover:text-orange-500 transition-colors"></i>
+                            <span class="text-base text-zinc-300 group-hover:text-white">How do credits work for video generation?</span>
+                        </div>
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-zinc-600 group-hover:translate-x-1 transition-transform"></i>
+                    </a>
+                    <a href="integrations.html#social-channels" class="flex items-center justify-between p-4 rounded-lg hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all group">
+                        <div class="flex items-center gap-4">
+                            <i data-lucide="file-text" class="w-5 h-5 text-zinc-600 group-hover:text-orange-500 transition-colors"></i>
+                            <span class="text-base text-zinc-300 group-hover:text-white">Connecting your LinkedIn and Twitter accounts</span>
+                        </div>
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-zinc-600 group-hover:translate-x-1 transition-transform"></i>
+                    </a>
+                    <a href="integrations.html#cms-integrations" class="flex items-center justify-between p-4 rounded-lg hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all group">
+                        <div class="flex items-center gap-4">
+                            <i data-lucide="file-text" class="w-5 h-5 text-zinc-600 group-hover:text-orange-500 transition-colors"></i>
+                            <span class="text-base text-zinc-300 group-hover:text-white">Importing content from your existing blog</span>
+                        </div>
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-zinc-600 group-hover:translate-x-1 transition-transform"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Contact Support CTA -->
+            <div class="mt-24 p-8 rounded-3xl bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 text-center relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-orange-500/5 blur-[80px] rounded-full pointer-events-none"></div>
+                <h3 class="text-2xl font-semibold text-white mb-3 tracking-tight relative z-10">Can't find what you're looking for?</h3>
+                <p class="text-lg text-zinc-400 mb-8 relative z-10">Our support team is just a click away.</p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center relative z-10">
+                    <a href="mailto:support@aibcmedia.com" class="bg-white text-black px-6 py-3 rounded-lg font-medium hover:bg-zinc-200 transition-colors">
+                        Chat with Support
+                    </a>
+                    <a href="mailto:support@aibcmedia.com" class="px-6 py-3 rounded-lg font-medium text-white border border-zinc-700 hover:bg-zinc-900 transition-colors">
+                        Email Us
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/10 bg-black py-16">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-start gap-12">
+            <div class="max-w-xs">
+                <div class="flex items-center gap-2 mb-6">
+                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 text-white">
+                        <circle cx="12" cy="12" r="10" stroke-opacity="0.5"></circle>
+                        <circle cx="12" cy="12" r="6"></circle>
+                        <circle cx="12" cy="12" r="2" fill="white"></circle>
+                    </svg>
+                    <span class="text-lg font-bold tracking-tight text-white">AIBC</span>
+                </div>
+                <p class="text-base text-zinc-500 leading-relaxed">
+                    AIBC scans your digital footprint and turns it into on-brand text, audio, and video you can copy-paste straight into your channels.
+                </p>
+            </div>
+            
+            <div class="flex gap-16 flex-wrap">
+                <div>
+                    <h4 class="text-sm font-medium text-white mb-6 uppercase tracking-wider">Product</h4>
+                    <ul class="space-y-4">
+                        <li><a href="/#features" class="text-base text-zinc-500 hover:text-white transition-colors">Features</a></li>
+                        <li><a href="/pricing" class="text-base text-zinc-500 hover:text-white transition-colors">Pricing</a></li>
+                        <li><a href="/stream" class="text-base text-zinc-500 hover:text-white transition-colors">Stream</a></li>
+                        <li><a href="/changelog" class="text-base text-zinc-500 hover:text-white transition-colors">Changelog</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-sm font-medium text-white mb-6 uppercase tracking-wider">Resources</h4>
+                    <ul class="space-y-4">
+                        <li><a href="/blog" class="text-base text-zinc-500 hover:text-white transition-colors">Blog</a></li>
+                        <li><a href="/community" class="text-base text-zinc-500 hover:text-white transition-colors">Community</a></li>
+                        <li><a href="/help-center" class="text-base text-zinc-500 hover:text-white transition-colors">Help Center</a></li>
+                        <li><a href="/status" class="text-base text-zinc-500 hover:text-white transition-colors">Status</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-sm font-medium text-white mb-6 uppercase tracking-wider">Company</h4>
+                    <ul class="space-y-4">
+                        <li><a href="/about" class="text-base text-zinc-500 hover:text-white transition-colors">About</a></li>
+                        <li><a href="/careers" class="text-base text-zinc-500 hover:text-white transition-colors">Careers</a></li>
+                        <li><a href="/legal" class="text-base text-zinc-500 hover:text-white transition-colors">Legal</a></li>
+                        <li><a href="/contact" class="text-base text-zinc-500 hover:text-white transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="max-w-7xl mx-auto px-6 mt-16 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center text-sm text-zinc-600">
+            <p>© 2024 AIBC Media Inc. All rights reserved.</p>
+            <div class="flex gap-6 mt-4 md:mt-0">
+                <a href="https://twitter.com/aibcmedia" class="hover:text-white transition-colors"><i data-lucide="twitter" class="w-4 h-4"></i></a>
+                <a href="https://github.com/aibcmedia" class="hover:text-white transition-colors"><i data-lucide="github" class="w-4 h-4"></i></a>
+                <a href="https://linkedin.com/company/aibcmedia" class="hover:text-white transition-colors"><i data-lucide="linkedin" class="w-4 h-4"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+        
+        // Search functionality (basic implementation)
+        document.querySelector('input[type="text"]').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || (e.metaKey && e.key === 'k')) {
+                e.preventDefault();
+                const query = this.value;
+                if (query) {
+                    // Implement search functionality
+                    console.log('Searching for:', query);
+                    // You can redirect to a search results page or implement client-side search
+                }
+            }
+        });
+        
+        // Keyboard shortcut for search (⌘K)
+        document.addEventListener('keydown', function(e) {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                document.querySelector('input[type="text"]').focus();
+            }
+        });
+    </script>
+
+</body>
+</html>
+

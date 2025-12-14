@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Tag, ArrowLeft, Share2 } from 'lucide-react';
-import { NavProps } from '../types';
+import { Calendar, Clock, Tag, ArrowLeft, Share2, ArrowRight } from 'lucide-react';
+import { NavProps, ViewState } from '../types';
 import { BlogPost } from '../types/seo';
 import Navigation from './shared/Navigation';
 import Footer from './shared/Footer';
@@ -15,7 +15,19 @@ const BlogPostView: React.FC<BlogPostViewProps> = ({ onNavigate, slug }) => {
   const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  // Use production API URL if on production domain
+  const getApiUrl = () => {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      if (hostname.includes('aibcmedia.com') || hostname.includes('netlify')) {
+        // Production backend URL
+        return 'https://aibc-backend-409115133182.us-central1.run.app';
+      }
+    }
+    return import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  };
+  
+  const API_URL = getApiUrl();
 
   useEffect(() => {
     fetchPost();
@@ -127,8 +139,8 @@ const BlogPostView: React.FC<BlogPostViewProps> = ({ onNavigate, slug }) => {
         datePublished: post.published_at || post.created_at,
         dateModified: post.updated_at || post.published_at || post.created_at,
         author: {
-          '@type': 'Organization',
-          name: 'AIBC',
+          '@type': 'Person',
+          name: post.author || 'AIBC',
         },
         url: `${baseURL}/blog/${post.slug}`,
       },
@@ -222,6 +234,30 @@ const BlogPostView: React.FC<BlogPostViewProps> = ({ onNavigate, slug }) => {
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
 
+          {/* Sign Up CTA */}
+          <div className="mt-12 pt-8 border-t border-white/10">
+            <div className="bg-gradient-to-r from-orange-500/10 to-orange-500/5 border border-orange-500/20 rounded-2xl p-8 md:p-12">
+              <div className="max-w-2xl mx-auto text-center">
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                  Ready to transform your content strategy?
+                </h2>
+                <p className="text-lg text-white/70 mb-8 leading-relaxed">
+                  Join AIBC and get AI-powered content generation, video ideas, and brand storytelling tools that help you create consistent, on-brand content effortlessly.
+                </p>
+                <button
+                  onClick={() => onNavigate(ViewState.SIGNIN)}
+                  className="inline-flex items-center gap-2 px-8 py-4 bg-white text-black font-bold rounded-lg hover:bg-neutral-200 transition-colors text-lg group"
+                >
+                  Get Started Free
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+                <p className="text-sm text-white/50 mt-4">
+                  No credit card required • Start in seconds
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Tags */}
           {post.tags && post.tags.length > 0 && (
             <div className="mt-12 pt-8 border-t border-white/10">
@@ -282,7 +318,7 @@ const BlogPostView: React.FC<BlogPostViewProps> = ({ onNavigate, slug }) => {
         )}
       </main>
 
-      <Footer />
+      <Footer onNavigate={onNavigate} />
     </div>
   );
 };

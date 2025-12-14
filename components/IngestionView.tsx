@@ -96,6 +96,7 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
   } | null>(null);
   const [showRescanWarning, setShowRescanWarning] = useState(false);
   const [pendingDomain, setPendingDomain] = useState<string | null>(null);
+  const [showDeepScanModal, setShowDeepScanModal] = useState(false);
   
   const subscription = getUserSubscription();
   const canUseDeepScan = subscription.tier === SubscriptionTier.PRO || subscription.tier === SubscriptionTier.ENTERPRISE;
@@ -471,7 +472,7 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
             <button
               onClick={() => {
                 if (!canUseDeepScan) {
-                  onNavigate(ViewState.PRICING);
+                  setShowDeepScanModal(true);
                   return;
                 }
                 setSelectedScanType('deep');
@@ -582,6 +583,46 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
 
         </div>
       </main>
+
+      {/* Deep Scan Upgrade Modal */}
+      {showDeepScanModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+                <Lock className="w-6 h-6 text-purple-400" />
+              </div>
+            </div>
+            
+            <h3 className="text-xl font-semibold text-white text-center mb-2">
+              Deep Scan Unavailable
+            </h3>
+            
+            <p className="text-zinc-400 text-center mb-6 text-sm">
+              Deepscan is available for Pro, Business and Enterprise users only
+            </p>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeepScanModal(false)}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-white/10 bg-zinc-800/50 hover:bg-zinc-800 text-white text-sm font-medium transition-colors"
+              >
+                Go Back
+              </button>
+              <button
+                onClick={() => {
+                  setShowDeepScanModal(false);
+                  onNavigate(ViewState.PRICING);
+                }}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-sm font-medium transition-all shadow-lg shadow-purple-500/20"
+              >
+                Upgrade
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <Footer onNavigate={onNavigate} />
     </div>
   );
 };

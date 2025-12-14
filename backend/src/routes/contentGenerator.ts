@@ -4,7 +4,7 @@
 
 import express from 'express';
 import { generateBlogPost } from '../services/contentGeneratorService';
-import { ContentGenerationRequest } from '../../../types/seo';
+import { ContentGenerationRequest } from '../types/seo';
 
 const router = express.Router();
 

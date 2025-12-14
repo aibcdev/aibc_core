@@ -1,12 +1,32 @@
 /**
  * SEO Analytics Service - Track rankings, traffic, and performance
+ * Uses Supabase for persistent storage, falls back to in-memory if not configured
  */
 
-import { ContentPerformance, BlogPost } from '../../../types/seo';
+import { ContentPerformance, BlogPost } from '../types/seo';
 import { listBlogPosts } from './seoContentService';
+import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
 
-// In-memory storage (will migrate to database)
-const performanceStore: Map<string, ContentPerformance[]> = new Map();
+// In-memory storage (fallback if Supabase not configured)
+const performanceStore: Map<string, ContentPerformance> = new Map();
+const performanceByPostId: Map<string, ContentPerformance[]> = new Map();
+
+/**
+ * Convert database row to ContentPerformance
+ */
+function dbRowToPerformance(row: any): ContentPerformance {
+  return {
+    id: row.id,
+    post_id: row.post_id,
+    date: row.date,
+    organic_views: row.organic_views || 0,
+    organic_clicks: row.organic_clicks || 0,
+    avg_position: row.avg_position,
+    impressions: row.impressions || 0,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
 
 /**
  * Record content performance metrics
@@ -16,41 +36,95 @@ export async function recordPerformance(
   metrics: Partial<ContentPerformance>
 ): Promise<ContentPerformance> {
   const date = metrics.date || new Date().toISOString().split('T')[0];
-  const key = `${postId}_${date}`;
 
-  const existing = performanceStore.get(key);
-  const existingArray = performanceStore.get(postId) || [];
+  if (isSupabaseConfigured()) {
+    const supabase = getSupabaseClient();
+    if (!supabase) throw new Error('Supabase client not available');
 
-  if (existing) {
-    // Update existing
-    const updated: ContentPerformance = {
-      ...existing,
-      ...metrics,
-      date,
-      updated_at: new Date().toISOString(),
-    };
-    existingArray[existingArray.findIndex(p => p.id === existing.id)] = updated;
-    performanceStore.set(key, updated);
-    performanceStore.set(postId, existingArray);
-    return updated;
-  } else {
-    // Create new
-    const performance: ContentPerformance = {
-      id: `perf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    // Check if exists
+    const { data: existing } = await supabase
+      .from('seo_content_performance')
+      .select('*')
+      .eq('post_id', postId)
+      .eq('date', date)
+      .single();
+
+    const perfData = {
       post_id: postId,
       date,
-      organic_views: metrics.organic_views || 0,
-      organic_clicks: metrics.organic_clicks || 0,
-      avg_position: metrics.avg_position,
-      impressions: metrics.impressions || 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      organic_views: metrics.organic_views ?? existing?.organic_views ?? 0,
+      organic_clicks: metrics.organic_clicks ?? existing?.organic_clicks ?? 0,
+      avg_position: metrics.avg_position ?? existing?.avg_position ?? null,
+      impressions: metrics.impressions ?? existing?.impressions ?? 0,
     };
-    
-    existingArray.push(performance);
-    performanceStore.set(key, performance);
-    performanceStore.set(postId, existingArray);
-    return performance;
+
+    if (existing) {
+      // Update existing
+      const { data: updated, error } = await supabase
+        .from('seo_content_performance')
+        .update(perfData)
+        .eq('id', existing.id)
+        .select()
+        .single();
+
+      if (error) throw new Error(`Failed to update performance: ${error.message}`);
+      return dbRowToPerformance(updated);
+    } else {
+      // Create new
+      const { data: created, error } = await supabase
+        .from('seo_content_performance')
+        .insert(perfData)
+        .select()
+        .single();
+
+      if (error) throw new Error(`Failed to create performance: ${error.message}`);
+      return dbRowToPerformance(created);
+    }
+  } else {
+    // Fallback to in-memory
+    const key = `${postId}_${date}`;
+    const existing = performanceStore.get(key);
+    const existingArray = performanceByPostId.get(postId) || [];
+
+    if (existing) {
+      const updated: ContentPerformance = {
+        id: existing.id,
+        post_id: existing.post_id,
+        date,
+        organic_views: metrics.organic_views !== undefined ? metrics.organic_views : existing.organic_views,
+        organic_clicks: metrics.organic_clicks !== undefined ? metrics.organic_clicks : existing.organic_clicks,
+        avg_position: metrics.avg_position !== undefined ? metrics.avg_position : existing.avg_position,
+        impressions: metrics.impressions !== undefined ? metrics.impressions : existing.impressions,
+        created_at: existing.created_at,
+        updated_at: new Date().toISOString(),
+      };
+      const index = existingArray.findIndex(p => p.id === existing.id);
+      if (index !== -1) {
+        existingArray[index] = updated;
+      } else {
+        existingArray.push(updated);
+      }
+      performanceStore.set(key, updated);
+      performanceByPostId.set(postId, existingArray);
+      return updated;
+    } else {
+      const performance: ContentPerformance = {
+        id: `perf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        post_id: postId,
+        date,
+        organic_views: metrics.organic_views || 0,
+        organic_clicks: metrics.organic_clicks || 0,
+        avg_position: metrics.avg_position,
+        impressions: metrics.impressions || 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      existingArray.push(performance);
+      performanceStore.set(key, performance);
+      performanceByPostId.set(postId, existingArray);
+      return performance;
+    }
   }
 }
 
@@ -58,13 +132,33 @@ export async function recordPerformance(
  * Get performance for a post
  */
 export async function getPostPerformance(postId: string, days: number = 30): Promise<ContentPerformance[]> {
-  const performances = performanceStore.get(postId) || [];
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - days);
+  if (isSupabaseConfigured()) {
+    const supabase = getSupabaseClient();
+    if (!supabase) return [];
 
-  return performances
-    .filter(p => new Date(p.date) >= cutoffDate)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    const cutoffDateStr = cutoffDate.toISOString().split('T')[0];
+
+    const { data, error } = await supabase
+      .from('seo_content_performance')
+      .select('*')
+      .eq('post_id', postId)
+      .gte('date', cutoffDateStr)
+      .order('date', { ascending: false });
+
+    if (error || !data) return [];
+    return data.map(dbRowToPerformance);
+  } else {
+    // Fallback to in-memory
+    const performances = performanceByPostId.get(postId) || [];
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+
+    return performances
+      .filter(p => new Date(p.date) >= cutoffDate)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }
 }
 
 /**
@@ -81,46 +175,108 @@ export async function getAggregateAnalytics(days: number = 30): Promise<{
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - days);
 
-  let totalViews = 0;
-  let totalClicks = 0;
-  let totalImpressions = 0;
-  let totalPosition = 0;
-  let positionCount = 0;
-  const postPerformance: Record<string, { views: number; clicks: number }> = {};
+  if (isSupabaseConfigured()) {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return { totalViews: 0, totalClicks: 0, averagePosition: 0, totalImpressions: 0, topPerformingPosts: [] };
+    }
 
-  for (const post of allPosts.posts) {
-    const performances = await getPostPerformance(post.id, days);
-    
-    for (const perf of performances) {
-      totalViews += perf.organic_views;
-      totalClicks += perf.organic_clicks;
-      totalImpressions += perf.impressions;
-      
+    const cutoffDateStr = cutoffDate.toISOString().split('T')[0];
+    const postIds = allPosts.posts.map(p => p.id);
+
+    if (postIds.length === 0) {
+      return { totalViews: 0, totalClicks: 0, averagePosition: 0, totalImpressions: 0, topPerformingPosts: [] };
+    }
+
+    const { data, error } = await supabase
+      .from('seo_content_performance')
+      .select('*')
+      .in('post_id', postIds)
+      .gte('date', cutoffDateStr);
+
+    if (error || !data) {
+      return { totalViews: 0, totalClicks: 0, averagePosition: 0, totalImpressions: 0, topPerformingPosts: [] };
+    }
+
+    let totalViews = 0;
+    let totalClicks = 0;
+    let totalImpressions = 0;
+    let totalPosition = 0;
+    let positionCount = 0;
+    const postPerformance: Record<string, { views: number; clicks: number }> = {};
+
+    for (const perf of data) {
+      totalViews += perf.organic_views || 0;
+      totalClicks += perf.organic_clicks || 0;
+      totalImpressions += perf.impressions || 0;
+
       if (perf.avg_position) {
         totalPosition += perf.avg_position;
         positionCount++;
       }
 
-      if (!postPerformance[post.id]) {
-        postPerformance[post.id] = { views: 0, clicks: 0 };
+      if (!postPerformance[perf.post_id]) {
+        postPerformance[perf.post_id] = { views: 0, clicks: 0 };
       }
-      postPerformance[post.id].views += perf.organic_views;
-      postPerformance[post.id].clicks += perf.organic_clicks;
+      postPerformance[perf.post_id].views += perf.organic_views || 0;
+      postPerformance[perf.post_id].clicks += perf.organic_clicks || 0;
     }
+
+    const topPerformingPosts = Object.entries(postPerformance)
+      .map(([postId, stats]) => ({ postId, ...stats }))
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 10);
+
+    return {
+      totalViews,
+      totalClicks,
+      averagePosition: positionCount > 0 ? totalPosition / positionCount : 0,
+      totalImpressions,
+      topPerformingPosts,
+    };
+  } else {
+    // Fallback to in-memory
+    let totalViews = 0;
+    let totalClicks = 0;
+    let totalImpressions = 0;
+    let totalPosition = 0;
+    let positionCount = 0;
+    const postPerformance: Record<string, { views: number; clicks: number }> = {};
+
+    for (const post of allPosts.posts) {
+      const performances = await getPostPerformance(post.id, days);
+      
+      for (const perf of performances) {
+        totalViews += perf.organic_views;
+        totalClicks += perf.organic_clicks;
+        totalImpressions += perf.impressions;
+        
+        if (perf.avg_position) {
+          totalPosition += perf.avg_position;
+          positionCount++;
+        }
+
+        if (!postPerformance[post.id]) {
+          postPerformance[post.id] = { views: 0, clicks: 0 };
+        }
+        postPerformance[post.id].views += perf.organic_views;
+        postPerformance[post.id].clicks += perf.organic_clicks;
+      }
+    }
+
+    const topPerformingPosts = Object.entries(postPerformance)
+      .map(([postId, stats]) => ({ postId, ...stats }))
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 10);
+
+    return {
+      totalViews,
+      totalClicks,
+      averagePosition: positionCount > 0 ? totalPosition / positionCount : 0,
+      totalImpressions,
+      topPerformingPosts,
+    };
   }
-
-  const topPerformingPosts = Object.entries(postPerformance)
-    .map(([postId, stats]) => ({ postId, ...stats }))
-    .sort((a, b) => b.views - a.views)
-    .slice(0, 10);
-
-  return {
-    totalViews,
-    totalClicks,
-    averagePosition: positionCount > 0 ? totalPosition / positionCount : 0,
-    totalImpressions,
-    topPerformingPosts,
-  };
 }
 
 /**
@@ -173,4 +329,3 @@ export async function getPostPerformanceSummary(postId: string): Promise<{
     trend,
   };
 }
-

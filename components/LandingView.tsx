@@ -554,7 +554,7 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
           </div>
         </section>
 
-        <Footer />
+        <Footer onNavigate={onNavigate} />
       </main>
 
       {/* How It Works Modal */}

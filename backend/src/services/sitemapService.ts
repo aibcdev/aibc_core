@@ -3,7 +3,7 @@
  */
 
 import { listBlogPosts } from './seoContentService';
-import { BlogPost } from '../../../types/seo';
+import { BlogPost } from '../types/seo';
 
 export interface SitemapUrl {
   loc: string;

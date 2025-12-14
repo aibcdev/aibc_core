@@ -55,23 +55,25 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
       if (selectedTag) params.append('tag', selectedTag);
       if (searchQuery) params.append('search', searchQuery);
 
-      const response = await fetch(`${API_URL}/api/blog?${params}`);
+      const requestUrl = `${API_URL}/api/blog?${params}`;
+      const response = await fetch(requestUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       
       if (!response.ok) {
-        console.error('Blog API error:', response.status, response.statusText);
+        const errorText = await response.text().catch(() => 'Could not read error');
+        console.error('Blog API error:', response.status, response.statusText, errorText);
         setFeaturedPost(null);
         setPosts([]);
         setTotalPages(0);
+        setLoading(false);
         return;
       }
       
       const data: BlogListResponse = await response.json();
-      
-      console.log('Blog posts fetched:', {
-        total: data.total,
-        postsCount: data.posts?.length || 0,
-        firstPost: data.posts?.[0]?.title || 'none',
-      });
       
       // Set featured post (first post) and regular posts
       if (data.posts && data.posts.length > 0) {
@@ -84,6 +86,9 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
       setTotalPages(data.totalPages || 0);
     } catch (error) {
       console.error('Error fetching blog posts:', error);
+      setFeaturedPost(null);
+      setPosts([]);
+      setTotalPages(0);
     } finally {
       setLoading(false);
     }
@@ -237,6 +242,8 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
                 </div>
                 <div className="p-8 md:p-12 flex flex-col justify-center">
                   <div className="flex items-center gap-3 text-sm text-neutral-500 mb-4">
+                    {featuredPost.author && <span className="text-white font-medium">{featuredPost.author}</span>}
+                    {featuredPost.author && featuredPost.published_at && <span className="w-1 h-1 rounded-full bg-neutral-600"></span>}
                     {featuredPost.published_at && <span>{formatDate(featuredPost.published_at)}</span>}
                     {featuredPost.published_at && featuredPost.reading_time && <span className="w-1 h-1 rounded-full bg-neutral-600"></span>}
                     {featuredPost.reading_time && <span>{featuredPost.reading_time} min read</span>}
@@ -309,6 +316,10 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
                     )}
                   </a>
                   <div className="flex items-center gap-3 text-xs text-neutral-500 mb-3">
+                    {post.author && <span className="text-white font-medium">{post.author}</span>}
+                    {post.author && (post.category || post.published_at || post.reading_time) && (
+                      <span className="w-1 h-1 rounded-full bg-neutral-700"></span>
+                    )}
                     {post.category && (
                       <>
                         <span className={`font-medium ${getCategoryColor(post.category)}`}>
@@ -383,7 +394,7 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
         </div>
       </section>
 
-      <Footer />
+      <Footer onNavigate={onNavigate} />
     </div>
   );
 };

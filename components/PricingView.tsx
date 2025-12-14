@@ -109,7 +109,7 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
       popular: false
     },
     {
-      name: 'Standard',
+      name: 'Pro',
       price: 39,
       tagline: 'Weekly content without hiring a content marketer.',
       seats: 1,
@@ -126,7 +126,7 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
         'Light content insights: topics, tone, "you vs industry" view',
         'Email support'
       ],
-      buttonText: 'Get Standard',
+      buttonText: 'Get Pro',
       buttonStyle: 'bg-white text-black hover:bg-gray-100',
       current: false,
       popular: false
@@ -138,7 +138,7 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
       seats: 3,
       credits: 600,
       features: [
-        'Everything in Standard, plus:',
+        'Everything in Pro, plus:',
         '600 credits / month for a full slate of content, e.g.:',
         '  150–200 short posts',
         '  20+ long-form articles / newsletters',
@@ -216,8 +216,8 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
       answer: 'Free lets you run your first digital footprint scan, see your brand analysis, and generate a small batch of content. It\'s there so you can see how close AIBC gets to your voice before you pay.'
     },
     {
-      question: 'What\'s the real difference between Standard and Business?',
-      answer: 'Standard is for solo operators who mainly need text. Business is for brands and teams who want a full content slate — text, audio scripts, and video packages — plus competitor insights and multi-brand workspaces.'
+      question: 'What\'s the real difference between Pro and Business?',
+      answer: 'Pro is for solo operators who mainly need text. Business is for brands and teams who want a full content slate — text, audio scripts, and video packages — plus competitor insights and multi-brand workspaces.'
     },
     {
       question: 'What does "fair-use unlimited" mean on the Lifetime Deal?',
@@ -401,9 +401,9 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
                         onNavigate(ViewState.DASHBOARD);
                         setLoading(null);
                       } else {
-                        // Standard or Business: find Stripe price
+                        // Pro or Business: find Stripe price
                         const tierMap: Record<string, string> = {
-                          'Standard': 'standard',
+                          'Pro': 'standard',
                           'Business': 'business',
                         };
                         const tierKey = tierMap[plan.name] || plan.name.toLowerCase();
@@ -546,7 +546,7 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
               </div>
             </div>
             <p className="text-xs text-white/40 mt-4 text-center">
-              Pro tip: Standard plan (150 credits) = ~6 short videos or 150+ posts per month
+              Pro tip: Pro plan (150 credits) = ~6 short videos or 150+ posts per month
             </p>
             <p className="text-sm text-white/60 mt-6 text-center">
               You generate content inside AIBC, then copy/paste it into your channels. No social logins, no posting automations.
@@ -681,7 +681,7 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
           </div>
         </div>
       </main>
-      <Footer />
+      <Footer onNavigate={onNavigate} />
     </div>
   );
 };

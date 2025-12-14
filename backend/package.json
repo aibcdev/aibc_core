@@ -8,13 +8,15 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "install-playwright": "npx playwright install chromium",
-    "postinstall": "npx playwright install chromium || true"
+    "postinstall": "npx playwright install chromium || true",
+    "init-keywords": "tsx scripts/initialize-keywords.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.87.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",

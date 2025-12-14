@@ -2,8 +2,8 @@
  * Internal Linking Service - Automatic contextual linking between related posts
  */
 
-import { listBlogPosts, getBlogPostById } from './seoContentService';
-import { BlogPost } from '../../../types/seo';
+import { listBlogPosts, getBlogPostById, updateBlogPost } from './seoContentService';
+import { BlogPost } from '../types/seo';
 
 /**
  * Extract keywords from content

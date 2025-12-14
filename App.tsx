@@ -14,6 +14,8 @@ import AdminView from './components/AdminView';
 import InboxView from './components/InboxView';
 import BlogView from './components/BlogView';
 import BlogPostView from './components/BlogPostView';
+import PrivacyPolicyView from './components/PrivacyPolicyView';
+import TermsOfServiceView from './components/TermsOfServiceView';
 import { ViewState } from './types';
 import { supabase, isSupabaseConfigured } from './services/supabaseClient';
 
@@ -40,6 +42,8 @@ const URL_TO_VIEW: Record<string, { view: ViewState; page?: string }> = {
   '/inbox': { view: ViewState.DASHBOARD, page: 'inbox' },
   '/admin': { view: ViewState.ADMIN },
   '/blog': { view: ViewState.BLOG },
+  '/privacy-policy': { view: ViewState.PRIVACY_POLICY },
+  '/terms-of-service': { view: ViewState.TERMS_OF_SERVICE },
 };
 
 // Page to URL mapping (for navigation)
@@ -92,8 +96,9 @@ function App() {
         // Parse URL to see if we should go to a specific page
         const urlMapping = getViewFromURL();
         
-        // Handle blog routes (public, no auth needed)
-        if (urlMapping.view === ViewState.BLOG || urlMapping.view === ViewState.BLOG_POST) {
+        // Handle public routes (no auth needed)
+        if (urlMapping.view === ViewState.BLOG || urlMapping.view === ViewState.BLOG_POST ||
+            urlMapping.view === ViewState.PRIVACY_POLICY || urlMapping.view === ViewState.TERMS_OF_SERVICE) {
           setView(urlMapping.view);
           if (urlMapping.view === ViewState.BLOG_POST && 'slug' in urlMapping) {
             setBlogSlug((urlMapping as any).slug);
@@ -141,6 +146,8 @@ function App() {
             if (urlMapping.view === ViewState.BLOG_POST && 'slug' in urlMapping) {
               setBlogSlug((urlMapping as any).slug);
             }
+          } else if (urlMapping.view === ViewState.PRIVACY_POLICY || urlMapping.view === ViewState.TERMS_OF_SERVICE) {
+            setView(urlMapping.view);
           } else if (urlMapping.view === ViewState.INGESTION) {
             // Only go to ingestion if explicitly navigating to /scan
             setView(ViewState.INGESTION);
@@ -160,6 +167,8 @@ function App() {
             if (urlMapping.view === ViewState.BLOG_POST && 'slug' in urlMapping) {
               setBlogSlug((urlMapping as any).slug);
             }
+          } else if (urlMapping.view === ViewState.PRIVACY_POLICY || urlMapping.view === ViewState.TERMS_OF_SERVICE) {
+            setView(urlMapping.view);
           } else if (urlMapping.view === ViewState.LOGIN) {
             setView(ViewState.LOGIN);
           } else if (urlMapping.view === ViewState.SIGNIN) {
@@ -339,6 +348,8 @@ function App() {
       {currentView === ViewState.INBOX && <InboxView onNavigate={navigate} />}
       {currentView === ViewState.BLOG && <BlogView onNavigate={navigate} />}
       {currentView === ViewState.BLOG_POST && <BlogPostView onNavigate={navigate} slug={blogSlug} />}
+      {currentView === ViewState.PRIVACY_POLICY && <PrivacyPolicyView onNavigate={navigate} />}
+      {currentView === ViewState.TERMS_OF_SERVICE && <TermsOfServiceView onNavigate={navigate} />}
     </>
   );
 }

@@ -1,5 +1,5 @@
 # Backend Dockerfile for Cloud Run
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -43,6 +43,7 @@ RUN npm prune --production --no-audit
 # Set environment variables
 ENV NODE_ENV=production
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV PORT=8080
 
 # Expose port
 EXPOSE 8080

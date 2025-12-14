@@ -150,7 +150,7 @@ const AdminView: React.FC<NavProps> = ({ onNavigate }) => {
   });
 
   const getTierLimit = (tier: SubscriptionTier): number => {
-    // Free: 1, Standard: 1, Business: 3, Enterprise: 10+
+    // Free: 1, Pro: 1, Business: 3, Enterprise: 10+
     const limits: Record<SubscriptionTier, number> = {
       [SubscriptionTier.FREE]: 1,
       [SubscriptionTier.PRO]: 1,

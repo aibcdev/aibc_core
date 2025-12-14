@@ -395,7 +395,7 @@ const OnboardingView: React.FC<NavProps> = ({ onNavigate }) => {
             </div>
           </div>
 
-          <Footer />
+          <Footer onNavigate={onNavigate} />
         </main>
       )}
     </div>

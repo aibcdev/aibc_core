@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integrations - AIBC Help Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .article-content {
+            max-width: 800px;
+        }
+    </style>
+</head>
+<body class="bg-[#050505] text-zinc-300 antialiased min-h-screen">
+    <!-- Navigation -->
+    <header class="fixed top-0 w-full z-50 border-b border-white/10 bg-[#050505]/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-3">
+                <div class="relative w-8 h-8 flex items-center justify-center">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-8 h-8 text-white">
+                        <circle cx="12" cy="12" r="10" stroke-opacity="0.5"></circle>
+                        <circle cx="12" cy="12" r="6"></circle>
+                        <circle cx="12" cy="12" r="2" fill="white"></circle>
+                    </svg>
+                </div>
+                <span class="text-xl font-bold tracking-tight text-white">AIBC</span>
+            </a>
+            <nav class="hidden md:flex items-center gap-8">
+                <a href="index.html" class="text-sm font-medium text-zinc-400 hover:text-white transition-colors">Help Center</a>
+                <a href="/dashboard" class="text-sm font-medium text-white hover:text-zinc-300 transition-colors">Dashboard</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="pt-32 pb-24 px-6">
+        <div class="max-w-4xl mx-auto">
+            <!-- Breadcrumb -->
+            <div class="flex items-center gap-2 text-sm text-zinc-500 mb-8">
+                <a href="index.html" class="hover:text-white transition-colors">Help Center</a>
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                <span>Integrations</span>
+            </div>
+
+            <!-- Header -->
+            <div class="mb-12">
+                <div class="w-12 h-12 rounded-lg bg-zinc-800 flex items-center justify-center mb-6">
+                    <i data-lucide="puzzle" class="w-6 h-6 text-white"></i>
+                </div>
+                <h1 class="text-4xl font-semibold text-white mb-4 tracking-tight">Integrations</h1>
+                <p class="text-lg text-zinc-400">Connect AIBC to your social channels, CMS, and marketing tools.</p>
+            </div>
+
+            <!-- Articles List -->
+            <div class="space-y-4 mb-16">
+                <a href="#social-channels" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Connecting Social Media Channels</h3>
+                    <p class="text-zinc-500">Connect Twitter/X, LinkedIn, Instagram, Facebook, TikTok, and YouTube to publish content directly from AIBC.</p>
+                </a>
+
+                <a href="#cms-integrations" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">CMS and Blog Integrations</h3>
+                    <p class="text-zinc-500">Connect WordPress, Medium, and other CMS platforms to publish blog posts and articles.</p>
+                </a>
+
+                <a href="#marketing-tools" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Marketing Tool Integrations</h3>
+                    <p class="text-zinc-500">Connect Mailchimp, Google Analytics, Zapier, and other marketing tools to streamline your workflow.</p>
+                </a>
+
+                <a href="#managing-integrations" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Managing Your Integrations</h3>
+                    <p class="text-zinc-500">Learn how to verify connections, sync status, disconnect platforms, and troubleshoot integration issues.</p>
+                </a>
+            </div>
+
+            <!-- Social Channels Article -->
+            <article id="social-channels" class="article-content mb-16">
+                <h2 class="text-3xl font-semibold text-white mb-6">Connecting Social Media Channels</h2>
+                
+                <div class="prose prose-invert max-w-none">
+                    <p class="text-lg text-zinc-300 mb-6">
+                        Connect your social media accounts to publish AIBC-generated content directly to your platforms. Once connected, you can schedule and publish content without leaving AIBC.
+                    </p>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">Supported Social Platforms</h3>
+                    <div class="grid md:grid-cols-2 gap-4 mb-8">
+                        <div class="glass-panel rounded-lg p-6">
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="w-12 h-12 rounded-lg bg-black flex items-center justify-center">
+                                    <span class="text-xl font-bold text-white">𝕏</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-semibold">Twitter/X</h4>
+                                    <p class="text-zinc-500 text-sm">Posts, threads, images</p>
+                                </div>
+                            </div>
+                            <p class="text-zinc-400 text-sm mb-3">Connect your Twitter/X account to publish tweets, threads, and images directly from AIBC.</p>
+                            <a href="#" class="text-orange-500 text-sm hover:text-orange-400">Learn how to connect →</a>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="w-12 h-12 rounded-lg bg-blue-600 flex items-center justify-center">
+                                    <i data-lucide="linkedin" class="w-6 h-6 text-white"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-semibold">LinkedIn</h4>
+                                    <p class="text-zinc-500 text-sm">Posts, articles, images</p>
+                                </div>
+                            </div>
+                            <p class="text-zinc-400 text-sm mb-3">Publish professional content to LinkedIn, including posts, articles, and carousel posts.</p>
+                            <a href="#" class="text-orange-500 text-sm hover:text-orange-400">Learn how to connect →</a>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 flex items-center justify-center">
+                                    <i data-lucide="instagram" class="w-6 h-6 text-white"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-semibold">Instagram</h4>
+                                    <p class="text-zinc-500 text-sm">Posts, Reels, Stories, Carousels</p>
+                                </div>
+                            </div>
+                            <p class="text-zinc-400 text-sm mb-3">Connect Instagram Business account to publish feed posts, Reels, Stories, and carousels.</p>
+                            <a href="#" class="text-orange-500 text-sm hover:text-orange-400">Learn how to connect →</a>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="w-12 h-12 rounded-lg bg-blue-500 flex items-center justify-center">
+                                    <span class="text-xl font-bold text-white">f</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-semibold">Facebook</h4>
+                                    <p class="text-zinc-500 text-sm">Page posts, images, videos</p>
+                                </div>
+                            </div>
+                            <p class="text-zinc-400 text-sm mb-3">Connect Facebook Business Page to publish posts, images, and videos to your page.</p>
+                            <a href="#" class="text-orange-500 text-sm hover:text-orange-400">Learn how to connect →</a>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="w-12 h-12 rounded-lg bg-black flex items-center justify-center">
+                                    <i data-lucide="music" class="w-6 h-6 text-white"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-semibold">TikTok</h4>
+                                    <p class="text-zinc-500 text-sm">Short-form videos</p>
+                                </div>
+                            </div>
+                            <p class="text-zinc-400 text-sm mb-3">Connect TikTok account to publish short-form video content directly from AIBC.</p>
+                            <a href="#" class="text-orange-500 text-sm hover:text-orange-400">Learn how to connect →</a>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="w-12 h-12 rounded-lg bg-red-600 flex items-center justify-center">
+                                    <i data-lucide="youtube" class="w-6 h-6 text-white"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-semibold">YouTube</h4>
+                                    <p class="text-zinc-500 text-sm">Videos, Shorts, descriptions</p>
+                                </div>
+                            </div>
+                            <p class="text-zinc-400 text-sm mb-3">Connect YouTube channel to upload videos, Shorts, and manage video descriptions.</p>
+                            <a href="#" class="text-orange-500 text-sm hover:text-orange-400">Learn how to connect →</a>
+                        </div>
+                    </div>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">How to Connect a Platform</h3>
+                    <ol class="list-decimal list-inside text-zinc-400 mb-6 space-y-3 ml-4">
+                        <li class="mb-2">Navigate to <strong class="text-white">Integrations</strong> page from your dashboard</li>
+                        <li class="mb-2">Find the platform you want to connect (e.g., Instagram, LinkedIn)</li>
+                        <li class="mb-2">Click <strong class="text-white">"Connect"</strong> button</li>
+                        <li class="mb-2">Enter your account handle or username (e.g., @yourbrand)</li>
+                        <li class="mb-2">Click <strong class="text-white">"Verify"</strong> - AIBC will verify the account exists</li>
+                        <li class="mb-2">Authorize AIBC access (you'll be redirected to the platform for OAuth)</li>
+                        <li class="mb-2">Grant necessary permissions (publishing, reading content, etc.)</li>
+                        <li class="mb-2">Connection is established - you'll see "Connected" status</li>
+                    </ol>
+
+                    <div class="glass-panel rounded-xl p-6 my-8 border-l-4 border-orange-500">
+                        <div class="flex items-start gap-4">
+                            <i data-lucide="shield" class="w-6 h-6 text-orange-500 flex-shrink-0 mt-1"></i>
+                            <div>
+                                <h4 class="text-white font-semibold mb-2">Security & Permissions</h4>
+                                <p class="text-zinc-400 mb-2">AIBC only requests the minimum permissions needed to publish content. We never post without your explicit approval (unless auto-publish is enabled in your settings).</p>
+                                <p class="text-zinc-400">You can revoke access at any time from the Integrations page or from the platform's app settings.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- CMS Integrations Article -->
+            <article id="cms-integrations" class="article-content mb-16">
+                <h2 class="text-3xl font-semibold text-white mb-6">CMS and Blog Integrations</h2>
+                
+                <div class="prose prose-invert max-w-none">
+                    <p class="text-lg text-zinc-300 mb-6">
+                        Connect your content management system or blog platform to publish AIBC-generated articles and blog posts directly to your website.
+                    </p>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">Supported CMS Platforms</h3>
+                    <div class="space-y-4 mb-8">
+                        <div class="glass-panel rounded-lg p-6">
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="w-12 h-12 rounded-lg bg-blue-600 flex items-center justify-center">
+                                    <i data-lucide="globe" class="w-6 h-6 text-white"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-semibold">WordPress</h4>
+                                    <p class="text-zinc-500 text-sm">Self-hosted and WordPress.com</p>
+                                </div>
+                            </div>
+                            <p class="text-zinc-400 text-sm mb-3">Connect your WordPress site to publish blog posts directly. AIBC can create drafts or publish immediately based on your settings.</p>
+                            <p class="text-zinc-500 text-xs">Requires: WordPress REST API access, Admin or Editor permissions</p>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="w-12 h-12 rounded-lg bg-zinc-800 flex items-center justify-center">
+                                    <i data-lucide="file-text" class="w-6 h-6 text-white"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-semibold">Medium</h4>
+                                    <p class="text-zinc-500 text-sm">Medium.com publications</p>
+                                </div>
+                            </div>
+                            <p class="text-zinc-400 text-sm mb-3">Publish articles to your Medium publication or personal profile directly from AIBC.</p>
+                            <p class="text-zinc-500 text-xs">Requires: Medium API access, publication permissions</p>
+                        </div>
+                    </div>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">How CMS Integration Works</h3>
+                    <p class="text-zinc-400 mb-4">When you connect a CMS:</p>
+                    <ul class="list-disc list-inside text-zinc-400 mb-6 space-y-2 ml-4">
+                        <li>AIBC can create blog posts and articles in your CMS</li>
+                        <li>Content is formatted according to your CMS requirements</li>
+                        <li>You can publish immediately or save as drafts</li>
+                        <li>Images and media are uploaded to your CMS media library</li>
+                        <li>SEO metadata is included automatically</li>
+                    </ul>
+                </div>
+            </article>
+
+            <!-- Marketing Tools Article -->
+            <article id="marketing-tools" class="article-content mb-16">
+                <h2 class="text-3xl font-semibold text-white mb-6">Marketing Tool Integrations</h2>
+                
+                <div class="prose prose-invert max-w-none">
+                    <p class="text-lg text-zinc-300 mb-6">
+                        Connect AIBC to your marketing stack to streamline workflows, track performance, and automate content distribution.
+                    </p>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">Available Marketing Integrations</h3>
+                    <div class="grid md:grid-cols-2 gap-4 mb-8">
+                        <div class="glass-panel rounded-lg p-6">
+                            <i data-lucide="mail" class="w-6 h-6 text-orange-500 mb-3"></i>
+                            <h4 class="text-white font-semibold mb-2">Mailchimp</h4>
+                            <p class="text-zinc-400 text-sm">Send AIBC-generated email newsletters to your Mailchimp lists automatically.</p>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <i data-lucide="bar-chart-2" class="w-6 h-6 text-orange-500 mb-3"></i>
+                            <h4 class="text-white font-semibold mb-2">Google Analytics</h4>
+                            <p class="text-zinc-400 text-sm">Track content performance and website traffic from AIBC-generated content.</p>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <i data-lucide="zap" class="w-6 h-6 text-orange-500 mb-3"></i>
+                            <h4 class="text-white font-semibold mb-2">Zapier</h4>
+                            <p class="text-zinc-400 text-sm">Connect AIBC to 5000+ apps via Zapier for advanced automation workflows.</p>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <i data-lucide="hard-drive" class="w-6 h-6 text-orange-500 mb-3"></i>
+                            <h4 class="text-white font-semibold mb-2">Google Drive</h4>
+                            <p class="text-zinc-400 text-sm">Save AIBC-generated content directly to Google Drive for backup and collaboration.</p>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Back to top / Next section -->
+            <div class="flex items-center justify-between mt-16 pt-8 border-t border-white/10">
+                <a href="index.html" class="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    Back to Help Center
+                </a>
+                <a href="team-management.html" class="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors">
+                    Next: Team Management
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
+

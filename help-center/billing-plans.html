@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billing & Plans - AIBC Help Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .article-content {
+            max-width: 800px;
+        }
+    </style>
+</head>
+<body class="bg-[#050505] text-zinc-300 antialiased min-h-screen">
+    <!-- Navigation -->
+    <header class="fixed top-0 w-full z-50 border-b border-white/10 bg-[#050505]/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-3">
+                <div class="relative w-8 h-8 flex items-center justify-center">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-8 h-8 text-white">
+                        <circle cx="12" cy="12" r="10" stroke-opacity="0.5"></circle>
+                        <circle cx="12" cy="12" r="6"></circle>
+                        <circle cx="12" cy="12" r="2" fill="white"></circle>
+                    </svg>
+                </div>
+                <span class="text-xl font-bold tracking-tight text-white">AIBC</span>
+            </a>
+            <nav class="hidden md:flex items-center gap-8">
+                <a href="index.html" class="text-sm font-medium text-zinc-400 hover:text-white transition-colors">Help Center</a>
+                <a href="/dashboard" class="text-sm font-medium text-white hover:text-zinc-300 transition-colors">Dashboard</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="pt-32 pb-24 px-6">
+        <div class="max-w-4xl mx-auto">
+            <!-- Breadcrumb -->
+            <div class="flex items-center gap-2 text-sm text-zinc-500 mb-8">
+                <a href="index.html" class="hover:text-white transition-colors">Help Center</a>
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                <span>Billing & Plans</span>
+            </div>
+
+            <!-- Header -->
+            <div class="mb-12">
+                <div class="w-12 h-12 rounded-lg bg-zinc-800 flex items-center justify-center mb-6">
+                    <i data-lucide="credit-card" class="w-6 h-6 text-white"></i>
+                </div>
+                <h1 class="text-4xl font-semibold text-white mb-4 tracking-tight">Billing & Plans</h1>
+                <p class="text-lg text-zinc-400">Understand credit systems, scaling pricing, and managing your subscriptions.</p>
+            </div>
+
+            <!-- Articles List -->
+            <div class="space-y-4 mb-16">
+                <a href="#credit-system" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Understanding the Credit System</h3>
+                    <p class="text-zinc-500">Learn how AIBC credits work for Production Room features like image, audio, and video generation.</p>
+                </a>
+
+                <a href="#pricing-tiers" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Pricing Tiers and Features</h3>
+                    <p class="text-zinc-500">Compare Free, Pro, and Enterprise tiers to find the right plan for your content needs.</p>
+                </a>
+
+                <a href="#scaling-pricing" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Scaling Your Pricing</h3>
+                    <p class="text-zinc-500">How pricing scales with usage, add-ons, and when to upgrade your plan.</p>
+                </a>
+
+                <a href="#managing-subscription" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Managing Your Subscription</h3>
+                    <p class="text-zinc-500">Update payment methods, view invoices, change plans, and cancel your subscription.</p>
+                </a>
+            </div>
+
+            <!-- Credit System Article -->
+            <article id="credit-system" class="article-content mb-16">
+                <h2 class="text-3xl font-semibold text-white mb-6">Understanding the Credit System</h2>
+                
+                <div class="prose prose-invert max-w-none">
+                    <p class="text-lg text-zinc-300 mb-6">
+                        AIBC uses a credit system for Production Room features - AI-generated images, audio, and video. Regular content generation, Brand Scans, and most features don't use credits.
+                    </p>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">What Uses Credits</h3>
+                    <div class="space-y-4 mb-8">
+                        <div class="glass-panel rounded-lg p-6">
+                            <div class="flex items-start justify-between mb-3">
+                                <div>
+                                    <h4 class="text-white font-semibold mb-1 flex items-center gap-2">
+                                        <i data-lucide="image" class="w-5 h-5 text-orange-500"></i>
+                                        Image Generation
+                                    </h4>
+                                    <p class="text-zinc-400 text-sm">Generate AI images for social media, banners, graphics</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-white font-semibold">5-20 credits</p>
+                                    <p class="text-zinc-500 text-xs">per image</p>
+                                </div>
+                            </div>
+                            <p class="text-zinc-500 text-xs mt-2">Cost varies by complexity: Short/Simple (~5), Mid/Moderate (~10), Long/Complex (~20)</p>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <div class="flex items-start justify-between mb-3">
+                                <div>
+                                    <h4 class="text-white font-semibold mb-1 flex items-center gap-2">
+                                        <i data-lucide="mic" class="w-5 h-5 text-orange-500"></i>
+                                        Audio Generation
+                                    </h4>
+                                    <p class="text-zinc-400 text-sm">Create podcast intros, outros, background music</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-white font-semibold">15-50 credits</p>
+                                    <p class="text-zinc-500 text-xs">per audio</p>
+                                </div>
+                            </div>
+                            <p class="text-zinc-500 text-xs mt-2">Enterprise tier only. Cost varies by length: Short (~15), Mid (~30), Long (~50)</p>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <div class="flex items-start justify-between mb-3">
+                                <div>
+                                    <h4 class="text-white font-semibold mb-1 flex items-center gap-2">
+                                        <i data-lucide="video" class="w-5 h-5 text-orange-500"></i>
+                                        Video Generation
+                                    </h4>
+                                    <p class="text-zinc-400 text-sm">Generate videos from shorts to long-form content</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-white font-semibold">25-100 credits</p>
+                                    <p class="text-zinc-500 text-xs">per video</p>
+                                </div>
+                            </div>
+                            <p class="text-zinc-500 text-xs mt-2">Enterprise tier only. Cost varies by length: Short (~25), Mid (~50), Long (~100)</p>
+                        </div>
+                    </div>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">Monthly Credit Allowances</h3>
+                    <div class="grid md:grid-cols-3 gap-4 mb-8">
+                        <div class="glass-panel rounded-lg p-6 text-center">
+                            <h4 class="text-white font-semibold mb-2">Free Tier</h4>
+                            <p class="text-3xl font-bold text-orange-500 mb-2">0</p>
+                            <p class="text-zinc-500 text-sm">No Production Room access</p>
+                        </div>
+                        <div class="glass-panel rounded-lg p-6 text-center border-2 border-orange-500/50">
+                            <h4 class="text-white font-semibold mb-2">Pro Tier</h4>
+                            <p class="text-3xl font-bold text-orange-500 mb-2">100</p>
+                            <p class="text-zinc-500 text-sm">Image generation only</p>
+                        </div>
+                        <div class="glass-panel rounded-lg p-6 text-center">
+                            <h4 class="text-white font-semibold mb-2">Enterprise</h4>
+                            <p class="text-3xl font-bold text-orange-500 mb-2">500</p>
+                            <p class="text-zinc-500 text-sm">All Production Room features</p>
+                        </div>
+                    </div>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">What Doesn't Use Credits</h3>
+                    <div class="glass-panel rounded-lg p-6 mb-8">
+                        <ul class="space-y-2 text-zinc-400">
+                            <li class="flex items-center gap-2">
+                                <i data-lucide="check" class="w-4 h-4 text-green-500"></i>
+                                <span>Regular content generation (text posts, blogs, emails)</span>
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <i data-lucide="check" class="w-4 h-4 text-green-500"></i>
+                                <span>Standard Brand Scans</span>
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <i data-lucide="check" class="w-4 h-4 text-green-500"></i>
+                                <span>Content editing and regeneration (text content)</span>
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <i data-lucide="check" class="w-4 h-4 text-green-500"></i>
+                                <span>Platform integrations and publishing</span>
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <i data-lucide="check" class="w-4 h-4 text-green-500"></i>
+                                <span>Analytics and reporting</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="glass-panel rounded-xl p-6 my-8 border-l-4 border-orange-500">
+                        <div class="flex items-start gap-4">
+                            <i data-lucide="lightbulb" class="w-6 h-6 text-orange-500 flex-shrink-0 mt-1"></i>
+                            <div>
+                                <h4 class="text-white font-semibold mb-2">Managing Your Credits</h4>
+                                <p class="text-zinc-400 mb-2">Check your credit balance in the Dashboard or Production Room. Credits reset monthly on your billing date. You can purchase additional credit packs if you need more.</p>
+                                <p class="text-zinc-400">Pro tip: Use simpler styles when possible to conserve credits for important projects.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Pricing Tiers Article -->
+            <article id="pricing-tiers" class="article-content mb-16">
+                <h2 class="text-3xl font-semibold text-white mb-6">Pricing Tiers and Features</h2>
+                
+                <div class="prose prose-invert max-w-none">
+                    <p class="text-lg text-zinc-300 mb-6">
+                        AIBC offers three tiers designed for different content needs: Free for getting started, Pro for regular content creators, and Enterprise for agencies and high-volume users.
+                    </p>
+
+                    <div class="overflow-x-auto mb-8">
+                        <table class="w-full border-collapse">
+                            <thead>
+                                <tr class="border-b border-white/10">
+                                    <th class="text-left py-4 px-4 text-white font-semibold">Feature</th>
+                                    <th class="text-center py-4 px-4 text-white font-semibold">Free</th>
+                                    <th class="text-center py-4 px-4 text-white font-semibold">Pro</th>
+                                    <th class="text-center py-4 px-4 text-white font-semibold">Enterprise</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-zinc-400">
+                                <tr class="border-b border-white/5">
+                                    <td class="py-4 px-4">Monthly Price</td>
+                                    <td class="text-center py-4 px-4">$0</td>
+                                    <td class="text-center py-4 px-4">$49</td>
+                                    <td class="text-center py-4 px-4">$149</td>
+                                </tr>
+                                <tr class="border-b border-white/5">
+                                    <td class="py-4 px-4">Content Generation (per week)</td>
+                                    <td class="text-center py-4 px-4">10 pieces</td>
+                                    <td class="text-center py-4 px-4">50 pieces</td>
+                                    <td class="text-center py-4 px-4">Unlimited</td>
+                                </tr>
+                                <tr class="border-b border-white/5">
+                                    <td class="py-4 px-4">Brand Scans (Standard)</td>
+                                    <td class="text-center py-4 px-4">1/month</td>
+                                    <td class="text-center py-4 px-4">3/month</td>
+                                    <td class="text-center py-4 px-4">Unlimited</td>
+                                </tr>
+                                <tr class="border-b border-white/5">
+                                    <td class="py-4 px-4">Brand Scans (Deep)</td>
+                                    <td class="text-center py-4 px-4">—</td>
+                                    <td class="text-center py-4 px-4">1/month</td>
+                                    <td class="text-center py-4 px-4">5/month</td>
+                                </tr>
+                                <tr class="border-b border-white/5">
+                                    <td class="py-4 px-4">Monthly Credits</td>
+                                    <td class="text-center py-4 px-4">0</td>
+                                    <td class="text-center py-4 px-4">100</td>
+                                    <td class="text-center py-4 px-4">500</td>
+                                </tr>
+                                <tr class="border-b border-white/5">
+                                    <td class="py-4 px-4">Image Generation</td>
+                                    <td class="text-center py-4 px-4">—</td>
+                                    <td class="text-center py-4 px-4"><i data-lucide="check" class="w-5 h-5 text-green-500 inline"></i></td>
+                                    <td class="text-center py-4 px-4"><i data-lucide="check" class="w-5 h-5 text-green-500 inline"></i></td>
+                                </tr>
+                                <tr class="border-b border-white/5">
+                                    <td class="py-4 px-4">Audio Generation</td>
+                                    <td class="text-center py-4 px-4">—</td>
+                                    <td class="text-center py-4 px-4">—</td>
+                                    <td class="text-center py-4 px-4"><i data-lucide="check" class="w-5 h-5 text-green-500 inline"></i></td>
+                                </tr>
+                                <tr class="border-b border-white/5">
+                                    <td class="py-4 px-4">Video Generation</td>
+                                    <td class="text-center py-4 px-4">—</td>
+                                    <td class="text-center py-4 px-4">—</td>
+                                    <td class="text-center py-4 px-4"><i data-lucide="check" class="w-5 h-5 text-green-500 inline"></i></td>
+                                </tr>
+                                <tr class="border-b border-white/5">
+                                    <td class="py-4 px-4">Workspaces</td>
+                                    <td class="text-center py-4 px-4">1</td>
+                                    <td class="text-center py-4 px-4">1</td>
+                                    <td class="text-center py-4 px-4">3</td>
+                                </tr>
+                                <tr class="border-b border-white/5">
+                                    <td class="py-4 px-4">Team Members</td>
+                                    <td class="text-center py-4 px-4">1</td>
+                                    <td class="text-center py-4 px-4">1</td>
+                                    <td class="text-center py-4 px-4">3</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">Choosing the Right Tier</h3>
+                    <div class="space-y-4 mb-8">
+                        <div class="glass-panel rounded-lg p-6">
+                            <h4 class="text-white font-semibold mb-2 flex items-center gap-2">
+                                <i data-lucide="user" class="w-5 h-5 text-orange-500"></i>
+                                Free Tier - Getting Started
+                            </h4>
+                            <p class="text-zinc-400 mb-3">Perfect for testing AIBC, understanding how Brand Scans work, and generating a small amount of content to see if AIBC fits your needs.</p>
+                            <p class="text-sm text-zinc-500"><strong>Best for:</strong> Individuals, personal brands, testing the platform</p>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6 border-2 border-orange-500/50">
+                            <h4 class="text-white font-semibold mb-2 flex items-center gap-2">
+                                <i data-lucide="zap" class="w-5 h-5 text-orange-500"></i>
+                                Pro Tier - Content Creators
+                            </h4>
+                            <p class="text-zinc-400 mb-3">Ideal for small businesses, content creators, and marketing teams who publish content regularly and need image generation capabilities.</p>
+                            <p class="text-sm text-zinc-500"><strong>Best for:</strong> Small businesses, content creators, regular publishers, image generation needs</p>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <h4 class="text-white font-semibold mb-2 flex items-center gap-2">
+                                <i data-lucide="crown" class="w-5 h-5 text-orange-500"></i>
+                                Enterprise Tier - Agencies & Scale
+                            </h4>
+                            <p class="text-zinc-400 mb-3">Built for agencies managing multiple brands, high-volume content needs, and teams requiring audio/video generation and collaboration features.</p>
+                            <p class="text-sm text-zinc-500"><strong>Best for:</strong> Agencies, large businesses, multiple brands, high-volume content, audio/video needs</p>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Back to top / Next section -->
+            <div class="flex items-center justify-between mt-16 pt-8 border-t border-white/10">
+                <a href="index.html" class="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    Back to Help Center
+                </a>
+                <a href="integrations.html" class="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors">
+                    Next: Integrations
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
+

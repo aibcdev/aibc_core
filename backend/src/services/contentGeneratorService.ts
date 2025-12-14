@@ -5,7 +5,7 @@
 import { generateText, generateJSON } from './llmService';
 import { getTemplate, suggestTemplateForKeyword } from './contentTemplates';
 import { createBlogPost, updateBlogPost } from './seoContentService';
-import { ContentGenerationRequest, ContentGenerationResponse, BlogPost } from '../../../types/seo';
+import { ContentGenerationRequest, ContentGenerationResponse, BlogPost } from '../types/seo';
 
 /**
  * Generate meta description from title and content
@@ -30,25 +30,30 @@ function generateExcerpt(content: string, maxLength: number = 160): string {
 }
 
 /**
- * Generate SEO-optimized title
+ * Generate SEO-optimized title (Blitz SEO: keyword-first approach)
  */
 async function generateTitle(keyword: string, templateType: string): Promise<string> {
-  const prompt = `Generate a compelling, SEO-optimized blog post title for the keyword: "${keyword}"
-  
-Requirements:
-- Include the keyword naturally
-- Keep it under 60 characters
-- Make it attention-grabbing and clear
-- Match the template type: ${templateType}
+  const prompt = `Generate a compelling, SEO-optimized blog post title following Blitz SEO methodology for keyword: "${keyword}"
 
-Return ONLY the title, nothing else.`;
+BLITZ SEO TITLE REQUIREMENTS:
+- Place the primary keyword "${keyword}" at the beginning or early in the title
+- Keep it between 50-60 characters for optimal SEO
+- Make it clear, compelling, and click-worthy
+- Include a benefit, number, or action word when possible
+- Match the template type: ${templateType}
+- Examples for guidance:
+  * "Content Marketing Strategies: [Rest of Title]"
+  * "[Keyword]: Complete Guide to [Benefit]"
+  * "How to [Action] with [Keyword]"
+
+Return ONLY the title, nothing else. No quotes, no markdown.`;
 
   const title = await generateText(prompt, undefined, { tier: 'basic' });
-  return title.trim().replace(/^["']|["']$/g, ''); // Remove quotes if present
+  return title.trim().replace(/^["']|["']$/g, '').replace(/^#+\s*/, ''); // Remove quotes and markdown if present
 }
 
 /**
- * Generate content using AI and template
+ * Generate content using AI and template (Blitz SEO optimized)
  */
 async function generateContentBody(
   keyword: string,
@@ -58,22 +63,28 @@ async function generateContentBody(
   const template = getTemplate(templateType as any);
   const structure = template.structure;
 
-  const prompt = `You are an expert content marketing writer. Write a comprehensive, SEO-optimized blog post about: "${keyword}"
+  const prompt = `You are an expert SEO content writer following Blitz SEO methodology. Write a comprehensive, highly-optimized blog post about: "${keyword}"
+
+BLITZ SEO REQUIREMENTS:
+- Target word count: ${targetWordCount} words (comprehensive, in-depth content)
+- Primary keyword "${keyword}" must appear in:
+  * Title (first part if possible)
+  * First paragraph (naturally)
+  * At least 3 H2/H3 headings
+  * Throughout body content (1-2% density, natural placement)
+- Include related keywords and semantic variations naturally
+- Use proper HTML formatting: <h2> for main headings, <h3> for subheadings, <p> for paragraphs, <ul>/<li> for lists, <strong> for emphasis
+- Structure: Clear introduction, detailed main content, actionable takeaways, conclusion
+- Include examples, case studies, or real-world applications
+- Add value: Make this the most comprehensive resource on "${keyword}"
+- Write in engaging, conversational yet authoritative tone
+- Use the exact template structure provided
+- Fill in all {placeholders} with relevant, detailed content
 
 Use this structure:
 ${structure}
 
-Requirements:
-- Target word count: ${targetWordCount} words
-- Include the keyword "${keyword}" naturally throughout (in title, headings, and body)
-- Write in an engaging, informative style
-- Use proper HTML formatting: <h2> for main headings, <h3> for subheadings, <p> for paragraphs, <ul>/<li> for lists
-- Include actionable advice and examples
-- Make it valuable and comprehensive
-- Use the exact template structure provided
-- Fill in all {placeholders} with relevant content
-
-Write the complete article in HTML format now:`;
+Write the complete, publication-ready article in HTML format now. Make it comprehensive and valuable enough to rank #1:`;
 
   const content = await generateText(prompt, undefined, { tier: 'basic' });
   return content.trim();
@@ -132,7 +143,10 @@ export async function generateBlogPost(
     if (selectedTemplateType === 'list') tags.push('recommendations', 'best-practices');
     if (selectedTemplateType === 'tools') tags.push('tools', 'resources');
 
-    // Create blog post
+    // Calculate word count
+    const wordCount = content.replace(/<[^>]*>/g, '').split(/\s+/).filter(w => w.length > 0).length;
+
+    // Create blog post - Auto-publish if SEO score is good
     const post = await createBlogPost({
       title,
       slug,
@@ -142,8 +156,9 @@ export async function generateBlogPost(
       category,
       tags: [...new Set(tags)], // Remove duplicates
       target_keywords: [keyword],
-      status: 'draft', // Start as draft, can be published later
-      word_count: content.replace(/<[^>]*>/g, '').split(/\s+/).length,
+      status: 'published', // Auto-publish for SEO content generation
+      published_at: new Date().toISOString(),
+      word_count: wordCount,
     });
 
     // Calculate initial SEO score (basic)

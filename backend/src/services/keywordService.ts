@@ -1,10 +1,12 @@
 /**
  * Keyword Research and Tracking Service
+ * Uses Supabase for persistent storage, falls back to in-memory if not configured
  */
 
-import { Keyword } from '../../../types/seo';
+import { Keyword } from '../types/seo';
+import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
 
-// In-memory storage (will migrate to database)
+// In-memory storage (fallback if Supabase not configured)
 const keywordsStore: Map<string, Keyword> = new Map();
 
 /**
@@ -40,6 +42,23 @@ export const TARGET_KEYWORDS: Array<{
 ];
 
 /**
+ * Convert database row to Keyword
+ */
+function dbRowToKeyword(row: any): Keyword {
+  return {
+    id: row.id,
+    keyword: row.keyword,
+    search_volume: row.search_volume,
+    competition_score: row.competition_score,
+    current_ranking: row.current_ranking,
+    target_url: row.target_url,
+    status: row.status,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+/**
  * Create or update keyword tracking
  */
 export async function trackKeyword(data: Partial<Keyword>): Promise<Keyword> {
@@ -48,33 +67,79 @@ export async function trackKeyword(data: Partial<Keyword>): Promise<Keyword> {
     throw new Error('Keyword is required');
   }
 
-  const existing = keywordsStore.get(keyword);
+  if (isSupabaseConfigured()) {
+    const supabase = getSupabaseClient();
+    if (!supabase) throw new Error('Supabase client not available');
 
-  if (existing) {
-    // Update existing
-    const updated: Keyword = {
-      ...existing,
-      ...data,
-      keyword,
-      updated_at: new Date().toISOString(),
-    };
-    keywordsStore.set(keyword, updated);
-    return updated;
+    // Check if exists
+    const { data: existing } = await supabase
+      .from('seo_keywords')
+      .select('*')
+      .eq('keyword', keyword)
+      .single();
+
+    if (existing) {
+      // Update existing
+      const updateData: any = { ...data, keyword };
+      delete updateData.id; // Don't update ID
+
+      const { data: updated, error } = await supabase
+        .from('seo_keywords')
+        .update(updateData)
+        .eq('id', existing.id)
+        .select()
+        .single();
+
+      if (error) throw new Error(`Failed to update keyword: ${error.message}`);
+      return dbRowToKeyword(updated);
+    } else {
+      // Create new
+      const insertData = {
+        keyword,
+        search_volume: data.search_volume,
+        competition_score: data.competition_score,
+        current_ranking: data.current_ranking,
+        target_url: data.target_url,
+        status: data.status || 'targeting',
+      };
+
+      const { data: created, error } = await supabase
+        .from('seo_keywords')
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) throw new Error(`Failed to create keyword: ${error.message}`);
+      return dbRowToKeyword(created);
+    }
   } else {
-    // Create new
-    const newKeyword: Keyword = {
-      id: `kw_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      keyword,
-      search_volume: data.search_volume,
-      competition_score: data.competition_score,
-      current_ranking: data.current_ranking,
-      target_url: data.target_url,
-      status: data.status || 'targeting',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    keywordsStore.set(keyword, newKeyword);
-    return newKeyword;
+    // Fallback to in-memory
+    const existing = keywordsStore.get(keyword);
+
+    if (existing) {
+      const updated: Keyword = {
+        ...existing,
+        ...data,
+        keyword,
+        updated_at: new Date().toISOString(),
+      };
+      keywordsStore.set(keyword, updated);
+      return updated;
+    } else {
+      const newKeyword: Keyword = {
+        id: `kw_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        keyword,
+        search_volume: data.search_volume,
+        competition_score: data.competition_score,
+        current_ranking: data.current_ranking,
+        target_url: data.target_url,
+        status: data.status || 'targeting',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      keywordsStore.set(keyword, newKeyword);
+      return newKeyword;
+    }
   }
 }
 
@@ -82,21 +147,65 @@ export async function trackKeyword(data: Partial<Keyword>): Promise<Keyword> {
  * Get keyword by keyword string
  */
 export async function getKeyword(keyword: string): Promise<Keyword | null> {
-  return keywordsStore.get(keyword.toLowerCase().trim()) || null;
+  const normalized = keyword.toLowerCase().trim();
+
+  if (isSupabaseConfigured()) {
+    const supabase = getSupabaseClient();
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+      .from('seo_keywords')
+      .select('*')
+      .eq('keyword', normalized)
+      .single();
+
+    if (error || !data) return null;
+    return dbRowToKeyword(data);
+  } else {
+    return keywordsStore.get(normalized) || null;
+  }
 }
 
 /**
  * Get all tracked keywords
  */
 export async function getAllKeywords(): Promise<Keyword[]> {
-  return Array.from(keywordsStore.values());
+  if (isSupabaseConfigured()) {
+    const supabase = getSupabaseClient();
+    if (!supabase) return [];
+
+    const { data, error } = await supabase
+      .from('seo_keywords')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error || !data) return [];
+    return data.map(dbRowToKeyword);
+  } else {
+    return Array.from(keywordsStore.values());
+  }
 }
 
 /**
  * Get keywords by status
  */
 export async function getKeywordsByStatus(status: Keyword['status']): Promise<Keyword[]> {
-  return Array.from(keywordsStore.values()).filter(k => k.status === status);
+  if (isSupabaseConfigured()) {
+    const supabase = getSupabaseClient();
+    if (!supabase) return [];
+
+    const { data, error } = await supabase
+      .from('seo_keywords')
+      .select('*')
+      .eq('status', status)
+      .order('competition_score', { ascending: true })
+      .order('search_volume', { ascending: false });
+
+    if (error || !data) return [];
+    return data.map(dbRowToKeyword);
+  } else {
+    return Array.from(keywordsStore.values()).filter(k => k.status === status);
+  }
 }
 
 /**
@@ -168,4 +277,3 @@ export async function markKeywordTracked(keyword: string): Promise<Keyword | nul
     status: 'tracked',
   });
 }
-

@@ -13,7 +13,9 @@ export enum ViewState {
   ADMIN = 'ADMIN',
   INBOX = 'INBOX',
   BLOG = 'BLOG',
-  BLOG_POST = 'BLOG_POST'
+  BLOG_POST = 'BLOG_POST',
+  PRIVACY_POLICY = 'PRIVACY_POLICY',
+  TERMS_OF_SERVICE = 'TERMS_OF_SERVICE'
 }
 
 export interface NavProps {

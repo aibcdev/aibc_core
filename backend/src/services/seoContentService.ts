@@ -3,12 +3,15 @@
  * Uses Supabase for persistent storage, falls back to in-memory if not configured
  */
 
-import { BlogPost, BlogListParams, BlogListResponse } from '../../../types/seo';
+import { BlogPost, BlogListParams, BlogListResponse } from '../types/seo';
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // In-memory storage (fallback if Supabase not configured)
 const blogPostsStore: Map<string, BlogPost> = new Map();
 const blogPostsBySlug: Map<string, string> = new Map();
+
 
 /**
  * Generate slug from title
@@ -45,6 +48,7 @@ function dbRowToBlogPost(row: any): BlogPost {
     id: row.id,
     slug: row.slug,
     title: row.title,
+    author: row.author,
     meta_description: row.meta_description,
     content: row.content,
     excerpt: row.excerpt,

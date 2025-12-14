@@ -1,6 +1,7 @@
 import { chromium, Browser } from 'playwright';
 import { storage } from './storage';
 import { generateJSON, generateText, isLLMConfigured, getActiveProvider, ScanTier } from './llmService';
+import { getActivePrompt } from './learningService';
 import * as dotenv from 'dotenv';
 
 /**
@@ -565,11 +566,17 @@ export async function startScan(
         // Process the HTML we got (even if empty)
           if (websiteContent.html && websiteContent.html.length > 50) {
             addLog(scanId, `[DISCOVERY] Website scraped successfully (${websiteContent.html.length} chars HTML, ${websiteContent.text?.length || 0} chars text)`);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:567',message:'Website scraped - before extraction',data:{websiteUrl,htmlLength:websiteContent.html.length,textLength:websiteContent.text?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
             
             // Extract social links from HTML - use direct regex (fast, no browser)
             storage.updateScan(scanId, { progress: 25 });
             addLog(scanId, `[EXTRACT] Extracting social links using direct regex (fast method)...`);
             let htmlLinks = extractSocialLinksFromHTMLDirect(websiteContent.html, websiteUrl, scanId);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:572',message:'After regex extraction',data:{websiteUrl,foundCount:Object.keys(htmlLinks).length,foundLinks:Object.keys(htmlLinks),htmlLinks},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
             
             // Skip browser extraction - it hangs. Use LLM as fallback instead
             if (Object.keys(htmlLinks).length === 0) {
@@ -592,7 +599,13 @@ export async function startScan(
               if (contentForLLM && contentForLLM.length > 50) {
                 const contentType = textContent ? 'text' : 'HTML';
                 addLog(scanId, `[DISCOVERY] Running LLM extraction (PRIMARY METHOD) on ${contentForLLM.length} chars of ${contentType}...`);
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:594',message:'Before LLM extraction from website',data:{websiteUrl,contentType,contentLength:contentForLLM.length,textLength:websiteContent.text?.length||0,htmlLength:websiteContent.html?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                // #endregion
                 const llmExtracted = await extractSocialLinksWithLLM(contentForLLM, websiteUrl, scanId);
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:596',message:'After LLM extraction from website',data:{websiteUrl,foundCount:Object.keys(llmExtracted).length,foundLinks:Object.keys(llmExtracted),llmResults:llmExtracted},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                // #endregion
               if (Object.keys(llmExtracted).length > 0) {
                   // LLM results take absolute priority - they're the most accurate
                   discoveredSocialLinks = { ...llmExtracted, ...discoveredSocialLinks };
@@ -602,6 +615,9 @@ export async function startScan(
                 }
               } else {
                 addLog(scanId, `[DISCOVERY] ⚠️ Not enough content for LLM extraction (text: ${websiteContent.text?.length || 0} chars, HTML: ${websiteContent.html?.length || 0} chars)`);
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:604',message:'LLM extraction skipped - insufficient content',data:{websiteUrl,textLength:websiteContent.text?.length||0,htmlLength:websiteContent.html?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
+                // #endregion
               }
             } catch (llmError: any) {
               addLog(scanId, `[DISCOVERY] ⚠️ LLM extraction failed: ${llmError.message}, using HTML results only`);
@@ -661,14 +677,23 @@ export async function startScan(
     }
     
     // Final LLM backfill for missing social links (use domain knowledge)
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:664',message:'Before LLM backfill',data:{domain:domainLower,discoveredCount:Object.keys(discoveredSocialLinks).length,discoveredLinks:Object.keys(discoveredSocialLinks),platforms},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     try {
       const backfilled = await backfillSocialLinksWithLLM(domainLower, discoveredSocialLinks, platforms, scanId);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:666',message:'After LLM backfill',data:{beforeCount:Object.keys(discoveredSocialLinks).length,afterCount:Object.keys(backfilled).length,addedCount:Object.keys(backfilled).length-Object.keys(discoveredSocialLinks).length,backfilledLinks:Object.keys(backfilled)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       if (Object.keys(backfilled).length > Object.keys(discoveredSocialLinks).length) {
         addLog(scanId, `[DISCOVERY] LLM backfill added ${Object.keys(backfilled).length - Object.keys(discoveredSocialLinks).length} links`);
         discoveredSocialLinks = backfilled;
       }
     } catch (e: any) {
       addLog(scanId, `[DISCOVERY] LLM backfill skipped/failed: ${e?.message || e}`);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:671',message:'LLM backfill error',data:{error:e?.message||e,domain:domainLower},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
     }
     
     // STEP 2: Scrape all platforms, using discovered links when available
@@ -730,10 +755,16 @@ export async function startScan(
             // Try first variation (most likely)
             usernameToTry = usernameVariations[0];
             addLog(scanId, `[${platform.toUpperCase()}] Domain detected, trying username: ${usernameToTry}`);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:732',message:'Domain detected - constructing URL',data:{platform,originalUsername:username,domainName,usernameToTry,variations:usernameVariations},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
           }
           
           // Construct URL for this platform
           profileUrl = getProfileUrl(usernameToTry, platform);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:736',message:'After getProfileUrl',data:{platform,usernameToTry,profileUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
           
           if (!profileUrl) {
             addLog(scanId, `[${platform.toUpperCase()}] ⚠️ Could not construct URL for ${platform} - skipping`);
@@ -802,15 +833,27 @@ export async function startScan(
           } else {
             // For non-discovered links (constructed URLs), verify before scraping
             addLog(scanId, `[SCRAPE] Checking ${actualPlatform} profile: ${profileUrl}`);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:804',message:'Before scraping constructed URL',data:{platform:actualPlatform,profileUrl,isDiscovered:false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D,E'})}).catch(()=>{});
+            // #endregion
             try {
               const content = await scrapeProfileWithRetry(profileUrl, actualPlatform, scanId);
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:807',message:'After scraping - content received',data:{platform:actualPlatform,textLength:content.text?.length||0,htmlLength:content.html?.length||0,url:content.url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E,F'})}).catch(()=>{});
+              // #endregion
               
               // Verify profile actually exists (not 404, not login page, has actual content)
               const profileExists = await verifyProfileExists(content, actualPlatform);
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:810',message:'After verifyProfileExists',data:{platform:actualPlatform,profileExists,textLength:content.text?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+              // #endregion
               
               // Be more lenient with content length - accept profiles with at least 10 chars (lowered from 20)
               const minContentLength = 10;
               const hasMinimalContent = content.text && content.text.length >= minContentLength;
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:813',message:'Content validation check',data:{platform:actualPlatform,hasMinimalContent,textLength:content.text?.length||0,minContentLength},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+              // #endregion
               
               if (profileExists && hasMinimalContent) {
                 verifiedPlatforms.push(actualPlatform);
@@ -819,6 +862,9 @@ export async function startScan(
                 addLog(scanId, `[SUCCESS] ${actualPlatform} profile found - ${content.text.length} chars, ${visualCount} visual assets`);
               } else if (!profileExists) {
                 addLog(scanId, `[SKIP] ${actualPlatform} profile not found or not accessible - skipping`);
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:821',message:'SKIP - profileExists=false',data:{platform:actualPlatform,profileUrl,textLength:content.text?.length||0,textPreview:content.text?.substring(0,200)||''},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                // #endregion
               } else if (!hasMinimalContent) {
                 // Even if verification passed, if content is too short, log but still try to use it
                 addLog(scanId, `[WARNING] ${actualPlatform} scraping returned minimal content (${content.text?.length || 0} chars) - will attempt LLM extraction anyway`);
@@ -827,9 +873,15 @@ export async function startScan(
                 scrapedData.push({ platform: actualPlatform, content });
               } else {
                 addLog(scanId, `[SKIP] ${actualPlatform} profile verification failed`);
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:829',message:'SKIP - verification failed',data:{platform:actualPlatform,profileUrl,profileExists,hasMinimalContent},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                // #endregion
               }
             } catch (scrapeError: any) {
               addLog(scanId, `[SKIP] ${actualPlatform} profile not accessible: ${scrapeError.message}`);
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:832',message:'SKIP - scrape error',data:{platform:actualPlatform,profileUrl,error:scrapeError.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+              // #endregion
             }
           }
         } else {
@@ -1443,7 +1495,14 @@ ${viralExamples || '    • No viral content data'}`;
       const creatorInfo = isCreatorProfile(username);
       const isTraditional = isTraditionalBusiness(username, brandDNA);
       
-      // Determine primary platform focus based on brand type
+      // Enhanced platform selection based on industry, niche, and company size
+      const industryLower = (brandIdentity?.industry || nicheIndicators || '').toLowerCase();
+      const nicheLower = (brandIdentity?.niche || '').toLowerCase();
+      const isSports = industryLower.includes('sport') || industryLower.includes('fitness') || nicheLower.includes('athletic');
+      const isB2B = industryLower.includes('saas') || industryLower.includes('software') || industryLower.includes('professional') || industryLower.includes('enterprise');
+      const isDTC = industryLower.includes('ecommerce') || industryLower.includes('retail') || industryLower.includes('consumer') || industryLower.includes('fashion') || industryLower.includes('beauty');
+      
+      // Determine primary platform focus based on brand type and industry
       let platformFocus = '';
       let platformMix = '';
       if (creatorInfo.isCreator) {
@@ -1451,19 +1510,49 @@ ${viralExamples || '    • No viral content data'}`;
         platformFocus = `This is a CREATOR/INFLUENCER brand. Focus heavily on ${creatorPlatform.toUpperCase()}, TikTok, and X/Twitter.
         Creators need SHORT-FORM, VIRAL, AUTHENTIC content. Think: hooks, trends, personality-driven.`;
         platformMix = '3 TikTok/Reels, 2 Instagram, 2 X/Twitter, 1 YouTube';
-      } else if (isTraditional) {
-        platformFocus = `This is a TRADITIONAL/B2B business. Focus heavily on LINKEDIN for thought leadership.
+      } else if (isSports) {
+        platformFocus = `This is a SPORTS/FITNESS brand. Focus heavily on Twitter/X and Instagram for real-time engagement.
+        Sports audiences prefer Twitter and Instagram over LinkedIn. Include TikTok for younger demographics.`;
+        platformMix = '3 Twitter/X, 3 Instagram, 2 TikTok, 1 LinkedIn';
+      } else if (isB2B || isTraditional) {
+        platformFocus = `This is a B2B/PROFESSIONAL business. Focus heavily on LINKEDIN for thought leadership and enterprise engagement.
         Also include long-form YouTube and professional Twitter threads. Less focus on TikTok.`;
-        platformMix = '3 LinkedIn, 2 YouTube, 2 Twitter/X, 1 Instagram';
+        platformMix = '4 LinkedIn, 2 Twitter/X, 1 YouTube, 1 Instagram';
+      } else if (isDTC) {
+        platformFocus = `This is a CONSUMER/DTC brand. Focus on visual platforms for awareness and engagement.
+        Instagram and TikTok for awareness, Twitter for engagement, LinkedIn for B2B/PR.`;
+        platformMix = '3 Instagram, 3 TikTok, 2 Twitter/X, 1 LinkedIn';
       } else {
-        platformFocus = `This is a CONSUMER/DTC brand. Balance between all platforms with emphasis on visual content.
+        platformFocus = `This is a GENERAL brand. Balance between all platforms with emphasis on visual content.
         Instagram and TikTok for awareness, LinkedIn for B2B/PR, Twitter for engagement.`;
         platformMix = '2 Instagram, 2 TikTok, 2 LinkedIn, 2 Twitter/X';
       }
 
       // COMPETITOR-DRIVEN VIRAL CONTENT GENERATION
+      // Check for active learned prompt version (auto-updates from learning system)
+      let activePromptVersion = null;
+      try {
+        const { getActivePrompt } = await import('./learningService');
+        activePromptVersion = await getActivePrompt('content_generation');
+        if (activePromptVersion) {
+          addLog(scanId, `[LEARNING] Using learned prompt version ${activePromptVersion.version} for content generation`);
+        }
+      } catch (error: any) {
+        addLog(scanId, `[LEARNING] Could not fetch active prompt version: ${error.message} - using default`);
+      }
+      
       // brandIdentityContext is PRIMARY - comes FIRST
       const contentPrompt = `${brandIdentityContext}🔥 VIRAL CONTENT STRATEGY for ${brandName} 🔥
+
+${!brandIdentity ? `⚠️ CRITICAL: Brand identity not available. Use the following context to generate BRAND-SPECIFIC content:
+- Company: ${brandName}
+- Industry/Niche: ${nicheIndicators || 'Unknown'}
+- Bio: ${bio || 'n/a'}
+- Themes: ${themes || 'n/a'}
+- Website: ${websiteTextContent ? websiteTextContent.substring(0, 1000) : 'n/a'}
+
+DO NOT generate generic content. Every idea MUST reference ${brandName} specifically and their actual business/industry.
+` : ''}
 
 ## BRAND TYPE ANALYSIS:
 ${platformFocus}
@@ -1501,21 +1590,29 @@ ${competitorViralContent.slice(0, 5).map((v: any) =>
 - "Day in my life as a [X]"
 - Raw, unpolished, authentic > produced
 
-**X/TWITTER (Thread openers that DEMAND clicks)**:
-- "I spent 100 hours researching [X]. Here's what nobody tells you:" (thread)
-- "Hot take: [controversial opinion]" (engagement bait)
-- "Unpopular opinion: [X] is actually [Y]"
-- "[Number] things I learned from [experience]:"
-- Single punchy tweets that invite replies
-- Quote tweets with spicy commentary
+**X/TWITTER (Enterprise-Level Thread openers that DEMAND clicks)**:
+- "I spent 100 hours researching [X]. Here's what nobody tells you:" (thread with deep insights)
+- "Hot take: [controversial but valuable opinion]" (engagement bait with substance)
+- "Unpopular opinion: [X] is actually [Y]" (contrarian with proof)
+- "[Number] things I learned from [experience]:" (numbered insights)
+- "The [industry] industry doesn't want you to know:" (revealing insights)
+- Single punchy tweets that invite replies (280-char value bombs)
+- Quote tweets with spicy commentary (thought leadership)
+- Industry-specific hot takes backed by experience
+- Data-driven insights that challenge conventional wisdom
+- Personal stories that reveal industry truths
 
-**LINKEDIN (Story + Lesson format)**:
-- "I just made a $X mistake. Here's what I learned:"
-- "Stop doing [common thing]. Do [this] instead."
-- "3 years ago I was [X]. Today I [Y]. Here's how:"
-- Personal vulnerability + professional insight
-- Controversial industry takes with data
-- "Agree or disagree?" polls
+**LINKEDIN (Enterprise-Level Story + Lesson format)**:
+- "I just made a $X mistake. Here's what I learned:" (personal vulnerability + professional insight)
+- "Stop doing [common thing]. Do [this] instead." (contrarian take with data)
+- "3 years ago I was [X]. Today I [Y]. Here's how:" (transformation story)
+- "After analyzing [X] companies in [industry], I found [surprising insight]:" (data-driven thought leadership)
+- "The [industry] industry is broken. Here's why:" (industry critique with solutions)
+- Personal vulnerability + professional insight (authentic storytelling)
+- Controversial industry takes with data (thought leadership)
+- "Agree or disagree?" polls (engagement-driven)
+- Industry-specific case studies and lessons learned
+- Strategic perspectives that only someone in this industry could provide
 
 **YOUTUBE (Retention-focused hooks)**:
 - "I tried [X] for 30 days. The results shocked me."
@@ -1542,13 +1639,16 @@ About: ${websiteTextContent.substring(0, 2000)}
 
 ## TASK: Generate 8 VIRAL content ideas for ${brandName}
 
-RULES:
+CRITICAL RULES - VIOLATION WILL RESULT IN REJECTION:
 1. Platform mix: ${platformMix}
 2. Each title MUST use a viral hook pattern from above (no generic titles!)
 3. Titles must be scroll-stopping - if it doesn't make you curious, rewrite it
 4. Each idea must explain WHY it will go viral (psychological trigger)
 5. Reference competitor patterns where applicable
 6. NO GENERIC TITLES like "Brand Story" or "Product Showcase" - these will NOT go viral
+7. **MANDATORY**: Every title MUST include ${brandName} or reference their specific industry/niche (${nicheIndicators || brandIdentity?.industry || 'their business'})
+8. **MANDATORY**: Every description MUST reference what ${brandName} actually does - be SPECIFIC, not generic
+9. **MANDATORY**: Content must be UNIQUE to ${brandName} - if the same idea could work for any company, it's REJECTED
 
 VIRAL PSYCHOLOGY TO USE:
 - Curiosity gap (make them want to know the answer)
@@ -1576,16 +1676,30 @@ Return JSON array:
       const systemPrompt = `You are a VIRAL CONTENT STRATEGIST who creates scroll-stopping, engagement-driving content.
 
 ${brandIdentity ? `
-CRITICAL: ${brandIdentity.name} is a ${brandIdentity.industry} company that ${brandIdentity.description}.
-Generate content that is ACCURATE to this brand identity - understand what ${brandIdentity.name} actually does,
-then create viral content that beats competitors in ${brandIdentity.industry}.
-` : ''}
+🚨 CRITICAL BRAND IDENTITY - THIS IS NON-NEGOTIABLE:
+${brandIdentity.name} is a ${brandIdentity.industry} company that ${brandIdentity.description}.
+Their niche: ${brandIdentity.niche}
+
+EVERY content idea MUST:
+- Reference ${brandIdentity.name} specifically by name or clear context
+- Be relevant to ${brandIdentity.industry} and ${brandIdentity.niche}
+- Understand what ${brandIdentity.name} actually does: ${brandIdentity.description}
+- Be UNIQUE to ${brandIdentity.name} - if the same idea works for any company, REJECT IT
+
+VIOLATION: If you generate generic content that could work for any company, ALL ideas will be rejected.
+` : `
+🚨 CRITICAL: Brand identity not available, but you MUST still generate BRAND-SPECIFIC content for ${brandName}.
+Use the provided context (bio, themes, website content) to understand what ${brandName} does.
+Every idea MUST reference ${brandName} or their specific industry/niche.
+Generic content that could work for any company will be REJECTED.
+`}
 
 Your ONLY goal: Create content that GOES VIRAL. Every idea must have:
 1. A HOOK that stops the scroll in 0.5 seconds
 2. A PSYCHOLOGICAL TRIGGER that compels action (curiosity, FOMO, controversy, identity)
 3. PLATFORM-NATIVE format (what works on TikTok ≠ what works on LinkedIn)
-4. ACCURACY to what the brand actually IS (from brand identity)
+4. ACCURACY to what the brand actually IS (from brand identity or provided context)
+5. **BRAND SPECIFICITY** - Must be unique to ${brandName}, not generic
 
 ${creatorInfo.isCreator ? `
 CREATOR FOCUS: This is a creator/influencer brand. Prioritize:
@@ -1603,16 +1717,30 @@ B2B/PROFESSIONAL FOCUS: This is a traditional business. Prioritize:
 DTC/CONSUMER FOCUS: Balance across platforms with strong visual identity
 `}
 
-REJECTION CRITERIA - Do NOT generate:
-- Generic titles like "Brand Story" or "Product Showcase"
-- Corporate-sounding content that wouldn't get engagement
-- Ideas without a clear hook or trigger
-- Same format repeated across ideas
-- Content that doesn't match what the brand actually does (be ACCURATE)
+REJECTION CRITERIA - Do NOT generate (VIOLATION = REJECTION):
+- Generic titles like "Brand Story" or "Product Showcase" - REJECTED
+- Corporate-sounding content that wouldn't get engagement - REJECTED
+- Ideas without a clear hook or trigger - REJECTED
+- Same format repeated across ideas - REJECTED
+- Content that doesn't match what the brand actually does - REJECTED
+- **Content that could work for any company (not unique to ${brandName}) - REJECTED**
+- **Content that doesn't reference ${brandName} or their specific industry/niche - REJECTED**
 
-For ${nicheIndicators || brandName}, generate content that MAXIMIZES VIRALITY while being ACCURATE to the brand's actual business. Think like a creator, not a marketer.`;
+For ${nicheIndicators || brandName}, generate content that MAXIMIZES VIRALITY while being ACCURATE and UNIQUE to ${brandName}'s actual business. Think like a creator, not a marketer.`;
 
-      const contentIdeasResult = await generateJSON<any>(contentPrompt, systemPrompt, { tier: scanTier });
+      // Use learned prompts if available (auto-updated from learning system)
+      const finalSystemPrompt = activePromptVersion?.systemPrompt || systemPrompt;
+      const finalContentPrompt = activePromptVersion?.prompt 
+        ? activePromptVersion.prompt
+            .replace(/\$\{brandName\}/g, brandName)
+            .replace(/\$\{brandIdentityContext\}/g, brandIdentityContext || '')
+            .replace(/\$\{nicheIndicators\}/g, nicheIndicators || '')
+            .replace(/\$\{platformFocus\}/g, platformFocus)
+            .replace(/\$\{competitorContentAnalysis\}/g, competitorContentAnalysis || 'No competitor data available')
+            .replace(/\$\{platformMix\}/g, platformMix)
+        : contentPrompt;
+
+      const contentIdeasResult = await generateJSON<any>(finalContentPrompt, finalSystemPrompt, { tier: scanTier });
       
       if (Array.isArray(contentIdeasResult)) {
         contentIdeas = contentIdeasResult;
@@ -3009,6 +3137,9 @@ async function discoverSocialHandlesWithLLM(domain: string, platform: string, sc
     // Clean domain for better LLM understanding
     const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
     const brandName = extractBrandNameFromInput(domain); // Handles social URLs and regular domains
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:3002',message:'Before LLM handle discovery',data:{domain,cleanDomain,brandName,platform},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     
     // More conversational prompt that leverages LLM's world knowledge
     const prompt = `What is the official ${platform} account for ${cleanDomain}?
@@ -3029,6 +3160,9 @@ Return ONLY the username (without @ symbol). If you're not sure, make your best 
     const systemPrompt = `You are a social media expert who knows the ${platform} handles of most major brands and companies. You should confidently provide handles for well-known companies. Return ONLY the username (without @ symbol). Make educated guesses for less well-known companies based on naming patterns.`;
 
     const result = await generateText(prompt, systemPrompt, { tier: 'basic' });
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:3031',message:'After LLM generateText',data:{domain,platform,result:result?.substring(0,100)||null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     
     if (result && typeof result === 'string') {
       // Clean up the response - remove any explanation, just get the handle
@@ -3919,6 +4053,17 @@ I need you to identify this brand/website/company and tell me:
 4. **Niche**: The specific niche within their industry (be specific, e.g., "AI-native decentralized token launch platform" not just "crypto")
 5. **Competitors**: List EXACTLY 3-5 DIRECT competitors - the CLOSEST competitors in the SAME industry/niche (use real company names)
 6. **Social Handles**: Their known social media handles (twitter, instagram, linkedin, tiktok, youtube)
+   - CRITICAL: Find ALL social profiles - check their website, search engines, and your knowledge base
+   - Return FULL URLs (e.g., "https://twitter.com/zebecprotocol" not just "@zebecprotocol")
+   - Include ALL platforms they're active on
+   - If you know the brand, you should know their social profiles - be thorough
+
+CRITICAL RULES FOR SOCIAL HANDLES:
+- Use your knowledge base to find ALL social profiles for this brand
+- Return complete URLs, not just handles
+- Include: twitter/x, instagram, linkedin, youtube, tiktok, facebook if they exist
+- If the brand is well-known, you should know their social profiles
+- Example format: {"twitter": "https://twitter.com/zebecprotocol", "linkedin": "https://linkedin.com/company/zebec"}
 
 CRITICAL RULES FOR COMPETITORS:
 - Return ONLY 3-5 competitors - NO MORE
@@ -3947,19 +4092,59 @@ Return JSON only:
   }
 }`;
 
-  const systemPrompt = `You are an expert brand analyst with comprehensive knowledge of companies, startups, creators, and websites across all industries. Your job is to identify what a brand/website is and who their competitors are. Be accurate and specific. Return valid JSON only.`;
+  const systemPrompt = `You are an expert brand analyst with comprehensive knowledge of companies, startups, creators, and websites across all industries. Your job is to identify what a brand/website is, who their competitors are, and find ALL their social media profiles.
+
+CRITICAL FOR SOCIAL HANDLES:
+- Use your knowledge base to find ALL social profiles for this brand
+- Search your knowledge: if you know the brand, you know their social profiles
+- Return FULL URLs (complete links, not just handles)
+- Be thorough - check all major platforms (Twitter/X, Instagram, LinkedIn, YouTube, TikTok, Facebook)
+- If the brand exists, they likely have social profiles - find them
+- Example: For "zebec.io" or "Zebec Protocol", you should know their Twitter, LinkedIn, etc.
+
+Be accurate and specific. Return valid JSON only.`;
 
   try {
     const result = await generateJSON(prompt, systemPrompt, { tier: 'basic' });
     
     if (result && result.name) {
+      // Normalize social handles to full URLs
+      const normalizedHandles: Record<string, string> = {};
+      if (result.socialHandles && typeof result.socialHandles === 'object') {
+        Object.entries(result.socialHandles).forEach(([platform, handle]: [string, any]) => {
+          if (handle && typeof handle === 'string') {
+            // If it's already a URL, use it; otherwise construct URL
+            if (handle.startsWith('http://') || handle.startsWith('https://')) {
+              normalizedHandles[platform] = handle;
+            } else {
+              // Convert handle to URL
+              const cleanHandle = handle.replace(/^@/, '').trim();
+              const platformUrls: Record<string, string> = {
+                twitter: `https://twitter.com/${cleanHandle}`,
+                x: `https://x.com/${cleanHandle}`,
+                instagram: `https://instagram.com/${cleanHandle}`,
+                linkedin: cleanHandle.includes('/company/') || cleanHandle.includes('/in/') 
+                  ? `https://linkedin.com/${cleanHandle}` 
+                  : `https://linkedin.com/company/${cleanHandle}`,
+                youtube: cleanHandle.startsWith('@') 
+                  ? `https://youtube.com/${cleanHandle}`
+                  : `https://youtube.com/@${cleanHandle}`,
+                tiktok: `https://tiktok.com/@${cleanHandle}`,
+                facebook: `https://facebook.com/${cleanHandle}`
+              };
+              normalizedHandles[platform] = platformUrls[platform.toLowerCase()] || handle;
+            }
+          }
+        });
+      }
+      
       return {
         name: result.name || cleanedInput,
         industry: result.industry || 'Unknown',
         description: result.description || '',
         niche: result.niche || result.industry || 'Unknown',
         competitors: Array.isArray(result.competitors) ? result.competitors : [],
-        socialHandles: result.socialHandles || {},
+        socialHandles: normalizedHandles,
       };
     }
     

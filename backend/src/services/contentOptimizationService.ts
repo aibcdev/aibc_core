@@ -2,7 +2,7 @@
  * Content Optimization Service - SEO scoring, keyword optimization, readability
  */
 
-import { BlogPost } from '../../../types/seo';
+import { BlogPost } from '../types/seo';
 
 export interface SEOAnalysis {
   score: number;

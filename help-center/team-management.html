@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Management - AIBC Help Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .article-content {
+            max-width: 800px;
+        }
+    </style>
+</head>
+<body class="bg-[#050505] text-zinc-300 antialiased min-h-screen">
+    <!-- Navigation -->
+    <header class="fixed top-0 w-full z-50 border-b border-white/10 bg-[#050505]/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-3">
+                <div class="relative w-8 h-8 flex items-center justify-center">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-8 h-8 text-white">
+                        <circle cx="12" cy="12" r="10" stroke-opacity="0.5"></circle>
+                        <circle cx="12" cy="12" r="6"></circle>
+                        <circle cx="12" cy="12" r="2" fill="white"></circle>
+                    </svg>
+                </div>
+                <span class="text-xl font-bold tracking-tight text-white">AIBC</span>
+            </a>
+            <nav class="hidden md:flex items-center gap-8">
+                <a href="index.html" class="text-sm font-medium text-zinc-400 hover:text-white transition-colors">Help Center</a>
+                <a href="/dashboard" class="text-sm font-medium text-white hover:text-zinc-300 transition-colors">Dashboard</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="pt-32 pb-24 px-6">
+        <div class="max-w-4xl mx-auto">
+            <!-- Breadcrumb -->
+            <div class="flex items-center gap-2 text-sm text-zinc-500 mb-8">
+                <a href="index.html" class="hover:text-white transition-colors">Help Center</a>
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                <span>Team Management</span>
+            </div>
+
+            <!-- Header -->
+            <div class="mb-12">
+                <div class="w-12 h-12 rounded-lg bg-zinc-800 flex items-center justify-center mb-6">
+                    <i data-lucide="users" class="w-6 h-6 text-white"></i>
+                </div>
+                <h1 class="text-4xl font-semibold text-white mb-4 tracking-tight">Team Management</h1>
+                <p class="text-lg text-zinc-400">Invite collaborators, set permissions, and manage workspace settings.</p>
+            </div>
+
+            <!-- Articles List -->
+            <div class="space-y-4 mb-16">
+                <a href="#workspace-roles" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Workspace Roles and Permissions</h3>
+                    <p class="text-zinc-500">Understand Admin, Editor, Reviewer, and Guest roles and what each can do in your workspace.</p>
+                </a>
+
+                <a href="#inviting-team" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Inviting Team Members</h3>
+                    <p class="text-zinc-500">Learn how to invite collaborators to your workspace and assign appropriate roles.</p>
+                </a>
+
+                <a href="#workspace-settings" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Managing Workspace Settings</h3>
+                    <p class="text-zinc-500">Configure workspace preferences, manage multiple workspaces, and control access settings.</p>
+                </a>
+
+                <a href="#collaboration-features" class="block glass-panel rounded-xl p-6 hover:bg-zinc-900/80 transition-all group">
+                    <h3 class="text-xl font-medium text-white mb-2 group-hover:text-orange-500 transition-colors">Collaboration Features</h3>
+                    <p class="text-zinc-500">Use comments, tasks, approvals, and sharing features to collaborate on content.</p>
+                </a>
+            </div>
+
+            <!-- Workspace Roles Article -->
+            <article id="workspace-roles" class="article-content mb-16">
+                <h2 class="text-3xl font-semibold text-white mb-6">Workspace Roles and Permissions</h2>
+                
+                <div class="prose prose-invert max-w-none">
+                    <p class="text-lg text-zinc-300 mb-6">
+                        AIBC offers four workspace roles to control what team members can do. Roles are available on Enterprise tier (3 seats included).
+                    </p>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">Role Types</h3>
+                    <div class="space-y-4 mb-8">
+                        <div class="glass-panel rounded-lg p-6 border-l-4 border-orange-500">
+                            <h4 class="text-white font-semibold mb-3 flex items-center gap-2">
+                                <i data-lucide="crown" class="w-5 h-5 text-orange-500"></i>
+                                Admin
+                            </h4>
+                            <p class="text-zinc-400 mb-3">Full access to everything in the workspace.</p>
+                            <ul class="space-y-2 text-zinc-400 text-sm">
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5"></i>
+                                    <span>All content creation and editing</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5"></i>
+                                    <span>Brand Kit configuration</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5"></i>
+                                    <span>Platform integrations</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5"></i>
+                                    <span>Workspace settings and billing</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5"></i>
+                                    <span>Invite and manage team members</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <h4 class="text-white font-semibold mb-3 flex items-center gap-2">
+                                <i data-lucide="edit" class="w-5 h-5 text-blue-500"></i>
+                                Editor
+                            </h4>
+                            <p class="text-zinc-400 mb-3">Can create, edit, and publish content.</p>
+                            <ul class="space-y-2 text-zinc-400 text-sm">
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5"></i>
+                                    <span>Create and edit content</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5"></i>
+                                    <span>Schedule and publish content</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5"></i>
+                                    <span>View Brand Kit (read-only)</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="x" class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5"></i>
+                                    <span>Cannot modify Brand Kit or settings</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="x" class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5"></i>
+                                    <span>Cannot manage integrations or billing</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <h4 class="text-white font-semibold mb-3 flex items-center gap-2">
+                                <i data-lucide="eye" class="w-5 h-5 text-amber-500"></i>
+                                Reviewer
+                            </h4>
+                            <p class="text-zinc-400 mb-3">Can review and approve content before publishing.</p>
+                            <ul class="space-y-2 text-zinc-400 text-sm">
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5"></i>
+                                    <span>View all content</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5"></i>
+                                    <span>Approve or reject content</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5"></i>
+                                    <span>Add comments and feedback</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="x" class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5"></i>
+                                    <span>Cannot create or edit content</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="x" class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5"></i>
+                                    <span>Cannot modify Brand Kit or settings</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="glass-panel rounded-lg p-6">
+                            <h4 class="text-white font-semibold mb-3 flex items-center gap-2">
+                                <i data-lucide="user" class="w-5 h-5 text-zinc-500"></i>
+                                Guest
+                            </h4>
+                            <p class="text-zinc-400 mb-3">Limited access for external reviewers or clients.</p>
+                            <ul class="space-y-2 text-zinc-400 text-sm">
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5"></i>
+                                    <span>View shared content only</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5"></i>
+                                    <span>Add comments on shared content</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="x" class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5"></i>
+                                    <span>Cannot access workspace directly</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="x" class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5"></i>
+                                    <span>Access via share links only</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-xl p-6 my-8 border-l-4 border-orange-500">
+                        <div class="flex items-start gap-4">
+                            <i data-lucide="info" class="w-6 h-6 text-orange-500 flex-shrink-0 mt-1"></i>
+                            <div>
+                                <h4 class="text-white font-semibold mb-2">Team Features Availability</h4>
+                                <p class="text-zinc-400">Team collaboration features (multiple seats, roles, permissions) are available on <strong class="text-white">Enterprise tier</strong> only. Free and Pro tiers include 1 seat per workspace.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Inviting Team Article -->
+            <article id="inviting-team" class="article-content mb-16">
+                <h2 class="text-3xl font-semibold text-white mb-6">Inviting Team Members</h2>
+                
+                <div class="prose prose-invert max-w-none">
+                    <p class="text-lg text-zinc-300 mb-6">
+                        Invite team members to collaborate on content creation, review, and publishing. Team features are available on Enterprise tier.
+                    </p>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">How to Invite Team Members</h3>
+                    <ol class="list-decimal list-inside text-zinc-400 mb-6 space-y-3 ml-4">
+                        <li class="mb-2">Go to <strong class="text-white">Settings</strong> → <strong class="text-white">Team</strong> section</li>
+                        <li class="mb-2">Click <strong class="text-white">"Invite Team Member"</strong> button</li>
+                        <li class="mb-2">Enter team member's email address</li>
+                        <li class="mb-2">Select their role:
+                            <ul class="list-disc list-inside ml-6 mt-2 space-y-1 text-zinc-500">
+                                <li>Admin - Full access</li>
+                                <li>Editor - Create and edit content</li>
+                                <li>Reviewer - Review and approve content</li>
+                            </ul>
+                        </li>
+                        <li class="mb-2">Click <strong class="text-white">"Send Invitation"</strong></li>
+                        <li class="mb-2">Team member receives email invitation</li>
+                        <li class="mb-2">They accept invitation and join workspace</li>
+                    </ol>
+
+                    <h3 class="text-2xl font-semibold text-white mt-8 mb-4">Managing Team Members</h3>
+                    <p class="text-zinc-400 mb-4">As an Admin, you can:</p>
+                    <ul class="list-disc list-inside text-zinc-400 mb-6 space-y-2 ml-4">
+                        <li>Change team member roles</li>
+                        <li>Remove team members from workspace</li>
+                        <li>Resend invitations</li>
+                        <li>View team member activity</li>
+                    </ul>
+                </div>
+            </article>
+
+            <!-- Back to top / Next section -->
+            <div class="flex items-center justify-between mt-16 pt-8 border-t border-white/10">
+                <a href="index.html" class="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    Back to Help Center
+                </a>
+                <a href="troubleshooting.html" class="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors">
+                    Next: Troubleshooting
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
+

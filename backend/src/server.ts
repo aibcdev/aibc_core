@@ -12,11 +12,14 @@ import contentGeneratorRoutes from './routes/contentGenerator';
 import sitemapRoutes from './routes/sitemap';
 import seoAnalyticsRoutes from './routes/seoAnalytics';
 import seoOptimizeRoutes from './routes/seoOptimize';
+import learningRoutes from './routes/learning';
+import blogSchedulerRoutes from './routes/blogScheduler';
+import socialContentRoutes from './routes/socialContent';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001; // Default to 3001 for local dev
+const PORT = parseInt(process.env.PORT || '3001', 10); // Default to 3001 for local dev, Cloud Run sets PORT=8080
 
 // Middleware - Allow all origins for API access
 // This is safe because we use authentication for protected routes
@@ -59,6 +62,9 @@ app.use('/api/blog', contentGeneratorRoutes);
 app.use('/api', sitemapRoutes);
 app.use('/api/seo/analytics', seoAnalyticsRoutes);
 app.use('/api/seo/optimize', seoOptimizeRoutes);
+app.use('/api/learning', learningRoutes);
+app.use('/api/blog', blogSchedulerRoutes);
+app.use('/api/social', socialContentRoutes);
 
 // Verify handle endpoint (quick verification for integrations)
 app.post('/api/verify-handle', async (req, res) => {
@@ -216,27 +222,61 @@ Return JSON: { "response": "your helpful response", "actions": ["action1", "acti
   }
 });
 
-// Health check
+// Health check (early in the file for quick startup detection)
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    port: PORT,
+    nodeVersion: process.version
+  });
 });
 
 // Initialize content scheduler (generate content at 9 AM daily)
+// Run asynchronously after server starts to avoid blocking startup
 if (process.env.ENABLE_CONTENT_SCHEDULER !== 'false') {
-  try {
-    const { scheduleDailyContentGeneration } = await import('./cron/seoContentScheduler');
-    scheduleDailyContentGeneration(
-      process.env.CONTENT_GENERATION_TIME || '09:00',
-      process.env.TIMEZONE || 'America/New_York'
-    );
-    console.log('✅ Content scheduler initialized');
-  } catch (error) {
-    console.warn('⚠️ Content scheduler not available (node-cron may not be installed)');
-  }
+  setImmediate(async () => {
+    try {
+      const { scheduleDailyContentGeneration } = await import('./cron/seoContentScheduler');
+      scheduleDailyContentGeneration(
+        process.env.CONTENT_GENERATION_TIME || '09:00',
+        process.env.TIMEZONE || 'America/New_York'
+      );
+      console.log('✅ Content scheduler initialized');
+    } catch (error) {
+      console.warn('⚠️ Content scheduler not available (node-cron may not be installed)');
+    }
+  });
 }
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📡 Health check: http://localhost:${PORT}/health`);
+// Add process error handlers
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  process.exit(1);
 });
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+// Start server with error handling
+try {
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📡 Health check: http://localhost:${PORT}/health`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+
+  server.on('error', (err: any) => {
+    console.error('❌ Server error:', err);
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Port ${PORT} is already in use`);
+    }
+    process.exit(1);
+  });
+} catch (error) {
+  console.error('❌ Failed to start server:', error);
+  process.exit(1);
+}
 

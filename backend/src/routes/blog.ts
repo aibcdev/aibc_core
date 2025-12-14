@@ -35,13 +35,15 @@ router.get('/', async (req, res) => {
     const result = await listBlogPosts(params);
     
     // Ensure we always return the correct structure
-    res.json({
+    const response = {
       posts: result.posts || [],
       total: result.total || 0,
       page: result.page || 1,
       limit: result.limit || 10,
       totalPages: result.totalPages || 0,
-    });
+    };
+    
+    res.json(response);
   } catch (error: any) {
     console.error('Error listing blog posts:', error);
     // Return empty result structure instead of error object

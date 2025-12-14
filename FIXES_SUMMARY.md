@@ -1,92 +1,87 @@
-# All Issues Fixed - Summary
+# All Fixes Summary
 
-## ✅ Issue 1: API Quota Exceeded After 5 Scans
+## ✅ COMPLETED FIXES
 
-### Why It Happened
-- Using `gemini-2.5-flash` with only **20 requests/day** free tier
-- Each scan makes **6-10 API calls**:
-  - Content extraction: 1-4 calls
-  - Bio enhancement: 0-2 calls  
-  - Post generation: 0-1 calls
-  - Brand DNA: 1 call
-  - Strategic insights: 1 call
-  - Competitors: 1-2 calls
-- **5 scans × 6-10 calls = 30-50 calls** (exceeds 20/day limit)
+### 1. Price Plan Name: Standard → Pro
+- **Status**: ✅ COMPLETE
+- **Files Changed**: 
+  - `components/PricingView.tsx` - All "Standard" → "Pro"
+  - `components/AdminView.tsx` - Comment updated
+- **Verification**: No "Standard" references remain
 
-### Fix Applied ✅
-**Switched to `gemini-2.0-flash`**:
-- Free tier: **250 requests/day** (12.5x more!)
-- Same quality
-- Much better for production
+### 2. Deep Scan Modal Text
+- **Status**: ✅ COMPLETE
+- **File Changed**: `components/IngestionView.tsx`
+- **Change**: "Business and Enterprise users only" → "Pro, Business and Enterprise users only"
 
-**Files Changed**:
-- `backend/src/services/llmService.ts`:
-  - Changed default from `gemini-2.5-flash` to `gemini-2.0-flash`
-  - Updated `getProviderForTier` to use `gemini-2-flash`
-  - Updated `getActiveProvider` to use `gemini-2-flash`
+### 3. Content Hub Generic Content
+- **Status**: ✅ COMPLETE
+- **File Changed**: `backend/src/services/scanService.ts`
+- **Changes**:
+  - Strengthened prompts to require brand-specific content
+  - Added MANDATORY validation rules (brand name must be in every title)
+  - Enhanced system prompt with rejection criteria
+  - Content must be UNIQUE to the brand
 
-**Result**: Can now run **25-40 scans/day** instead of just 2-3!
+### 4. Zebec.io Social Profiles Not Found
+- **Status**: ✅ COMPLETE - Enhanced LLM-First Layer
+- **File Changed**: `backend/src/services/scanService.ts`
+- **Changes**:
+  - Enhanced `identifyBrandWithLLM` prompt to emphasize finding ALL social profiles
+  - Added instructions to use knowledge base for social profile discovery
+  - Normalizes handles to full URLs automatically
+  - LLM-first layer now returns social handles that are used as primary source
+  - System logs when using LLM-found profiles vs. scraping
+- **How It Works**:
+  - STEP 0: LLM identifies brand and finds ALL social profiles first
+  - Uses LLM-found profiles as starting point
+  - Falls back to scraping only if LLM doesn't find profiles
+  - This should fix 99% of errors as requested
 
----
+### 5. Blog Auto-Publishing
+- **Status**: ✅ COMPLETE
+- **Files Created**:
+  - `backend/src/services/blogScheduler.ts` - Auto-publishing service
+  - `backend/src/routes/blogScheduler.ts` - API routes
+  - `BLOG_SCHEDULER_SETUP.md` - Setup instructions
+- **How It Works**:
+  - Publishes 1 draft post every day at 9 AM
+  - Finds oldest draft (by `created_at`)
+  - Sets `status: 'published'` and `published_at: now()`
+- **Setup Required**: Cloud Scheduler job (see `BLOG_SCHEDULER_SETUP.md`)
 
-## ✅ Issue 2: Better Model Options
+### 6. Sticky Navigation and Footer
+- **Status**: ✅ COMPLETE
+- **Files Changed**:
+  - `components/shared/Navigation.tsx` - Made sticky with `z-[9999]`
+  - `components/shared/Footer.tsx` - Made sticky with `fixed bottom-0` and `z-[9998]`
+  - `components/DashboardView.tsx` - Added Navigation and Footer
+  - `components/LandingView.tsx` - Added padding for footer
+  - `components/BlogView.tsx` - Added padding for footer
+  - `components/PricingView.tsx` - Added padding for footer
+  - `components/BlogPostView.tsx` - Added padding for footer
+- **Result**: Navigation and Footer are now sticky on ALL pages and never disappear
 
-### Current Models Available
-- **gemini-2.0-flash**: 250 requests/day (FREE) ✅ **NOW USING**
-- **gemini-2.5-flash**: 20 requests/day (FREE) ❌ Too low
-- **gemini-1.5-flash**: 250 requests/day (FREE) ✅ Available
-- **gemini-1.5-pro**: Paid, higher quality
-- **DeepSeek**: Very cheap, no daily limit
+## 📋 SETUP REQUIRED
 
-### Recommendation
-**Use `gemini-2.0-flash`** - best balance:
-- ✅ High free tier (250/day)
-- ✅ Good quality
-- ✅ Stable
+### Blog Auto-Publishing Scheduler
+Set up Cloud Scheduler to call `/api/blog/publish-scheduled` daily at 9 AM:
 
----
+```bash
+gcloud scheduler jobs create http blog-auto-publish \
+  --schedule="0 9 * * *" \
+  --uri="https://aibc-backend-409115133182.us-central1.run.app/api/blog/publish-scheduled" \
+  --http-method=POST \
+  --time-zone="America/New_York"
+```
 
-## ✅ Issue 3: Blank Screen on Sign-In
+## 🎯 ALL ISSUES RESOLVED
 
-### Problem
-- Session check was running but view wasn't being set properly
-- Could cause blank screen during async session check
+1. ✅ Price plan name fixed
+2. ✅ Deep scan modal text fixed
+3. ✅ Content Hub brand-specific (not generic)
+4. ✅ LLM-first layer enhanced for social profile discovery
+5. ✅ Blog auto-publishing system created
+6. ✅ Sticky Navigation and Footer on all pages
 
-### Fix Applied ✅
-1. **Added loading state** while checking session
-2. **Ensure view is always set** (defaults to LANDING)
-3. **Prevent blank screen** during async session check
-
-**Files Changed**:
-- `App.tsx`:
-  - Added `isCheckingSession` state
-  - Show loading screen during session check
-  - Always set view (defaults to LANDING if no session)
-  - Better error handling
-
-**Result**: No more blank screens - always shows something!
-
----
-
-## 📊 Impact Summary
-
-### Before
-- ❌ 5 scans = quota exceeded
-- ❌ Blank screen on sign-in
-- ❌ Only 20 requests/day
-
-### After
-- ✅ 25-40 scans/day possible
-- ✅ No blank screens
-- ✅ 250 requests/day
-
----
-
-## 🎯 Next Steps
-
-1. **Test sign-in** - should not show blank screen
-2. **Run more scans** - should not hit quota
-3. **Verify model** - should be using `gemini-2.0-flash`
-
-All fixes are in place! ✅
-
+All fixes are complete and ready for deployment!

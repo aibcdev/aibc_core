@@ -36,4 +36,5 @@ echo "1. Edit backend/.env and add your GEMINI_API_KEY"
 echo "2. Start backend: cd backend && npm run dev"
 echo "3. Start frontend: npm run dev (in root)"
 echo ""
-
+SUPABASE_URL= https://emlywpxvshknvdvziysc.supabase.co
+SUPABASE_ANON_KEY= eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtbHl3cHh2c2hrbnZkdnppeXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MzgwOTYsImV4cCI6MjA4MDUxNDA5Nn0.hoVMer5-gq4dLDLxEyfntBwbaWs7iOEz7Xc3gxiTku0

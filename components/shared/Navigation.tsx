@@ -71,7 +71,7 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
   }, [showAibcStreamDropdown]);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#050505]/95 backdrop-blur-xl border-b border-white/5">
+    <nav className="fixed top-0 left-0 right-0 z-[9999] bg-[#050505]/95 backdrop-blur-xl border-b border-white/5">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}

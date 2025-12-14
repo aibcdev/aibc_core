@@ -30,6 +30,7 @@ export interface Keyword {
   target_url?: string;
   status: 'targeting' | 'ranking' | 'tracked';
   created_at: string;
+  updated_at?: string;
 }
 
 export interface ContentPerformance {
@@ -41,6 +42,7 @@ export interface ContentPerformance {
   avg_position?: number;
   impressions: number;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface BlogListParams {
@@ -70,7 +72,7 @@ export interface ContentTemplate {
 
 export interface ContentGenerationRequest {
   keyword: string;
-  template_type: ContentTemplate['type'];
+  template_type?: ContentTemplate['type']; // Optional - auto-detected if not provided
   category?: string;
   target_word_count?: number;
 }

@@ -3,7 +3,8 @@
  */
 
 import { getNextKeywordToTarget } from './keywordService';
-import { generateBlogPost, ContentGenerationRequest } from './contentGeneratorService';
+import { generateBlogPost } from './contentGeneratorService';
+import { ContentGenerationRequest } from '../types/seo';
 import { addInternalLinks, updatePostWithInternalLinks } from './internalLinkingService';
 import { analyzeContentSEO } from './contentOptimizationService';
 import { updateBlogPost, getBlogPostById } from './seoContentService';
@@ -69,9 +70,13 @@ export async function executeContentPipeline(): Promise<PipelineResult> {
     });
     steps[steps.length - 1] = { step: 'seo_optimization', success: true, message: `SEO Score: ${analysis.score}/100` };
 
-    // Step 5: Publish (if score is acceptable)
+    // Step 5: Publish (content is already published by generator, just verify)
     steps.push({ step: 'publishing', success: false });
-    if (analysis.score >= 70) {
+    const finalPost = await getBlogPostById(generated.post.id);
+    if (finalPost && finalPost.status === 'published') {
+      steps[steps.length - 1] = { step: 'publishing', success: true, message: 'Published successfully' };
+    } else if (analysis.score >= 70) {
+      // If not published and score is good, publish it
       const published = await updateBlogPost(generated.post.id, {
         status: 'published',
         published_at: new Date().toISOString(),

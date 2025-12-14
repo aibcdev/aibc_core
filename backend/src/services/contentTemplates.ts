@@ -2,7 +2,7 @@
  * Content Templates - Pre-defined article structures for different content types
  */
 
-import { ContentTemplate } from '../../../types/seo';
+import { ContentTemplate } from '../types/seo';
 
 export const CONTENT_TEMPLATES: Record<ContentTemplate['type'], ContentTemplate> = {
   'how-to': {

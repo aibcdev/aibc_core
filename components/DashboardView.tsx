@@ -22,6 +22,8 @@ import BrandAssetsView from './BrandAssetsView';
 import IntegrationsView from './IntegrationsView';
 import SettingsView from './SettingsView';
 import InboxView from './InboxView';
+import Navigation from './shared/Navigation';
+import Footer from './shared/Footer';
 
 // Task Interface
 interface Task {
@@ -1027,8 +1029,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
   // Always render the dashboard structure, even during loading
   // This prevents blank screens during navigation
   return (
-    <div className="flex h-screen bg-[#050505] text-white overflow-hidden font-sans relative">
-      
+    <div className="flex flex-col h-screen bg-[#050505] text-white overflow-hidden font-sans relative">
+      <Navigation onNavigate={onNavigate} />
+      <div className="flex flex-1 overflow-hidden">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
@@ -1043,6 +1046,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
         w-64 flex-shrink-0 border-r border-white/10 flex flex-col bg-[#080808]
         transform transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        top-16 lg:top-0 h-[calc(100vh-4rem)] lg:h-full
       `}>
          <div className="h-16 flex items-center justify-between px-6 border-b border-white/10">
              <div className="flex items-center gap-3">
@@ -2664,6 +2668,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
         </div>
       )}
       </div>
+      </div>
+      <Footer onNavigate={onNavigate} />
     </div>
   );
 };
