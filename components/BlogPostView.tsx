@@ -230,7 +230,11 @@ const BlogPostView: React.FC<BlogPostViewProps> = ({ onNavigate, slug }) => {
               prose-pre:bg-[#0A0A0A] prose-pre:border prose-pre:border-white/10
               prose-ul:text-white/80 prose-ol:text-white/80
               prose-li:text-white/80
-              prose-img:rounded-lg prose-img:border prose-img:border-white/10"
+              prose-img:rounded-lg prose-img:border prose-img:border-white/10
+              [&_.lead]:text-xl [&_.lead]:text-white/90 [&_.lead]:font-medium [&_.lead]:mb-6 [&_.lead]:leading-relaxed
+              [&_h2]:mt-12 [&_h2]:mb-6 [&_h3]:mt-8 [&_h3]:mb-4
+              [&_p]:mb-6 [&_ul]:mb-6 [&_ol]:mb-6
+              [&_li]:mb-2"
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
 
