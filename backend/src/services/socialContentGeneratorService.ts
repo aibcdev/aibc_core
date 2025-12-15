@@ -560,15 +560,20 @@ export async function enhanceContentIdeaWithPostContent(
       brandContext.brandVoice
     );
   
+  // Ensure platformPrefs has required properties
+  const primary = platformPrefs?.primary || [];
+  const secondary = platformPrefs?.secondary || [];
+  const rationale = (platformPrefs as any)?.rationale || 'General business audience';
+  
   // Check if platform matches brand's primary platforms
-  const isPrimaryPlatform = platformPrefs.primary.includes(platform);
-  const isSecondaryPlatform = platformPrefs.secondary.includes(platform);
+  const isPrimaryPlatform = primary.includes(platform);
+  const isSecondaryPlatform = secondary.includes(platform);
   
   if (!isPrimaryPlatform && !isSecondaryPlatform) {
     // Platform doesn't match brand preferences - log rationale
     console.log(`Platform ${platform} doesn't match brand preferences for ${brandContext.name}`);
-    console.log(`Recommended platforms: ${platformPrefs.primary.join(', ')} (primary), ${platformPrefs.secondary.join(', ')} (secondary)`);
-    console.log(`Rationale: ${platformPrefs.rationale || 'General business audience'}`);
+    console.log(`Recommended platforms: ${primary.join(', ')} (primary), ${secondary.join(', ')} (secondary)`);
+    console.log(`Rationale: ${rationale}`);
   }
   
   try {
