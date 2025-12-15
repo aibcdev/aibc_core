@@ -10,16 +10,15 @@ steps:
     args: ['run', 'build']
     dir: 'backend'
 
-  # Build Docker image (from backend directory)
+  # Build Docker image (from root, context is backend directory)
   - name: 'gcr.io/cloud-builders/docker'
-    dir: 'backend'
     args:
       - 'build'
       - '-f'
-      - 'Dockerfile'
+      - 'backend/Dockerfile'
       - '-t'
       - 'gcr.io/$PROJECT_ID/aibc-backend:latest'
-      - '.'
+      - 'backend'
 
   # Push to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
