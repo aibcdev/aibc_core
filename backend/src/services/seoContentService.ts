@@ -106,6 +106,7 @@ export async function createBlogPost(data: Partial<BlogPost>): Promise<BlogPost>
     const postData = {
       slug: finalSlug,
       title: data.title || 'Untitled',
+      author: data.author || null, // Author name assigned during generation
       meta_description: data.meta_description,
       content: data.content || '',
       excerpt: data.excerpt || data.content?.substring(0, 160) || '',
@@ -148,6 +149,7 @@ export async function createBlogPost(data: Partial<BlogPost>): Promise<BlogPost>
       id,
       slug: finalSlug,
       title: data.title || 'Untitled',
+      author: data.author || undefined, // Author name assigned during generation
       meta_description: data.meta_description,
       content: data.content || '',
       excerpt: data.excerpt || data.content?.substring(0, 160) || '',

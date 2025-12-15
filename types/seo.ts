@@ -2,6 +2,7 @@ export interface BlogPost {
   id: string;
   slug: string;
   title: string;
+  author?: string; // Author name assigned during generation
   meta_description?: string;
   content: string;
   excerpt?: string;

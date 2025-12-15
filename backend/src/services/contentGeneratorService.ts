@@ -6,6 +6,7 @@ import { generateText, generateJSON } from './llmService';
 import { getTemplate, suggestTemplateForKeyword } from './contentTemplates';
 import { createBlogPost, updateBlogPost } from './seoContentService';
 import { ContentGenerationRequest, ContentGenerationResponse, BlogPost } from '../types/seo';
+import { selectAuthor, getAuthorWritingInstructions, Author } from './authorService';
 
 /**
  * Generate SEO-optimized meta description for instant traffic
@@ -99,12 +100,20 @@ Return ONLY the title, nothing else. No quotes, no markdown, no colons at the en
 async function generateContentBody(
   keyword: string,
   templateType: string,
-  targetWordCount: number = 2000
+  targetWordCount: number = 2000,
+  author?: Author
 ): Promise<string> {
   const template = getTemplate(templateType as any);
   const structure = template.structure;
 
-  const prompt = `You are an expert SEO content writer and storyteller. Write a comprehensive, highly-optimized blog post about: "${keyword}" that sounds like it was written by a real human expert, not AI.
+  // Get author-specific writing instructions if author provided
+  const authorInstructions = author ? getAuthorWritingInstructions(author) : '';
+
+  const prompt = `${authorInstructions}
+
+You are an expert SEO content writer and storyteller. Write a comprehensive, highly-optimized blog post about: "${keyword}" that sounds like it was written by a real human expert, not AI.
+
+${author ? `REMEMBER: Write in ${author.name}'s distinct voice and style throughout. Use their characteristic phrases, tone, and approach while maintaining all SEO requirements.` : ''}
 
 CRITICAL REQUIREMENTS FOR INSTANT SEO TRAFFIC:
 
@@ -217,16 +226,19 @@ export async function generateBlogPost(
   // Auto-select template if not provided
   const selectedTemplateType = template_type || suggestTemplateForKeyword(keyword);
 
+  // Select author with clustering algorithm
+  const author = selectAuthor();
   console.log(`[Content Generator] Generating ${selectedTemplateType} post for keyword: "${keyword}"`);
+  console.log(`[Content Generator] Assigned author: ${author.name} (${author.background})`);
 
   try {
     // Generate title
     const title = await generateTitle(keyword, selectedTemplateType);
     console.log(`[Content Generator] Generated title: "${title}"`);
 
-    // Generate content body
-    const content = await generateContentBody(keyword, selectedTemplateType, target_word_count);
-    console.log(`[Content Generator] Generated content (${content.length} chars)`);
+    // Generate content body with author's writing style
+    const content = await generateContentBody(keyword, selectedTemplateType, target_word_count, author);
+    console.log(`[Content Generator] Generated content (${content.length} chars) in ${author.name}'s voice`);
 
     // Generate slug from title
     const slug = title
@@ -261,6 +273,7 @@ export async function generateBlogPost(
     const post = await createBlogPost({
       title,
       slug,
+      author: author.name, // Assign selected author
       meta_description: metaDescription,
       content,
       excerpt,
