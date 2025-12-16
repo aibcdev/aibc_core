@@ -145,17 +145,17 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
         
         // Check backend health first
         const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-        addLog(`[SYSTEM] Connecting to backend: ${API_BASE_URL}`);
+          addLog(`[SYSTEM] Connecting to backend: ${API_BASE_URL}`);
         
         const healthCheck = await checkBackendHealth();
         if (!healthCheck.healthy) {
           addLog(`[ERROR] Cannot connect to backend server: ${healthCheck.message || 'Network error'}`);
           addLog(`[INFO] Backend URL: ${API_BASE_URL}`);
-          addLog(`[INFO] Please ensure the backend server is running`);
-          addLog(`[INFO] You can proceed anyway - some features may be limited`);
-          setTimeout(() => { if (mounted) setShowButton(true); }, 3000);
-          return;
-        }
+            addLog(`[INFO] Please ensure the backend server is running`);
+            addLog(`[INFO] You can proceed anyway - some features may be limited`);
+            setTimeout(() => { if (mounted) setShowButton(true); }, 3000);
+            return;
+          }
         
         addLog(`[SYSTEM] Backend connection verified`);
         
@@ -285,6 +285,9 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
             }
             
             // Dispatch event to notify dashboard of new scan completion
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:287',message:'DISPATCHING scanComplete EVENT',data:{scanUsername,scanId,hasBrandDNA:!!scanResultsWithUsername.brandDNA,brandDNAKeys:scanResultsWithUsername.brandDNA?Object.keys(scanResultsWithUsername.brandDNA):[],hasInsights:!!scanResultsWithUsername.strategicInsights,insightsCount:scanResultsWithUsername.strategicInsights?.length||0,hasCompetitors:!!scanResultsWithUsername.competitorIntelligence,competitorsCount:scanResultsWithUsername.competitorIntelligence?.length||0,resultKeys:Object.keys(scanResultsWithUsername)},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H1'})}).catch(()=>{});
+            // #endregion
             const event = new CustomEvent('scanComplete', {
               detail: {
                 username: scanUsername,
@@ -387,7 +390,7 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
                     }
                   }
                 });
-              }
+            }
           } catch (err: any) {
             // #region agent log
             fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:375',message:'pollInterval ERROR',data:{error:err?.message||'unknown',pollCount,scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-poll',hypothesisId:'H4'})}).catch(()=>{});

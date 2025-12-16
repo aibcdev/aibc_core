@@ -301,9 +301,56 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
   // Listen for events that should trigger notifications
   useEffect(() => {
     const handleScanCompleteNotif = (event: CustomEvent) => {
-      const { username } = event.detail || {};
+      const { username, results } = event.detail || {};
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:303',message:'scanComplete EVENT RECEIVED',data:{username,hasResults:!!results,hasBrandDNA:!!results?.brandDNA,hasInsights:!!results?.strategicInsights,insightsCount:results?.strategicInsights?.length||0,resultsKeys:results?Object.keys(results):[]},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete-handler',hypothesisId:'H3'})}).catch(()=>{});
+      // #endregion
       if (username) {
         addNotification('Scan Complete', `Digital footprint scan for ${username} has completed successfully.`);
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:310',message:'scanComplete - LOADING DATA FROM EVENT',data:{username,hasResults:!!results},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete-handler',hypothesisId:'H3'})}).catch(()=>{});
+        // #endregion
+        
+        // CRITICAL FIX: Load scan results into dashboard state when scan completes
+        if (results) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:318',message:'scanComplete - SETTING STATE FROM RESULTS',data:{hasBrandDNA:!!results.brandDNA,brandDNAKeys:results.brandDNA?Object.keys(results.brandDNA):[],hasInsights:!!results.strategicInsights,insightsCount:results.strategicInsights?.length||0,hasCompetitors:!!results.competitorIntelligence,competitorsCount:results.competitorIntelligence?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete-handler',hypothesisId:'H3'})}).catch(()=>{});
+          // #endregion
+          
+          console.log('📥 Dashboard: Loading scan results from event', results);
+          setScanUsername(username);
+          setBrandDNA(results.brandDNA || null);
+          setStrategicInsights(results.strategicInsights || []);
+          setCompetitorIntelligence(results.competitorIntelligence || []);
+          setMarketShare(results.marketShare || null);
+          if (results.scanStats) {
+            setScanStats(results.scanStats);
+          }
+        } else {
+          // Fallback: Try to load from localStorage if results not in event
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:335',message:'scanComplete - NO RESULTS IN EVENT - trying localStorage',data:{username},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete-handler',hypothesisId:'H3'})}).catch(()=>{});
+          // #endregion
+          
+          const cachedResults = localStorage.getItem('lastScanResults');
+          if (cachedResults) {
+            try {
+              const cached = JSON.parse(cachedResults);
+              console.log('📥 Dashboard: Loading scan results from localStorage fallback', cached);
+              setScanUsername(username);
+              setBrandDNA(cached.brandDNA || null);
+              setStrategicInsights(cached.strategicInsights || []);
+              setCompetitorIntelligence(cached.competitorIntelligence || []);
+              setMarketShare(cached.marketShare || null);
+              if (cached.scanStats) {
+                setScanStats(cached.scanStats);
+              }
+            } catch (e) {
+              console.error('Error parsing cached results:', e);
+            }
+          }
+        }
       }
     };
     
@@ -2496,7 +2543,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-sm font-bold text-white">Brand DNA</h3>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-[10px] text-white/30 px-2 py-1 bg-white/5 rounded">AI Extracted</span>
+                                <span className="text-[10px] text-white/30 px-2 py-1 bg-white/5 rounded">AI Extracted</span>
                                     {brandDNA && (
                                         <button
                                             onClick={() => setShowRescanWarning(true)}
