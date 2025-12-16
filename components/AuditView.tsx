@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Network, ArrowRight, CheckCircle, Loader2, AlertCircle, Search, Brain, Database, Target, Sparkles } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
-import { startScan, pollScanStatus } from '../services/apiClient';
+import { startScan, pollScanStatus, checkBackendHealth, getScanStatus } from '../services/apiClient';
 import Navigation from './shared/Navigation';
 
 interface AuditProps extends NavProps {
@@ -69,11 +69,22 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
 
   useEffect(() => {
     let mounted = true;
+    let pollIntervalId: NodeJS.Timeout | null = null;
+    let pollCount = 0;
     
     const performScan = async () => {
       const scanUsername = username || localStorage.getItem('lastScannedUsername') || '';
       
+      // #region agent log
+      const logData = {location:'AuditView.tsx:73',message:'performScan STARTED',data:{scanUsername,hasUsername:!!scanUsername,usernameProp:username},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H1'};
+      console.log('[DEBUG]', logData);
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+      // #endregion
+      
       if (!scanUsername) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:79',message:'performScan ERROR - no username',data:{username,lastScannedUsername:localStorage.getItem('lastScannedUsername')},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H6'})}).catch(()=>{});
+        // #endregion
         setError('No username provided');
         setLogs([`[ERROR] No username provided. Please go back and enter a username.`]);
         setTimeout(() => { if (mounted) setShowButton(true); }, 2000);
@@ -105,8 +116,10 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
       localStorage.setItem('lastScanTimestamp', Date.now().toString());
       
       // Dispatch event to notify all components to clear state IMMEDIATELY
+      // NOTE: We already cleared localStorage above, so we don't need clearAll here
+      // The dashboard will ignore this event since clearAll is not set
       window.dispatchEvent(new CustomEvent('newScanStarted', {
-        detail: { username: scanUsername, timestamp: Date.now() }
+        detail: { username: scanUsername, timestamp: Date.now(), clearAll: false, isRescan: false }
       }));
       
       console.log('✅ HARD RESET complete - all cache cleared for:', scanUsername);
@@ -132,46 +145,19 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
         
         // Check backend health first
         const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-        try {
-          addLog(`[SYSTEM] Connecting to backend: ${API_BASE_URL}`);
-          const healthCheck = await fetch(`${API_BASE_URL}/health`, { 
-            method: 'GET',
-            signal: AbortSignal.timeout(10000), // 10 second timeout (increased for Cloud Run cold starts)
-            headers: {
-              'Content-Type': 'application/json',
-            }
-          });
-          if (!healthCheck.ok) {
-            throw new Error(`Backend health check failed: ${healthCheck.status} ${healthCheck.statusText}`);
-          }
-          const healthData = await healthCheck.json();
-          addLog(`[SYSTEM] Backend connection verified: ${healthData.status || 'ok'}`);
-        } catch (healthError: any) {
-          console.error('Health check error:', healthError);
-          addLog(`[ERROR] Cannot connect to backend server: ${healthError.message || 'Network error'}`);
+        addLog(`[SYSTEM] Connecting to backend: ${API_BASE_URL}`);
+        
+        const healthCheck = await checkBackendHealth();
+        if (!healthCheck.healthy) {
+          addLog(`[ERROR] Cannot connect to backend server: ${healthCheck.message || 'Network error'}`);
           addLog(`[INFO] Backend URL: ${API_BASE_URL}`);
-          addLog(`[INFO] This might be a temporary network issue. Retrying...`);
-          
-          // Retry once after 2 seconds
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          try {
-            const retryCheck = await fetch(`${API_BASE_URL}/health`, { 
-              method: 'GET',
-              signal: AbortSignal.timeout(10000),
-            });
-            if (retryCheck.ok) {
-              addLog(`[SUCCESS] Backend connection verified on retry`);
-            } else {
-              throw new Error('Retry also failed');
-            }
-          } catch (retryError: any) {
-            addLog(`[ERROR] Backend still not reachable after retry`);
-            addLog(`[INFO] Please ensure the backend server is running`);
-            addLog(`[INFO] You can proceed anyway - some features may be limited`);
-            setTimeout(() => { if (mounted) setShowButton(true); }, 3000);
-            return;
-          }
+          addLog(`[INFO] Please ensure the backend server is running`);
+          addLog(`[INFO] You can proceed anyway - some features may be limited`);
+          setTimeout(() => { if (mounted) setShowButton(true); }, 3000);
+          return;
         }
+        
+        addLog(`[SYSTEM] Backend connection verified`);
         
         // Get scan type from localStorage or prop
         const finalScanType = scanType || localStorage.getItem('lastScanType') || 'basic';
@@ -269,14 +255,34 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
               scanTimestamp: Date.now(),
               lastUpdated: new Date().toISOString()
             };
-            localStorage.setItem('lastScanResults', JSON.stringify(scanResultsWithUsername));
-            // Store username, scan ID, and timestamp for dashboard loading
-            localStorage.setItem('lastScannedUsername', scanUsername);
-            localStorage.setItem('lastScanTimestamp', Date.now().toString());
-            if (scanId) {
-              localStorage.setItem('lastScanId', scanId);
+            try {
+              localStorage.setItem('lastScanResults', JSON.stringify(scanResultsWithUsername));
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:272',message:'localStorage WRITE - lastScanResults',data:{scanUsername,hasResults:!!scanResultsWithUsername,resultsSize:JSON.stringify(scanResultsWithUsername).length},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H5'})}).catch(()=>{});
+              // #endregion
+              // Store username, scan ID, and timestamp for dashboard loading
+              // CRITICAL: Update timestamp to match the completion time, not the start time
+              // This ensures timestamp validation in dashboard works correctly
+              const completionTimestamp = Date.now().toString();
+              localStorage.setItem('lastScannedUsername', scanUsername);
+              localStorage.setItem('lastScanTimestamp', completionTimestamp);
+              if (scanId) {
+                localStorage.setItem('lastScanId', scanId);
+              }
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:293',message:'localStorage TIMESTAMP UPDATED',data:{scanUsername,completionTimestamp,cachedTimestamp:scanResultsWithUsername.timestamp},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+              // #endregion
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:279',message:'localStorage WRITE - all keys',data:{scanUsername,scanId,timestamp:Date.now().toString()},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H5'})}).catch(()=>{});
+              // #endregion
+              addLog(`[SUCCESS] Scan results stored for ${scanUsername}`);
+            } catch (storageError: any) {
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:283',message:'localStorage WRITE ERROR',data:{error:storageError?.message||'unknown',scanUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H5'})}).catch(()=>{});
+              // #endregion
+              console.error('Failed to store scan results:', storageError);
+              addLog(`[WARNING] Failed to store scan results: ${storageError.message}`);
             }
-            addLog(`[SUCCESS] Scan results stored for ${scanUsername}`);
             
             // Dispatch event to notify dashboard of new scan completion
             const event = new CustomEvent('scanComplete', {
@@ -290,6 +296,9 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
             console.log('📢 Dispatched scanComplete event for:', scanUsername);
           }
         }).catch(err => {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:292',message:'pollScanStatus ERROR',data:{error:err?.message||'unknown',scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-poll',hypothesisId:'H4'})}).catch(()=>{});
+          // #endregion
           console.error('Background poll error:', err);
         });
 
@@ -304,17 +313,26 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
         let pollCount = 0;
         const maxPolls = 30; // Poll for up to 5 minutes
         
-        const pollInterval = setInterval(async () => {
+        pollIntervalId = setInterval(async () => {
           if (!mounted || pollCount >= maxPolls) {
-            clearInterval(pollInterval);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:307',message:'pollInterval CLEARED',data:{pollCount,maxPolls,mounted},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-poll',hypothesisId:'H2'})}).catch(()=>{});
+            // #endregion
+            if (pollIntervalId) clearInterval(pollIntervalId);
             return;
           }
           
+          pollCount++;
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:314',message:'pollInterval EXECUTING',data:{pollCount,maxPolls,scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-poll',hypothesisId:'H1'})}).catch(()=>{});
+          // #endregion
+          
           try {
-            const statusResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/scan/${scanId}/status`);
-            if (statusResponse.ok) {
-              const statusData = await statusResponse.json();
-              if (statusData.scan?.logs) {
+            const statusData = await getScanStatus(scanId);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:318',message:'pollInterval STATUS DATA',data:{hasScan:!!statusData.scan,hasLogs:!!statusData.scan?.logs,logsCount:statusData.scan?.logs?.length||0,scanStatus:statusData.scan?.status},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-poll',hypothesisId:'H1'})}).catch(()=>{});
+            // #endregion
+            if (statusData.success && statusData.scan?.logs) {
                 // Parse logs to see which platforms were scanned
                 const logs = statusData.scan.logs;
                 logs.forEach((log: string) => {
@@ -370,12 +388,12 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
                   }
                 });
               }
-            }
-          } catch (err) {
+          } catch (err: any) {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:375',message:'pollInterval ERROR',data:{error:err?.message||'unknown',pollCount,scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-poll',hypothesisId:'H4'})}).catch(()=>{});
+            // #endregion
             // Ignore polling errors
           }
-          
-          pollCount++;
         }, 10000); // Poll every 10 seconds
         
         // Wait for initial platform scanning
@@ -484,7 +502,18 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
 
     performScan();
 
-    return () => { mounted = false; };
+    return () => { 
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:487',message:'useEffect CLEANUP',data:{hasPollInterval:!!pollIntervalId,pollCount},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-cleanup',hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+      mounted = false;
+      if (pollIntervalId) {
+        clearInterval(pollIntervalId);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:491',message:'pollInterval CLEARED in cleanup',data:{pollCount},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-cleanup',hypothesisId:'H2'})}).catch(()=>{});
+        // #endregion
+      }
+    };
   }, [username]);
 
   return (

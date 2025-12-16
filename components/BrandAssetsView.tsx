@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Palette, Type, Image as ImageIcon, FileText, Video, Music, X, Plus, Check, Globe, Trash2, Edit3, Link2, Sparkles, RefreshCw, Save, Clock, Megaphone, Target, Compass, Info, Lock, ChevronDown, Cloud, Bot } from 'lucide-react';
+import { Upload, Palette, Type, Image as ImageIcon, FileText, Video, Music, X, Plus, Check, Globe, Trash2, Edit3, Link2, Sparkles, RefreshCw, Save, Clock, Megaphone, Target, Compass, Info, Lock, ChevronDown, Cloud, Bot, Linkedin } from 'lucide-react';
 import { getScanResults } from '../services/apiClient';
 
 interface BrandAsset {
@@ -60,7 +60,7 @@ const BrandAssetsView: React.FC = () => {
   const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
-      Array.from(files).forEach(file => {
+      Array.from(files).forEach((file: File) => {
         const newMaterial: BrandAsset = {
           id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
           name: file.name,

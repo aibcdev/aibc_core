@@ -24,6 +24,77 @@ const getApiBaseUrl = () => {
 
 const API_BASE_URL = getApiBaseUrl();
 
+/**
+ * Retry configuration
+ */
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  retryDelay: 1000, // 1 second
+  timeout: 30000, // 30 seconds
+};
+
+/**
+ * Retry wrapper for fetch requests
+ */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit = {},
+  retries = RETRY_CONFIG.maxRetries
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), RETRY_CONFIG.timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    
+    // Retry on network errors or timeouts
+    if (retries > 0 && (
+      error.name === 'AbortError' ||
+      error.name === 'TypeError' ||
+      error.message?.includes('fetch') ||
+      error.message?.includes('network') ||
+      error.message?.includes('Failed to fetch')
+    )) {
+      console.log(`Retrying request (${RETRY_CONFIG.maxRetries - retries + 1}/${RETRY_CONFIG.maxRetries})...`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_CONFIG.retryDelay));
+      return fetchWithRetry(url, options, retries - 1);
+    }
+    
+    throw error;
+  }
+}
+
+/**
+ * Check backend health
+ */
+export async function checkBackendHealth(): Promise<{ healthy: boolean; message?: string }> {
+  try {
+    const response = await fetchWithRetry(`${API_BASE_URL}/health`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }, 1); // Only 1 retry for health check
+
+    if (response.ok) {
+      return { healthy: true };
+    }
+    return { healthy: false, message: `Backend returned ${response.status}` };
+  } catch (error: any) {
+    return { 
+      healthy: false, 
+      message: error.message || 'Cannot connect to backend server' 
+    };
+  }
+}
+
 export interface ScanResponse {
   success: boolean;
   scanId?: string;
@@ -57,6 +128,13 @@ export interface ScanResults {
       totalCreatorsInSpace?: number;
       yourRank?: number;
       note?: string;
+    };
+    scanStats?: {
+      postsAnalyzed: number;
+      competitorsFound: number;
+      themesIdentified: number;
+      isDeepScan: boolean;
+      scanTier: string;
     };
   };
   error?: string;
@@ -151,7 +229,7 @@ export async function startScan(
       }
     })();
     
-    const response = await fetch(`${API_BASE_URL}/api/scan/start`, {
+    const response = await fetchWithRetry(`${API_BASE_URL}/api/scan/start`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -179,8 +257,8 @@ export async function startScan(
   } catch (error: any) {
     console.error('Start scan error:', error);
     // Provide more specific error messages
-    if (error.message?.includes('fetch') || error.message?.includes('network') || error.name === 'TypeError') {
-      throw new Error('Load failed - Cannot connect to backend server. Please check if the server is running.');
+    if (error.message?.includes('fetch') || error.message?.includes('network') || error.name === 'TypeError' || error.name === 'AbortError') {
+      throw new Error('Cannot connect to backend server. Please check if the server is running and try again.');
     }
     throw error;
   }
@@ -191,16 +269,31 @@ export async function startScan(
  */
 export async function getScanStatus(scanId: string): Promise<ScanStatus> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/scan/${scanId}/status`);
+    const response = await fetchWithRetry(`${API_BASE_URL}/api/scan/${scanId}/status`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to get scan status');
+      let errorMessage = 'Failed to get scan status';
+      try {
+        const error = await response.json();
+        errorMessage = error.error || errorMessage;
+      } catch {
+        errorMessage = `Server error: ${response.status} ${response.statusText}`;
+      }
+      throw new Error(errorMessage);
     }
 
     return await response.json();
   } catch (error: any) {
     console.error('Get scan status error:', error);
+    // Don't throw network errors - let polling handle retries
+    if (error.message?.includes('fetch') || error.message?.includes('network') || error.name === 'TypeError' || error.name === 'AbortError') {
+      throw new Error('Network error - will retry');
+    }
     throw error;
   }
 }
@@ -210,11 +303,22 @@ export async function getScanStatus(scanId: string): Promise<ScanStatus> {
  */
 export async function getScanResults(scanId: string): Promise<ScanResults> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/scan/${scanId}/results`);
+    const response = await fetchWithRetry(`${API_BASE_URL}/api/scan/${scanId}/results`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to get scan results');
+      let errorMessage = 'Failed to get scan results';
+      try {
+        const error = await response.json();
+        errorMessage = error.error || errorMessage;
+      } catch {
+        errorMessage = `Server error: ${response.status} ${response.statusText}`;
+      }
+      throw new Error(errorMessage);
     }
 
     return await response.json();
@@ -230,12 +334,26 @@ export async function getScanResults(scanId: string): Promise<ScanResults> {
 export async function pollScanStatus(
   scanId: string,
   onUpdate: (status: ScanStatus['scan']) => void,
-  interval: number = 2000
+  interval: number = 2000,
+  maxPolls: number = 300 // 10 minutes max (300 * 2s = 600s)
 ): Promise<ScanResults> {
   return new Promise((resolve, reject) => {
+    let pollCount = 0;
+    let consecutiveErrors = 0;
+    const maxConsecutiveErrors = 5;
+
     const poll = async () => {
       try {
+        pollCount++;
+        
+        // Check max polls
+        if (pollCount > maxPolls) {
+          reject(new Error('Scan timeout - maximum polling attempts reached'));
+          return;
+        }
+
         const statusResponse = await getScanStatus(scanId);
+        consecutiveErrors = 0; // Reset error count on success
         
         if (statusResponse.success && statusResponse.scan) {
           onUpdate(statusResponse.scan);
@@ -251,8 +369,24 @@ export async function pollScanStatus(
         } else {
           reject(new Error(statusResponse.error || 'Failed to get scan status'));
         }
-      } catch (error) {
-        reject(error);
+      } catch (error: any) {
+        consecutiveErrors++;
+        
+        // If too many consecutive errors, fail
+        if (consecutiveErrors >= maxConsecutiveErrors) {
+          reject(new Error(`Failed to get scan status after ${maxConsecutiveErrors} attempts: ${error.message}`));
+          return;
+        }
+        
+        // For network errors, retry with exponential backoff
+        if (error.message?.includes('Network error') || error.message?.includes('network')) {
+          const backoffDelay = Math.min(interval * Math.pow(2, consecutiveErrors - 1), 10000); // Max 10s
+          console.log(`Network error, retrying in ${backoffDelay}ms...`);
+          setTimeout(poll, backoffDelay);
+        } else {
+          // For other errors, reject immediately
+          reject(error);
+        }
       }
     };
 
@@ -265,11 +399,22 @@ export async function pollScanStatus(
  */
 export async function getLatestScanResults(username: string): Promise<ScanResults> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/scan/user/${encodeURIComponent(username)}/latest`);
+    const response = await fetchWithRetry(`${API_BASE_URL}/api/scan/user/${encodeURIComponent(username)}/latest`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to get latest scan results');
+      let errorMessage = 'Failed to get latest scan results';
+      try {
+        const error = await response.json();
+        errorMessage = error.error || errorMessage;
+      } catch {
+        errorMessage = `Server error: ${response.status} ${response.statusText}`;
+      }
+      throw new Error(errorMessage);
     }
 
     return await response.json();
