@@ -2495,15 +2495,43 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                         <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-6 relative overflow-hidden shadow-lg">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-sm font-bold text-white">Brand DNA</h3>
-                                <span className="text-[10px] text-white/30 px-2 py-1 bg-white/5 rounded">AI Extracted</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] text-white/30 px-2 py-1 bg-white/5 rounded">AI Extracted</span>
+                                    {brandDNA && (
+                                        <button
+                                            onClick={() => setShowRescanWarning(true)}
+                                            className="px-2 py-1 bg-white/5 border border-white/10 rounded text-[10px] font-bold text-white hover:bg-white/10 transition-all flex items-center gap-1"
+                                            title="Redo footprint scan"
+                                        >
+                                            <RefreshCw className="w-3 h-3" />
+                                            <span className="hidden sm:inline">Redo Scan</span>
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                             {!brandDNA ? (
                                 <div className="text-center py-12 text-white/40">
                                     <Sparkles className="w-12 h-12 text-white/20 mx-auto mb-4" />
                                     <p className="text-sm mb-2">No brand DNA extracted yet</p>
                                     <p className="text-xs text-white/20 mb-4">Run a digital footprint scan</p>
+                                    <button
+                                        onClick={() => {
+                                            // Check if there's existing scan data - show warning if so
+                                            const hasExistingData = localStorage.getItem('lastScanResults') || localStorage.getItem('lastScannedUsername');
+                                            if (hasExistingData) {
+                                                setShowRescanWarning(true);
+                                            } else {
+                                                // No existing data, go directly to scan
+                                                onNavigate(ViewState.INGESTION);
+                                            }
+                                        }}
+                                        className="px-4 py-2 bg-orange-500 border border-white/10 rounded-lg text-xs font-bold text-white hover:bg-orange-600 transition-all flex items-center gap-2 mx-auto"
+                                    >
+                                        <Zap className="w-3 h-3" />
+                                        Run Footprint Scan
+                                    </button>
                                     {scanUsername && (
-                                        <div className="space-y-2">
+                                        <div className="space-y-2 mt-4">
                                             <p className="text-xs text-white/30">Last scanned: {scanUsername}</p>
                                             <button
                                                 onClick={async () => {
