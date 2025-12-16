@@ -279,15 +279,71 @@ function App() {
     const user = localStorage.getItem('user');
     const isLoggedIn = authToken && user;
     
-    // If user is logged in and tries to go to landing page, redirect to dashboard
-    // This protects against accidental navigation to landing while authenticated
-    // If auth was cleared (logout), this check will pass and allow landing
-    if (newView === ViewState.LANDING && isLoggedIn) {
-      // Auth still exists - don't go to landing, go to dashboard instead
-      setView(ViewState.DASHBOARD);
-      window.history.pushState(null, '', '/dashboard');
-      window.scrollTo(0, 0);
-      return;
+    // #region agent log
+    const navLog = {location:'App.tsx:276',message:'navigate CALLED',data:{newView,page,isLoggedIn,hasAuthToken:!!authToken,hasUser:!!user},timestamp:Date.now(),sessionId:'debug-session',runId:'app-navigate',hypothesisId:'H9'};
+    console.log('[DEBUG]', navLog);
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(navLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+    // #endregion
+    
+    // Public routes that are always accessible (even when logged in)
+    const publicRoutes = [ViewState.PRICING, ViewState.BLOG, ViewState.BLOG_POST, ViewState.PRIVACY_POLICY, ViewState.TERMS_OF_SERVICE];
+    
+    // If user is logged in, restrict navigation
+    if (isLoggedIn) {
+      // Allow public routes
+      if (publicRoutes.includes(newView)) {
+        setView(newView);
+        // Update URL based on view
+        let newPath = '/';
+        if (newView === ViewState.PRICING) newPath = '/pricing';
+        else if (newView === ViewState.BLOG) newPath = '/blog';
+        else if (newView === ViewState.BLOG_POST && page) newPath = `/blog/${page}`;
+        else if (newView === ViewState.PRIVACY_POLICY) newPath = '/privacy-policy';
+        else if (newView === ViewState.TERMS_OF_SERVICE) newPath = '/terms-of-service';
+        window.history.pushState(null, '', newPath);
+        window.scrollTo(0, 0);
+        return;
+      }
+      
+      // If trying to go to landing or login pages, redirect to ingestion
+      if (newView === ViewState.LANDING || newView === ViewState.LOGIN || newView === ViewState.SIGNIN) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:295',message:'navigate REDIRECT - logged in user to ingestion',data:{attemptedView:newView},timestamp:Date.now(),sessionId:'debug-session',runId:'app-navigate',hypothesisId:'H9'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+        // #endregion
+        setView(ViewState.INGESTION);
+        window.history.pushState(null, '', '/scan');
+        window.scrollTo(0, 0);
+        return;
+      }
+      
+      // Allow dashboard and ingestion for logged in users
+      if (newView === ViewState.DASHBOARD || newView === ViewState.INGESTION || newView === ViewState.AUDIT || newView === ViewState.ONBOARDING) {
+        // Allow these views
+      } else {
+        // Block other views - redirect to ingestion
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:308',message:'navigate BLOCKED - redirecting to ingestion',data:{attemptedView:newView},timestamp:Date.now(),sessionId:'debug-session',runId:'app-navigate',hypothesisId:'H9'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+        // #endregion
+        setView(ViewState.INGESTION);
+        window.history.pushState(null, '', '/scan');
+        window.scrollTo(0, 0);
+        return;
+      }
+    } else {
+      // Not logged in - only allow public routes or auth routes
+      if (!publicRoutes.includes(newView) && 
+          newView !== ViewState.LOGIN && 
+          newView !== ViewState.SIGNIN && 
+          newView !== ViewState.RESET_PASSWORD &&
+          newView !== ViewState.LANDING) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:320',message:'navigate BLOCKED - redirecting to login',data:{attemptedView:newView},timestamp:Date.now(),sessionId:'debug-session',runId:'app-navigate',hypothesisId:'H9'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+        // #endregion
+        setView(ViewState.LOGIN);
+        window.history.pushState(null, '', '/login');
+        window.scrollTo(0, 0);
+        return;
+      }
     }
     
     setView(newView);

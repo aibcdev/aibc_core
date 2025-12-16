@@ -11,6 +11,25 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
 
   useEffect(() => {
     const checkAuth = async () => {
+      // Check localStorage first (faster, works for local auth)
+      const authToken = localStorage.getItem('authToken');
+      const userStr = localStorage.getItem('user');
+      const isLoggedInLocal = !!(authToken && userStr);
+      
+      if (isLoggedInLocal) {
+        setIsLoggedIn(true);
+        try {
+          const user = JSON.parse(userStr || '{}');
+          const name = user.name || user.email || 'User';
+          const email = user.email || '';
+          const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
+          setUserInfo({ name, email, initials });
+        } catch (e) {
+          setUserInfo({ name: 'User', email: '', initials: 'U' });
+        }
+      }
+      
+      // Also check Supabase if configured
       if (isSupabaseConfigured() && supabase) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
@@ -19,7 +38,7 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
           const email = session.user.email || '';
           const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
           setUserInfo({ name, email, initials });
-        } else {
+        } else if (!isLoggedInLocal) {
           setIsLoggedIn(false);
           setUserInfo(null);
         }
@@ -32,10 +51,17 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
             const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
             setUserInfo({ name, email, initials });
           } else {
-            setIsLoggedIn(false);
-            setUserInfo(null);
+            // Only clear if Supabase session is gone AND no local auth
+            const localAuth = !!(localStorage.getItem('authToken') && localStorage.getItem('user'));
+            if (!localAuth) {
+              setIsLoggedIn(false);
+              setUserInfo(null);
+            }
           }
         });
+      } else if (!isLoggedInLocal) {
+        setIsLoggedIn(false);
+        setUserInfo(null);
       }
     };
     checkAuth();
@@ -77,7 +103,20 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
           {/* Logo */}
           <div className="flex items-center gap-2">
             <button 
-              onClick={() => onNavigate(ViewState.LANDING)}
+              onClick={() => {
+                // #region agent log
+                const navLog = {location:'Navigation.tsx:79',message:'LOGO clicked',data:{isLoggedIn},timestamp:Date.now(),sessionId:'debug-session',runId:'nav-click',hypothesisId:'H9'};
+                console.log('[DEBUG]', navLog);
+                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(navLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                // #endregion
+                if (isLoggedIn) {
+                  // Authenticated users should go to ingestion page, not landing
+                  onNavigate(ViewState.INGESTION);
+                } else {
+                  // Not authenticated - go to login
+                  onNavigate(ViewState.LOGIN);
+                }
+              }}
               className="flex items-center gap-2"
             >
               <svg viewBox="0 0 100 100" className="w-8 h-8" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -94,10 +133,17 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
           <div className="hidden md:flex items-center gap-8">
             <button 
               onClick={() => {
-                if (window.location.pathname === '/' || window.location.hash === '') {
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                // #region agent log
+                const navLog = {location:'Navigation.tsx:96',message:'HOME button clicked',data:{isLoggedIn,currentPath:window.location.pathname},timestamp:Date.now(),sessionId:'debug-session',runId:'nav-click',hypothesisId:'H9'};
+                console.log('[DEBUG]', navLog);
+                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(navLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                // #endregion
+                if (isLoggedIn) {
+                  // Authenticated users should go to ingestion page, not landing
+                  onNavigate(ViewState.INGESTION);
                 } else {
-                  onNavigate(ViewState.LANDING);
+                  // Not authenticated - go to login
+                  onNavigate(ViewState.LOGIN);
                 }
               }}
               className="text-sm font-bold text-white hover:text-orange-500 transition-colors uppercase"
@@ -105,13 +151,27 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
               HOME
             </button>
             <button 
-              onClick={() => window.location.href = '/blog'}
+              onClick={() => {
+                // #region agent log
+                const navLog = {location:'Navigation.tsx:111',message:'BLOG button clicked',data:{isLoggedIn},timestamp:Date.now(),sessionId:'debug-session',runId:'nav-click',hypothesisId:'H9'};
+                console.log('[DEBUG]', navLog);
+                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(navLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                // #endregion
+                window.location.href = '/blog';
+              }}
               className="text-sm font-bold text-white hover:text-orange-500 transition-colors uppercase"
             >
               BLOG
             </button>
             <button 
-              onClick={() => onNavigate(ViewState.PRICING)}
+              onClick={() => {
+                // #region agent log
+                const navLog = {location:'Navigation.tsx:118',message:'PRICING button clicked',data:{isLoggedIn},timestamp:Date.now(),sessionId:'debug-session',runId:'nav-click',hypothesisId:'H9'};
+                console.log('[DEBUG]', navLog);
+                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(navLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                // #endregion
+                onNavigate(ViewState.PRICING);
+              }}
               className="text-sm font-bold text-white hover:text-orange-500 transition-colors uppercase"
             >
               PRICING

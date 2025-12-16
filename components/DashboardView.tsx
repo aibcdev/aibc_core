@@ -5,7 +5,7 @@ import {
   AlertCircle, Briefcase, Plus, Trash2,
   X, Zap, Globe, Users, Activity, BarChart2, ShieldAlert,
   Target, FileText, Send, CheckCircle, Sparkles, TrendingUp,
-  Linkedin, Instagram, Play, Loader2
+  Linkedin, Instagram, Play, Loader2, History, ChevronDown, RefreshCw
 } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
 import { fetchAnalyticsData, fetchCalendarEvents, fetchCompetitors, fetchContentPipeline } from '../services/dashboardData';
@@ -64,8 +64,21 @@ interface DashboardViewProps extends NavProps {
 const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }) => {
   const [currentPage, setCurrentPageState] = useState<DashboardPage>((initialPage as DashboardPage) || 'dashboard');
   
+  // #region agent log
+  useEffect(() => {
+    const dashLog = {location:'DashboardView.tsx:64',message:'DashboardView MOUNTED',data:{initialPage,currentPage,hasOnNavigate:!!onNavigate},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-mount',hypothesisId:'H10'};
+    console.log('[DEBUG]', dashLog);
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+  }, []);
+  // #endregion
+  
   // Wrapper to update URL when page changes
   const setCurrentPage = (page: DashboardPage) => {
+    // #region agent log
+    const dashLog = {location:'DashboardView.tsx:72',message:'setCurrentPage CALLED',data:{page,previousPage:currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-nav',hypothesisId:'H10'};
+    console.log('[DEBUG]', dashLog);
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+    // #endregion
     setCurrentPageState(page);
     const newPath = PAGE_TO_URL[page] || '/dashboard';
     window.history.pushState(null, '', newPath);
@@ -85,9 +98,29 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
     };
     
     // Listen for new scan started - clear all state IMMEDIATELY and SYNCHRONOUSLY
+    // BUT ONLY if this is actually a new scan, not just navigation
     const handleNewScanStarted = (event: CustomEvent) => {
+      const { username, isRescan, clearAll } = event.detail;
+      
+      // #region agent log
+      const newScanLog = {location:'DashboardView.tsx:89',message:'newScanStarted EVENT RECEIVED',data:{username,isRescan,clearAll,hasLastScanResults:!!localStorage.getItem('lastScanResults'),lastScannedUsername:localStorage.getItem('lastScannedUsername')},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-new-scan',hypothesisId:'H7'};
+      console.log('[DEBUG]', newScanLog);
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(newScanLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+      // #endregion
+      
+      // Only clear if explicitly told to clear (from actual scan start, not navigation)
+      if (!clearAll && !isRescan) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:96',message:'newScanStarted IGNORED - not real scan',data:{username,isRescan,clearAll},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-new-scan',hypothesisId:'H7'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+        // #endregion
+        console.log('⚠️ Dashboard: Ignoring newScanStarted event - not a real scan start');
+        return;
+      }
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:101',message:'newScanStarted CLEARING DATA',data:{username,isRescan,clearAll},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-new-scan',hypothesisId:'H7'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+      // #endregion
       console.log('🧹 Dashboard: New scan started, clearing ALL state SYNCHRONOUSLY');
-      const { username, isRescan } = event.detail;
       
       // CRITICAL: Clear all dashboard state IMMEDIATELY
       setStrategicInsights([]);
@@ -223,6 +256,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
   const [showAddCompetitor, setShowAddCompetitor] = useState(false);
   const [showRescanWarning, setShowRescanWarning] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
+  const [scanHistory, setScanHistory] = useState<Array<{username: string; timestamp: number; scanId?: string}>>([]);
   const [newCompetitor, setNewCompetitor] = useState({
     name: '',
     xHandle: '',
@@ -461,6 +496,190 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
     regenerateInsights();
   }, [scanUsername, brandDNA, competitorIntelligence]);
 
+  // Scan History Management
+  const loadScanHistory = () => {
+    try {
+      const historyStr = localStorage.getItem('scanHistory');
+      if (historyStr) {
+        const history = JSON.parse(historyStr);
+        // Sort by timestamp (newest first) and limit to 20
+        const sorted = history.sort((a: any, b: any) => b.timestamp - a.timestamp).slice(0, 20);
+        setScanHistory(sorted);
+      }
+    } catch (e) {
+      console.error('Error loading scan history:', e);
+      setScanHistory([]);
+    }
+  };
+
+  const addToScanHistory = (username: string, scanId?: string) => {
+    try {
+      const historyStr = localStorage.getItem('scanHistory');
+      let history: Array<{username: string; timestamp: number; scanId?: string}> = [];
+      
+      if (historyStr) {
+        history = JSON.parse(historyStr);
+      }
+      
+      // Remove existing entry for this username (if any)
+      history = history.filter((h: any) => h.username.toLowerCase() !== username.toLowerCase());
+      
+      // Add new entry at the beginning
+      history.unshift({
+        username,
+        timestamp: Date.now(),
+        scanId
+      });
+      
+      // Limit to 20 entries
+      history = history.slice(0, 20);
+      
+      localStorage.setItem('scanHistory', JSON.stringify(history));
+      setScanHistory(history);
+    } catch (e) {
+      console.error('Error adding to scan history:', e);
+    }
+  };
+
+  const loadCompanyFromHistory = (username: string) => {
+    // Set the username and trigger data reload
+    localStorage.setItem('lastScannedUsername', username);
+    setScanUsername(username);
+    
+    // Clear current state to force reload
+    setStrategicInsights([]);
+    setBrandDNA(null);
+    setCompetitorIntelligence([]);
+    setMarketShare(null);
+    
+    // Try to load from cache first
+    const cachedResults = localStorage.getItem('lastScanResults');
+    if (cachedResults) {
+      try {
+        const cached = JSON.parse(cachedResults);
+        const cachedUsername = cached.scanUsername || cached.username;
+        
+        if (cachedUsername && cachedUsername.toLowerCase() === username.toLowerCase()) {
+          // Username matches - use cache
+          const generatedInsights = generateStrategicInsightsFromData(
+            cached,
+            cached.brandDNA,
+            cached.competitorIntelligence || [],
+            username
+          );
+          
+          const insights = generatedInsights.length > 0
+            ? generatedInsights
+            : (Array.isArray(cached.strategicInsights) ? cached.strategicInsights : []);
+          setStrategicInsights(insights);
+          setBrandDNA(cached.brandDNA || null);
+          setCompetitorIntelligence(Array.isArray(cached.competitorIntelligence) ? cached.competitorIntelligence : []);
+          setMarketShare(cached.marketShare || null);
+          if (cached.scanStats) {
+            setScanStats(cached.scanStats);
+          }
+        } else {
+          // Username doesn't match - fetch from API
+          getLatestScanResults(username)
+            .then((scanResults) => {
+              if (scanResults.success && scanResults.data) {
+                const generatedInsights = generateStrategicInsightsFromData(
+                  scanResults.data,
+                  scanResults.data.brandDNA,
+                  scanResults.data.competitorIntelligence || [],
+                  username
+                );
+                
+                const insights = generatedInsights.length > 0
+                  ? generatedInsights
+                  : (Array.isArray(scanResults.data.strategicInsights) ? scanResults.data.strategicInsights : []);
+                setStrategicInsights(insights);
+                setBrandDNA(scanResults.data.brandDNA || null);
+                setCompetitorIntelligence(Array.isArray(scanResults.data.competitorIntelligence) ? scanResults.data.competitorIntelligence : []);
+                setMarketShare(scanResults.data.marketShare || null);
+                if (scanResults.data.scanStats) {
+                  setScanStats(scanResults.data.scanStats);
+                }
+                
+                // Update cache
+                const updatedCache = {
+                  ...scanResults.data,
+                  scanUsername: username,
+                  username: username,
+                  lastUpdated: new Date().toISOString()
+                };
+                localStorage.setItem('lastScanResults', JSON.stringify(updatedCache));
+              }
+            })
+            .catch((error) => {
+              console.error('Error loading company from history:', error);
+            });
+        }
+      } catch (e) {
+        console.error('Error parsing cache:', e);
+      }
+    } else {
+      // No cache - fetch from API
+      getLatestScanResults(username)
+        .then((scanResults) => {
+          if (scanResults.success && scanResults.data) {
+            const generatedInsights = generateStrategicInsightsFromData(
+              scanResults.data,
+              scanResults.data.brandDNA,
+              scanResults.data.competitorIntelligence || [],
+              username
+            );
+            
+            const insights = generatedInsights.length > 0
+              ? generatedInsights
+              : (Array.isArray(scanResults.data.strategicInsights) ? scanResults.data.strategicInsights : []);
+            setStrategicInsights(insights);
+            setBrandDNA(scanResults.data.brandDNA || null);
+            setCompetitorIntelligence(Array.isArray(scanResults.data.competitorIntelligence) ? scanResults.data.competitorIntelligence : []);
+            setMarketShare(scanResults.data.marketShare || null);
+            if (scanResults.data.scanStats) {
+              setScanStats(scanResults.data.scanStats);
+            }
+            
+            // Update cache
+            const updatedCache = {
+              ...scanResults.data,
+              scanUsername: username,
+              username: username,
+              lastUpdated: new Date().toISOString()
+            };
+            localStorage.setItem('lastScanResults', JSON.stringify(updatedCache));
+          }
+        })
+        .catch((error) => {
+          console.error('Error loading company from history:', error);
+        });
+    }
+    
+    setShowHistoryDropdown(false);
+  };
+
+  // Load scan history on mount
+  useEffect(() => {
+    loadScanHistory();
+  }, []);
+
+  // Listen for scan completion to add to history
+  useEffect(() => {
+    const handleScanCompleteForHistory = (event: CustomEvent) => {
+      const { username, scanId } = event.detail || {};
+      if (username) {
+        addToScanHistory(username, scanId);
+      }
+    };
+    
+    window.addEventListener('scanComplete', handleScanCompleteForHistory as EventListener);
+    
+    return () => {
+      window.removeEventListener('scanComplete', handleScanCompleteForHistory as EventListener);
+    };
+  }, []);
+
   // Update credit info
   useEffect(() => {
     const updateCreditInfo = () => {
@@ -525,14 +744,28 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
   // Fetch real data on mount
   useEffect(() => {
     // CRITICAL: On page load, check if we need to clear stale cache
-    // If lastScanTimestamp is old (> 1 hour) or doesn't exist, clear cache
+    // Only clear if data is older than 7 days (very conservative)
+    // Changed from 24 hours to 7 days to prevent clearing valid scan data
     const lastTimestamp = localStorage.getItem('lastScanTimestamp');
     const currentUsername = localStorage.getItem('lastScannedUsername');
+    const hasScanResults = !!localStorage.getItem('lastScanResults');
     
-    if (lastTimestamp) {
+    // #region agent log
+    const initLog = {location:'DashboardView.tsx:732',message:'Dashboard MOUNT - checking cache',data:{hasLastTimestamp:!!lastTimestamp,hasScanResults,currentUsername,lastTimestamp},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-init',hypothesisId:'H5'};
+    console.log('[DEBUG]', initLog);
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(initLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+    // #endregion
+    
+    // Only clear if data is VERY old (7 days) - be very conservative
+    if (lastTimestamp && hasScanResults) {
       const age = Date.now() - parseInt(lastTimestamp);
-      if (age > 3600000) { // Older than 1 hour
-        console.log('🧹 Cache is stale (>1 hour old) - clearing on page load');
+      if (age > 604800000) { // Older than 7 days (was 24 hours)
+        // #region agent log
+        const staleLog = {location:'DashboardView.tsx:742',message:'Cache is stale - clearing',data:{age,ageDays:Math.round(age/86400000),lastTimestamp,currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-init',hypothesisId:'H5'};
+        console.log('[DEBUG]', staleLog);
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(staleLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+        // #endregion
+        console.log('🧹 Cache is stale (>7 days old) - clearing on page load');
         localStorage.removeItem('lastScanResults');
         localStorage.removeItem('lastScanTimestamp');
         setStrategicInsights([]);
@@ -540,7 +773,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
         setCompetitorIntelligence([]);
         setMarketShare(null);
         setScanUsername(null);
+      } else {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:756',message:'Cache is VALID - NOT clearing',data:{age,ageHours:Math.round(age/3600000),lastTimestamp,currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-init',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+        // #endregion
+        console.log('✅ Cache is valid - keeping data (age:', Math.round(age/3600000), 'hours)');
       }
+    } else if (!hasScanResults) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:762',message:'No scan results in cache',data:{hasLastTimestamp:!!lastTimestamp,currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-init',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+      // #endregion
+      console.log('⚠️ No scan results in cache - will try to load from API');
     }
     
     // Set loading to false immediately so dashboard renders instantly
@@ -571,17 +814,43 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
           
           // Method 1: Try localStorage cache first (fastest) - BUT validate username AND timestamp matches
           const cachedResults = localStorage.getItem('lastScanResults');
+          // #region agent log
+          const loadLogData = {location:'DashboardView.tsx:573',message:'loadScanData - checking cache',data:{hasCachedResults:!!cachedResults,cachedSize:cachedResults?.length||0,currentUsername,currentTimestamp},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'};
+          console.log('[DEBUG]', loadLogData);
+          fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(loadLogData)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+          // #endregion
           if (cachedResults) {
             try {
               const cached = JSON.parse(cachedResults);
               const cachedUsername = cached.scanUsername || cached.username;
               const cachedTimestamp = cached.timestamp || cached.scanTimestamp;
               
-              // CRITICAL: Only use cached data if username matches AND timestamp is recent (within 1 hour)
-              const timestampValid = currentTimestamp && cachedTimestamp && 
-                (parseInt(currentTimestamp) - parseInt(cachedTimestamp)) < 3600000; // 1 hour
+              // CRITICAL: Only use cached data if username matches
+              // Timestamp validation: Accept if either timestamp exists and is recent (within 7 days)
+              // Note: lastScanTimestamp is set when scan STARTS, cached.timestamp is set when scan COMPLETES
+              // They will be different, so we check both independently
+              // Changed to 7 days to be very conservative and prevent clearing valid data
+              const currentTimestampAge = currentTimestamp 
+                ? Date.now() - parseInt(currentTimestamp)
+                : Infinity;
+              const cachedTimestampAge = cachedTimestamp 
+                ? Date.now() - parseInt(cachedTimestamp)
+                : Infinity;
+              // Valid if either timestamp exists and is less than 7 days old (very conservative)
+              const timestampValid = (currentTimestamp && currentTimestampAge < 604800000) || 
+                                     (cachedTimestamp && cachedTimestampAge < 604800000) ||
+                                     (!currentTimestamp && !cachedTimestamp); // If neither exists, still valid (might be old data)
+              
+              // #region agent log
+              const validationLog = {location:'DashboardView.tsx:585',message:'loadScanData - cache validation',data:{currentUsername,cachedUsername,usernameMatch:currentUsername?.toLowerCase()===cachedUsername?.toLowerCase(),timestampValid,currentTimestamp,cachedTimestamp},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'};
+              console.log('[DEBUG]', validationLog);
+              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(validationLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+              // #endregion
               
               if (currentUsername && cachedUsername && currentUsername.toLowerCase() !== cachedUsername.toLowerCase()) {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:592',message:'loadScanData - USERNAME MISMATCH - clearing cache',data:{currentUsername,cachedUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                // #endregion
                 console.log('⚠️ Username mismatch - clearing old cache');
                 console.log('Current username:', currentUsername);
                 console.log('Cached username:', cachedUsername);
@@ -596,7 +865,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                 setScanUsername(null);
                 // Don't use cached data - will fetch fresh from API
               } else if (!timestampValid) {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:830',message:'loadScanData - TIMESTAMP INVALID - clearing cache',data:{currentTimestamp,cachedTimestamp,currentTimestampAge,cachedTimestampAge},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                // #endregion
                 console.log('⚠️ Cache timestamp invalid or expired - clearing cache');
+                console.log('Current timestamp age:', currentTimestampAge, 'ms');
+                console.log('Cached timestamp age:', cachedTimestampAge, 'ms');
                 localStorage.removeItem('lastScanResults');
                 localStorage.removeItem('lastScanTimestamp');
                 setStrategicInsights([]);
@@ -604,8 +878,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                 setCompetitorIntelligence([]);
                 setMarketShare(null);
                 setScanUsername(null);
-              } else if (currentUsername && cachedUsername && currentUsername.toLowerCase() === cachedUsername.toLowerCase() && timestampValid) {
-                // Username matches - safe to use cache
+              } else if (currentUsername && cachedUsername && currentUsername.toLowerCase() === cachedUsername.toLowerCase()) {
+                // Username matches - safe to use cache (timestamp validation passed or not required)
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:850',message:'loadScanData - USING CACHE - username matches',data:{currentUsername,cachedUsername,hasBrandDNA:!!cached.brandDNA,hasInsights:!!cached.strategicInsights,insightsCount:cached.strategicInsights?.length||0,timestampValid},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                // #endregion
                 console.log('=== LOADING FROM CACHE (username matches) ===');
                 console.log('Cached data keys:', Object.keys(cached));
                 console.log('Strategic insights:', cached.strategicInsights?.length || 0, cached.strategicInsights);
@@ -625,6 +902,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                 const insights = generatedInsights.length > 0
                   ? generatedInsights
                   : (Array.isArray(cached.strategicInsights) ? cached.strategicInsights : []);
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:638',message:'loadScanData - SETTING STATE FROM CACHE',data:{insightsCount:insights.length,hasBrandDNA:!!cached.brandDNA,competitorsCount:cached.competitorIntelligence?.length||0,hasMarketShare:!!cached.marketShare,currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                // #endregion
                 console.log('Setting strategic insights from cache:', insights.length);
                 setStrategicInsights(insights);
                 
@@ -659,6 +939,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                   setScanUsername(currentUsername);
                 }
                 
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:675',message:'loadScanData - STATE SET COMPLETE',data:{strategicInsightsCount:insights.length,hasBrandDNA:!!cached.brandDNA,competitorsCount:cached.competitorIntelligence?.length||0,scanUsername:currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                // #endregion
+                
                 // Recalculate analytics with cached scan data
                 fetchAnalyticsData().then(updatedAnalytics => {
                   console.log('Analytics updated from cache:', updatedAnalytics);
@@ -667,13 +951,56 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                   console.error('Error updating analytics:', err);
                 });
               } else {
-                // No username match - clear cache and state
-                console.log('No username match or missing username - clearing cache');
-                localStorage.removeItem('lastScanResults');
-                setStrategicInsights([]);
-                setBrandDNA(null);
-                setCompetitorIntelligence([]);
-                setMarketShare(null);
+                // No username match or missing username
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:941',message:'loadScanData - NO USERNAME MATCH',data:{currentUsername,cachedUsername,hasCurrentUsername:!!currentUsername,hasCachedUsername:!!cachedUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                // #endregion
+                console.log('⚠️ No username match or missing username');
+                console.log('Current username:', currentUsername);
+                console.log('Cached username:', cachedUsername);
+                // Only clear if we have BOTH usernames and they don't match
+                // If no current username but we have cached data, try to use it
+                if (currentUsername && cachedUsername && currentUsername.toLowerCase() !== cachedUsername.toLowerCase()) {
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:950',message:'loadScanData - USERNAME MISMATCH - clearing',data:{currentUsername,cachedUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  // #endregion
+                  console.log('⚠️ Username mismatch - clearing cache');
+                  localStorage.removeItem('lastScanResults');
+                  setStrategicInsights([]);
+                  setBrandDNA(null);
+                  setCompetitorIntelligence([]);
+                  setMarketShare(null);
+                } else if (!currentUsername && cachedUsername) {
+                  // No current username but we have cached data - use it
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:961',message:'loadScanData - NO CURRENT USERNAME - using cache',data:{cachedUsername,hasBrandDNA:!!cached.brandDNA},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  // #endregion
+                  console.log('⚠️ No current username but cached data exists - using cache');
+                  localStorage.setItem('lastScannedUsername', cachedUsername);
+                  // Try to load from cache anyway
+                  const generatedInsights = generateStrategicInsightsFromData(
+                    cached,
+                    cached.brandDNA,
+                    cached.competitorIntelligence || [],
+                    cachedUsername
+                  );
+                  const insights = generatedInsights.length > 0
+                    ? generatedInsights
+                    : (Array.isArray(cached.strategicInsights) ? cached.strategicInsights : []);
+                  setStrategicInsights(insights);
+                  setBrandDNA(cached.brandDNA || null);
+                  setCompetitorIntelligence(Array.isArray(cached.competitorIntelligence) ? cached.competitorIntelligence : []);
+                  setMarketShare(cached.marketShare || null);
+                  setScanUsername(cachedUsername);
+                } else {
+                  // No cached username either - clear
+                  console.log('⚠️ No usernames found - clearing cache');
+                  localStorage.removeItem('lastScanResults');
+                  setStrategicInsights([]);
+                  setBrandDNA(null);
+                  setCompetitorIntelligence([]);
+                  setMarketShare(null);
+                }
               }
             } catch (e) {
               console.error('Error parsing cached results:', e);
@@ -824,11 +1151,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
     const handleScanComplete = (event: CustomEvent) => {
       const { username, scanId, results } = event.detail || {};
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:684',message:'handleScanComplete EVENT',data:{username,scanId,hasResults:!!results,currentScanUsername:scanUsername,resultsKeys:results?Object.keys(results):[]},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
+      const logData = {location:'DashboardView.tsx:1018',message:'handleScanComplete EVENT RECEIVED',data:{username,scanId,hasResults:!!results,currentScanUsername:scanUsername,resultsKeys:results?Object.keys(results):[],hasLastScanResults:!!localStorage.getItem('lastScanResults')},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-scan-complete',hypothesisId:'H5'};
+      console.log('[DEBUG]', logData);
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
       // #endregion
       console.log('📥 Scan completed event received - reloading dashboard data...');
       console.log('New scan username:', username);
       console.log('Current scan username:', scanUsername);
+      
+      // Add to history
+      if (username) {
+        addToScanHistory(username, scanId);
+      }
       
       // Clear old state first if username changed
       if (username && username !== scanUsername) {
@@ -1151,7 +1485,64 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* History Dropdown */}
+            {scanHistory.length > 0 && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowHistoryDropdown(!showHistoryDropdown)}
+                  className="px-3 py-1.5 bg-[#0A0A0A] border border-white/10 rounded-lg text-xs font-bold text-white hover:bg-white/5 transition-all flex items-center gap-2"
+                >
+                  <History className="w-3 h-3" />
+                  <span className="hidden sm:inline">History</span>
+                  <ChevronDown className={`w-3 h-3 transition-transform ${showHistoryDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {showHistoryDropdown && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setShowHistoryDropdown(false)}
+                    />
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-[#0A0A0A] border border-white/10 rounded-lg shadow-2xl z-50 max-h-96 overflow-y-auto">
+                      <div className="p-3 border-b border-white/10">
+                        <h3 className="text-xs font-bold text-white/60 uppercase tracking-wider">Previously Scanned</h3>
+                      </div>
+                      <div className="py-2">
+                        {scanHistory.map((item, index) => (
+                          <button
+                            key={index}
+                            onClick={() => loadCompanyFromHistory(item.username)}
+                            className={`w-full px-4 py-2.5 text-left hover:bg-white/5 transition-colors ${
+                              scanUsername?.toLowerCase() === item.username.toLowerCase() 
+                                ? 'bg-orange-500/10 border-l-2 border-orange-500' 
+                                : ''
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-bold text-white truncate">{item.username}</div>
+                                <div className="text-xs text-white/40 mt-0.5">
+                                  {new Date(item.timestamp).toLocaleDateString('en-US', { 
+                                    month: 'short', 
+                                    day: 'numeric',
+                                    year: new Date(item.timestamp).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                                  })}
+                                </div>
+                              </div>
+                              {scanUsername?.toLowerCase() === item.username.toLowerCase() && (
+                                <CheckCircle className="w-4 h-4 text-orange-500 flex-shrink-0 ml-2" />
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+            
             {/* Credit Display */}
             <div className="flex items-center gap-2 px-3 py-1.5 bg-[#0A0A0A] border border-white/10 rounded-lg">
               <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Credits</span>
@@ -1160,6 +1551,19 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
               </span>
             </div>
             
+            {/* Rescan Button - Always visible when there's scan data */}
+            {scanUsername && (
+              <button
+                onClick={() => setShowRescanWarning(true)}
+                className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs font-bold text-white hover:bg-white/10 transition-all flex items-center gap-2"
+                title="Rescan current company"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span className="hidden sm:inline">Rescan</span>
+              </button>
+            )}
+            
+            {/* Run Footprint Scan Button */}
             <button
               onClick={() => {
                 // Check if there's existing scan data - show warning if so
@@ -1174,7 +1578,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
               className="px-3 py-1.5 bg-orange-500 border border-white/10 rounded-lg text-xs font-bold text-white hover:bg-orange-600 transition-all flex items-center gap-2"
             >
               <Zap className="w-3 h-3" />
-              Run Footprint Scan
+              <span className="hidden sm:inline">Run Footprint Scan</span>
+              <span className="sm:hidden">Scan</span>
             </button>
             <button
               onClick={async () => {
@@ -1449,6 +1854,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
             
             {/* 1. DASHBOARD VIEW (Default) */}
             {currentPage === 'dashboard' && (
+              <>
+                {/* #region agent log */}
+                {(() => {
+                  const dashLog = {location:'DashboardView.tsx:1856',message:'RENDERING dashboard page',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
+                  console.log('[DEBUG]', dashLog);
+                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  return null;
+                })()}
+                {/* #endregion */}
                 <div className="grid grid-cols-12 gap-6 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
                     <div className="col-span-12 lg:col-span-8 space-y-6">
                         {/* Top Metrics - DASHBOARD KPIs */}
@@ -2087,7 +2501,56 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                                 <div className="text-center py-12 text-white/40">
                                     <Sparkles className="w-12 h-12 text-white/20 mx-auto mb-4" />
                                     <p className="text-sm mb-2">No brand DNA extracted yet</p>
-                                    <p className="text-xs text-white/20">Run a digital footprint scan</p>
+                                    <p className="text-xs text-white/20 mb-4">Run a digital footprint scan</p>
+                                    {scanUsername && (
+                                        <div className="space-y-2">
+                                            <p className="text-xs text-white/30">Last scanned: {scanUsername}</p>
+                                            <button
+                                                onClick={async () => {
+                                                    setIsRefreshing(true);
+                                                    try {
+                                                        const storedUsername = localStorage.getItem('lastScannedUsername');
+                                                        if (storedUsername) {
+                                                            const scanResults = await getLatestScanResults(storedUsername);
+                                                            if (scanResults.success && scanResults.data) {
+                                                                setBrandDNA(scanResults.data.brandDNA || null);
+                                                                setStrategicInsights(scanResults.data.strategicInsights || []);
+                                                                setCompetitorIntelligence(scanResults.data.competitorIntelligence || []);
+                                                                setMarketShare(scanResults.data.marketShare || null);
+                                                                
+                                                                // Update cache
+                                                                const updatedCache = {
+                                                                    ...scanResults.data,
+                                                                    scanUsername: storedUsername,
+                                                                    username: storedUsername,
+                                                                    lastUpdated: new Date().toISOString()
+                                                                };
+                                                                localStorage.setItem('lastScanResults', JSON.stringify(updatedCache));
+                                                                
+                                                                // Recalculate analytics
+                                                                const updatedAnalytics = await fetchAnalyticsData();
+                                                                setAnalytics(updatedAnalytics);
+                                                                
+                                                                console.log('✅ Data refreshed successfully');
+                                                            } else {
+                                                                console.warn('⚠️ No scan data found in backend - scan may not have completed or server restarted');
+                                                                alert('No scan data found. The backend may have lost data (server restart) or the scan did not complete. Please run a new scan.');
+                                                            }
+                                                        }
+                                                    } catch (error) {
+                                                        console.error('Error refreshing data:', error);
+                                                        alert('Failed to refresh data. Check console for details.');
+                                                    } finally {
+                                                        setIsRefreshing(false);
+                                                    }
+                                                }}
+                                                disabled={isRefreshing}
+                                                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+                                            >
+                                                {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="space-y-5">
@@ -2315,10 +2778,20 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                         </div>
                     </div>
                 </div>
+              </>
             )}
 
             {/* 2. COMPETITOR INTELLIGENCE VIEW */}
             {currentPage === 'competitors' && (
+              <>
+                {/* #region agent log */}
+                {(() => {
+                  const dashLog = {location:'DashboardView.tsx:2774',message:'RENDERING competitors',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
+                  console.log('[DEBUG]', dashLog);
+                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  return null;
+                })()}
+                {/* #endregion */}
                 <div className="max-w-[1600px] mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                     <div className="flex items-center justify-between">
                         <div>
@@ -2426,39 +2899,134 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                         </div>
                     </div>
                 </div>
+              </>
             )}
 
             {/* Content Hub */}
-            {currentPage === 'contentHub' && <ContentHubView />}
+            {currentPage === 'contentHub' && (
+              <>
+                {/* #region agent log */}
+                {(() => {
+                  const dashLog = {location:'DashboardView.tsx:2873',message:'RENDERING contentHub',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
+                  console.log('[DEBUG]', dashLog);
+                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  return null;
+                })()}
+                {/* #endregion */}
+                <ContentHubView />
+              </>
+            )}
 
             {/* Strategy */}
-            {currentPage === 'strategy' && <StrategyView />}
+            {currentPage === 'strategy' && (
+              <>
+                {/* #region agent log */}
+                {(() => {
+                  const dashLog = {location:'DashboardView.tsx:2876',message:'RENDERING strategy',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
+                  console.log('[DEBUG]', dashLog);
+                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  return null;
+                })()}
+                {/* #endregion */}
+                <StrategyView />
+              </>
+            )}
 
             {/* Production Room */}
             {currentPage === 'production' && (
-              <FeatureLock 
-                feature="content_generation" 
-                requiredTier={SubscriptionTier.PRO}
-                onNavigate={onNavigate}
-              >
-                <ProductionRoomView />
-              </FeatureLock>
+              <>
+                {/* #region agent log */}
+                {(() => {
+                  const dashLog = {location:'DashboardView.tsx:2879',message:'RENDERING production',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
+                  console.log('[DEBUG]', dashLog);
+                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  return null;
+                })()}
+                {/* #endregion */}
+                <FeatureLock 
+                  feature="content_generation" 
+                  requiredTier={SubscriptionTier.PRO}
+                  onNavigate={onNavigate}
+                >
+                  <ProductionRoomView />
+                </FeatureLock>
+              </>
             )}
 
             {/* Calendar */}
-            {currentPage === 'calendar' && <CalendarView />}
+            {currentPage === 'calendar' && (
+              <>
+                {/* #region agent log */}
+                {(() => {
+                  const dashLog = {location:'DashboardView.tsx:2890',message:'RENDERING calendar',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
+                  console.log('[DEBUG]', dashLog);
+                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  return null;
+                })()}
+                {/* #endregion */}
+                <CalendarView />
+              </>
+            )}
 
             {/* Analytics */}
-            {currentPage === 'analytics' && <AnalyticsView />}
+            {currentPage === 'analytics' && (
+              <>
+                {/* #region agent log */}
+                {(() => {
+                  const dashLog = {location:'DashboardView.tsx:2893',message:'RENDERING analytics',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
+                  console.log('[DEBUG]', dashLog);
+                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  return null;
+                })()}
+                {/* #endregion */}
+                <AnalyticsView />
+              </>
+            )}
 
             {/* Brand Assets */}
-            {currentPage === 'assets' && <BrandAssetsView />}
+            {currentPage === 'assets' && (
+              <>
+                {/* #region agent log */}
+                {(() => {
+                  const dashLog = {location:'DashboardView.tsx:2896',message:'RENDERING assets',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
+                  console.log('[DEBUG]', dashLog);
+                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  return null;
+                })()}
+                {/* #endregion */}
+                <BrandAssetsView />
+              </>
+            )}
 
             {/* Integrations */}
-            {currentPage === 'integrations' && <IntegrationsView />}
+            {currentPage === 'integrations' && (
+              <>
+                {/* #region agent log */}
+                {(() => {
+                  const dashLog = {location:'DashboardView.tsx:2899',message:'RENDERING integrations',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
+                  console.log('[DEBUG]', dashLog);
+                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  return null;
+                })()}
+                {/* #endregion */}
+                <IntegrationsView />
+              </>
+            )}
 
             {/* Inbox */}
-            {currentPage === 'inbox' && <InboxView onNavigate={onNavigate} />}
+            {currentPage === 'inbox' && (
+              <>
+                {/* #region agent log */}
+                {(() => {
+                  const dashLog = {location:'DashboardView.tsx:2902',message:'RENDERING inbox',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
+                  console.log('[DEBUG]', dashLog);
+                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  return null;
+                })()}
+                {/* #endregion */}
+                <InboxView onNavigate={onNavigate} />
+              </>
+            )}
 
             {/* Settings */}
             {currentPage === 'settings' && <SettingsView onLogout={() => {
