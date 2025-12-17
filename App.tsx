@@ -90,10 +90,10 @@ function App() {
       try {
         // DEV BYPASS: Allow access without auth on localhost for debugging
         const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const devBypass = isLocalDev && (window.location.search.includes('dev=true') || !isSupabaseConfigured());
+        const devBypass = isLocalDev; // Always bypass on localhost
         
         if (devBypass) {
-          console.log('🔧 DEV BYPASS ENABLED - Skipping auth check (localhost + no Supabase config)');
+          console.log('🔧 DEV BYPASS ENABLED - Auto-signing in on localhost');
           // Set fake auth for local testing
           localStorage.setItem('authToken', 'dev-bypass-token');
           localStorage.setItem('user', JSON.stringify({ email: 'dev@test.com', name: 'Dev User' }));
@@ -118,7 +118,7 @@ function App() {
           return;
         }
         
-        // If we have a token and user, they're authenticated
+        // If we have a token and user, they're authenticated (or dev bypass is active)
         if (authToken && userStr) {
           // If Supabase is configured, try to restore session
           if (isSupabaseConfigured() && supabase) {
@@ -170,25 +170,47 @@ function App() {
             setView(ViewState.LANDING);
           }
         } else {
-          // Not authenticated - only allow public pages
-          if (urlMapping.view === ViewState.PRICING) {
-            setView(ViewState.PRICING);
-          } else if (urlMapping.view === ViewState.BLOG || urlMapping.view === ViewState.BLOG_POST) {
-            setView(urlMapping.view);
-            if (urlMapping.view === ViewState.BLOG_POST && 'slug' in urlMapping) {
-              setBlogSlug((urlMapping as any).slug);
+          // Not authenticated - check if localhost (auto-bypass)
+          if (isLocalDev) {
+            console.log('🔧 LOCALHOST: Auto-signing in for testing');
+            localStorage.setItem('authToken', 'dev-bypass-token');
+            localStorage.setItem('user', JSON.stringify({ email: 'dev@test.com', name: 'Dev User' }));
+            // Go to dashboard or ingestion based on URL
+            if (urlMapping.view === ViewState.DASHBOARD || urlMapping.page) {
+              setView(ViewState.DASHBOARD);
+              if (urlMapping.page) {
+                setDashboardPage(urlMapping.page);
+              }
+            } else if (urlMapping.view === ViewState.INGESTION) {
+              setView(ViewState.INGESTION);
+            } else if (lastScanResults) {
+              setView(ViewState.DASHBOARD);
+              window.history.replaceState(null, '', '/dashboard');
+            } else {
+              setView(ViewState.INGESTION);
+              window.history.replaceState(null, '', '/scan');
             }
-          } else if (urlMapping.view === ViewState.PRIVACY_POLICY || urlMapping.view === ViewState.TERMS_OF_SERVICE) {
-            setView(urlMapping.view);
-          } else if (urlMapping.view === ViewState.LOGIN) {
-            setView(ViewState.LOGIN);
-          } else if (urlMapping.view === ViewState.SIGNIN) {
-            setView(ViewState.SIGNIN);
-          } else if (urlMapping.view === ViewState.RESET_PASSWORD) {
-            setView(ViewState.RESET_PASSWORD);
           } else {
-            // Stay on landing page
-            setView(ViewState.LANDING);
+            // Production: require auth
+            if (urlMapping.view === ViewState.PRICING) {
+              setView(ViewState.PRICING);
+            } else if (urlMapping.view === ViewState.BLOG || urlMapping.view === ViewState.BLOG_POST) {
+              setView(urlMapping.view);
+              if (urlMapping.view === ViewState.BLOG_POST && 'slug' in urlMapping) {
+                setBlogSlug((urlMapping as any).slug);
+              }
+            } else if (urlMapping.view === ViewState.PRIVACY_POLICY || urlMapping.view === ViewState.TERMS_OF_SERVICE) {
+              setView(urlMapping.view);
+            } else if (urlMapping.view === ViewState.LOGIN) {
+              setView(ViewState.LOGIN);
+            } else if (urlMapping.view === ViewState.SIGNIN) {
+              setView(ViewState.SIGNIN);
+            } else if (urlMapping.view === ViewState.RESET_PASSWORD) {
+              setView(ViewState.RESET_PASSWORD);
+            } else {
+              // Stay on landing page
+              setView(ViewState.LANDING);
+            }
           }
         }
       } catch (error) {
