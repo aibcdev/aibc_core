@@ -88,6 +88,17 @@ function App() {
   useEffect(() => {
     const checkAuthState = async () => {
       try {
+        // DEV BYPASS: Allow access without auth on localhost for debugging
+        const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const devBypass = isLocalDev && (window.location.search.includes('dev=true') || !isSupabaseConfigured());
+        
+        if (devBypass) {
+          console.log('🔧 DEV BYPASS ENABLED - Skipping auth check (localhost + no Supabase config)');
+          // Set fake auth for local testing
+          localStorage.setItem('authToken', 'dev-bypass-token');
+          localStorage.setItem('user', JSON.stringify({ email: 'dev@test.com', name: 'Dev User' }));
+        }
+        
         // First check localStorage for existing auth
         const authToken = localStorage.getItem('authToken');
         const userStr = localStorage.getItem('user');

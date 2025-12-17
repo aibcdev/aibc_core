@@ -114,6 +114,31 @@ export async function signUp(
     return { success: true, token: data.token, user: data.user };
   } catch (error: any) {
     console.error('Sign up error:', error);
+    // LOCAL DEV FALLBACK: If backend unavailable and on localhost, allow signup
+    const isLocalDev = typeof window !== 'undefined' && 
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    
+    if (isLocalDev && !isSupabaseConfigured()) {
+      console.log('🔧 LOCAL DEV: Allowing sign-up without backend (localhost mode)');
+      const userName = firstName && lastName ? `${firstName} ${lastName}` : email.split('@')[0];
+      const mockToken = `local_${Date.now()}`;
+      localStorage.setItem('authToken', mockToken);
+      localStorage.setItem('user', JSON.stringify({ 
+        id: `local_${email.split('@')[0]}`, 
+        email, 
+        name: userName
+      }));
+      return { 
+        success: true, 
+        token: mockToken, 
+        user: { 
+          id: `local_${email.split('@')[0]}`, 
+          email, 
+          name: userName
+        } 
+      };
+    }
+    
     // Fallback: allow user to continue without backend
     localStorage.setItem('authToken', `mock_${Date.now()}`);
     localStorage.setItem('user', JSON.stringify({ id: 'mock', email }));
@@ -195,6 +220,31 @@ export async function signIn(email: string, password: string): Promise<AuthRespo
     return { success: true, token: data.token, user: data.user };
   } catch (error: any) {
     console.error('Sign in error:', error);
+    // LOCAL DEV FALLBACK: If backend unavailable and on localhost, allow any email/password
+    const isLocalDev = typeof window !== 'undefined' && 
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    
+    if (isLocalDev && !isSupabaseConfigured()) {
+      console.log('🔧 LOCAL DEV: Allowing sign-in without backend (localhost mode)');
+      const mockToken = `local_${Date.now()}`;
+      const userName = email.split('@')[0];
+      localStorage.setItem('authToken', mockToken);
+      localStorage.setItem('user', JSON.stringify({ 
+        id: `local_${userName}`, 
+        email, 
+        name: userName.charAt(0).toUpperCase() + userName.slice(1)
+      }));
+      return { 
+        success: true, 
+        token: mockToken, 
+        user: { 
+          id: `local_${userName}`, 
+          email, 
+          name: userName.charAt(0).toUpperCase() + userName.slice(1)
+        } 
+      };
+    }
+    
     return { success: false, error: 'Connection error. Please try again.' };
   }
 }
