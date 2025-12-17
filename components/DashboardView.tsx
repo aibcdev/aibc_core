@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
 import { fetchAnalyticsData, fetchCalendarEvents, fetchCompetitors, fetchContentPipeline } from '../services/dashboardData';
-import { getLatestScanResults } from '../services/apiClient';
+import { getLatestScanResults, pollScanStatus } from '../services/apiClient';
 import { isAdmin } from '../services/adminService';
 import { SubscriptionTier, getCreditBalance, getUserSubscription, TIER_LIMITS } from '../services/subscriptionService';
 import FeatureLock from './FeatureLock';
@@ -1054,6 +1054,51 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
               // Clear corrupted cache
               localStorage.removeItem('lastScanResults');
             }
+          }
+
+          // If user navigated away from AuditView before completion, there may be no cache yet.
+          // Recover by polling backend via scanId, then populate cache + state.
+          if (!cachedResults && currentScanId) {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:recover',message:'No cache - polling by lastScanId',data:{currentScanId,currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H7'})}).catch(()=>{});
+            // #endregion
+            pollScanStatus(currentScanId, () => {}, 2000, 300)
+              .then((scanResults) => {
+                if (scanResults.success && scanResults.data) {
+                  const usernameToUse = currentUsername || (scanResults.data as any).scanUsername || (scanResults.data as any).username || null;
+                  const generatedInsights = generateStrategicInsightsFromData(
+                    scanResults.data,
+                    (scanResults.data as any).brandDNA,
+                    (scanResults.data as any).competitorIntelligence || [],
+                    usernameToUse || ''
+                  );
+                  const insights = generatedInsights.length > 0
+                    ? generatedInsights
+                    : (Array.isArray((scanResults.data as any).strategicInsights) ? (scanResults.data as any).strategicInsights : []);
+                  setStrategicInsights(insights);
+                  setBrandDNA((scanResults.data as any).brandDNA || null);
+                  setCompetitorIntelligence(Array.isArray((scanResults.data as any).competitorIntelligence) ? (scanResults.data as any).competitorIntelligence : []);
+                  setMarketShare((scanResults.data as any).marketShare || null);
+                  if (usernameToUse) setScanUsername(usernameToUse);
+
+                  const updatedCache = {
+                    ...scanResults.data,
+                    scanUsername: usernameToUse,
+                    username: usernameToUse,
+                    timestamp: Date.now(),
+                    scanTimestamp: Date.now(),
+                    lastUpdated: new Date().toISOString()
+                  };
+                  localStorage.setItem('lastScanResults', JSON.stringify(updatedCache));
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:recover',message:'Recovered results via lastScanId',data:{currentScanId,usernameToUse,hasBrandDNA:!!(scanResults.data as any).brandDNA,insightsCount:insights.length},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H7'})}).catch(()=>{});
+                  // #endregion
+                }
+              })
+              .catch((error) => {
+                console.error('Error polling scan results by lastScanId:', error);
+              });
+            return;
           }
           
           // Method 2: Try API fetch - CRITICAL: Verify username before using API data
@@ -2544,7 +2589,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                                 <h3 className="text-sm font-bold text-white">Brand DNA</h3>
                                 <div className="flex items-center gap-2">
                                 <span className="text-[10px] text-white/30 px-2 py-1 bg-white/5 rounded">AI Extracted</span>
-                                    {brandDNA && (
+                                    {(brandDNA || scanUsername) && (
                                         <button
                                             onClick={() => setShowRescanWarning(true)}
                                             className="px-2 py-1 bg-white/5 border border-white/10 rounded text-[10px] font-bold text-white hover:bg-white/10 transition-all flex items-center gap-1"

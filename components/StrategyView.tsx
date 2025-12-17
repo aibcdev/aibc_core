@@ -79,8 +79,22 @@ const StrategyView: React.FC = () => {
     };
     
     // Listen for scan completion events
-    const handleScanComplete = () => {
-      console.log('📥 Scan completed - reloading strategy data...');
+    const handleScanComplete = (event: CustomEvent) => {
+      const { username, results } = event.detail || {};
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleScanComplete',message:'scanComplete EVENT RECEIVED',data:{username,hasResults:!!results,hasBrandDNA:!!results?.brandDNA},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-scan-complete',hypothesisId:'H3'})}).catch(()=>{});
+      // #endregion
+      console.log('📥 Strategy: Scan completed - reloading strategy data...', username);
+      if (results) {
+        // Update state immediately from event
+        setBrandDNA(results.brandDNA || null);
+        setCompetitorIntelligence(results.competitorIntelligence || []);
+        setScanUsername(username);
+        if (results.strategicInsights && Array.isArray(results.strategicInsights)) {
+          generateInsightsFromData(results.strategicInsights, results.brandDNA, results.competitorIntelligence);
+        }
+      }
+      // Also reload from cache/API to ensure consistency
       loadScanData();
     };
     
@@ -176,9 +190,16 @@ const StrategyView: React.FC = () => {
           const cachedUsername = cached.scanUsername || cached.username;
           const cachedTimestamp = cached.timestamp || cached.scanTimestamp;
           
-          // Validate timestamp (must be within 1 hour)
-          const timestampValid = currentTimestamp && cachedTimestamp && 
-            (parseInt(currentTimestamp) - parseInt(cachedTimestamp)) < 3600000;
+          // Validate timestamp (must be within 7 days - same as DashboardView)
+          const currentTimestampAge = currentTimestamp 
+            ? Date.now() - parseInt(currentTimestamp)
+            : Infinity;
+          const cachedTimestampAge = cachedTimestamp 
+            ? Date.now() - parseInt(cachedTimestamp)
+            : Infinity;
+          const timestampValid = (currentTimestamp && currentTimestampAge < 604800000) || 
+                                 (cachedTimestamp && cachedTimestampAge < 604800000) ||
+                                 (!currentTimestamp && !cachedTimestamp);
           
           // Only use cache if username matches AND timestamp is valid
           if (cachedUsername && cachedUsername.toLowerCase() === currentUsername.toLowerCase() && timestampValid) {

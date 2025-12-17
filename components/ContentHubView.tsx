@@ -594,15 +594,36 @@ What do you think? Drop a comment below! 👇
     
     // Listen for scan completion - only reload if we have data
     const handleScanComplete = (event: CustomEvent) => {
-      const { results } = event.detail || {};
-      console.log('📥 Scan completed event received', { hasResults: !!results });
-      // Only reload if scan actually has results - don't clear existing content
-      if (results && (results.contentIdeas?.length > 0 || results.extractedContent)) {
-        console.log('📥 Scan has new content - reloading...');
-        loadContent();
-      } else {
-        console.log('📥 Scan has no new content - keeping existing');
+      const { username, results } = event.detail || {};
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleScanComplete',message:'scanComplete EVENT RECEIVED',data:{username,hasResults:!!results,hasContentIdeas:!!results?.contentIdeas,contentIdeasCount:results?.contentIdeas?.length||0,hasExtractedContent:!!results?.extractedContent},timestamp:Date.now(),sessionId:'debug-session',runId:'contenthub-scan-complete',hypothesisId:'H3'})}).catch(()=>{});
+      // #endregion
+      console.log('📥 Content Hub: Scan completed event received', { username, hasResults: !!results });
+      // Always reload when scan completes - even if no contentIdeas, we might have brandDNA/context
+      if (results) {
+        setUsername(username);
+        // Update cache immediately
+        const cachedResults = localStorage.getItem('lastScanResults');
+        if (cachedResults) {
+          try {
+            const parsed = JSON.parse(cachedResults);
+            // Merge new results
+            const updated = {
+              ...parsed,
+              ...results,
+              scanUsername: username,
+              username: username,
+              timestamp: Date.now(),
+              lastUpdated: new Date().toISOString()
+            };
+            localStorage.setItem('lastScanResults', JSON.stringify(updated));
+          } catch (e) {
+            console.error('Error updating cache:', e);
+          }
+        }
       }
+      // Reload content to show new scan data
+      loadContent();
     };
     
     // Listen for analytics updates - may affect content recommendations
