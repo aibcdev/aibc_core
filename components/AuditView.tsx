@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Network, ArrowRight, CheckCircle, Loader2, AlertCircle, Search, Brain, Database, Target, Sparkles } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
-import { startScan, pollScanStatus, checkBackendHealth, getScanStatus } from '../services/apiClient';
+import { startScan, pollScanStatus, checkBackendHealth, getScanStatus, getDebugEndpoint } from '../services/apiClient';
 import Navigation from './shared/Navigation';
 
 interface AuditProps extends NavProps {
@@ -41,6 +41,7 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
     { id: 'youtube', name: 'Scanning YouTube', description: 'Processing videos and channel data', status: 'pending', duration: 90, icon: <Search className="w-4 h-4" /> },
     { id: 'linkedin', name: 'Scanning LinkedIn', description: 'Extracting professional content', status: 'pending', duration: 60, icon: <Search className="w-4 h-4" /> },
     { id: 'instagram', name: 'Scanning Instagram', description: 'Analyzing posts and reels', status: 'pending', duration: 60, icon: <Search className="w-4 h-4" /> },
+    { id: 'tiktok', name: 'Scanning TikTok', description: 'Analyzing videos and trends', status: 'pending', duration: 60, icon: <Search className="w-4 h-4" /> },
     { id: 'aggregate', name: 'Aggregating Data', description: 'Combining all platform data', status: 'pending', duration: 30, icon: <Database className="w-4 h-4" /> },
     { id: 'brandDNA', name: 'Extracting Brand DNA', description: 'Identifying voice, tone, and patterns', status: 'pending', duration: 45, icon: <Brain className="w-4 h-4" /> },
     { id: 'competitors', name: 'Competitor Analysis', description: 'Researching market position', status: 'pending', duration: 45, icon: <Target className="w-4 h-4" /> },
@@ -70,13 +71,11 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
 
   useEffect(() => {
     let mounted = true;
-    let pollIntervalId: NodeJS.Timeout | null = null;
-    let pollCount = 0;
     
     const performScan = async () => {
       if (scanStartedRef.current) {
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:performScan',message:'performScan SKIPPED (already started)',data:{usernameProp:username},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H7'})}).catch(()=>{});
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:performScan',message:'performScan SKIPPED (already started)',data:{usernameProp:username},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H7'})}).catch(()=>{});
         // #endregion
         return;
       }
@@ -87,12 +86,12 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
       // #region agent log
       const logData = {location:'AuditView.tsx:73',message:'performScan STARTED',data:{scanUsername,hasUsername:!!scanUsername,usernameProp:username},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H1'};
       console.log('[DEBUG]', logData);
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
       // #endregion
       
       if (!scanUsername) {
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:79',message:'performScan ERROR - no username',data:{username,lastScannedUsername:localStorage.getItem('lastScannedUsername')},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H6'})}).catch(()=>{});
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:79',message:'performScan ERROR - no username',data:{username,lastScannedUsername:localStorage.getItem('lastScannedUsername')},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H6'})}).catch(()=>{});
         // #endregion
         setError('No username provided');
         setLogs([`[ERROR] No username provided. Please go back and enter a username.`]);
@@ -198,7 +197,7 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
         // Persist scanId immediately so Dashboard can recover even if user navigates away early
         localStorage.setItem('lastScanId', scanId);
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:scanId',message:'Stored lastScanId immediately',data:{scanUsername,scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H7'})}).catch(()=>{});
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:scanId',message:'Stored lastScanId immediately',data:{scanUsername,scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H7'})}).catch(()=>{});
         // #endregion
         await delay(1000);
         updateStageStatus(0, 'complete');
@@ -223,14 +222,46 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
               const logLower = log.toLowerCase();
               if (logLower.includes('[success]') && logLower.includes('profile found')) {
                 // Extract platform from log
-                if (logLower.includes('twitter') || logLower.includes('x')) scannedPlatforms.add('twitter');
-                if (logLower.includes('youtube')) scannedPlatforms.add('youtube');
-                if (logLower.includes('linkedin')) scannedPlatforms.add('linkedin');
-                if (logLower.includes('instagram')) scannedPlatforms.add('instagram');
+                if (logLower.includes('twitter') || logLower.includes('x')) {
+                  if (!scannedPlatforms.has('twitter')) {
+                    scannedPlatforms.add('twitter');
+                    addLog(`[SUCCESS] Twitter/X profile found and scanned`);
+                  }
+                }
+                if (logLower.includes('youtube')) {
+                  if (!scannedPlatforms.has('youtube')) {
+                    scannedPlatforms.add('youtube');
+                    addLog(`[SUCCESS] YouTube profile found and scanned`);
+                  }
+                }
+                if (logLower.includes('linkedin')) {
+                  if (!scannedPlatforms.has('linkedin')) {
+                    scannedPlatforms.add('linkedin');
+                    addLog(`[SUCCESS] LinkedIn profile found and scanned`);
+                  }
+                }
+                if (logLower.includes('instagram')) {
+                  if (!scannedPlatforms.has('instagram')) {
+                    scannedPlatforms.add('instagram');
+                    addLog(`[SUCCESS] Instagram profile found and scanned`);
+                  }
+                }
               }
               // Also check for skip messages
-              if (logLower.includes('[skip]')) {
-                // Platform was skipped - don't show it
+              if (logLower.includes('[skip]') || logLower.includes('[warning]')) {
+                // Platform was skipped - log it
+                if ((logLower.includes('twitter') || logLower.includes('x')) && !scannedPlatforms.has('twitter')) {
+                  addLog(`[SKIP] Twitter/X profile not found - skipping`);
+                }
+                if (logLower.includes('youtube') && !scannedPlatforms.has('youtube')) {
+                  addLog(`[SKIP] YouTube profile not found - skipping`);
+                }
+                if (logLower.includes('linkedin') && !scannedPlatforms.has('linkedin')) {
+                  addLog(`[SKIP] LinkedIn profile not found - skipping`);
+                }
+                if (logLower.includes('instagram') && !scannedPlatforms.has('instagram')) {
+                  addLog(`[SKIP] Instagram profile not found - skipping`);
+                }
               }
             });
             
@@ -272,7 +303,7 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
             try {
               localStorage.setItem('lastScanResults', JSON.stringify(scanResultsWithUsername));
               // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:272',message:'localStorage WRITE - lastScanResults',data:{scanUsername,hasResults:!!scanResultsWithUsername,resultsSize:JSON.stringify(scanResultsWithUsername).length},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H5'})}).catch(()=>{});
+              fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:272',message:'localStorage WRITE - lastScanResults',data:{scanUsername,hasResults:!!scanResultsWithUsername,resultsSize:JSON.stringify(scanResultsWithUsername).length},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H5'})}).catch(()=>{});
               // #endregion
               // Store username, scan ID, and timestamp for dashboard loading
               // CRITICAL: Update timestamp to match the completion time, not the start time
@@ -284,15 +315,15 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
                 localStorage.setItem('lastScanId', scanId);
               }
               // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:293',message:'localStorage TIMESTAMP UPDATED',data:{scanUsername,completionTimestamp,cachedTimestamp:scanResultsWithUsername.timestamp},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+              fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:293',message:'localStorage TIMESTAMP UPDATED',data:{scanUsername,completionTimestamp,cachedTimestamp:scanResultsWithUsername.timestamp},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
               // #endregion
               // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:279',message:'localStorage WRITE - all keys',data:{scanUsername,scanId,timestamp:Date.now().toString()},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H5'})}).catch(()=>{});
+              fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:279',message:'localStorage WRITE - all keys',data:{scanUsername,scanId,timestamp:Date.now().toString()},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H5'})}).catch(()=>{});
               // #endregion
               addLog(`[SUCCESS] Scan results stored for ${scanUsername}`);
             } catch (storageError: any) {
               // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:283',message:'localStorage WRITE ERROR',data:{error:storageError?.message||'unknown',scanUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H5'})}).catch(()=>{});
+              fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:283',message:'localStorage WRITE ERROR',data:{error:storageError?.message||'unknown',scanUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H5'})}).catch(()=>{});
               // #endregion
               console.error('Failed to store scan results:', storageError);
               addLog(`[WARNING] Failed to store scan results: ${storageError.message}`);
@@ -300,7 +331,7 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
             
             // Dispatch event to notify dashboard of new scan completion
             // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:287',message:'DISPATCHING scanComplete EVENT',data:{scanUsername,scanId,hasBrandDNA:!!scanResultsWithUsername.brandDNA,brandDNAKeys:scanResultsWithUsername.brandDNA?Object.keys(scanResultsWithUsername.brandDNA):[],hasInsights:!!scanResultsWithUsername.strategicInsights,insightsCount:scanResultsWithUsername.strategicInsights?.length||0,hasCompetitors:!!scanResultsWithUsername.competitorIntelligence,competitorsCount:scanResultsWithUsername.competitorIntelligence?.length||0,resultKeys:Object.keys(scanResultsWithUsername)},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H1'})}).catch(()=>{});
+            fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:287',message:'DISPATCHING scanComplete EVENT',data:{scanUsername,scanId,hasBrandDNA:!!scanResultsWithUsername.brandDNA,brandDNAKeys:scanResultsWithUsername.brandDNA?Object.keys(scanResultsWithUsername.brandDNA):[],hasInsights:!!scanResultsWithUsername.strategicInsights,insightsCount:scanResultsWithUsername.strategicInsights?.length||0,hasCompetitors:!!scanResultsWithUsername.competitorIntelligence,competitorsCount:scanResultsWithUsername.competitorIntelligence?.length||0,resultKeys:Object.keys(scanResultsWithUsername)},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H1'})}).catch(()=>{});
             // #endregion
             const event = new CustomEvent('scanComplete', {
               detail: {
@@ -315,112 +346,24 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
             if (mounted) {
               setShowButton(true);
               // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:scanComplete',message:'Proceed ENABLED (real results ready)',data:{scanUsername,scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H7'})}).catch(()=>{});
+              fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:scanComplete',message:'Proceed ENABLED (real results ready)',data:{scanUsername,scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H7'})}).catch(()=>{});
               // #endregion
             }
           }
         }).catch(err => {
           // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:292',message:'pollScanStatus ERROR',data:{error:err?.message||'unknown',scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-poll',hypothesisId:'H4'})}).catch(()=>{});
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:292',message:'pollScanStatus ERROR',data:{error:err?.message||'unknown',scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-poll',hypothesisId:'H4'})}).catch(()=>{});
           // #endregion
           console.error('Background poll error:', err);
         });
 
         // Platform stages are now dynamic - only show if platform was actually scanned
         // The backend logs will determine which platforms exist
-        // We'll poll backend logs to see which platforms were found
-        // For now, show a generic "Scanning platforms" stage
+        // pollScanStatus callback above handles all log parsing and platform detection
         updateStageStatus(1, 'active');
         addLog(`[SCANNER] Scanning available platforms...`);
         
-        // Poll backend to get real platform status
-        let pollCount = 0;
-        const maxPolls = 30; // Poll for up to 5 minutes
-        
-        pollIntervalId = setInterval(async () => {
-          if (!mounted || pollCount >= maxPolls) {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:307',message:'pollInterval CLEARED',data:{pollCount,maxPolls,mounted},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-poll',hypothesisId:'H2'})}).catch(()=>{});
-            // #endregion
-            if (pollIntervalId) clearInterval(pollIntervalId);
-            return;
-          }
-          
-          pollCount++;
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:314',message:'pollInterval EXECUTING',data:{pollCount,maxPolls,scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-poll',hypothesisId:'H1'})}).catch(()=>{});
-          // #endregion
-          
-          try {
-            const statusData = await getScanStatus(scanId);
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:318',message:'pollInterval STATUS DATA',data:{hasScan:!!statusData.scan,hasLogs:!!statusData.scan?.logs,logsCount:statusData.scan?.logs?.length||0,scanStatus:statusData.scan?.status},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-poll',hypothesisId:'H1'})}).catch(()=>{});
-            // #endregion
-            if (statusData.success && statusData.scan?.logs) {
-                // Parse logs to see which platforms were scanned
-                const logs = statusData.scan.logs;
-                logs.forEach((log: string) => {
-                  const logLower = log.toLowerCase();
-                  if (logLower.includes('[success]') && logLower.includes('profile found')) {
-                    if (logLower.includes('twitter') || logLower.includes('x')) {
-                      if (!scannedPlatforms.has('twitter')) {
-                        scannedPlatforms.add('twitter');
-                        addLog(`[SUCCESS] Twitter/X profile found and scanned`);
-                      }
-                    }
-                    if (logLower.includes('youtube')) {
-                      if (!scannedPlatforms.has('youtube')) {
-                        scannedPlatforms.add('youtube');
-                        addLog(`[SUCCESS] YouTube profile found and scanned`);
-                      }
-                    }
-                    if (logLower.includes('linkedin')) {
-                      if (!scannedPlatforms.has('linkedin')) {
-                        scannedPlatforms.add('linkedin');
-                        addLog(`[SUCCESS] LinkedIn profile found and scanned`);
-                      }
-                    }
-                    if (logLower.includes('instagram')) {
-                      if (!scannedPlatforms.has('instagram')) {
-                        scannedPlatforms.add('instagram');
-                        addLog(`[SUCCESS] Instagram profile found and scanned`);
-                      }
-                    }
-                  }
-                  if (logLower.includes('[skip]') || logLower.includes('[warning]')) {
-                    // Platform was skipped - log it
-                    if (logLower.includes('twitter') || logLower.includes('x')) {
-                      if (!scannedPlatforms.has('twitter')) {
-                        addLog(`[SKIP] Twitter/X profile not found - skipping`);
-                      }
-                    }
-                    if (logLower.includes('youtube')) {
-                      if (!scannedPlatforms.has('youtube')) {
-                        addLog(`[SKIP] YouTube profile not found - skipping`);
-                      }
-                    }
-                    if (logLower.includes('linkedin')) {
-                      if (!scannedPlatforms.has('linkedin')) {
-                        addLog(`[SKIP] LinkedIn profile not found - skipping`);
-                      }
-                    }
-                    if (logLower.includes('instagram')) {
-                      if (!scannedPlatforms.has('instagram')) {
-                        addLog(`[SKIP] Instagram profile not found - skipping`);
-                      }
-                    }
-                  }
-                });
-            }
-          } catch (err: any) {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:375',message:'pollInterval ERROR',data:{error:err?.message||'unknown',pollCount,scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-poll',hypothesisId:'H4'})}).catch(()=>{});
-            // #endregion
-            // Ignore polling errors
-          }
-        }, 10000); // Poll every 10 seconds
-        
-        // Wait for initial platform scanning
+        // Wait for initial platform scanning (pollScanStatus handles the actual polling)
         await delay(20000);
         updateStageStatus(1, 'complete');
         setProgress(40);
@@ -480,7 +423,7 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
         // UI stages finished, but do NOT allow Proceed until backend confirms completion and results are stored.
         addLog(`[SYSTEM] UI stages complete. Waiting for backend scan completion...`);
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:uiComplete',message:'UI stages complete (waiting for backend)',data:{scanUsername,lastScanId:localStorage.getItem('lastScanId')},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-ui',hypothesisId:'H7'})}).catch(()=>{});
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:uiComplete',message:'UI stages complete (waiting for backend)',data:{scanUsername,lastScanId:localStorage.getItem('lastScanId')},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-ui',hypothesisId:'H7'})}).catch(()=>{});
         // #endregion
 
       } catch (err: any) {
@@ -520,15 +463,10 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
 
     return () => { 
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:487',message:'useEffect CLEANUP',data:{hasPollInterval:!!pollIntervalId,pollCount},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-cleanup',hypothesisId:'H2'})}).catch(()=>{});
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:cleanup',message:'useEffect CLEANUP',data:{mounted},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-cleanup',hypothesisId:'H2'})}).catch(()=>{});
       // #endregion
       mounted = false;
-      if (pollIntervalId) {
-        clearInterval(pollIntervalId);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:491',message:'pollInterval CLEARED in cleanup',data:{pollCount},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-cleanup',hypothesisId:'H2'})}).catch(()=>{});
-        // #endregion
-      }
+      // pollScanStatus handles its own cleanup, no manual interval needed
     };
   }, [username]);
 
@@ -589,7 +527,7 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
                   <button 
                     onClick={() => {
                       // #region agent log
-                      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:ProceedClick',message:'Proceed CLICKED',data:{target:'DASHBOARD'},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-ui',hypothesisId:'H7'})}).catch(()=>{});
+                      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:ProceedClick',message:'Proceed CLICKED',data:{target:'DASHBOARD'},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-ui',hypothesisId:'H7'})}).catch(()=>{});
                       // #endregion
                       onNavigate(ViewState.DASHBOARD);
                     }} 
