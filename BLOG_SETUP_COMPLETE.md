@@ -114,3 +114,5 @@ The blog uses the `seo_blog_posts` table in Supabase with the following key fiel
 
 All schema is defined in: `backend/database/schema.sql`
 
+
+

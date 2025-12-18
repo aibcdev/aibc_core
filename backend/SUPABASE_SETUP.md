@@ -102,3 +102,5 @@ gcloud run services update aibc-backend \
   --set-secrets SUPABASE_ANON_KEY=supabase-anon-key:latest
 ```
 
+
+

@@ -15,8 +15,28 @@ import seoOptimizeRoutes from './routes/seoOptimize';
 import learningRoutes from './routes/learning';
 import blogSchedulerRoutes from './routes/blogScheduler';
 import socialContentRoutes from './routes/socialContent';
+import enterpriseSSORoutes from './routes/enterpriseSSO';
+import apiDocsRoutes from './routes/apiDocs';
+import integrationsRoutes from './routes/integrations';
+import localizationRoutes from './routes/localization';
+import videoAudioRoutes from './routes/videoAudio';
+import ecommerceRoutes from './routes/ecommerce';
+import enterpriseSecurityRoutes from './routes/enterpriseSecurity';
 
 dotenv.config();
+
+// Validate Stripe configuration (warn if not set, but don't block startup)
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.warn('⚠️  STRIPE_SECRET_KEY not set. Stripe payment features will be disabled.');
+} else {
+  console.log('✅ Stripe configured (Secret Key found)');
+}
+
+if (!process.env.STRIPE_WEBHOOK_SECRET) {
+  console.warn('⚠️  STRIPE_WEBHOOK_SECRET not set. Webhook verification will fail.');
+} else {
+  console.log('✅ Stripe webhook secret configured');
+}
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10); // Default to 3001 for local dev, Cloud Run sets PORT=8080
@@ -65,6 +85,14 @@ app.use('/api/seo/optimize', seoOptimizeRoutes);
 app.use('/api/learning', learningRoutes);
 app.use('/api/blog', blogSchedulerRoutes);
 app.use('/api/social', socialContentRoutes);
+app.use('/api/enterprise/sso', enterpriseSSORoutes);
+app.use('/api/docs', apiDocsRoutes);
+app.use('/api/integrations', integrationsRoutes);
+app.use('/api/localization', localizationRoutes);
+app.use('/api/video', videoAudioRoutes);
+app.use('/api/audio', videoAudioRoutes);
+app.use('/api/ecommerce', ecommerceRoutes);
+app.use('/api/enterprise/security', enterpriseSecurityRoutes);
 
 // Verify handle endpoint (quick verification for integrations)
 app.post('/api/verify-handle', async (req, res) => {

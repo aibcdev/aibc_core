@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Filter, RefreshCw, Plus, FileText, Video, Image as ImageIcon, Mic2, Linkedin, Instagram, Music, X, Play, Sparkles, Loader2, ArrowLeft, ArrowRight, Upload, Calendar, Zap, Wand2, Copy, Check, Edit3, Clock, Send } from 'lucide-react';
-import { getScanResults } from '../services/apiClient';
+import { getScanResults, getDebugEndpoint } from '../services/apiClient';
 import { trackApproval, trackEdit, trackDismissal, trackRegeneration, trackScanQuality } from '../services/learningClient';
 
 interface ContentAsset {
@@ -42,6 +42,10 @@ const ContentHubView: React.FC = () => {
   const [showCreateWizard, setShowCreateWizard] = useState(false);
   const [wizardStep, setWizardStep] = useState(1); // 1: Choose Type, 2: Add Content Types, 3: Topic & Media, 4: Schedule
   const [wizardMode, setWizardMode] = useState<'automatic' | 'manual' | null>(null);
+  const [showGeminiImageGen, setShowGeminiImageGen] = useState(false);
+  const [geminiPrompt, setGeminiPrompt] = useState('');
+  const [geminiGenerating, setGeminiGenerating] = useState(false);
+  const [geminiGeneratedImages, setGeminiGeneratedImages] = useState<string[]>([]);
   const [contentTypes, setContentTypes] = useState<ContentTypeCount[]>([
     { id: 'cross-posts', name: 'Cross Posts', icon: <div className="flex -space-x-1"><Instagram className="w-3 h-3 text-pink-400" /><span className="text-[10px] font-bold">𝕏</span><Linkedin className="w-3 h-3 text-blue-400" /></div>, count: 0, platforms: ['instagram', 'x', 'linkedin'] },
     { id: 'video-cross', name: 'Video Cross Posts', icon: <div className="flex -space-x-1"><Instagram className="w-3 h-3 text-pink-400" /><Play className="w-3 h-3 text-red-500" /></div>, count: 0, platforms: ['instagram', 'youtube'] },
@@ -87,7 +91,11 @@ const ContentHubView: React.FC = () => {
   
   // Generate enterprise-level personalized content for selected idea
   const generateContentTemplate = async (asset: ContentAsset) => {
-    const brandName = username || 'your brand';
+    // #region agent log
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:generateContentTemplate',message:'GENERATING CONTENT TEMPLATE',data:{assetTitle:asset.title,assetPlatform:asset.platform,assetTheme:asset.theme,username},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+    // #endregion
+    
+    const brandName = username || localStorage.getItem('lastScannedUsername') || 'your brand';
     const theme = asset.theme || asset.basedOn || 'your topic';
     
     // Try to get brand context from scan results
@@ -95,49 +103,60 @@ const ContentHubView: React.FC = () => {
     let brandContext: any = null;
     let brandDNA: any = null;
     let competitorIntelligence: any[] = [];
+    let extractedContent: any = null;
     
     if (lastScanResults) {
       try {
         const parsed = JSON.parse(lastScanResults);
         brandDNA = parsed.brandDNA || null;
         competitorIntelligence = parsed.competitorIntelligence || [];
+        extractedContent = parsed.extractedContent || null;
+        
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:generateContentTemplate:BRAND_CONTEXT',message:'Brand context loaded',data:{hasBrandDNA:!!brandDNA,brandDNAKeys:brandDNA?Object.keys(brandDNA):[],hasExtractedContent:!!extractedContent,contentThemes:extractedContent?.content_themes?.length||0,competitorsCount:competitorIntelligence.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+        // #endregion
         
         // Extract brand identity if available
         const brandIdentity = parsed.brandIdentity || null;
         if (brandIdentity) {
           brandContext = {
             name: brandIdentity.name || brandName,
-            industry: brandIdentity.industry,
-            niche: brandIdentity.niche,
+            industry: brandIdentity.industry || brandDNA?.industry,
+            niche: brandIdentity.niche || brandDNA?.niche,
             companySize: brandIdentity.companySize || 'medium',
-            description: brandIdentity.description,
+            description: brandIdentity.description || parsed.profile?.bio || '',
             brandVoice: brandDNA?.voice || null,
-            themes: parsed.content_themes || [],
+            themes: extractedContent?.content_themes || brandDNA?.themes || brandDNA?.corePillars || [],
             competitors: competitorIntelligence.map((c: any) => ({
               name: c.name || c.competitor,
               advantage: c.advantage,
               contentStyle: c.contentStyle
-            }))
+            })),
+            actualPosts: extractedContent?.posts || []
           };
         } else {
-          // Fallback: construct from available data
+          // Fallback: construct from available data - USE ACTUAL SCAN DATA
           brandContext = {
             name: brandName,
             industry: brandDNA?.industry || 'General',
             niche: brandDNA?.niche,
             companySize: 'medium',
-            description: parsed.profile?.bio || '',
+            description: parsed.profile?.bio || brandDNA?.description || '',
             brandVoice: brandDNA?.voice || null,
-            themes: parsed.content_themes || [],
+            themes: extractedContent?.content_themes || brandDNA?.themes || brandDNA?.corePillars || [],
             competitors: competitorIntelligence.map((c: any) => ({
               name: c.name || c.competitor,
               advantage: c.advantage,
               contentStyle: c.contentStyle
-            }))
+            })),
+            actualPosts: extractedContent?.posts || []
           };
         }
       } catch (e) {
         console.error('Error parsing scan results for brand context:', e);
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:generateContentTemplate:ERROR',message:'Error parsing scan results',data:{error:String(e)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+        // #endregion
       }
     }
     
@@ -176,17 +195,60 @@ const ContentHubView: React.FC = () => {
       }
     }
     
-    // Fallback templates for other platforms or if API fails
+    // Fallback templates for other platforms or if API fails - USE BRAND-SPECIFIC DATA
+    const brandIndustry = brandContext?.industry || brandDNA?.industry || '';
+    const brandThemes = brandContext?.themes || brandDNA?.themes || brandDNA?.corePillars || [];
+    const primaryTheme = brandThemes[0] || theme;
+    const brandDescription = brandContext?.description || brandDNA?.description || '';
+    
+    // #region agent log - Log actual brand data being used
+    const actualBrandData = {
+      brandName,
+      brandIndustry: brandContext?.industry || brandDNA?.industry || '',
+      brandThemes: brandContext?.themes || brandDNA?.themes || brandDNA?.corePillars || [],
+      brandDescription: brandContext?.description || brandDNA?.description || '',
+      brandVoice: brandContext?.brandVoice || brandDNA?.voice || null,
+      actualPostsCount: brandContext?.actualPosts?.length || extractedContent?.posts?.length || 0,
+      competitorsCount: competitorIntelligence.length,
+      primaryTheme
+    };
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:generateContentTemplate:FALLBACK',message:'Using fallback template with brand data',data:actualBrandData,timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+    // #endregion
+    
+    // Use actual brand data - if no brand data, show error instead of generic content
+    if (!brandDNA && !extractedContent && !brandContext) {
+      return `⚠️ Brand data not available. Please run a digital footprint scan first to generate brand-specific content.
+
+For ${brandName}, we need:
+- Brand DNA and voice
+- Content themes
+- Industry context
+- Competitor intelligence
+
+Run a scan to unlock personalized content generation.`;
+    }
+    
+    // Extract real brand information
+    const realIndustry = brandContext?.industry || brandDNA?.industry || '';
+    const realThemes = brandContext?.themes || brandDNA?.themes || brandDNA?.corePillars || [];
+    const realPrimaryTheme = realThemes[0] || primaryTheme || 'your expertise';
+    const realDescription = brandContext?.description || brandDNA?.description || extractedContent?.profile?.bio || '';
+    const realVoice = brandContext?.brandVoice || brandDNA?.voice || {};
+    const realPosts = brandContext?.actualPosts || extractedContent?.posts || [];
+    
+    // Use actual post content as inspiration if available
+    const samplePostContent = realPosts.length > 0 ? realPosts[0]?.content?.substring(0, 200) : '';
+    
     if (asset.type === 'thread') {
-      return `🧵 Thread: ${asset.title}
+      return `🧵 Thread: ${asset.title || realPrimaryTheme}
 
-1/ Let's talk about ${theme}.
+1/ ${brandName} here. Let's talk about ${realPrimaryTheme}${realIndustry ? ` in ${realIndustry}` : ''}.
 
-Most people get this wrong. Here's what I've learned after years in the game:
+${realDescription ? `${realDescription.substring(0, 100)}... ` : ''}Here's what we've learned:
 
-2/ The biggest misconception about ${theme} is...
+2/ The biggest misconception about ${realPrimaryTheme} is...
 
-[Your insight here]
+[Your insight based on ${brandName}'s ${realIndustry || 'expertise'}]
 
 3/ Here's what actually works:
 
@@ -202,84 +264,89 @@ Most people get this wrong. Here's what I've learned after years in the game:
 
 Like + Repost if this helped! 🔄`;
     } else if (asset.type === 'carousel') {
-      return `📸 Carousel: ${asset.title}
+      return `📸 Carousel: ${asset.title || realPrimaryTheme}
 
 SLIDE 1 (Hook):
-"${asset.title}"
-[Eye-catching visual]
+"${realPrimaryTheme}${realIndustry ? ` - ${realIndustry}` : ''} - ${brandName}"
+[Eye-catching visual related to ${realIndustry || realPrimaryTheme}]
 
 SLIDE 2:
-The Problem
-[Describe the pain point]
+The Problem ${realIndustry ? `in ${realIndustry}` : 'We Solve'}
+${realDescription ? `${realDescription.substring(0, 150)}` : `[Describe the pain point ${brandName} addresses]`}
 
 SLIDE 3:
-The Solution
-[Your approach]
+${brandName}'s Solution
+${samplePostContent ? `Inspired by: "${samplePostContent}..."` : `[Your approach based on ${realDescription || 'your expertise'}]`}
 
 SLIDE 4-6:
-Key Points
-• Point 1
-• Point 2
-• Point 3
+Key Points from ${brandName}
+• ${realThemes[0] || realPrimaryTheme} insight
+• ${realThemes[1] || 'Industry expertise'} perspective  
+• ${realThemes[2] || 'Actionable takeaway'} for your audience
 
 SLIDE 7 (CTA):
 Save this for later!
-Follow @${brandName} for more`;
+Follow @${brandName} for more ${realPrimaryTheme} insights`;
     } else if (asset.type === 'reel' || asset.type === 'video') {
-      return `🎬 ${asset.type === 'reel' ? 'Reel' : 'Video'}: ${asset.title}
+      const hookText = samplePostContent ? `"${samplePostContent.substring(0, 50)}..."` : `"${brandName} here. Did you know about ${realPrimaryTheme}?"`;
+      return `🎬 ${asset.type === 'reel' ? 'Reel' : 'Video'}: ${asset.title || realPrimaryTheme}
 
 HOOK (0-3s):
-"${asset.title.split(':')[0] || 'Did you know...'}?"
+${hookText}
 
 CONTENT (4-45s):
-[Your main content about ${theme}]
+${realDescription ? `About ${brandName}: ${realDescription.substring(0, 200)}` : `Your main content about ${realPrimaryTheme}`}
+${realIndustry ? `\n\nIn ${realIndustry}, ` : ''}${realThemes.length > 0 ? `we focus on ${realThemes.slice(0, 2).join(' and ')}.` : ''}
 
 Key points to cover:
-1. [First point]
-2. [Second point]
-3. [Third point]
+1. ${realThemes[0] || realPrimaryTheme} - ${brandName}'s expertise
+2. ${realIndustry || 'Industry'}-specific insights
+3. Actionable takeaway for your audience
 
 CTA (45-60s):
-"Follow for more content like this!"
+"Follow @${brandName} for more ${realPrimaryTheme} content!"
 
 ---
-Hashtags: #${theme.replace(/\s+/g, '')} #ContentCreator`;
+Hashtags: #${realPrimaryTheme.replace(/\s+/g, '')} #${brandName.replace(/\s+/g, '')}${realIndustry ? ' #' + realIndustry.replace(/\s+/g, '') : ''}`;
     } else if (asset.type === 'podcast' || asset.type === 'audio') {
-      return `🎙️ Podcast Script: ${asset.title}
+      return `🎙️ Podcast Script: ${asset.title || realPrimaryTheme}
 
 INTRO:
-"Welcome back to another episode. Today we're diving into ${theme}..."
+"Welcome back to ${brandName}${realIndustry ? ` - your ${realIndustry} experts` : ''}. Today we're diving into ${realPrimaryTheme}${realIndustry ? ` in ${realIndustry}` : ''}..."
 
 SEGMENT 1 (2-3 min):
-- Background and context
-- Why this matters now
+- ${brandName}'s background: ${realDescription ? realDescription.substring(0, 200) : `Expertise in ${realPrimaryTheme}`}
+- Why ${realPrimaryTheme} matters now${realIndustry ? ` in ${realIndustry}` : ''}
+${realThemes.length > 0 ? `- Our focus on ${realThemes.slice(0, 2).join(' and ')}` : ''}
 
 SEGMENT 2 (3-5 min):
-- Main insights
-- Examples and case studies
+- ${brandName}'s insights on ${realPrimaryTheme}
+${samplePostContent ? `- Real example: "${samplePostContent.substring(0, 150)}..."` : `- Examples from ${realDescription || 'our experience'}`}
+${competitorIntelligence.length > 0 ? `- How we compare to competitors in ${realIndustry || 'the market'}` : ''}
 
 SEGMENT 3 (2-3 min):
-- Actionable takeaways
-- How to apply this
+- Actionable takeaways from ${brandName}
+- How to apply ${realPrimaryTheme} insights in ${realIndustry || 'your work'}
 
 OUTRO:
-"Thanks for listening! If you enjoyed this, leave a review and share with someone who needs to hear this."`;
+"Thanks for listening to ${brandName}! If you enjoyed this, leave a review and share with someone who needs to hear this."`;
     } else {
-      return `📝 ${asset.platform.toUpperCase()} Post: ${asset.title}
+      const postContent = samplePostContent ? `Inspired by our recent content: "${samplePostContent.substring(0, 150)}..."\n\n` : '';
+      return `📝 ${asset.platform.toUpperCase()} Post: ${asset.title || realPrimaryTheme}
 
-${asset.description || `Sharing insights about ${theme}...`}
+${asset.description || `${brandName} sharing insights about ${realPrimaryTheme}${realIndustry ? ` in ${realIndustry}` : ''}...`}
 
-[Your main content here]
+${postContent}${realDescription ? `About ${brandName}: ${realDescription.substring(0, 200)}` : `Your main content about ${realPrimaryTheme}`}
 
 Key points:
-• Point 1
-• Point 2
-• Point 3
+• ${realThemes[0] || realPrimaryTheme} - ${brandName}'s expertise
+• ${realIndustry || 'Industry'}-specific perspective
+• Actionable takeaway for your audience
 
 ---
 What do you think? Drop a comment below! 👇
 
-#${theme.replace(/\s+/g, '')} #${brandName.replace(/\s+/g, '')}`;
+#${realPrimaryTheme.replace(/\s+/g, '')} #${brandName.replace(/\s+/g, '')}${realIndustry ? ' #' + realIndustry.replace(/\s+/g, '') : ''}`;
     }
   };
   
@@ -393,6 +460,41 @@ What do you think? Drop a comment below! 👇
     setSelectedSchedule('current');
   };
   
+  const handleGeminiGenerate = async () => {
+    if (!geminiPrompt.trim() || geminiGenerating) return;
+    
+    setGeminiGenerating(true);
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_BASE_URL}/api/gemini/generate-image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: geminiPrompt,
+          size: 'square',
+          style: 'photo'
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.images && Array.isArray(result.images)) {
+          setGeminiGeneratedImages(result.images);
+        } else if (result.image) {
+          setGeminiGeneratedImages([result.image]);
+        }
+      } else {
+        console.error('Failed to generate image');
+        alert('Failed to generate image. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error generating image:', error);
+      alert('Error generating image. Please try again.');
+    } finally {
+      setGeminiGenerating(false);
+    }
+  };
+  
   const handleGenerateContent = async () => {
     setIsGenerating(true);
     
@@ -445,7 +547,7 @@ What do you think? Drop a comment below! 👇
       const { username, isRescan } = event.detail;
       
       // #region agent log - H11: Check if newScanStarted clears assets
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleNewScanStarted',message:'CLEARING ASSETS - NEW SCAN',data:{username,isRescan},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H11'})}).catch(()=>{});
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleNewScanStarted',message:'CLEARING ASSETS - NEW SCAN',data:{username,isRescan},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H11'})}).catch(()=>{});
       // #endregion
       
       // Clear all content hub state
@@ -528,7 +630,7 @@ What do you think? Drop a comment below! 👇
       if (forceContentRegenerate && (activeStrategy || strategy)) {
         console.log('🔄 Content Hub: Force regenerating content from backend based on new strategy');
         // #region agent log - H12: Check if strategy update clears assets
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleStrategyUpdate',message:'CLEARING ASSETS - STRATEGY UPDATE',data:{forceContentRegenerate,hasStrategy:!!(activeStrategy||strategy)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H12'})}).catch(()=>{});
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleStrategyUpdate',message:'CLEARING ASSETS - STRATEGY UPDATE',data:{forceContentRegenerate,hasStrategy:!!(activeStrategy||strategy)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H12'})}).catch(()=>{});
         // #endregion
         // Clear current assets first
         setAssets([]);
@@ -596,7 +698,7 @@ What do you think? Drop a comment below! 👇
     const handleScanComplete = (event: CustomEvent) => {
       const { username, results } = event.detail || {};
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleScanComplete',message:'scanComplete EVENT RECEIVED',data:{username,hasResults:!!results,hasContentIdeas:!!results?.contentIdeas,contentIdeasCount:results?.contentIdeas?.length||0,hasExtractedContent:!!results?.extractedContent},timestamp:Date.now(),sessionId:'debug-session',runId:'contenthub-scan-complete',hypothesisId:'H3'})}).catch(()=>{});
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleScanComplete',message:'scanComplete EVENT RECEIVED',data:{username,hasResults:!!results,hasContentIdeas:!!results?.contentIdeas,contentIdeasCount:results?.contentIdeas?.length||0,hasExtractedContent:!!results?.extractedContent},timestamp:Date.now(),sessionId:'debug-session',runId:'contenthub-scan-complete',hypothesisId:'H3'})}).catch(()=>{});
       // #endregion
       console.log('📥 Content Hub: Scan completed event received', { username, hasResults: !!results });
       // Always reload when scan completes - even if no contentIdeas, we might have brandDNA/context
@@ -820,7 +922,7 @@ What do you think? Drop a comment below! 👇
     const debugLastScanResults = localStorage.getItem('lastScanResults');
     let debugParsedResults: any = null;
     try { debugParsedResults = debugLastScanResults ? JSON.parse(debugLastScanResults) : null; } catch(e) {}
-    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:loadContent:ENTRY',message:'loadContent START',data:{lastScannedUsername:localStorage.getItem('lastScannedUsername'),lastScanId:localStorage.getItem('lastScanId'),hasLastScanResults:!!debugLastScanResults,contentIdeasInCache:debugParsedResults?.contentIdeas?.length||0,cacheKeys:debugParsedResults?Object.keys(debugParsedResults):[]},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1-H5'})}).catch(()=>{});
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:loadContent:ENTRY',message:'loadContent START',data:{lastScannedUsername:localStorage.getItem('lastScannedUsername'),lastScanId:localStorage.getItem('lastScanId'),hasLastScanResults:!!debugLastScanResults,contentIdeasInCache:debugParsedResults?.contentIdeas?.length||0,cacheKeys:debugParsedResults?Object.keys(debugParsedResults):[]},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1-H5'})}).catch(()=>{});
     // #endregion
     try {
       // Load brand assets for context
@@ -867,7 +969,7 @@ What do you think? Drop a comment below! 👇
         try {
           const results = await getScanResults(lastScanId);
           // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:360',message:'getScanResults response',data:{lastScanId,success:results.success,hasContentIdeas:!!results.data?.contentIdeas,contentIdeasCount:results.data?.contentIdeas?.length||0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:360',message:'getScanResults response',data:{lastScanId,success:results.success,hasContentIdeas:!!results.data?.contentIdeas,contentIdeasCount:results.data?.contentIdeas?.length||0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
           // #endregion
           if (results.success && results.data?.contentIdeas && Array.isArray(results.data.contentIdeas)) {
             contentIdeasFromScan = results.data.contentIdeas;
@@ -884,7 +986,7 @@ What do you think? Drop a comment below! 👇
         const currentTimestamp = localStorage.getItem('lastScanTimestamp');
         
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:loadContent:FALLBACK',message:'Trying localStorage fallback',data:{hasLastScanResults:!!lastScanResults,currentUsername,currentTimestamp},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:loadContent:FALLBACK',message:'Trying localStorage fallback',data:{hasLastScanResults:!!lastScanResults,currentUsername,currentTimestamp},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
         // #endregion
         
         if (lastScanResults) {
@@ -898,7 +1000,7 @@ What do you think? Drop a comment below! 👇
               currentUsername.toLowerCase() === cachedUsername.toLowerCase();
             
             // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:loadContent:CACHE_CHECK',message:'Cache validation',data:{currentUsername,cachedUsername,usernameValid,hasContentIdeas:!!parsed.contentIdeas,contentIdeasCount:parsed.contentIdeas?.length||0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+            fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:loadContent:CACHE_CHECK',message:'Cache validation',data:{currentUsername,cachedUsername,usernameValid,hasContentIdeas:!!parsed.contentIdeas,contentIdeasCount:parsed.contentIdeas?.length||0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
             // #endregion
             
             if (usernameValid && parsed.contentIdeas && Array.isArray(parsed.contentIdeas)) {
@@ -941,22 +1043,30 @@ What do you think? Drop a comment below! 👇
         }
       }
       
+      let extractedContent: any = null;
       if (cachedResults) {
         try {
           const parsedResults = JSON.parse(cachedResults);
           competitorIntelligence = parsedResults.competitorIntelligence || [];
           brandDNA = parsedResults.brandDNA || null;
+          extractedContent = parsedResults.extractedContent || null;
         } catch (e) {
           console.error('Error parsing scan results for context:', e);
         }
       }
       
       // Filter out any generic content ideas before enhancement
-      // Extract brand name without domain extension (airbnb.com -> airbnb)
-      const brandNameLower = (lastUsername || '').toLowerCase().replace(/\.(com|net|org|io|co|app)$/i, '').replace(/^www\./, '');
+      // Extract brand name without domain extension (airbnb.com -> airbnb, script.tv -> script)
+      const brandNameLower = (lastUsername || '').toLowerCase().replace(/\.(com|net|org|io|co|app|tv)$/i, '').replace(/^www\./, '').replace(/^https?:\/\//, '');
+      const brandIndustry = brandDNA?.industry?.toLowerCase() || '';
+      const brandThemes = (brandDNA?.themes || brandDNA?.corePillars || extractedContent?.content_themes || []).map((t:any)=>typeof t === 'string' ? t.toLowerCase() : '').filter(Boolean);
+      
       const isGenericIdea = (idea: any) => {
         const title = (idea.title || '').toLowerCase();
         const desc = (idea.description || '').toLowerCase();
+        const combined = `${title} ${desc}`;
+        
+        // Generic patterns that indicate placeholder content
         const genericPatterns = [
           'content creation',
           'brand building', 
@@ -965,20 +1075,59 @@ What do you think? Drop a comment below! 👇
           'content creation explained',
           'you finally get'
         ];
-        // Only filter if it matches generic patterns AND doesn't mention the brand at all
         const hitsGeneric = genericPatterns.some((p) => title.includes(p) || desc.includes(p));
-        const hasBrand = brandNameLower && (title.includes(brandNameLower) || desc.includes(brandNameLower));
-        // Only filter out truly generic content - keep anything that mentions the brand
-        return hitsGeneric && !hasBrand;
+        
+        // Check if content confuses brand name with unrelated concepts
+        // This is CRITICAL - backend sometimes generates wrong content that confuses brand names
+        const wrongConceptPatterns: string[] = [];
+        
+        // If brand is "script" but NOT in rental/hospitality, filter out rental-related content
+        if (brandNameLower === 'script' && !brandIndustry.includes('rental') && !brandIndustry.includes('hospitality') && !brandIndustry.includes('travel')) {
+          wrongConceptPatterns.push('script properties', 'script host', 'script stay', 'script booking', 'short-term rental', 'airbnb', 'property host', 'stayed at');
+        }
+        
+        // If brand is "nike" but NOT a game, filter out gaming content
+        if (brandNameLower === 'nike' && !brandIndustry.includes('game') && !brandIndustry.includes('gaming') && !brandIndustry.includes('entertainment')) {
+          wrongConceptPatterns.push('played nike', 'nike game', 'nike hours', 'gaming nike', 'played for', '1000 hours');
+        }
+        
+        // General wrong concept detection - if content mentions concepts that don't match brand industry
+        if (brandIndustry && brandIndustry.length > 0) {
+          // If industry is clearly defined, check for obvious mismatches
+          if (brandIndustry.includes('sportswear') || brandIndustry.includes('apparel') || brandIndustry.includes('fashion')) {
+            // Sportswear brands shouldn't have gaming content
+            if (combined.includes('played') && combined.includes('hours') && !combined.includes('sport')) {
+              wrongConceptPatterns.push('gaming reference');
+            }
+          }
+        }
+        
+        const hasWrongConcept = wrongConceptPatterns.some((p) => combined.includes(p));
+        const hasBrand = brandNameLower && brandNameLower.length > 2 && (title.includes(brandNameLower) || desc.includes(brandNameLower));
+        
+        // Filter out if: (generic AND no brand mention) OR (wrong concept for this brand)
+        // #region agent log
+        if (hasWrongConcept) {
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:isGenericIdea',message:'FILTERING WRONG CONCEPT',data:{title:idea.title,hasWrongConcept,matchedPatterns:wrongConceptPatterns.filter(p=>combined.includes(p)),brandNameLower,brandIndustry},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
+        }
+        // #endregion
+        
+        return (hitsGeneric && !hasBrand) || hasWrongConcept;
       };
       // Log before filtering
       console.log(`Content Hub: ${contentIdeasFromScan.length} ideas before generic filter`);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:loadContent:BEFORE_FILTER',message:'Before generic filter',data:{countBefore:contentIdeasFromScan.length,firstThreeTitles:contentIdeasFromScan.slice(0,3).map((i:any)=>i.title)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
+      // #region agent log - Log actual content idea titles to see if they're generic
+      const firstThreeIdeas = contentIdeasFromScan.slice(0,3).map((i:any)=>({
+        title:i.title,
+        description:i.description?.substring(0,100),
+        platform:i.platform,
+        theme:i.theme
+      }));
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:loadContent:BEFORE_FILTER',message:'Before generic filter - INSPECTING ACTUAL IDEAS',data:{countBefore:contentIdeasFromScan.length,firstThreeIdeas,allTitles:contentIdeasFromScan.map((i:any)=>i.title),hasBrandDNA:!!brandDNA,brandIndustry:brandDNA?.industry,brandThemes:brandDNA?.themes||brandDNA?.corePillars},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
       // #endregion
       contentIdeasFromScan = contentIdeasFromScan.filter((idea) => !isGenericIdea(idea));
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:loadContent:AFTER_FILTER',message:'After generic filter',data:{countAfter:contentIdeasFromScan.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:loadContent:AFTER_FILTER',message:'After generic filter',data:{countAfter:contentIdeasFromScan.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
       // #endregion
       console.log(`Content Hub: ${contentIdeasFromScan.length} ideas after generic filter`);
       
@@ -1000,7 +1149,7 @@ What do you think? Drop a comment below! 👇
       
       // Convert content ideas to ContentAsset format
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:478',message:'contentIdeasFromScan check',data:{contentIdeasCount:contentIdeasFromScan.length,firstIdea:contentIdeasFromScan[0]?.title||'none'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:478',message:'contentIdeasFromScan check',data:{contentIdeasCount:contentIdeasFromScan.length,firstIdea:contentIdeasFromScan[0]?.title||'none'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
       // #endregion
       if (contentIdeasFromScan.length > 0) {
         const brandSpecificAssets = contentIdeasFromScan.map((idea: any, index: number) => {
@@ -1046,8 +1195,22 @@ What do you think? Drop a comment below! 👇
         // ONLY use brand-specific assets from backend - DO NOT merge with old productionAssets
         // This ensures we never show generic suggestions
         setAssets(brandSpecificAssets);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:524',message:'setAssets CALLED',data:{assetCount:brandSpecificAssets.length,firstAssetTitle:brandSpecificAssets[0]?.title||'none'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+        // #region agent log - Log what assets are actually being set and WHY they might be wrong
+        const firstAssetDetails = brandSpecificAssets[0] ? {
+          title:brandSpecificAssets[0].title,
+          description:brandSpecificAssets[0].description?.substring(0,100),
+          platform:brandSpecificAssets[0].platform,
+          theme:brandSpecificAssets[0].theme
+        } : null;
+        const brandDataForDebug = {
+          username:lastUsername,
+          brandNameLower,
+          hasBrandDNA:!!brandDNA,
+          brandIndustry:brandDNA?.industry,
+          brandThemes:brandDNA?.themes||brandDNA?.corePillars,
+          extractedContentThemes:extractedContent?.content_themes
+        };
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:524',message:'setAssets CALLED - WHAT IS BEING DISPLAYED vs BRAND DATA',data:{assetCount:brandSpecificAssets.length,firstAssetDetails,allTitles:brandSpecificAssets.map((a:any)=>a.title),brandDataForDebug,contentIdeasSource:'backend'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
         // #endregion
         localStorage.setItem('productionAssets', JSON.stringify(brandSpecificAssets));
         
@@ -1069,7 +1232,7 @@ What do you think? Drop a comment below! 👇
       console.warn('⚠️ Content Hub: No content ideas from scan - clearing ALL assets including old productionAssets');
       
       // #region agent log - H9: Check if clearing path is reached
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:737',message:'CLEARING ASSETS - NO CONTENT IDEAS',data:{reason:'No content ideas from scan'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H9'})}).catch(()=>{});
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:737',message:'CLEARING ASSETS - NO CONTENT IDEAS',data:{reason:'No content ideas from scan'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H9'})}).catch(()=>{});
       // #endregion
       
       // Clear ALL assets - including any old generic suggestions in productionAssets
@@ -1085,7 +1248,7 @@ What do you think? Drop a comment below! 👇
     } catch (e) {
       console.error('Error loading content:', e);
       // #region agent log - H10: Check if error path is reached
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:CATCH',message:'CLEARING ASSETS - ERROR',data:{error:String(e)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H10'})}).catch(()=>{});
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:CATCH',message:'CLEARING ASSETS - ERROR',data:{error:String(e)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H10'})}).catch(()=>{});
       // #endregion
       setAssets([]);
     }
@@ -1166,7 +1329,7 @@ What do you think? Drop a comment below! 👇
   });
 
   // #region agent log - H6: Check render state
-  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:RENDER',message:'Render cycle state',data:{assetsLength:assets.length,filteredAssetsLength:filteredAssets.length,statusFilter,platformFilter,firstAssetStatus:assets[0]?.status||'no-assets',firstAssetPlatform:assets[0]?.platform||'no-assets'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+  fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:RENDER',message:'Render cycle state',data:{assetsLength:assets.length,filteredAssetsLength:filteredAssets.length,statusFilter,platformFilter,firstAssetStatus:assets[0]?.status||'no-assets',firstAssetPlatform:assets[0]?.platform||'no-assets'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
   // #endregion
 
   const statusCounts = {
@@ -1492,10 +1655,31 @@ What do you think? Drop a comment below! 👇
                     />
                   </div>
                   
+                  {/* Generate with AI (Gemini) */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-sm font-medium text-white">Generate Images with AI</label>
+                      <span className="text-xs text-white/40">Powered by Gemini</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        // Open Gemini image generation modal
+                        setShowGeminiImageGen(true);
+                      }}
+                      className="w-full border-2 border-dashed border-blue-500/30 rounded-xl p-6 text-center bg-blue-500/5 hover:bg-blue-500/10 transition-all group"
+                    >
+                      <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Sparkles className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="font-medium text-white mb-1">Generate with AI</div>
+                      <div className="text-xs text-white/50">Create banners, posters, and graphics</div>
+                    </button>
+                  </div>
+                  
                   {/* Media Upload */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm font-medium text-white">Use specific images and videos</label>
+                      <label className="text-sm font-medium text-white">Or use specific images and videos</label>
                       <span className="text-xs text-white/40">Optional</span>
                     </div>
                     <div className="border-2 border-dashed border-orange-500/30 rounded-xl p-8 text-center bg-orange-500/5">
@@ -1626,6 +1810,106 @@ What do you think? Drop a comment below! 👇
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      
+      {/* Gemini Image Generation Modal (Blaze AI style) */}
+      {showGeminiImageGen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => { setShowGeminiImageGen(false); setGeminiPrompt(''); setGeminiGeneratedImages([]); }}></div>
+          <div className="relative w-full max-w-2xl bg-[#0A0A0A] border border-white/10 rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-white/10">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-xl font-bold text-white">Generate an Image</h2>
+                <button onClick={() => { setShowGeminiImageGen(false); setGeminiPrompt(''); setGeminiGeneratedImages([]); }} className="text-white/40 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-sm text-white/50">Describe the image you want to generate—or try an example</p>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="mb-6">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={geminiPrompt}
+                    onChange={(e) => setGeminiPrompt(e.target.value)}
+                    placeholder="Overhead shot of artist's worktable"
+                    className="w-full px-4 py-3 bg-[#050505] border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && geminiPrompt.trim() && !geminiGenerating) {
+                        handleGeminiGenerate();
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={handleGeminiGenerate}
+                    disabled={!geminiPrompt.trim() || geminiGenerating}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-blue-500 hover:bg-blue-600 disabled:bg-white/10 disabled:text-white/30 text-white rounded-lg transition-colors"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+                
+                <div className="flex items-center gap-2 mt-3">
+                  <button className="px-3 py-1.5 border border-white/10 rounded-lg text-xs text-white/60 hover:border-white/20">
+                    Size Square &gt;
+                  </button>
+                  <button className="px-3 py-1.5 border border-white/10 rounded-lg text-xs text-white/60 hover:border-white/20">
+                    Style Photo &gt;
+                  </button>
+                  <button className="px-3 py-1.5 border border-white/10 rounded-lg text-xs text-white/60 hover:border-white/20">
+                    Priority Speed &gt;
+                  </button>
+                </div>
+              </div>
+              
+              {geminiGenerating && (
+                <div className="text-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
+                  <p className="text-white/60">Generating image...</p>
+                </div>
+              )}
+              
+              {geminiGeneratedImages.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-white/60 mb-3">Generated Images</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {geminiGeneratedImages.map((img, idx) => (
+                      <div key={idx} className="relative group">
+                        <img src={img} alt={`Generated ${idx + 1}`} className="w-full rounded-lg border border-white/10" />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                          <button className="px-3 py-1.5 bg-white/20 text-white rounded text-xs">Use</button>
+                          <button className="px-3 py-1.5 bg-white/20 text-white rounded text-xs">Download</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {!geminiGenerating && geminiGeneratedImages.length === 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-white/60 mb-3">Trending Examples</h3>
+                  <div className="grid grid-cols-4 gap-3">
+                    {['Happy customer holding a product', 'Overhead shot of artist\'s worktable', 'E-commerce summer sale promotion', 'Happy hour at a restaurant'].map((example, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          setGeminiPrompt(example);
+                          handleGeminiGenerate();
+                        }}
+                        className="aspect-square bg-white/5 rounded-lg border border-white/10 hover:border-blue-500/50 transition-colors p-2 text-[10px] text-white/60 text-center"
+                      >
+                        {example}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

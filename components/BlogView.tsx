@@ -56,6 +56,11 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
       if (searchQuery) params.append('search', searchQuery);
 
       const requestUrl = `${API_URL}/api/blog?${params}`;
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:58',message:'Fetching blog posts',data:{apiUrl:API_URL,requestUrl:requestUrl,hostname:typeof window !== 'undefined' ? window.location.hostname : 'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
       const response = await fetch(requestUrl, {
         method: 'GET',
         headers: {
@@ -63,9 +68,18 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
         },
       });
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:66',message:'API response received',data:{status:response.status,statusText:response.statusText,ok:response.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Could not read error');
         console.error('Blog API error:', response.status, response.statusText, errorText);
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:72',message:'API error response',data:{status:response.status,errorText:errorText},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
+        
         setFeaturedPost(null);
         setPosts([]);
         setTotalPages(0);
@@ -75,17 +89,34 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
       
       const data: BlogListResponse = await response.json();
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:78',message:'Blog data received',data:{postsCount:data.posts?.length || 0,total:data.total || 0,hasPosts:!!(data.posts && data.posts.length > 0)},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      
       // Set featured post (first post) and regular posts
       if (data.posts && data.posts.length > 0) {
         setFeaturedPost(data.posts[0]);
         setPosts(data.posts.slice(1));
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:82',message:'Posts set successfully',data:{featuredPost:!!data.posts[0],regularPosts:data.posts.length - 1},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
       } else {
         setFeaturedPost(null);
         setPosts([]);
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:85',message:'No posts found - showing coming soon',data:{postsArray:data.posts,postsLength:data.posts?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
       }
       setTotalPages(data.totalPages || 0);
     } catch (error) {
       console.error('Error fetching blog posts:', error);
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:88',message:'Exception caught',data:{error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+      
       setFeaturedPost(null);
       setPosts([]);
       setTotalPages(0);

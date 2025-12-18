@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 import { ViewState, NavProps } from '../types';
 import { fetchAnalyticsData, fetchCalendarEvents, fetchCompetitors, fetchContentPipeline } from '../services/dashboardData';
-import { getLatestScanResults, pollScanStatus } from '../services/apiClient';
+import { getLatestScanResults, pollScanStatus, getDebugEndpoint } from '../services/apiClient';
+import { startRealTimePolling, mergeMetrics, hasPlatformIntegrations, type PlatformMetrics } from '../services/platformApiService';
 import { isAdmin } from '../services/adminService';
 import { SubscriptionTier, getCreditBalance, getUserSubscription, TIER_LIMITS } from '../services/subscriptionService';
 import FeatureLock from './FeatureLock';
@@ -68,7 +69,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
   useEffect(() => {
     const dashLog = {location:'DashboardView.tsx:64',message:'DashboardView MOUNTED',data:{initialPage,currentPage,hasOnNavigate:!!onNavigate},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-mount',hypothesisId:'H10'};
     console.log('[DEBUG]', dashLog);
-    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
   }, []);
   // #endregion
   
@@ -77,7 +78,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
     // #region agent log
     const dashLog = {location:'DashboardView.tsx:72',message:'setCurrentPage CALLED',data:{page,previousPage:currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-nav',hypothesisId:'H10'};
     console.log('[DEBUG]', dashLog);
-    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
     // #endregion
     setCurrentPageState(page);
     const newPath = PAGE_TO_URL[page] || '/dashboard';
@@ -105,20 +106,20 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
       // #region agent log
       const newScanLog = {location:'DashboardView.tsx:89',message:'newScanStarted EVENT RECEIVED',data:{username,isRescan,clearAll,hasLastScanResults:!!localStorage.getItem('lastScanResults'),lastScannedUsername:localStorage.getItem('lastScannedUsername')},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-new-scan',hypothesisId:'H7'};
       console.log('[DEBUG]', newScanLog);
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(newScanLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(newScanLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
       // #endregion
       
       // Only clear if explicitly told to clear (from actual scan start, not navigation)
       if (!clearAll && !isRescan) {
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:96',message:'newScanStarted IGNORED - not real scan',data:{username,isRescan,clearAll},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-new-scan',hypothesisId:'H7'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:96',message:'newScanStarted IGNORED - not real scan',data:{username,isRescan,clearAll},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-new-scan',hypothesisId:'H7'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
         // #endregion
         console.log('⚠️ Dashboard: Ignoring newScanStarted event - not a real scan start');
         return;
       }
       
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:101',message:'newScanStarted CLEARING DATA',data:{username,isRescan,clearAll},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-new-scan',hypothesisId:'H7'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:101',message:'newScanStarted CLEARING DATA',data:{username,isRescan,clearAll},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-new-scan',hypothesisId:'H7'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
       // #endregion
       console.log('🧹 Dashboard: New scan started, clearing ALL state SYNCHRONOUSLY');
       
@@ -235,6 +236,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
   const [competitors, setCompetitors] = useState<any[]>([]);
   const [contentPipeline, setContentPipeline] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [realTimeMetrics, setRealTimeMetrics] = useState<PlatformMetrics | null>(null);
+  const [isRealTime, setIsRealTime] = useState(false);
   
   // Scan Results State
   const [strategicInsights, setStrategicInsights] = useState<any[]>([]);
@@ -303,19 +306,19 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
     const handleScanCompleteNotif = (event: CustomEvent) => {
       const { username, results } = event.detail || {};
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:303',message:'scanComplete EVENT RECEIVED',data:{username,hasResults:!!results,hasBrandDNA:!!results?.brandDNA,hasInsights:!!results?.strategicInsights,insightsCount:results?.strategicInsights?.length||0,resultsKeys:results?Object.keys(results):[]},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete-handler',hypothesisId:'H3'})}).catch(()=>{});
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:303',message:'scanComplete EVENT RECEIVED',data:{username,hasResults:!!results,hasBrandDNA:!!results?.brandDNA,hasInsights:!!results?.strategicInsights,insightsCount:results?.strategicInsights?.length||0,resultsKeys:results?Object.keys(results):[]},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete-handler',hypothesisId:'H3'})}).catch(()=>{});
       // #endregion
       if (username) {
         addNotification('Scan Complete', `Digital footprint scan for ${username} has completed successfully.`);
         
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:310',message:'scanComplete - LOADING DATA FROM EVENT',data:{username,hasResults:!!results},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete-handler',hypothesisId:'H3'})}).catch(()=>{});
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:310',message:'scanComplete - LOADING DATA FROM EVENT',data:{username,hasResults:!!results},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete-handler',hypothesisId:'H3'})}).catch(()=>{});
         // #endregion
         
         // CRITICAL FIX: Load scan results into dashboard state when scan completes
         if (results) {
           // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:318',message:'scanComplete - SETTING STATE FROM RESULTS',data:{hasBrandDNA:!!results.brandDNA,brandDNAKeys:results.brandDNA?Object.keys(results.brandDNA):[],hasInsights:!!results.strategicInsights,insightsCount:results.strategicInsights?.length||0,hasCompetitors:!!results.competitorIntelligence,competitorsCount:results.competitorIntelligence?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete-handler',hypothesisId:'H3'})}).catch(()=>{});
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:318',message:'scanComplete - SETTING STATE FROM RESULTS',data:{hasBrandDNA:!!results.brandDNA,brandDNAKeys:results.brandDNA?Object.keys(results.brandDNA):[],hasInsights:!!results.strategicInsights,insightsCount:results.strategicInsights?.length||0,hasCompetitors:!!results.competitorIntelligence,competitorsCount:results.competitorIntelligence?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete-handler',hypothesisId:'H3'})}).catch(()=>{});
           // #endregion
           
           console.log('📥 Dashboard: Loading scan results from event', results);
@@ -330,7 +333,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
         } else {
           // Fallback: Try to load from localStorage if results not in event
           // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:335',message:'scanComplete - NO RESULTS IN EVENT - trying localStorage',data:{username},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete-handler',hypothesisId:'H3'})}).catch(()=>{});
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:335',message:'scanComplete - NO RESULTS IN EVENT - trying localStorage',data:{username},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete-handler',hypothesisId:'H3'})}).catch(()=>{});
           // #endregion
           
           const cachedResults = localStorage.getItem('lastScanResults');
@@ -745,6 +748,37 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
     const interval = setInterval(updateCreditInfo, 30000);
     return () => clearInterval(interval);
   }, []);
+  
+  // Real-time platform API polling
+  useEffect(() => {
+    if (!scanUsername || !hasPlatformIntegrations()) {
+      return; // No scan username or no API integrations configured
+    }
+    
+    // Start real-time polling (5 minute intervals)
+    const cleanup = startRealTimePolling(
+      scanUsername,
+      ['twitter', 'instagram', 'linkedin'],
+      (metrics) => {
+        setRealTimeMetrics(metrics);
+        // Update analytics with real-time data
+        if (analytics) {
+          const updatedAnalytics = {
+            ...analytics,
+            postsThisWeek: metrics.postsThisWeek,
+            engagementThisWeek: metrics.engagementThisWeek,
+            lastUpdated: metrics.lastFetched,
+            isRealTime: true
+          };
+          setAnalytics(updatedAnalytics);
+          setIsRealTime(true);
+        }
+      },
+      5 * 60 * 1000 // 5 minutes
+    );
+    
+    return cleanup; // Cleanup on unmount or when scanUsername changes
+  }, [scanUsername, analytics]);
 
   // Verify Stripe checkout session on mount (if redirected from Stripe)
   useEffect(() => {
@@ -800,7 +834,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
     // #region agent log
     const initLog = {location:'DashboardView.tsx:732',message:'Dashboard MOUNT - checking cache',data:{hasLastTimestamp:!!lastTimestamp,hasScanResults,currentUsername,lastTimestamp},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-init',hypothesisId:'H5'};
     console.log('[DEBUG]', initLog);
-    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(initLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(initLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
     // #endregion
     
     // Only clear if data is VERY old (7 days) - be very conservative
@@ -810,7 +844,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
         // #region agent log
         const staleLog = {location:'DashboardView.tsx:742',message:'Cache is stale - clearing',data:{age,ageDays:Math.round(age/86400000),lastTimestamp,currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-init',hypothesisId:'H5'};
         console.log('[DEBUG]', staleLog);
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(staleLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(staleLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
         // #endregion
         console.log('🧹 Cache is stale (>7 days old) - clearing on page load');
         localStorage.removeItem('lastScanResults');
@@ -822,13 +856,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
         setScanUsername(null);
       } else {
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:756',message:'Cache is VALID - NOT clearing',data:{age,ageHours:Math.round(age/3600000),lastTimestamp,currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-init',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:756',message:'Cache is VALID - NOT clearing',data:{age,ageHours:Math.round(age/3600000),lastTimestamp,currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-init',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
         // #endregion
         console.log('✅ Cache is valid - keeping data (age:', Math.round(age/3600000), 'hours)');
       }
     } else if (!hasScanResults) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:762',message:'No scan results in cache',data:{hasLastTimestamp:!!lastTimestamp,currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-init',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:762',message:'No scan results in cache',data:{hasLastTimestamp:!!lastTimestamp,currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-init',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
       // #endregion
       console.log('⚠️ No scan results in cache - will try to load from API');
     }
@@ -846,12 +880,28 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
           fetchContentPipeline(),
         ]);
         
-        setAnalytics(analyticsData);
+        // Merge real-time metrics if available
+        const mergedMetrics = mergeMetrics(
+          { postsThisWeek: analyticsData.postsThisWeek, engagementThisWeek: analyticsData.engagementThisWeek },
+          realTimeMetrics
+        );
+        
+        // Update analytics with merged data
+        const updatedAnalytics = {
+          ...analyticsData,
+          postsThisWeek: mergedMetrics.postsThisWeek,
+          engagementThisWeek: mergedMetrics.engagementThisWeek,
+          lastUpdated: mergedMetrics.lastUpdated,
+          isRealTime: mergedMetrics.isRealTime
+        };
+        
+        setAnalytics(updatedAnalytics);
+        setIsRealTime(mergedMetrics.isRealTime);
         setCalendarEvents(events);
         setCompetitors(competitorData);
         setContentPipeline(pipeline);
         
-        console.log('Analytics loaded:', analyticsData);
+        console.log('Analytics loaded:', updatedAnalytics);
         
         // Load scan results - try multiple methods
         const loadScanData = () => {
@@ -864,7 +914,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
           // #region agent log
           const loadLogData = {location:'DashboardView.tsx:573',message:'loadScanData - checking cache',data:{hasCachedResults:!!cachedResults,cachedSize:cachedResults?.length||0,currentUsername,currentTimestamp},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'};
           console.log('[DEBUG]', loadLogData);
-          fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(loadLogData)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(loadLogData)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
           // #endregion
           if (cachedResults) {
             try {
@@ -891,12 +941,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
               // #region agent log
               const validationLog = {location:'DashboardView.tsx:585',message:'loadScanData - cache validation',data:{currentUsername,cachedUsername,usernameMatch:currentUsername?.toLowerCase()===cachedUsername?.toLowerCase(),timestampValid,currentTimestamp,cachedTimestamp},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'};
               console.log('[DEBUG]', validationLog);
-              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(validationLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+              fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(validationLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
               // #endregion
               
               if (currentUsername && cachedUsername && currentUsername.toLowerCase() !== cachedUsername.toLowerCase()) {
                 // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:592',message:'loadScanData - USERNAME MISMATCH - clearing cache',data:{currentUsername,cachedUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:592',message:'loadScanData - USERNAME MISMATCH - clearing cache',data:{currentUsername,cachedUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                 // #endregion
                 console.log('⚠️ Username mismatch - clearing old cache');
                 console.log('Current username:', currentUsername);
@@ -913,7 +963,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                 // Don't use cached data - will fetch fresh from API
               } else if (!timestampValid) {
                 // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:830',message:'loadScanData - TIMESTAMP INVALID - clearing cache',data:{currentTimestamp,cachedTimestamp,currentTimestampAge,cachedTimestampAge},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:830',message:'loadScanData - TIMESTAMP INVALID - clearing cache',data:{currentTimestamp,cachedTimestamp,currentTimestampAge,cachedTimestampAge},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                 // #endregion
                 console.log('⚠️ Cache timestamp invalid or expired - clearing cache');
                 console.log('Current timestamp age:', currentTimestampAge, 'ms');
@@ -928,7 +978,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
               } else if (currentUsername && cachedUsername && currentUsername.toLowerCase() === cachedUsername.toLowerCase()) {
                 // Username matches - safe to use cache (timestamp validation passed or not required)
                 // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:850',message:'loadScanData - USING CACHE - username matches',data:{currentUsername,cachedUsername,hasBrandDNA:!!cached.brandDNA,hasInsights:!!cached.strategicInsights,insightsCount:cached.strategicInsights?.length||0,timestampValid},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:850',message:'loadScanData - USING CACHE - username matches',data:{currentUsername,cachedUsername,hasBrandDNA:!!cached.brandDNA,hasInsights:!!cached.strategicInsights,insightsCount:cached.strategicInsights?.length||0,timestampValid},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                 // #endregion
                 console.log('=== LOADING FROM CACHE (username matches) ===');
                 console.log('Cached data keys:', Object.keys(cached));
@@ -950,7 +1000,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                   ? generatedInsights
                   : (Array.isArray(cached.strategicInsights) ? cached.strategicInsights : []);
                 // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:638',message:'loadScanData - SETTING STATE FROM CACHE',data:{insightsCount:insights.length,hasBrandDNA:!!cached.brandDNA,competitorsCount:cached.competitorIntelligence?.length||0,hasMarketShare:!!cached.marketShare,currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:638',message:'loadScanData - SETTING STATE FROM CACHE',data:{insightsCount:insights.length,hasBrandDNA:!!cached.brandDNA,competitorsCount:cached.competitorIntelligence?.length||0,hasMarketShare:!!cached.marketShare,currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                 // #endregion
                 console.log('Setting strategic insights from cache:', insights.length);
                 setStrategicInsights(insights);
@@ -987,7 +1037,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                 }
                 
                 // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:675',message:'loadScanData - STATE SET COMPLETE',data:{strategicInsightsCount:insights.length,hasBrandDNA:!!cached.brandDNA,competitorsCount:cached.competitorIntelligence?.length||0,scanUsername:currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:675',message:'loadScanData - STATE SET COMPLETE',data:{strategicInsightsCount:insights.length,hasBrandDNA:!!cached.brandDNA,competitorsCount:cached.competitorIntelligence?.length||0,scanUsername:currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                 // #endregion
                 
                 // Recalculate analytics with cached scan data
@@ -1000,7 +1050,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
               } else {
                 // No username match or missing username
                 // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:941',message:'loadScanData - NO USERNAME MATCH',data:{currentUsername,cachedUsername,hasCurrentUsername:!!currentUsername,hasCachedUsername:!!cachedUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:941',message:'loadScanData - NO USERNAME MATCH',data:{currentUsername,cachedUsername,hasCurrentUsername:!!currentUsername,hasCachedUsername:!!cachedUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                 // #endregion
                 console.log('⚠️ No username match or missing username');
                 console.log('Current username:', currentUsername);
@@ -1009,7 +1059,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                 // If no current username but we have cached data, try to use it
                 if (currentUsername && cachedUsername && currentUsername.toLowerCase() !== cachedUsername.toLowerCase()) {
                   // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:950',message:'loadScanData - USERNAME MISMATCH - clearing',data:{currentUsername,cachedUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:950',message:'loadScanData - USERNAME MISMATCH - clearing',data:{currentUsername,cachedUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                   // #endregion
                   console.log('⚠️ Username mismatch - clearing cache');
                   localStorage.removeItem('lastScanResults');
@@ -1020,7 +1070,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                 } else if (!currentUsername && cachedUsername) {
                   // No current username but we have cached data - use it
                   // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:961',message:'loadScanData - NO CURRENT USERNAME - using cache',data:{cachedUsername,hasBrandDNA:!!cached.brandDNA},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:961',message:'loadScanData - NO CURRENT USERNAME - using cache',data:{cachedUsername,hasBrandDNA:!!cached.brandDNA},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H5'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                   // #endregion
                   console.log('⚠️ No current username but cached data exists - using cache');
                   localStorage.setItem('lastScannedUsername', cachedUsername);
@@ -1060,7 +1110,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
           // Recover by polling backend via scanId, then populate cache + state.
           if (!cachedResults && currentScanId) {
             // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:recover',message:'No cache - polling by lastScanId',data:{currentScanId,currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H7'})}).catch(()=>{});
+            fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:recover',message:'No cache - polling by lastScanId',data:{currentScanId,currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H7'})}).catch(()=>{});
             // #endregion
             pollScanStatus(currentScanId, () => {}, 2000, 300)
               .then((scanResults) => {
@@ -1091,7 +1141,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                   };
                   localStorage.setItem('lastScanResults', JSON.stringify(updatedCache));
                   // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:recover',message:'Recovered results via lastScanId',data:{currentScanId,usernameToUse,hasBrandDNA:!!(scanResults.data as any).brandDNA,insightsCount:insights.length},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H7'})}).catch(()=>{});
+                  fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardView.tsx:recover',message:'Recovered results via lastScanId',data:{currentScanId,usernameToUse,hasBrandDNA:!!(scanResults.data as any).brandDNA,insightsCount:insights.length},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-load',hypothesisId:'H7'})}).catch(()=>{});
                   // #endregion
                 }
               })
@@ -1245,7 +1295,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
       // #region agent log
       const logData = {location:'DashboardView.tsx:1018',message:'handleScanComplete EVENT RECEIVED',data:{username,scanId,hasResults:!!results,currentScanUsername:scanUsername,resultsKeys:results?Object.keys(results):[],hasLastScanResults:!!localStorage.getItem('lastScanResults')},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-scan-complete',hypothesisId:'H5'};
       console.log('[DEBUG]', logData);
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
       // #endregion
       console.log('📥 Scan completed event received - reloading dashboard data...');
       console.log('New scan username:', username);
@@ -1442,6 +1492,32 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
       const updatedTasks = tasks.map(t => t.id === selectedTask.id ? selectedTask : t);
       setTasks(updatedTasks);
       localStorage.setItem('dashboardTasks', JSON.stringify(updatedTasks));
+      
+      // If addToCalendar is checked, add to calendar
+      if (selectedTask.addToCalendar && selectedTask.dueDate) {
+        const calendarEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+        const calendarEvent = {
+          id: `task_${selectedTask.id}`,
+          date: selectedTask.dueDate.toISOString(),
+          time: selectedTask.dueTime || '09:00',
+          title: selectedTask.title,
+          description: selectedTask.description || '',
+          type: 'document',
+          platform: 'Task',
+          status: selectedTask.completed ? 'published' : 'scheduled',
+          createdAt: new Date().toISOString(),
+          deadline: selectedTask.dueDate.toISOString()
+        };
+        
+        // Remove existing task event if any
+        const filtered = calendarEvents.filter((e: any) => e.id !== calendarEvent.id);
+        filtered.push(calendarEvent);
+        localStorage.setItem('calendarEvents', JSON.stringify(filtered));
+        
+        // Dispatch event to update calendar view
+        window.dispatchEvent(new CustomEvent('calendarUpdated', { detail: { event: calendarEvent } }));
+      }
+      
       setSelectedTask(null);
     }
   };
@@ -1558,12 +1634,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
               </svg>
             </button>
             
-            <div className="flex items-center gap-2 text-xs text-white/40">
+            <div className="flex items-center gap-3 text-xs text-white/40">
               <Calendar className="w-3 h-3 hidden sm:block" />
               <span className="hidden sm:inline">{new Date().toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
-              {scanUsername && (
-                <span className="bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded text-[10px] font-bold truncate max-w-[100px] sm:max-w-none">Scan: {scanUsername}</span>
-              )}
+            </div>
+            
+            {/* Prominent Company Name Display */}
+            {scanUsername && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/30 rounded-lg">
+                <span className="text-white/80 text-[11px] font-semibold uppercase tracking-wider">Company:</span>
+                <span className="text-white text-sm font-black truncate max-w-[200px] sm:max-w-none">{scanUsername}</span>
+              </div>
+            )}
               {scanStats && (
                 <div className="hidden md:flex items-center gap-2 ml-2 border-l border-white/10 pl-2">
                   <span className="text-[10px] text-white/30">{scanStats.postsAnalyzed} posts</span>
@@ -1575,9 +1657,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                 </div>
               )}
             </div>
-          </div>
           
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 flex-1 justify-end">
             {/* History Dropdown */}
             {scanHistory.length > 0 && (
               <div className="relative">
@@ -1866,7 +1947,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
               )}
             </button>
           </div>
-
+          
           {/* Global Search Bar */}
           <div className="flex-1 max-w-xl mx-8 hidden md:block group relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 group-focus-within:text-white transition-colors" />
@@ -1951,7 +2032,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                 {(() => {
                   const dashLog = {location:'DashboardView.tsx:1856',message:'RENDERING dashboard page',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
                   console.log('[DEBUG]', dashLog);
-                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                   return null;
                 })()}
                 {/* #endregion */}
@@ -1965,7 +2046,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                                     <FileText className="w-3 h-3 text-white/20" />
                                 </div>
                                 <div className="flex items-baseline gap-2 mb-1">
-                                    <span className="text-2xl font-black text-white">{analytics?.postsThisWeek || 0}</span>
+                                    <span className="text-2xl font-black text-white">{analytics?.postsThisWeek ?? 0}</span>
                                     {analytics?.postsThisWeekChange !== undefined && (
                                         <span className={`text-xs font-bold ${analytics.postsThisWeekChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                             {analytics.postsThisWeekChange > 0 ? '+' : ''}{analytics.postsThisWeekChange}
@@ -1973,7 +2054,16 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                                     )}
                                 </div>
                                 <div className="text-[9px] text-white/30 mb-1">
-                                    via {analytics?.postsTopPlatform && analytics.postsTopPlatform !== 'Unknown' ? analytics.postsTopPlatform : 'X, Instagram, LinkedIn'}
+                                    {analytics?.postsThisWeek === 0 && analytics?.postsTopPlatform === 'All Platforms' ? (
+                                        <span className="text-white/20 italic">No date data available</span>
+                                    ) : (
+                                        <>via {analytics?.postsTopPlatform && analytics.postsTopPlatform !== 'Unknown' ? analytics.postsTopPlatform : 'X, Instagram, LinkedIn'}</>
+                                    )}
+                                    {analytics?.lastUpdated && (
+                                        <div className="mt-1 text-[8px] text-white/20">
+                                            {isRealTime ? '🟢 Live' : '📊'} Updated {new Date(analytics.lastUpdated).toLocaleString()}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
                                     <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" style={{ width: `${Math.min(((analytics?.postsThisWeek || 0) / 20) * 100, 100)}%` }}></div>
@@ -1995,6 +2085,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                                 </div>
                                 <div className="text-[9px] text-white/30 mb-1">
                                     via {analytics?.engagementTopPlatform && analytics.engagementTopPlatform !== 'Unknown' ? analytics.engagementTopPlatform : 'X, Instagram, LinkedIn'}
+                                    {analytics?.lastUpdated && (
+                                        <div className="mt-1 text-[8px] text-white/20">
+                                            {isRealTime ? '🟢 Live' : '📊'} Updated {new Date(analytics.lastUpdated).toLocaleString()}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
                                     <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full" style={{ width: `${Math.min(((analytics?.engagementThisWeek || 0) / 15) * 100, 100)}%` }}></div>
@@ -2695,20 +2790,25 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                                         </p>
                                     </div>
                                     
-                                    {/* Brand Voice - Full Description */}
+                                    {/* Brand / Creator Description - Comprehensive */}
                                     <div>
-                                        <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-3">BRAND VOICE</div>
-                                        <div className="bg-[#111111] border border-white/10 rounded-xl p-4">
-                                            <p className="text-sm text-white/80 leading-relaxed">
-                                                {brandDNA.voice?.description || brandDNA.voiceSummary || (
-                                                    `The brand voice utilizes a '${brandDNA.archetype || 'Strategic'}' style. ` +
-                                                    `Communication is characterized by ${(brandDNA.voice?.tones || ['professional', 'clear']).slice(0, 2).join(' and ').toLowerCase()} messaging ` +
-                                                    `that drives audience engagement. The tone is ${brandDNA.voice?.tones?.[0]?.toLowerCase() || 'direct'} yet accessible, ` +
-                                                    `emphasizing ${(brandDNA.corePillars || ['value', 'trust'])[0]?.toLowerCase() || 'value'} and ${(brandDNA.corePillars || ['innovation'])[1]?.toLowerCase() || 'innovation'}.`
-                                                )}
+                                        <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-3">BRAND / CREATOR DESCRIPTION</div>
+                                        <div className="bg-[#111111] border border-white/10 rounded-xl p-4 max-h-[400px] overflow-y-auto">
+                                            <p className="text-sm text-white/80 leading-relaxed whitespace-pre-line">
+                                                {generateDetailedBrandDescription(brandDNA, scanUsername, competitorIntelligence, strategicInsights)}
                                             </p>
                                         </div>
                                     </div>
+                                    
+                                    {/* LENS Section - Brand Philosophy */}
+                                    {brandDNA?.lens && (
+                                        <div className="border border-white/20 rounded-xl p-4 bg-white/[0.02]">
+                                            <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2">LENS</div>
+                                            <p className="text-xs text-white/70 leading-relaxed uppercase">
+                                                {brandDNA.lens}
+                                            </p>
+                                        </div>
+                                    )}
                                     
                                     {/* Voice Tone Tags */}
                                     <div>
@@ -2908,7 +3008,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                 {(() => {
                   const dashLog = {location:'DashboardView.tsx:2774',message:'RENDERING competitors',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
                   console.log('[DEBUG]', dashLog);
-                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                   return null;
                 })()}
                 {/* #endregion */}
@@ -3029,7 +3129,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                 {(() => {
                   const dashLog = {location:'DashboardView.tsx:2873',message:'RENDERING contentHub',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
                   console.log('[DEBUG]', dashLog);
-                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                   return null;
                 })()}
                 {/* #endregion */}
@@ -3044,7 +3144,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                 {(() => {
                   const dashLog = {location:'DashboardView.tsx:2876',message:'RENDERING strategy',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
                   console.log('[DEBUG]', dashLog);
-                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                   return null;
                 })()}
                 {/* #endregion */}
@@ -3059,7 +3159,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                 {(() => {
                   const dashLog = {location:'DashboardView.tsx:2879',message:'RENDERING production',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
                   console.log('[DEBUG]', dashLog);
-                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                   return null;
                 })()}
                 {/* #endregion */}
@@ -3080,7 +3180,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                 {(() => {
                   const dashLog = {location:'DashboardView.tsx:2890',message:'RENDERING calendar',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
                   console.log('[DEBUG]', dashLog);
-                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                   return null;
                 })()}
                 {/* #endregion */}
@@ -3095,7 +3195,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                 {(() => {
                   const dashLog = {location:'DashboardView.tsx:2893',message:'RENDERING analytics',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
                   console.log('[DEBUG]', dashLog);
-                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                   return null;
                 })()}
                 {/* #endregion */}
@@ -3110,7 +3210,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                 {(() => {
                   const dashLog = {location:'DashboardView.tsx:2896',message:'RENDERING assets',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
                   console.log('[DEBUG]', dashLog);
-                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                   return null;
                 })()}
                 {/* #endregion */}
@@ -3125,7 +3225,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                 {(() => {
                   const dashLog = {location:'DashboardView.tsx:2899',message:'RENDERING integrations',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
                   console.log('[DEBUG]', dashLog);
-                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                   return null;
                 })()}
                 {/* #endregion */}
@@ -3140,7 +3240,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                 {(() => {
                   const dashLog = {location:'DashboardView.tsx:2902',message:'RENDERING inbox',data:{currentPage},timestamp:Date.now(),sessionId:'debug-session',runId:'dashboard-render',hypothesisId:'H10'};
                   console.log('[DEBUG]', dashLog);
-                  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                  fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dashLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                   return null;
                 })()}
                 {/* #endregion */}
@@ -3562,6 +3662,104 @@ const ActivityItem = ({ img, name, action, meta, time }: any) => (
 );
 
 /* --- Strategic Insight Card --- */
+// Generate comprehensive brand description similar to LLM-generated analysis
+const generateDetailedBrandDescription = (
+  brandDNA: any,
+  scanUsername: string | null,
+  competitorIntelligence: any[],
+  strategicInsights: any[]
+): string => {
+  if (!brandDNA && !scanUsername) {
+    return 'No brand data available. Run a digital footprint scan to generate a comprehensive brand description.';
+  }
+
+  const brandName = scanUsername?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || 'this brand';
+  const displayName = brandName.charAt(0).toUpperCase() + brandName.slice(1);
+  const industry = brandDNA?.industry || brandDNA?.niche || 'their industry';
+  const archetype = brandDNA?.archetype || 'The Creator';
+  const voiceTones = brandDNA?.voice?.tones || brandDNA?.tones || ['energetic', 'authentic', 'engaging'];
+  const corePillars = brandDNA?.corePillars || brandDNA?.values || ['authenticity', 'engagement', 'value'];
+  const themes = brandDNA?.themes || brandDNA?.contentThemes || [];
+  const bio = brandDNA?.bio || brandDNA?.description || brandDNA?.summary || '';
+  
+  // Extract platform presence from scan data
+  const platforms: string[] = [];
+  if (brandDNA?.platforms) {
+    platforms.push(...(Array.isArray(brandDNA.platforms) ? brandDNA.platforms : Object.keys(brandDNA.platforms)));
+  }
+  
+  // Build comprehensive description
+  let description = `${displayName}'s digital footprint reveals a ${archetype.toLowerCase()} brand `;
+  description += `poised for growth in the ${industry} sector. `;
+  
+  if (bio) {
+    description += `${bio} `;
+  } else {
+    description += `The brand embodies ${voiceTones.slice(0, 2).join(' and ')} communication, `;
+    description += `emphasizing ${corePillars.slice(0, 2).join(' and ')} as core differentiators. `;
+  }
+  
+  // Platform-specific strategies
+  description += `\n\nPlatform Strategy:\n`;
+  
+  const platformStrategies: Record<string, string> = {
+    'twitter': 'X (Twitter) suggests a knack for viral hooks and timely reactions, making it ideal for real-time engagement and trend participation.',
+    'x': 'X (Twitter) suggests a knack for viral hooks and timely reactions, making it ideal for real-time engagement and trend participation.',
+    'linkedin': 'LinkedIn indicates potential for professional networking and brand appeal, positioning the brand as a thought leader in their space.',
+    'instagram': 'Instagram is highlighted as a platform for video-first content, which the brand aims to grow through authentic visual storytelling.',
+    'youtube': 'YouTube serves as a hub for long-form content, interviews, and structured, high-value content that builds deeper audience connections.',
+    'tiktok': 'TikTok offers opportunities for short-form, high-energy content that captures attention and drives viral moments.',
+    'reddit': 'Reddit (r/' + (themes[0]?.toLowerCase() || 'community') + ') is prime for observing fan sentiment and discussion, understanding audience needs.',
+    'discord': 'Discord and Telegram serve as hubs for real-time engagement with passionate community members, fostering direct connections.',
+    'telegram': 'Discord and Telegram serve as hubs for real-time engagement with passionate community members, fostering direct connections.'
+  };
+  
+  // Add platform strategies based on available data
+  const mentionedPlatforms = new Set<string>();
+  platforms.forEach(p => {
+    const platformKey = p.toLowerCase().replace('twitter', 'x');
+    if (platformStrategies[platformKey] && !mentionedPlatforms.has(platformKey)) {
+      description += `• ${platformStrategies[platformKey]}\n`;
+      mentionedPlatforms.add(platformKey);
+    }
+  });
+  
+  // Add default platforms if none specified
+  if (mentionedPlatforms.size === 0) {
+    description += `• X (Twitter): Ideal for viral hooks and timely reactions\n`;
+    description += `• LinkedIn: Professional networking and brand appeal\n`;
+    description += `• Instagram: Video-first content and visual storytelling\n`;
+    description += `• YouTube: Long-form content, interviews, and structured content\n`;
+  }
+  
+  // Content strategy
+  description += `\n\nContent Strategy:\n`;
+  description += `The brand focuses on ${themes.length > 0 ? themes.slice(0, 3).join(', ') : 'authentic engagement'} content, `;
+  description += `emphasizing ${voiceTones.slice(0, 2).join(' and ')} messaging that drives audience engagement. `;
+  description += `Content types include ${themes.length > 0 ? 'themed content' : 'short-form videos, interviews, and lighthearted banter'}, `;
+  description += `all designed to build brand-friendly professionalism while maintaining authentic connection with the audience. `;
+  
+  // Monetization and growth
+  if (strategicInsights.length > 0 || competitorIntelligence.length > 0) {
+    description += `\n\nGrowth Opportunities:\n`;
+    description += `Monetization and brand deals are key focus areas, with opportunities for `;
+    description += `sponsored content, partnerships, and community-driven revenue streams. `;
+    if (competitorIntelligence.length > 0) {
+      description += `Competitors like ${competitorIntelligence.slice(0, 2).map((c: any) => c.name).join(' and ')} `;
+      description += `are gaining market share, highlighting the need for differentiated content strategy. `;
+    }
+  }
+  
+  // Brand personality summary
+  description += `\n\nBrand Personality:\n`;
+  description += `The brand maintains a ${voiceTones[0] || 'high-energy'} visual vibe, `;
+  description += `combining ${corePillars.slice(0, 2).join(' and ')} to create a unique position in the ${industry} space. `;
+  description += `The approach balances structured, high-value content with authentic, spontaneous engagement, `;
+  description += `creating a brand that resonates with audiences seeking both entertainment and meaningful connection.`;
+  
+  return description;
+};
+
 // Generate strategic insights based on actual scan data
 const generateStrategicInsightsFromData = (
   scanData: any,

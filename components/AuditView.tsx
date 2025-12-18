@@ -33,6 +33,7 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
   const [estimatedTotal, setEstimatedTotal] = useState(420); // 7 minutes default
   const logsEndRef = useRef<HTMLDivElement>(null);
   const scanStartTime = useRef<number>(Date.now());
+  const scanStartedRef = useRef(false);
 
   const stages: ScanStage[] = [
     { id: 'init', name: 'Initializing', description: 'Setting up scan parameters', status: 'pending', duration: 15, icon: <Network className="w-4 h-4" /> },
@@ -73,6 +74,14 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
     let pollCount = 0;
     
     const performScan = async () => {
+      if (scanStartedRef.current) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:performScan',message:'performScan SKIPPED (already started)',data:{usernameProp:username},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H7'})}).catch(()=>{});
+        // #endregion
+        return;
+      }
+      scanStartedRef.current = true;
+
       const scanUsername = username || localStorage.getItem('lastScannedUsername') || '';
       
       // #region agent log
@@ -186,6 +195,11 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
 
         const scanId = scanResponse.scanId;
         addLog(`[SYSTEM] Scan ID: ${scanId}`);
+        // Persist scanId immediately so Dashboard can recover even if user navigates away early
+        localStorage.setItem('lastScanId', scanId);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:scanId',message:'Stored lastScanId immediately',data:{scanUsername,scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H7'})}).catch(()=>{});
+        // #endregion
         await delay(1000);
         updateStageStatus(0, 'complete');
         setProgress(5);
@@ -297,6 +311,13 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
             });
             window.dispatchEvent(event);
             console.log('📢 Dispatched scanComplete event for:', scanUsername);
+            // Only allow proceeding AFTER we have real results stored/dispatched
+            if (mounted) {
+              setShowButton(true);
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:scanComplete',message:'Proceed ENABLED (real results ready)',data:{scanUsername,scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H7'})}).catch(()=>{});
+              // #endregion
+            }
           }
         }).catch(err => {
           // #region agent log
@@ -456,19 +477,11 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
         updateStageStatus(8, 'complete');
         setProgress(100);
 
-        // Final
-        addLog(`[COMPLETE] ═══════════════════════════════════════`);
-        addLog(`[COMPLETE] Digital Footprint Scan Finished`);
-        addLog(`[COMPLETE] Brand DNA: Extracted`);
-        addLog(`[COMPLETE] Competitors: 3 identified`);
-        addLog(`[COMPLETE] Content Suggestions: 14 generated`);
-        addLog(`[COMPLETE] ═══════════════════════════════════════`);
-
-        // Ensure username is stored even if scan had issues
-        if (mounted) {
-          localStorage.setItem('lastScannedUsername', scanUsername);
-          setShowButton(true);
-        }
+        // UI stages finished, but do NOT allow Proceed until backend confirms completion and results are stored.
+        addLog(`[SYSTEM] UI stages complete. Waiting for backend scan completion...`);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:uiComplete',message:'UI stages complete (waiting for backend)',data:{scanUsername,lastScanId:localStorage.getItem('lastScanId')},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-ui',hypothesisId:'H7'})}).catch(()=>{});
+        // #endregion
 
       } catch (err: any) {
         console.error('Scan error:', err);
@@ -574,7 +587,12 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
               <div className="md:w-48 flex justify-center md:justify-end">
                 {showButton ? (
                   <button 
-                    onClick={() => onNavigate(ViewState.ONBOARDING)} 
+                    onClick={() => {
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:ProceedClick',message:'Proceed CLICKED',data:{target:'DASHBOARD'},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-ui',hypothesisId:'H7'})}).catch(()=>{});
+                      // #endregion
+                      onNavigate(ViewState.DASHBOARD);
+                    }} 
                     className="w-full md:w-auto animate-in fade-in slide-in-from-right-4 duration-500 px-6 py-3 md:py-2.5 rounded-full bg-green-500 hover:bg-green-400 text-black text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.4)]"
                   >
                     Proceed <ArrowRight className="w-4 h-4" />

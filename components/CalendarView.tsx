@@ -114,9 +114,54 @@ const CalendarView: React.FC = () => {
     
     loadEvents();
     
+    // Listen for changes from Production Room and tasks
+    const handleCalendarUpdate = () => {
+      loadEvents();
+    };
+    
+    window.addEventListener('calendarUpdated', handleCalendarUpdate);
+    
     // Listen for changes from Production Room
     const interval = setInterval(loadEvents, 5000); // Check every 5 seconds
-    return () => clearInterval(interval);
+    
+    // Also load tasks from dashboard
+    const loadTasks = () => {
+      try {
+        const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+        const tasksWithCalendar = tasks.filter((t: any) => t.addToCalendar && t.dueDate);
+        const taskEvents: CalendarEvent[] = tasksWithCalendar.map((task: any) => {
+          const dueDate = task.dueDate instanceof Date ? task.dueDate : new Date(task.dueDate);
+          return {
+            id: `task_${task.id}`,
+            date: dueDate.getDate(),
+            title: task.title,
+            description: task.description || '',
+            type: 'document',
+            time: task.dueTime || '09:00',
+            platform: 'Task',
+            status: task.completed ? 'published' : 'scheduled',
+            createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            deadline: dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            tasks: [],
+            comments: []
+          };
+        });
+        
+        setEvents(prev => {
+          const existing = prev.filter(e => !e.id.startsWith('task_'));
+          return [...existing, ...taskEvents];
+        });
+      } catch (e) {
+        console.error('Error loading tasks:', e);
+      }
+    };
+    
+    loadTasks();
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('calendarUpdated', handleCalendarUpdate);
+    };
   }, []);
 
   const getEventIcon = (type: string) => {

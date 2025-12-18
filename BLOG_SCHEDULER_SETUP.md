@@ -102,3 +102,5 @@ This shows:
 - Check blog API endpoint returns published posts
 - Verify frontend is calling the correct API URL
 
+
+

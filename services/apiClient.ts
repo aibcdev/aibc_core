@@ -279,7 +279,7 @@ export async function getScanStatus(scanId: string): Promise<ScanStatus> {
     if (!response.ok) {
       let errorMessage = 'Failed to get scan status';
       try {
-        const error = await response.json();
+      const error = await response.json();
         errorMessage = error.error || errorMessage;
       } catch {
         errorMessage = `Server error: ${response.status} ${response.statusText}`;
@@ -313,7 +313,7 @@ export async function getScanResults(scanId: string): Promise<ScanResults> {
     if (!response.ok) {
       let errorMessage = 'Failed to get scan results';
       try {
-        const error = await response.json();
+      const error = await response.json();
         errorMessage = error.error || errorMessage;
       } catch {
         errorMessage = `Server error: ${response.status} ${response.statusText}`;
@@ -385,7 +385,7 @@ export async function pollScanStatus(
           setTimeout(poll, backoffDelay);
         } else {
           // For other errors, reject immediately
-          reject(error);
+        reject(error);
         }
       }
     };
@@ -409,7 +409,7 @@ export async function getLatestScanResults(username: string): Promise<ScanResult
     if (!response.ok) {
       let errorMessage = 'Failed to get latest scan results';
       try {
-        const error = await response.json();
+      const error = await response.json();
         errorMessage = error.error || errorMessage;
       } catch {
         errorMessage = `Server error: ${response.status} ${response.statusText}`;

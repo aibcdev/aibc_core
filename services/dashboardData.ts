@@ -117,7 +117,47 @@ function calculateDashboardKPIs() {
     // #endregion
     
     const posts = scanData?.extractedContent?.posts || [];
-    const postsThisWeek = posts.length;
+    // #region agent log - Inspect post structure
+    const samplePost = posts[0] || {};
+    const postKeys = Object.keys(samplePost);
+    const hasTimestamp = !!samplePost.timestamp;
+    const hasDate = !!samplePost.date;
+    const hasCreatedAt = !!samplePost.createdAt;
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboardData.ts:119',message:'POST STRUCTURE INSPECTION',data:{totalPosts:posts.length,postKeys,samplePostKeys:postKeys,hasTimestamp,hasDate,hasCreatedAt,timestampValue:samplePost.timestamp,dateValue:samplePost.date,createdAtValue:samplePost.createdAt},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
+    
+    // Filter posts from the last 7 days only
+    const now = Date.now();
+    const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
+    
+    // If posts don't have timestamps, we can't filter by date
+    // In that case, "POSTS THIS WEEK" should show 0 or we need to use a different metric
+    // For now, if no timestamps exist, assume all posts are historical (not this week)
+    let postsThisWeek = 0;
+    if (posts.length > 0) {
+      const postsWithTimestamps = posts.filter((post: any) => {
+        return post.timestamp || post.date || post.createdAt || post.time || post.publishedAt;
+      });
+      
+      if (postsWithTimestamps.length > 0) {
+        // We have timestamps - filter by date
+        postsThisWeek = postsWithTimestamps.filter((post: any) => {
+          const postDate = post.timestamp || post.date || post.createdAt || post.time || post.publishedAt;
+          if (!postDate) return false;
+          const postTime = typeof postDate === 'string' ? new Date(postDate).getTime() : (typeof postDate === 'number' ? postDate : null);
+          if (!postTime || isNaN(postTime)) return false;
+          return postTime >= sevenDaysAgo;
+        }).length;
+      } else {
+        // No timestamps - can't determine if posts are from this week
+        // For now, show 0 (user needs to see accurate data, not guess)
+        postsThisWeek = 0;
+      }
+    }
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboardData.ts:120',message:'POSTS THIS WEEK calculation',data:{totalPosts:posts.length,postsThisWeek,sevenDaysAgo:new Date(sevenDaysAgo).toISOString(),now:new Date(now).toISOString(),postsWithTimestamps:posts.filter((p:any)=>p.timestamp||p.date||p.createdAt).length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
     const postsThisWeekChange = undefined;
     
     // Calculate platform breakdown

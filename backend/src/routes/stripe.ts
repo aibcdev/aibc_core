@@ -1,4 +1,5 @@
 import express from 'express';
+import { getSupabaseClient } from '../lib/supabase';
 
 const router = express.Router();
 
@@ -23,6 +24,75 @@ function getStripe() {
     return new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-11-20.acacia' });
   } catch {
     return null;
+  }
+}
+
+/**
+ * Get user ID from auth token
+ */
+function getUserIdFromRequest(req: express.Request): string | null {
+  // Try to get from Authorization header
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    try {
+      // Decode JWT token (basic decode, no verification for now)
+      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+      return payload.userId || payload.id || null;
+    } catch {
+      // If token decode fails, try to get from request body or headers
+      return (req.body?.userId || req.headers['x-user-id']) as string | null;
+    }
+  }
+  return (req.body?.userId || req.headers['x-user-id']) as string | null;
+}
+
+/**
+ * Update user subscription in database
+ */
+async function updateUserSubscription(
+  userId: string,
+  subscriptionData: {
+    tier: SubscriptionTier;
+    status: string;
+    currentPeriodEnd: Date | null;
+    cancelAtPeriodEnd: boolean;
+    stripeCustomerId?: string;
+    stripeSubscriptionId?: string | null;
+    isLifetimeDeal?: boolean;
+  }
+): Promise<void> {
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    console.warn('⚠️  Supabase not configured. Subscription update skipped.');
+    return;
+  }
+
+  try {
+    // Update or insert subscription
+    const { error } = await supabase
+      .from('subscriptions')
+      .upsert({
+        user_id: userId,
+        tier: subscriptionData.tier,
+        status: subscriptionData.status,
+        current_period_end: subscriptionData.currentPeriodEnd?.toISOString() || null,
+        cancel_at_period_end: subscriptionData.cancelAtPeriodEnd,
+        stripe_customer_id: subscriptionData.stripeCustomerId || null,
+        stripe_subscription_id: subscriptionData.stripeSubscriptionId || null,
+        is_lifetime_deal: subscriptionData.isLifetimeDeal || false,
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id',
+      });
+
+    if (error) {
+      console.error('Error updating subscription in database:', error);
+    } else {
+      console.log(`✅ Subscription updated for user ${userId}: ${subscriptionData.tier} (${subscriptionData.status})`);
+    }
+  } catch (error) {
+    console.error('Error updating subscription:', error);
   }
 }
 
@@ -111,19 +181,71 @@ router.post('/customer-portal', async (req, res) => {
     }
 
     const { returnUrl } = req.body;
-    const userId = req.headers['x-user-id'] as string;
+    const userId = getUserIdFromRequest(req);
 
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized - user ID required' });
     }
 
-    // Get or create Stripe customer
-    // In production, you'd look up the customer ID from your database
-    const customerId = `cus_${userId}`;
+    // Look up Stripe customer ID from database
+    const supabase = getSupabaseClient();
+    let customerId: string | null = null;
+
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('stripe_customer_id')
+        .eq('user_id', userId)
+        .single();
+
+      if (!error && data?.stripe_customer_id) {
+        customerId = data.stripe_customer_id;
+      }
+    }
+
+    // If no customer ID found, try to get from Stripe by email
+    if (!customerId) {
+      // Try to get user email from auth token or request
+      const userEmail = req.body.userEmail || req.headers['x-user-email'];
+      if (userEmail) {
+        const customers = await stripe.customers.list({
+          email: userEmail as string,
+          limit: 1,
+        });
+        if (customers.data.length > 0) {
+          customerId = customers.data[0].id;
+        }
+      }
+    }
+
+    // If still no customer ID, create one
+    if (!customerId) {
+      const userEmail = req.body.userEmail || req.headers['x-user-email'] || `user-${userId}@aibc.com`;
+      const customer = await stripe.customers.create({
+        email: userEmail as string,
+        metadata: {
+          userId,
+        },
+      });
+      customerId = customer.id;
+
+      // Save customer ID to database
+      if (supabase) {
+        await supabase
+          .from('subscriptions')
+          .upsert({
+            user_id: userId,
+            stripe_customer_id: customerId,
+            updated_at: new Date().toISOString(),
+          }, {
+            onConflict: 'user_id',
+          });
+      }
+    }
 
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: returnUrl,
+      return_url: returnUrl || `${req.headers.origin || 'http://localhost:5173'}/dashboard`,
     });
 
     res.json({ url: session.url });
@@ -156,6 +278,7 @@ router.post('/verify-session', async (req, res) => {
     }
 
     const tier = session.metadata?.tier || 'pro';
+    const userId = session.metadata?.userId || getUserIdFromRequest(req) || 'unknown';
     const isLifetimeDeal = tier === 'lifetime' || tier === 'lifetime_deal';
 
     let subscriptionData: any;
@@ -178,9 +301,9 @@ router.post('/verify-session', async (req, res) => {
       // Regular subscription - only retrieve if subscription exists
       if (!session.subscription) {
         return res.status(400).json({ error: 'No subscription found for this session' });
-    }
+      }
 
-    const subscription = await stripe.subscriptions.retrieve(session.subscription as string) as any;
+      const subscription = await stripe.subscriptions.retrieve(session.subscription as string) as any;
 
       // Map tier names to our SubscriptionTier enum
       let mappedTier = SubscriptionTier.PRO;
@@ -192,12 +315,17 @@ router.post('/verify-session', async (req, res) => {
 
       subscriptionData = {
         tier: mappedTier,
-      status: subscription.status === 'active' ? 'active' : 'cancelled',
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
-      stripeCustomerId: subscription.customer as string,
-      stripeSubscriptionId: subscription.id,
-    };
+        status: subscription.status === 'active' ? 'active' : 'cancelled',
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        stripeCustomerId: subscription.customer as string,
+        stripeSubscriptionId: subscription.id,
+      };
+    }
+
+    // Update subscription in database
+    if (userId && userId !== 'unknown') {
+      await updateUserSubscription(userId, subscriptionData);
     }
 
     res.json({ subscription: subscriptionData });
@@ -269,24 +397,150 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   }
 
   // Handle the event
-  switch (event.type) {
-    case 'checkout.session.completed':
-      const checkoutSession = event.data.object;
-      console.log('Checkout completed:', checkoutSession.id);
-      // Update user subscription in database
-      break;
-    case 'customer.subscription.updated':
-      const updatedSubscription = event.data.object;
-      console.log('Subscription updated:', updatedSubscription.id);
-      // Update subscription status in database
-      break;
-    case 'customer.subscription.deleted':
-      const deletedSubscription = event.data.object;
-      console.log('Subscription cancelled:', deletedSubscription.id);
-      // Update subscription status in database
-      break;
-    default:
-      console.log(`Unhandled event type: ${event.type}`);
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const checkoutSession = event.data.object as any;
+        console.log('✅ Checkout completed:', checkoutSession.id);
+        
+        const userId = checkoutSession.metadata?.userId;
+        const tier = checkoutSession.metadata?.tier || 'pro';
+        const isLifetimeDeal = tier === 'lifetime' || tier === 'lifetime_deal';
+
+        if (userId && userId !== 'unknown') {
+          if (isLifetimeDeal) {
+            // Lifetime Deal: one-time payment
+            const endDate = new Date();
+            endDate.setMonth(endDate.getMonth() + 12);
+            
+            await updateUserSubscription(userId, {
+              tier: SubscriptionTier.ENTERPRISE,
+              status: 'active',
+              currentPeriodEnd: endDate,
+              cancelAtPeriodEnd: false,
+              stripeCustomerId: checkoutSession.customer as string,
+              stripeSubscriptionId: null,
+              isLifetimeDeal: true,
+            });
+          } else if (checkoutSession.subscription) {
+            // Regular subscription
+            const subscription = await stripe.subscriptions.retrieve(checkoutSession.subscription as string) as any;
+            let mappedTier = SubscriptionTier.PRO;
+            if (tier === 'business' || tier === 'enterprise') {
+              mappedTier = SubscriptionTier.ENTERPRISE;
+            }
+
+            await updateUserSubscription(userId, {
+              tier: mappedTier,
+              status: subscription.status === 'active' ? 'active' : 'cancelled',
+              currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+              cancelAtPeriodEnd: subscription.cancel_at_period_end,
+              stripeCustomerId: subscription.customer as string,
+              stripeSubscriptionId: subscription.id,
+            });
+          }
+        }
+        break;
+      }
+      case 'customer.subscription.updated': {
+        const updatedSubscription = event.data.object as any;
+        console.log('✅ Subscription updated:', updatedSubscription.id);
+        
+        // Find user by Stripe customer ID
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          const { data } = await supabase
+            .from('subscriptions')
+            .select('user_id')
+            .eq('stripe_subscription_id', updatedSubscription.id)
+            .single();
+
+          if (data?.user_id) {
+            // Get tier from subscription metadata or price
+            let mappedTier = SubscriptionTier.PRO;
+            const priceId = updatedSubscription.items?.data[0]?.price?.id;
+            // You can check price metadata or subscription metadata for tier
+            const tier = updatedSubscription.metadata?.tier || 'pro';
+            if (tier === 'business' || tier === 'enterprise') {
+              mappedTier = SubscriptionTier.ENTERPRISE;
+            }
+
+            await updateUserSubscription(data.user_id, {
+              tier: mappedTier,
+              status: updatedSubscription.status === 'active' ? 'active' : 'cancelled',
+              currentPeriodEnd: new Date(updatedSubscription.current_period_end * 1000),
+              cancelAtPeriodEnd: updatedSubscription.cancel_at_period_end,
+              stripeCustomerId: updatedSubscription.customer as string,
+              stripeSubscriptionId: updatedSubscription.id,
+            });
+          }
+        }
+        break;
+      }
+      case 'customer.subscription.deleted': {
+        const deletedSubscription = event.data.object as any;
+        console.log('⚠️  Subscription cancelled:', deletedSubscription.id);
+        
+        // Find user by Stripe subscription ID
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          const { data } = await supabase
+            .from('subscriptions')
+            .select('user_id')
+            .eq('stripe_subscription_id', deletedSubscription.id)
+            .single();
+
+          if (data?.user_id) {
+            await updateUserSubscription(data.user_id, {
+              tier: SubscriptionTier.FREE,
+              status: 'cancelled',
+              currentPeriodEnd: new Date(deletedSubscription.current_period_end * 1000),
+              cancelAtPeriodEnd: false,
+              stripeCustomerId: deletedSubscription.customer as string,
+              stripeSubscriptionId: null,
+            });
+          }
+        }
+        break;
+      }
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object as any;
+        console.log('✅ Payment succeeded:', invoice.id);
+        // Subscription is already active, no action needed
+        break;
+      }
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as any;
+        console.log('⚠️  Payment failed:', invoice.id);
+        
+        // Find user and update subscription status
+        const supabase = getSupabaseClient();
+        if (supabase && invoice.subscription) {
+          const { data } = await supabase
+            .from('subscriptions')
+            .select('user_id')
+            .eq('stripe_subscription_id', invoice.subscription)
+            .single();
+
+          if (data?.user_id) {
+            await updateUserSubscription(data.user_id, {
+              tier: SubscriptionTier.PRO, // Keep tier, just update status
+              status: 'past_due',
+              currentPeriodEnd: new Date(invoice.period_end * 1000),
+              cancelAtPeriodEnd: false,
+              stripeCustomerId: invoice.customer as string,
+              stripeSubscriptionId: invoice.subscription,
+            });
+          }
+        }
+        break;
+      }
+      default:
+        console.log(`ℹ️  Unhandled event type: ${event.type}`);
+    }
+  } catch (error: any) {
+    console.error('Error handling webhook event:', error);
+    // Don't return error to Stripe, log it instead
   }
 
   res.json({ received: true });

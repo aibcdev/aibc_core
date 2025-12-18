@@ -62,3 +62,5 @@ Verify footer shows:
 - All links should work correctly
 - Footer appears on every page at the end of content
 
+
+

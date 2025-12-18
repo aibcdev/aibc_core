@@ -4,11 +4,24 @@ import { generateJSON, generateText, isLLMConfigured, getActiveProvider, ScanTie
 import { getActivePrompt } from './learningService';
 import * as dotenv from 'dotenv';
 
+// Debug logging helper for backend
+function getDebugEndpoint(): string {
+  return process.env.DEBUG_ENDPOINT || 'http://localhost:3001/api/debug/log';
+}
+
 /**
  * Launch chromium with fallback to system chromium if Playwright browsers aren't available
  * This handles Cloud Run deployments where Playwright browsers may not install correctly
  */
 async function launchChromiumWithFallback(options: { headless?: boolean; args?: string[] } = {}): Promise<Browser> {
+  // #region agent log
+  const fs = require('fs');
+  const logPath = '/Users/akeemojuko/Documents/aibc_core-1/.cursor/debug.log';
+  try {
+    fs.appendFileSync(logPath, JSON.stringify({location:'scanService.ts:11',message:'launchChromiumWithFallback CALLED',data:{headless:options.headless!==false},timestamp:Date.now(),sessionId:'debug-session',runId:'browser-launch',hypothesisId:'H3'})+'\n');
+  } catch(e){}
+  // #endregion
+  
   const defaultArgs = [
     '--no-sandbox', 
     '--disable-setuid-sandbox', 
@@ -34,11 +47,21 @@ async function launchChromiumWithFallback(options: { headless?: boolean; args?: 
     
     // Verify browser is actually working by checking if it's connected
     if (browser && browser.isConnected()) {
+      // #region agent log
+      try {
+        fs.appendFileSync(logPath, JSON.stringify({location:'scanService.ts:36',message:'launchChromiumWithFallback SUCCESS - Playwright',data:{isConnected:browser.isConnected()},timestamp:Date.now(),sessionId:'debug-session',runId:'browser-launch',hypothesisId:'H3'})+'\n');
+      } catch(e){}
+      // #endregion
       console.log('✅ Playwright chromium launched successfully');
       return browser;
     }
     throw new Error('Browser launched but not connected');
   } catch (playwrightError: any) {
+    // #region agent log
+    try {
+      fs.appendFileSync(logPath, JSON.stringify({location:'scanService.ts:41',message:'launchChromiumWithFallback PLAYWRIGHT FAILED',data:{error:playwrightError?.message||'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'browser-launch',hypothesisId:'H3'})+'\n');
+    } catch(e){}
+    // #endregion
     console.log('Playwright browsers not found, falling back to system chromium...');
     
     // Try multiple possible chromium paths (Alpine Linux)
@@ -301,8 +324,21 @@ export async function startScan(
   scanType: string,
   connectedAccounts?: Record<string, string> // Platform-specific handles from integrations
 ) {
+  // #region agent log
+  const fs = require('fs');
+  const logPath = '/Users/akeemojuko/Documents/aibc_core-1/.cursor/debug.log';
+  try {
+    fs.appendFileSync(logPath, JSON.stringify({location:'scanService.ts:297',message:'startScan CALLED',data:{scanId,username,platforms:platforms.length,scanType,hasConnectedAccounts:!!connectedAccounts},timestamp:Date.now(),sessionId:'debug-session',runId:'backend-scan',hypothesisId:'H7'})+'\n');
+  } catch(e){}
+  // #endregion
+  
   const scan = storage.getScan(scanId);
   if (!scan) {
+    // #region agent log
+    try {
+      fs.appendFileSync(logPath, JSON.stringify({location:'scanService.ts:306',message:'startScan ERROR - scan not found',data:{scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'backend-scan',hypothesisId:'H6'})+'\n');
+    } catch(e){}
+    // #endregion
     console.error(`Scan ${scanId} not found in storage`);
     return;
   }
@@ -310,6 +346,11 @@ export async function startScan(
 
   try {
     storage.updateScan(scanId, { status: 'scanning', progress: 0 });
+    // #region agent log
+    try {
+      fs.appendFileSync(logPath, JSON.stringify({location:'scanService.ts:313',message:'startScan STATUS UPDATE',data:{scanId,status:'scanning',progress:0},timestamp:Date.now(),sessionId:'debug-session',runId:'backend-scan',hypothesisId:'H7'})+'\n');
+    } catch(e){}
+    // #endregion
     addLog(scanId, `[SYSTEM] Initializing Digital Footprint Scanner...`);
     addLog(scanId, `[SYSTEM] Target: ${username}`);
     addLog(scanId, `[SYSTEM] Platforms: ${platforms.join(', ')}`);
@@ -567,7 +608,7 @@ export async function startScan(
           if (websiteContent.html && websiteContent.html.length > 50) {
             addLog(scanId, `[DISCOVERY] Website scraped successfully (${websiteContent.html.length} chars HTML, ${websiteContent.text?.length || 0} chars text)`);
             // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:567',message:'Website scraped - before extraction',data:{websiteUrl,htmlLength:websiteContent.html.length,textLength:websiteContent.text?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:567',message:'Website scraped - before extraction',data:{websiteUrl,htmlLength:websiteContent.html.length,textLength:websiteContent.text?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
             // #endregion
             
             // Extract social links from HTML - use direct regex (fast, no browser)
@@ -575,7 +616,7 @@ export async function startScan(
             addLog(scanId, `[EXTRACT] Extracting social links using direct regex (fast method)...`);
             let htmlLinks = extractSocialLinksFromHTMLDirect(websiteContent.html, websiteUrl, scanId);
             // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:572',message:'After regex extraction',data:{websiteUrl,foundCount:Object.keys(htmlLinks).length,foundLinks:Object.keys(htmlLinks),htmlLinks},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:572',message:'After regex extraction',data:{websiteUrl,foundCount:Object.keys(htmlLinks).length,foundLinks:Object.keys(htmlLinks),htmlLinks},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
             // #endregion
             
             // Skip browser extraction - it hangs. Use LLM as fallback instead
@@ -600,11 +641,11 @@ export async function startScan(
                 const contentType = textContent ? 'text' : 'HTML';
                 addLog(scanId, `[DISCOVERY] Running LLM extraction (PRIMARY METHOD) on ${contentForLLM.length} chars of ${contentType}...`);
                 // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:594',message:'Before LLM extraction from website',data:{websiteUrl,contentType,contentLength:contentForLLM.length,textLength:websiteContent.text?.length||0,htmlLength:websiteContent.html?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:594',message:'Before LLM extraction from website',data:{websiteUrl,contentType,contentLength:contentForLLM.length,textLength:websiteContent.text?.length||0,htmlLength:websiteContent.html?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
                 // #endregion
                 const llmExtracted = await extractSocialLinksWithLLM(contentForLLM, websiteUrl, scanId);
                 // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:596',message:'After LLM extraction from website',data:{websiteUrl,foundCount:Object.keys(llmExtracted).length,foundLinks:Object.keys(llmExtracted),llmResults:llmExtracted},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:596',message:'After LLM extraction from website',data:{websiteUrl,foundCount:Object.keys(llmExtracted).length,foundLinks:Object.keys(llmExtracted),llmResults:llmExtracted},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
                 // #endregion
               if (Object.keys(llmExtracted).length > 0) {
                   // LLM results take absolute priority - they're the most accurate
@@ -616,7 +657,7 @@ export async function startScan(
               } else {
                 addLog(scanId, `[DISCOVERY] ⚠️ Not enough content for LLM extraction (text: ${websiteContent.text?.length || 0} chars, HTML: ${websiteContent.html?.length || 0} chars)`);
                 // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:604',message:'LLM extraction skipped - insufficient content',data:{websiteUrl,textLength:websiteContent.text?.length||0,htmlLength:websiteContent.html?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
+                fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:604',message:'LLM extraction skipped - insufficient content',data:{websiteUrl,textLength:websiteContent.text?.length||0,htmlLength:websiteContent.html?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
                 // #endregion
               }
             } catch (llmError: any) {
@@ -678,12 +719,12 @@ export async function startScan(
     
     // Final LLM backfill for missing social links (use domain knowledge)
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:664',message:'Before LLM backfill',data:{domain:domainLower,discoveredCount:Object.keys(discoveredSocialLinks).length,discoveredLinks:Object.keys(discoveredSocialLinks),platforms},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:664',message:'Before LLM backfill',data:{domain:domainLower,discoveredCount:Object.keys(discoveredSocialLinks).length,discoveredLinks:Object.keys(discoveredSocialLinks),platforms},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
     // #endregion
     try {
       const backfilled = await backfillSocialLinksWithLLM(domainLower, discoveredSocialLinks, platforms, scanId);
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:666',message:'After LLM backfill',data:{beforeCount:Object.keys(discoveredSocialLinks).length,afterCount:Object.keys(backfilled).length,addedCount:Object.keys(backfilled).length-Object.keys(discoveredSocialLinks).length,backfilledLinks:Object.keys(backfilled)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:666',message:'After LLM backfill',data:{beforeCount:Object.keys(discoveredSocialLinks).length,afterCount:Object.keys(backfilled).length,addedCount:Object.keys(backfilled).length-Object.keys(discoveredSocialLinks).length,backfilledLinks:Object.keys(backfilled)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
       // #endregion
       if (Object.keys(backfilled).length > Object.keys(discoveredSocialLinks).length) {
         addLog(scanId, `[DISCOVERY] LLM backfill added ${Object.keys(backfilled).length - Object.keys(discoveredSocialLinks).length} links`);
@@ -692,7 +733,7 @@ export async function startScan(
     } catch (e: any) {
       addLog(scanId, `[DISCOVERY] LLM backfill skipped/failed: ${e?.message || e}`);
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:671',message:'LLM backfill error',data:{error:e?.message||e,domain:domainLower},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:671',message:'LLM backfill error',data:{error:e?.message||e,domain:domainLower},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
       // #endregion
     }
     
@@ -756,14 +797,14 @@ export async function startScan(
             usernameToTry = usernameVariations[0];
             addLog(scanId, `[${platform.toUpperCase()}] Domain detected, trying username: ${usernameToTry}`);
             // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:732',message:'Domain detected - constructing URL',data:{platform,originalUsername:username,domainName,usernameToTry,variations:usernameVariations},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:732',message:'Domain detected - constructing URL',data:{platform,originalUsername:username,domainName,usernameToTry,variations:usernameVariations},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
             // #endregion
           }
           
           // Construct URL for this platform
           profileUrl = getProfileUrl(usernameToTry, platform);
           // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:736',message:'After getProfileUrl',data:{platform,usernameToTry,profileUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:736',message:'After getProfileUrl',data:{platform,usernameToTry,profileUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
           // #endregion
           
           if (!profileUrl) {
@@ -834,25 +875,25 @@ export async function startScan(
             // For non-discovered links (constructed URLs), verify before scraping
             addLog(scanId, `[SCRAPE] Checking ${actualPlatform} profile: ${profileUrl}`);
             // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:804',message:'Before scraping constructed URL',data:{platform:actualPlatform,profileUrl,isDiscovered:false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D,E'})}).catch(()=>{});
+            fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:804',message:'Before scraping constructed URL',data:{platform:actualPlatform,profileUrl,isDiscovered:false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D,E'})}).catch(()=>{});
             // #endregion
             try {
               const content = await scrapeProfileWithRetry(profileUrl, actualPlatform, scanId);
               // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:807',message:'After scraping - content received',data:{platform:actualPlatform,textLength:content.text?.length||0,htmlLength:content.html?.length||0,url:content.url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E,F'})}).catch(()=>{});
+              fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:807',message:'After scraping - content received',data:{platform:actualPlatform,textLength:content.text?.length||0,htmlLength:content.html?.length||0,url:content.url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E,F'})}).catch(()=>{});
               // #endregion
               
               // Verify profile actually exists (not 404, not login page, has actual content)
               const profileExists = await verifyProfileExists(content, actualPlatform);
               // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:810',message:'After verifyProfileExists',data:{platform:actualPlatform,profileExists,textLength:content.text?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+              fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:810',message:'After verifyProfileExists',data:{platform:actualPlatform,profileExists,textLength:content.text?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
               // #endregion
               
               // Be more lenient with content length - accept profiles with at least 10 chars (lowered from 20)
               const minContentLength = 10;
               const hasMinimalContent = content.text && content.text.length >= minContentLength;
               // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:813',message:'Content validation check',data:{platform:actualPlatform,hasMinimalContent,textLength:content.text?.length||0,minContentLength},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+              fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:813',message:'Content validation check',data:{platform:actualPlatform,hasMinimalContent,textLength:content.text?.length||0,minContentLength},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
               // #endregion
               
               if (profileExists && hasMinimalContent) {
@@ -863,7 +904,7 @@ export async function startScan(
               } else if (!profileExists) {
                 addLog(scanId, `[SKIP] ${actualPlatform} profile not found or not accessible - skipping`);
                 // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:821',message:'SKIP - profileExists=false',data:{platform:actualPlatform,profileUrl,textLength:content.text?.length||0,textPreview:content.text?.substring(0,200)||''},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:821',message:'SKIP - profileExists=false',data:{platform:actualPlatform,profileUrl,textLength:content.text?.length||0,textPreview:content.text?.substring(0,200)||''},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
                 // #endregion
               } else if (!hasMinimalContent) {
                 // Even if verification passed, if content is too short, log but still try to use it
@@ -874,13 +915,13 @@ export async function startScan(
               } else {
                 addLog(scanId, `[SKIP] ${actualPlatform} profile verification failed`);
                 // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:829',message:'SKIP - verification failed',data:{platform:actualPlatform,profileUrl,profileExists,hasMinimalContent},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:829',message:'SKIP - verification failed',data:{platform:actualPlatform,profileUrl,profileExists,hasMinimalContent},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
                 // #endregion
               }
             } catch (scrapeError: any) {
               addLog(scanId, `[SKIP] ${actualPlatform} profile not accessible: ${scrapeError.message}`);
               // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:832',message:'SKIP - scrape error',data:{platform:actualPlatform,profileUrl,error:scrapeError.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+              fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:832',message:'SKIP - scrape error',data:{platform:actualPlatform,profileUrl,error:scrapeError.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
               // #endregion
             }
           }
@@ -1414,6 +1455,16 @@ Return JSON array of actionable recommendations with metrics:
       const nicheIndicators = brandIdentity?.niche || 
                              brandIdentity?.industry || 
                              extractNicheIndicators(allPosts.substring(0, 10000), bio, themes, brandDNA, websiteTextContent);
+      
+      // Log which source we're using for niche detection
+      if (brandIdentity?.niche) {
+        addLog(scanId, `[CONTENT] Using brand identity niche: "${brandIdentity.niche}" (from LLM-first layer)`);
+      } else if (brandIdentity?.industry) {
+        addLog(scanId, `[CONTENT] Using brand identity industry: "${brandIdentity.industry}" (from LLM-first layer)`);
+      } else {
+        addLog(scanId, `[CONTENT] Using extracted niche: "${nicheIndicators}" (fallback - brandIdentity not available)`);
+      }
+      
       const postPatternSummary = summarizePostPatterns(validatedContent.posts || []);
       
       // Extract brand name from username (handles social media URLs properly)
@@ -1422,7 +1473,7 @@ Return JSON array of actionable recommendations with metrics:
       // Build brandIdentity context - PRIMARY SOURCE OF TRUTH (LLM-first layer)
       let brandIdentityContext = '';
       if (brandIdentity) {
-        brandIdentityContext = `## 🎯 BRAND IDENTITY (LLM-FIRST LAYER - PRIMARY SOURCE OF TRUTH):
+        brandIdentityContext = `## 🎯 BRAND IDENTITY (PRIMARY SOURCE - USE THIS):
 This information comes from direct LLM identification of what this brand IS.
 Use this as the ACCURATE understanding before generating Content Hub suggestions.
 
@@ -1431,10 +1482,14 @@ Use this as the ACCURATE understanding before generating Content Hub suggestions
 - What they do: ${brandIdentity.description}
 - Specific niche: ${brandIdentity.niche}
 
-CRITICAL: ${brandIdentity.name} is a ${brandIdentity.industry} company.
+CRITICAL INSTRUCTION: ${brandIdentity.name} is a ${brandIdentity.industry} company.
 ${brandIdentity.description}
 
-Generate Content Hub suggestions that are ACCURATE to this brand identity.
+DO NOT confuse "${brandIdentity.name}" with unrelated industries or concepts.
+For example, if this is a video platform, do NOT generate content about crypto tokens or blockchain.
+If this is a SaaS tool, do NOT generate content about physical products or e-commerce stores.
+
+Generate Content Hub suggestions that are SPECIFIC to ${brandIdentity.industry} and ${brandIdentity.niche}.
 Understand what ${brandIdentity.name} actually does, then create viral content
 that beats competitors in their actual market space (${brandIdentity.industry}).
 
@@ -1444,12 +1499,15 @@ that beats competitors in their actual market space (${brandIdentity.industry}).
       // Build supplementary context - website content, bio, themes (secondary to brandIdentity)
       let brandContext = '';
       if (brandIdentity) {
-        brandContext = `BRAND IDENTITY (Authoritative - from LLM-first layer):
+        brandContext = `BRAND IDENTITY (Authoritative - from LLM-first layer - USE THIS AS PRIMARY):
+- Company: ${brandIdentity.name}
 - Industry: ${brandIdentity.industry}
 - Description: ${brandIdentity.description}
 - Niche: ${brandIdentity.niche}
 
-SUPPLEMENTARY CONTEXT (from website and social profiles):
+CRITICAL: ${brandIdentity.name} is a ${brandIdentity.industry} company. DO NOT confuse the brand name "${brandIdentity.name}" with unrelated industries.
+
+SUPPLEMENTARY CONTEXT (from website and social profiles - use to supplement, not replace brandIdentity):
 `;
       }
       if (websiteTextContent && websiteTextContent.length > 100) {
@@ -1552,6 +1610,7 @@ ${!brandIdentity ? `⚠️ CRITICAL: Brand identity not available. Use the follo
 - Website: ${websiteTextContent ? websiteTextContent.substring(0, 1000) : 'n/a'}
 
 DO NOT generate generic content. Every idea MUST reference ${brandName} specifically and their actual business/industry.
+DO NOT confuse the brand name "${brandName}" with unrelated industries or concepts.
 ` : ''}
 
 ## BRAND TYPE ANALYSIS:
@@ -1766,16 +1825,31 @@ For ${nicheIndicators || brandName}, generate content that MAXIMIZES VIRALITY wh
           const descLower = (idea.description || '').toLowerCase();
           const combinedText = `${titleLower} ${descLower}`;
           const brandIndustry = brandIdentity.industry.toLowerCase();
+          const brandNameLower = brandIdentity.name.toLowerCase();
           
           // Check if content clearly references wrong industry (only if obviously wrong)
           // Allow hybrid/adjacent industries - just ensure it's not completely off
           // This is about ACCURACY, not preventing industry mixing
           const wrongIndustryKeywords: Record<string, string[]> = {
-            'video platform': ['crypto token', 'blockchain', 'defi', 'nft', 'token launch', 'script launch'],
-            'content platform': ['crypto token', 'blockchain', 'defi', 'nft', 'token launch'],
-            'saas': ['physical product', 'ecommerce store', 'retail shop'],
-            'ecommerce': ['saas platform', 'software tool', 'api service'],
+            'video platform': ['crypto token', 'blockchain', 'defi', 'nft', 'token launch', 'script launch', 'cryptocurrency', 'token sale'],
+            'content platform': ['crypto token', 'blockchain', 'defi', 'nft', 'token launch', 'cryptocurrency', 'token sale'],
+            'saas': ['physical product', 'ecommerce store', 'retail shop', 'shipping', 'warehouse'],
+            'ecommerce': ['saas platform', 'software tool', 'api service', 'software development'],
+            'software': ['physical product', 'ecommerce store', 'retail shop', 'shipping'],
           };
+          
+          // Check if brand name is being confused with unrelated concepts
+          // Example: "script" (video platform) being confused with "script token" (crypto)
+          const brandNameWords = brandNameLower.split(/[\s\-_]+/);
+          const hasBrandNameConfusion = brandNameWords.some(word => {
+            // Check if brand name word appears with wrong industry keywords
+            const wrongKeywords = wrongIndustryKeywords[brandIndustry] || [];
+            return wrongKeywords.some(keyword => {
+              // If content mentions both brand name word AND wrong industry keyword together
+              const keywordWords = keyword.split(' ');
+              return keywordWords.some(kw => combinedText.includes(kw) && combinedText.includes(word));
+            });
+          });
           
           // Only filter if content clearly references wrong industry keywords
           const wrongKeywords = wrongIndustryKeywords[brandIndustry] || [];
@@ -1784,8 +1858,21 @@ For ${nicheIndicators || brandName}, generate content that MAXIMIZES VIRALITY wh
           );
           
           // If content has wrong industry reference AND doesn't mention brandIdentity industry, filter it
-          if (hasWrongIndustryRef && !combinedText.includes(brandIndustry.split(' ')[0])) {
-            addLog(scanId, `[VALIDATION] Filtered content idea "${idea.title}" - references wrong industry`);
+          // OR if brand name is being confused with unrelated concepts
+          if ((hasWrongIndustryRef && !combinedText.includes(brandIndustry.split(' ')[0])) || hasBrandNameConfusion) {
+            addLog(scanId, `[VALIDATION] Filtered content idea "${idea.title}" - references wrong industry or confuses brand name`);
+            return false;
+          }
+          
+          // Additional check: Ensure content mentions brand name or industry context
+          // This prevents completely generic content
+          const mentionsBrand = combinedText.includes(brandNameLower) || 
+                               combinedText.includes(brandIndustry.split(' ')[0]) ||
+                               combinedText.includes(brandIdentity.niche?.toLowerCase() || '');
+          
+          // If content doesn't reference brand at all, it's too generic
+          if (!mentionsBrand && idea.title.length < 40) {
+            addLog(scanId, `[VALIDATION] Filtered content idea "${idea.title}" - too generic, no brand reference`);
             return false;
           }
         }
@@ -1849,6 +1936,10 @@ For ${nicheIndicators || brandName}, generate content that MAXIMIZES VIRALITY wh
 CRITICAL REMINDER - BRAND IDENTITY (LLM-FIRST LAYER):
 ${brandIdentity.name} is a ${brandIdentity.industry} company that ${brandIdentity.description}.
 Generate Content Hub suggestions ACCURATE to this brand identity - ${brandIdentity.industry} and ${brandIdentity.niche}.
+
+DO NOT confuse "${brandIdentity.name}" with unrelated industries.
+For example, if this is a ${brandIdentity.industry} company, do NOT generate content about ${brandIdentity.industry === 'video platform' ? 'crypto tokens or blockchain' : brandIdentity.industry === 'saas' ? 'physical products or e-commerce stores' : 'unrelated industries'}.
+Generate content for ${brandIdentity.industry} company, NOT for unrelated industries.
 ` : '';
           const retryPrompt = `${contentPrompt}\n\nIMPORTANT: The previous attempt generated inaccurate or generic ideas. 
 ${brandIdentityEmphasis}
@@ -3138,7 +3229,7 @@ async function discoverSocialHandlesWithLLM(domain: string, platform: string, sc
     const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
     const brandName = extractBrandNameFromInput(domain); // Handles social URLs and regular domains
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:3002',message:'Before LLM handle discovery',data:{domain,cleanDomain,brandName,platform},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:3002',message:'Before LLM handle discovery',data:{domain,cleanDomain,brandName,platform},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
     // #endregion
     
     // More conversational prompt that leverages LLM's world knowledge
@@ -3161,7 +3252,7 @@ Return ONLY the username (without @ symbol). If you're not sure, make your best 
 
     const result = await generateText(prompt, systemPrompt, { tier: 'basic' });
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:3031',message:'After LLM generateText',data:{domain,platform,result:result?.substring(0,100)||null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:3031',message:'After LLM generateText',data:{domain,platform,result:result?.substring(0,100)||null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
     // #endregion
     
     if (result && typeof result === 'string') {

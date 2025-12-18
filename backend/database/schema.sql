@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS seo_blog_posts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   slug TEXT UNIQUE NOT NULL,
   title TEXT NOT NULL,
+  author TEXT,
   meta_description TEXT,
   content TEXT NOT NULL,
   excerpt TEXT,

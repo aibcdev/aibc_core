@@ -263,3 +263,5 @@ After setting your Content Plan:
 
 **Your Content Plan is your content strategy in action.** Set it up thoughtfully, and adjust based on results!
 
+
+

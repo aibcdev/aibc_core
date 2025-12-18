@@ -37,3 +37,5 @@ SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 3. **Spaces**: Don't use spaces like `SUPABASE_URL = https://...` - use `SUPABASE_URL=https://...`
 4. **Not saved**: Make sure you save the file after editing (Cmd+S or Ctrl+S)
 
+
+

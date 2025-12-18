@@ -56,3 +56,5 @@ The footer should appear on:
 - Privacy Policy and Terms pages are public (no login required)
 - All navigation should work smoothly
 
+
+

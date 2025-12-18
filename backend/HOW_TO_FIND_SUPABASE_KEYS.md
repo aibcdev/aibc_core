@@ -68,3 +68,5 @@ SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 - Don't commit the `.env` file to git (it should already be in `.gitignore`)
 - Keep your keys secure!
 
+
+

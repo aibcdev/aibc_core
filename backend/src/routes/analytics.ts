@@ -1,6 +1,11 @@
 import { Router } from 'express';
 import { generateAnalyticsReport, checkBusinessPlusAccess } from '../services/analyticsService';
 import { scrapeLast7DaysContent, generateAnalyticsInsights } from '../services/contentScraperService';
+import {
+  generateAdvancedAnalytics,
+  generateCustomDashboard,
+  generatePerformancePredictions,
+} from '../services/enhancedAnalyticsService';
 
 const router = Router();
 
@@ -398,6 +403,101 @@ Return JSON:
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to generate comparison'
+    });
+  }
+});
+
+/**
+ * POST /api/analytics/advanced
+ * Generate advanced analytics with deeper insights
+ */
+router.post('/advanced', async (req, res) => {
+  try {
+    const { contentData, engagementData, dateRange, brandDNA } = req.body;
+
+    if (!contentData || !engagementData || !dateRange) {
+      return res.status(400).json({
+        success: false,
+        error: 'ContentData, engagementData, and dateRange required'
+      });
+    }
+
+    const analytics = await generateAdvancedAnalytics(
+      contentData,
+      engagementData,
+      dateRange,
+      brandDNA
+    );
+
+    res.json({
+      success: true,
+      analytics,
+    });
+  } catch (error: any) {
+    console.error('Advanced analytics error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to generate advanced analytics'
+    });
+  }
+});
+
+/**
+ * POST /api/analytics/custom-dashboard
+ * Generate custom analytics dashboard
+ */
+router.post('/custom-dashboard', async (req, res) => {
+  try {
+    const { metrics, contentData, dateRange } = req.body;
+
+    if (!metrics || !Array.isArray(metrics) || !contentData || !dateRange) {
+      return res.status(400).json({
+        success: false,
+        error: 'Metrics array, contentData, and dateRange required'
+      });
+    }
+
+    const dashboard = await generateCustomDashboard(metrics, contentData, dateRange);
+
+    res.json({
+      success: true,
+      dashboard,
+    });
+  } catch (error: any) {
+    console.error('Custom dashboard error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to generate custom dashboard'
+    });
+  }
+});
+
+/**
+ * POST /api/analytics/predictions
+ * Generate content performance predictions
+ */
+router.post('/predictions', async (req, res) => {
+  try {
+    const { historicalData, plannedContent } = req.body;
+
+    if (!historicalData || !plannedContent) {
+      return res.status(400).json({
+        success: false,
+        error: 'HistoricalData and plannedContent required'
+      });
+    }
+
+    const predictions = await generatePerformancePredictions(historicalData, plannedContent);
+
+    res.json({
+      success: true,
+      predictions,
+    });
+  } catch (error: any) {
+    console.error('Performance predictions error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to generate predictions'
     });
   }
 });

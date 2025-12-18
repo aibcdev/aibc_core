@@ -75,3 +75,5 @@ curl https://aibc-backend-409115133182.us-central1.run.app/api/blog?status=publi
 Expected: JSON response with posts array
 Current: "Cannot GET /api/blog" error
 
+
+

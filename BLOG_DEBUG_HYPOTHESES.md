@@ -29,3 +29,5 @@
 3. Check network tab for API call to `/api/blog`
 4. Review logs in `.cursor/debug.log` after reproduction
 
+
+
