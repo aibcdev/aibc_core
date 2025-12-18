@@ -3,26 +3,33 @@
  */
 
 // Determine API URL: use env var, or detect production vs local
-const getApiBaseUrl = () => {
+export function getApiBaseUrl(): string {
   // If env var is set, use it
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
   
-  // Production detection: if running on Netlify (or any non-localhost domain)
+  // Production detection: if running on aibcmedia.com (or any non-localhost domain)
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-      // Production - use Cloud Run backend
-      return 'https://aibc-backend-409115133182.us-central1.run.app';
+      // Production - use aibcmedia.com backend
+      return 'https://api.aibcmedia.com';
     }
   }
   
-  // Local development
+  // Local development - AIBC backend
   return 'http://localhost:3001';
-};
+}
 
 const API_BASE_URL = getApiBaseUrl();
+
+/**
+ * Get debug logging endpoint (uses AIBC backend)
+ */
+export function getDebugEndpoint(): string {
+  return `${getApiBaseUrl()}/api/debug/log`;
+}
 
 /**
  * Retry configuration
