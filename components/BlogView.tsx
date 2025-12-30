@@ -5,6 +5,7 @@ import { BlogPost, BlogListResponse } from '../types/seo';
 import Navigation from './shared/Navigation';
 import Footer from './shared/Footer';
 import SEOMeta from './shared/SEOMeta';
+import BlogImage from './shared/BlogImage';
 import { getDebugEndpoint } from '../services/apiClient';
 
 interface BlogViewProps extends NavProps {
@@ -183,7 +184,7 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
     if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
-      month: 'short',
+      month: 'long',
       day: 'numeric',
     });
   };
@@ -236,63 +237,55 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
       />
       <Navigation onNavigate={onNavigate} />
 
-      <main className="relative pt-32 pb-24 px-6">
-        {/* Hero Section */}
-        <div className="max-w-7xl mx-auto mb-24">
+      <main className="relative pt-24 pb-24 px-6">
+        {/* Hero Section - Simplified */}
+        <div className="max-w-7xl mx-auto mb-16">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 text-xs text-orange-400 mb-8">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
-              </span>
-              Latest Insights
-            </div>
-            <h1 className="text-5xl md:text-7xl font-semibold tracking-tight text-white mb-8 leading-[1.1]">
-              Content engineering <br />
-              <span className="text-neutral-500">for the digital age.</span>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white mb-4 leading-tight">
+              AIBC Blog
             </h1>
-            <p className="text-lg md:text-xl text-neutral-400 leading-relaxed max-w-2xl">
-              Deep dives into content automation, embedded media strategies, and the future of digital footprints. Curated by the AIBC team.
+            <p className="text-lg text-neutral-400 leading-relaxed">
+              Expert content marketing strategies, video marketing ideas, and brand storytelling insights.
             </p>
           </div>
         </div>
 
         {/* Filter / Search Bar */}
-        <div className="max-w-7xl mx-auto mb-16 border-b border-white/10 pb-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="max-w-7xl mx-auto mb-12">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
               <button
                 onClick={() => {
                   setSelectedCategory(undefined);
                   setPage(1);
                 }}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
                   !selectedCategory
                     ? 'bg-white text-black'
-                    : 'border border-white/10 text-neutral-400 hover:text-white hover:border-white/20'
+                    : 'bg-white/5 text-neutral-400 hover:text-white hover:bg-white/10'
                 }`}
               >
                 All Posts
               </button>
-              {categories.slice(0, 5).map((cat) => (
+              {categories.slice(0, 6).map((cat) => (
                 <button
                   key={cat}
                   onClick={() => {
                     setSelectedCategory(cat);
                     setPage(1);
                   }}
-                  className={`px-4 py-2 rounded-full border border-white/10 text-sm font-medium transition-all ${
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
                     selectedCategory === cat
-                      ? 'bg-white text-black border-white'
-                      : 'text-neutral-400 hover:text-white hover:border-white/20'
+                      ? 'bg-white text-black'
+                      : 'bg-white/5 text-neutral-400 hover:text-white hover:bg-white/10'
                   }`}
                 >
                   {cat}
                 </button>
               ))}
             </div>
-            <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 group-hover:text-neutral-300 transition-colors" />
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
               <input
                 type="text"
                 placeholder="Search articles..."
@@ -301,68 +294,38 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
                   setSearchQuery(e.target.value);
                   setPage(1);
                 }}
-                className="w-full md:w-64 bg-transparent border border-white/10 rounded-lg py-2 pl-10 pr-4 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-orange-500/50 transition-colors"
+                className="w-full md:w-72 bg-white/5 border border-white/10 rounded-md py-2 pl-10 pr-4 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-white/30 focus:bg-white/10 transition-all"
               />
             </div>
           </div>
         </div>
 
-        {/* Featured Article */}
+        {/* Featured Article - Simplified Card Layout */}
         {featuredPost && (
-          <div className="max-w-7xl mx-auto mb-20">
+          <div className="max-w-7xl mx-auto mb-16">
             <a
               href={`/blog/${featuredPost.slug}`}
-              className="group relative block rounded-3xl overflow-hidden border border-white/10 bg-neutral-900/40 hover:border-orange-500/30 transition-all duration-500"
+              className="group block rounded-xl overflow-hidden border border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10 transition-all"
             >
-              <div className="grid md:grid-cols-2 gap-0">
-                <div className="h-64 md:h-auto bg-neutral-800 relative overflow-hidden">
-                  {(featuredPost.featured_image_url || getFallbackImageUrl(featuredPost)) ? (
-                    <img
-                      src={featuredPost.featured_image_url || getFallbackImageUrl(featuredPost) || ''}
-                      alt={featuredPost.title}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        // Fallback to placeholder if image fails to load
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const parent = target.parentElement;
-                        if (parent && !parent.querySelector('.image-placeholder')) {
-                          const placeholder = document.createElement('div');
-                          placeholder.className = 'image-placeholder absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(249,115,22,0.15),transparent_50%)] flex items-center justify-center';
-                          placeholder.innerHTML = `<div class="text-white/60 text-lg font-medium text-center px-8">${featuredPost.title}</div>`;
-                          parent.appendChild(placeholder);
-                        }
-                      }}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(249,115,22,0.15),transparent_50%)] flex items-center justify-center">
-                        <div className="text-white/60 text-lg font-medium text-center px-8">{featuredPost.title}</div>
-                      </div>
-                  )}
-                  <div className="absolute bottom-6 left-6">
-                    <span className="inline-block px-3 py-1 bg-black/50 backdrop-blur-md border border-white/10 rounded-md text-xs text-white font-medium">Featured</span>
-                  </div>
-                </div>
-                <div className="p-8 md:p-12 flex flex-col justify-center">
-                  <div className="flex items-center gap-3 text-sm text-neutral-500 mb-4">
-                    {featuredPost.author && <span className="text-white font-medium">{featuredPost.author}</span>}
-                    {featuredPost.author && featuredPost.published_at && <span className="w-1 h-1 rounded-full bg-neutral-600"></span>}
-                    {featuredPost.published_at && <span>{formatDate(featuredPost.published_at)}</span>}
-                    {featuredPost.published_at && featuredPost.reading_time && <span className="w-1 h-1 rounded-full bg-neutral-600"></span>}
-                    {featuredPost.reading_time && <span>{featuredPost.reading_time} min read</span>}
-                  </div>
-                  <h2 className="text-3xl md:text-4xl font-semibold text-white mb-6 tracking-tight group-hover:text-orange-500 transition-colors duration-300">
-                    {featuredPost.title}
-                  </h2>
-                  {featuredPost.excerpt && (
-                    <p className="text-lg text-neutral-400 mb-8 leading-relaxed">
-                      {featuredPost.excerpt}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-2 text-white font-medium mt-auto group/btn">
-                    Read article
-                    <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
-                  </div>
+              <BlogImage post={featuredPost} aspectRatio="16:9" className="mb-6" />
+              <div className="px-6 pb-6">
+                {featuredPost.category && (
+                  <span className="inline-block px-3 py-1 bg-orange-500/20 text-orange-500 text-xs font-semibold rounded-md mb-3">
+                    {featuredPost.category}
+                  </span>
+                )}
+                <h2 className="text-2xl md:text-3xl font-bold text-white mb-3 leading-tight group-hover:text-orange-500 transition-colors">
+                  {featuredPost.title}
+                </h2>
+                {featuredPost.excerpt && (
+                  <p className="text-base text-neutral-400 mb-4 leading-relaxed line-clamp-2">
+                    {featuredPost.excerpt}
+                  </p>
+                )}
+                <div className="flex items-center gap-3 text-sm text-neutral-500">
+                  {featuredPost.published_at && <span>{formatDate(featuredPost.published_at)}</span>}
+                  {featuredPost.published_at && featuredPost.reading_time && <span>•</span>}
+                  {featuredPost.reading_time && <span>{featuredPost.reading_time} min read</span>}
                 </div>
               </div>
             </a>
@@ -401,75 +364,34 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
           </div>
         ) : (
           <>
-            <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {posts.map((post) => (
                 <article key={post.id} className="flex flex-col group">
                   <a
                     href={`/blog/${post.slug}`}
-                    className="block overflow-hidden rounded-xl border border-white/10 bg-neutral-900/20 aspect-video mb-6 relative hover:border-white/20 transition-all"
+                    className="block rounded-xl overflow-hidden border border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10 transition-all"
                   >
-                    {(post.featured_image_url || getFallbackImageUrl(post)) ? (
-                      <img
-                        src={post.featured_image_url || getFallbackImageUrl(post) || ''}
-                        alt={post.title}
-                        className="w-full h-full object-cover"
-                        onLoad={() => {
-                          // #region agent log
-                          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:img-onLoad',message:'IMAGE LOADED SUCCESSFULLY',data:{postId:post.id,src:post.featured_image_url || getFallbackImageUrl(post)},timestamp:Date.now(),sessionId:'debug-session',runId:'image-load',hypothesisId:'H6'})}).catch(()=>{});
-                          // #endregion
-                        }}
-                        onError={(e) => {
-                          // #region agent log
-                          const target = e.target as HTMLImageElement;
-                          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:img-onError',message:'IMAGE LOAD ERROR',data:{postId:post.id,src:target.src,hasFeaturedImageUrl:!!post.featured_image_url,featuredImageUrl:post.featured_image_url},timestamp:Date.now(),sessionId:'debug-session',runId:'image-load',hypothesisId:'H6'})}).catch(()=>{});
-                          // #endregion
-                          // Fallback to placeholder if image fails to load
-                          target.style.display = 'none';
-                          const parent = target.parentElement;
-                          if (parent && !parent.querySelector('.image-placeholder')) {
-                            const placeholder = document.createElement('div');
-                            placeholder.className = 'image-placeholder absolute inset-0 bg-gradient-to-br from-orange-500/10 via-blue-500/5 to-transparent flex items-center justify-center';
-                            placeholder.innerHTML = `<div class="text-white/40 text-sm font-medium text-center px-4">${post.title.substring(0, 40)}...</div>`;
-                            parent.appendChild(placeholder);
-                          }
-                        }}
-                      />
-                    ) : (
-                      <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-blue-500/5 to-transparent flex items-center justify-center">
-                        <div className="text-white/40 text-sm font-medium text-center px-4">{post.title.substring(0, 40)}...</div>
-                      </div>
-                    )}
-                  </a>
-                  <div className="flex items-center gap-3 text-xs text-neutral-500 mb-3">
-                    {post.author && <span className="text-white font-medium">{post.author}</span>}
-                    {post.author && (post.category || post.published_at || post.reading_time) && (
-                      <span className="w-1 h-1 rounded-full bg-neutral-700"></span>
-                    )}
-                    {post.category && (
-                      <>
-                        <span className={`font-medium ${getCategoryColor(post.category)}`}>
+                    <BlogImage post={post} aspectRatio="16:9" className="mb-4" />
+                    <div className="px-4 pb-4">
+                      {post.category && (
+                        <span className="inline-block px-2 py-1 bg-orange-500/20 text-orange-500 text-xs font-semibold rounded-md mb-3">
                           {post.category}
                         </span>
-                        {(post.published_at || post.reading_time) && (
-                          <span className="w-1 h-1 rounded-full bg-neutral-700"></span>
-                        )}
-                      </>
-                    )}
-                    {post.published_at && <span>{formatDate(post.published_at)}</span>}
-                  </div>
-                  <h3 className={`text-xl font-semibold text-white mb-3 tracking-tight transition-colors ${getCategoryColor(post.category).replace('text-', 'group-hover:text-')}`}>
-                    {post.title}
-                  </h3>
-                  {post.excerpt && (
-                    <p className="text-base text-neutral-400 leading-relaxed mb-4 line-clamp-3">
-                      {post.excerpt}
-                    </p>
-                  )}
-                  <a
-                    href={`/blog/${post.slug}`}
-                    className="inline-flex items-center text-sm text-white mt-auto hover:text-neutral-300 transition-colors"
-                  >
-                    Read more <ChevronRight className="w-4 h-4 ml-1" />
+                      )}
+                      <h3 className="text-lg font-bold text-white mb-2 leading-tight group-hover:text-orange-500 transition-colors line-clamp-2">
+                        {post.title}
+                      </h3>
+                      {post.excerpt && (
+                        <p className="text-sm text-neutral-400 leading-relaxed mb-3 line-clamp-2">
+                          {post.excerpt}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 text-xs text-neutral-500">
+                        {post.published_at && <span>{formatDate(post.published_at)}</span>}
+                        {post.published_at && post.reading_time && <span>•</span>}
+                        {post.reading_time && <span>{post.reading_time} min read</span>}
+                      </div>
+                    </div>
                   </a>
                 </article>
               ))}

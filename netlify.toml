@@ -3,12 +3,18 @@
   publish = "dist"
 
 [build.environment]
-  # Force Node 18 for compatibility
-  NODE_VERSION = "18"
+  # Use Node.js 22 for Agent Runners compatibility
+  # Note: Netlify Agent Runners work best with Node.js 22 or higher
+  # Some features may not work as expected with Node.js 20 or lower
+  NODE_VERSION = "22"
   # Disable Netlify cache to ensure fresh builds
   NPM_FLAGS = "--prefer-offline=false"
   # Disable secrets scanner
   SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
+
+# Use Node.js 22 runtime
+[context.production.environment]
+  NODE_VERSION = "22"
 
 # Clear build cache
 [build.processing]

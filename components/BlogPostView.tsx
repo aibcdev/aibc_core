@@ -5,6 +5,7 @@ import { BlogPost } from '../types/seo';
 import Navigation from './shared/Navigation';
 import Footer from './shared/Footer';
 import SEOMeta from './shared/SEOMeta';
+import BlogImage from './shared/BlogImage';
 
 interface BlogPostViewProps extends NavProps {
   slug: string;
@@ -14,6 +15,7 @@ const BlogPostView: React.FC<BlogPostViewProps> = ({ onNavigate, slug }) => {
   const [post, setPost] = useState<BlogPost | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [contentWithLinks, setContentWithLinks] = useState<string>('');
 
   // Use production API URL if on production domain
   const getApiUrl = () => {
@@ -241,74 +243,54 @@ const BlogPostView: React.FC<BlogPostViewProps> = ({ onNavigate, slug }) => {
         {/* Article Header */}
         <article className="max-w-4xl mx-auto px-6 pb-12">
           {post.category && (
-            <span className="inline-block px-3 py-1 bg-orange-500/20 text-orange-500 text-sm font-bold rounded-full mb-4">
+            <span className="inline-block px-3 py-1 bg-orange-500/20 text-orange-500 text-sm font-semibold rounded-md mb-4">
               {post.category}
             </span>
           )}
 
-          <h1 className="text-4xl md:text-5xl font-black mb-6">{post.title}</h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-4 leading-tight">{post.title}</h1>
 
           {post.meta_description && (
-            <p className="text-xl text-white/70 mb-8">{post.meta_description}</p>
+            <p className="text-lg text-neutral-400 mb-6 leading-relaxed">{post.meta_description}</p>
           )}
 
-          <div className="flex flex-wrap items-center gap-6 mb-8 text-sm text-white/60">
+          <div className="flex flex-wrap items-center gap-4 mb-8 text-sm text-neutral-500">
             {post.published_at && (
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                <span>{formatDate(post.published_at)}</span>
-              </div>
+              <span>{formatDate(post.published_at)}</span>
             )}
+            {post.published_at && post.reading_time && <span>•</span>}
             {post.reading_time && (
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                <span>{post.reading_time} min read</span>
-              </div>
+              <span>{post.reading_time} min read</span>
             )}
             <button
               onClick={handleShare}
-              className="flex items-center gap-2 hover:text-white transition-colors"
+              className="ml-auto flex items-center gap-2 hover:text-white transition-colors"
             >
               <Share2 className="w-4 h-4" />
               <span>Share</span>
             </button>
           </div>
 
-          {(post.featured_image_url || (post.target_keywords?.[0] ? (() => {
-            const keyword = post.target_keywords[0].substring(0, 50);
-            return `https://placehold.co/1200x630/1a1a1a/f97316?text=${encodeURIComponent(keyword)}`;
-          })() : null)) ? (
-            <div className="mb-8 rounded-xl overflow-hidden">
-              <img
-                src={post.featured_image_url || (post.target_keywords?.[0] ? (() => {
-                  const keyword = post.target_keywords[0].substring(0, 50);
-                  return `https://placehold.co/1200x630/1a1a1a/f97316?text=${encodeURIComponent(keyword)}`;
-                })() : '')}
-                alt={post.title}
-                className="w-full h-auto"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                }}
-              />
-            </div>
-          ) : null}
+          <div className="mb-10">
+            <BlogImage post={post} aspectRatio="16:9" showTitle={true} />
+          </div>
 
           {/* Article Content */}
           <div
             className="prose prose-invert prose-lg max-w-none
               prose-headings:text-white prose-headings:font-bold
-              prose-p:text-white/80 prose-p:leading-relaxed
+              prose-p:text-neutral-300 prose-p:leading-relaxed prose-p:text-base
               prose-a:text-orange-500 prose-a:no-underline hover:prose-a:underline
               prose-strong:text-white prose-strong:font-bold
               prose-code:text-orange-500 prose-code:bg-white/5 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
               prose-pre:bg-[#0A0A0A] prose-pre:border prose-pre:border-white/10
-              prose-ul:text-white/80 prose-ol:text-white/80
-              prose-li:text-white/80
+              prose-ul:text-neutral-300 prose-ol:text-neutral-300
+              prose-li:text-neutral-300
               prose-img:rounded-lg prose-img:border prose-img:border-white/10
-              [&_.lead]:text-xl [&_.lead]:text-white/90 [&_.lead]:font-medium [&_.lead]:mb-6 [&_.lead]:leading-relaxed
-              [&_h2]:mt-12 [&_h2]:mb-6 [&_h3]:mt-8 [&_h3]:mb-4
-              [&_p]:mb-6 [&_ul]:mb-6 [&_ol]:mb-6
+              [&_.lead]:text-lg [&_.lead]:text-neutral-200 [&_.lead]:font-medium [&_.lead]:mb-6 [&_.lead]:leading-relaxed
+              [&_h2]:mt-10 [&_h2]:mb-4 [&_h2]:text-2xl [&_h2]:font-bold
+              [&_h3]:mt-8 [&_h3]:mb-3 [&_h3]:text-xl [&_h3]:font-bold
+              [&_p]:mb-5 [&_ul]:mb-5 [&_ol]:mb-5
               [&_li]:mb-2
               [&_a.internal-link]:text-orange-400 [&_a.internal-link]:font-medium"
             dangerouslySetInnerHTML={{ __html: contentWithLinks || post.content }}
@@ -340,13 +322,12 @@ const BlogPostView: React.FC<BlogPostViewProps> = ({ onNavigate, slug }) => {
 
           {/* Tags */}
           {post.tags && post.tags.length > 0 && (
-            <div className="mt-12 pt-8 border-t border-white/10">
+            <div className="mt-10 pt-8 border-t border-white/10">
               <div className="flex flex-wrap items-center gap-2">
-                <Tag className="w-5 h-5 text-white/60" />
                 {post.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-3 py-1 bg-white/5 text-white/60 text-sm rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+                    className="px-3 py-1 bg-white/5 text-neutral-400 text-sm rounded-md hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
                   >
                     {tag}
                   </span>
@@ -359,34 +340,26 @@ const BlogPostView: React.FC<BlogPostViewProps> = ({ onNavigate, slug }) => {
         {/* Related Posts */}
         {relatedPosts.length > 0 && (
           <section className="max-w-7xl mx-auto px-6 py-12 border-t border-white/10">
-            <h2 className="text-3xl font-bold mb-8">Related Articles</h2>
+            <h2 className="text-2xl font-bold mb-6">Related Articles</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {relatedPosts.map((relatedPost) => (
                 <article
                   key={relatedPost.id}
                   onClick={() => window.location.href = `/blog/${relatedPost.slug}`}
-                  className="bg-[#0A0A0A] rounded-xl border border-white/10 overflow-hidden hover:border-orange-500/50 transition-all cursor-pointer group"
+                  className="rounded-xl border border-white/10 bg-white/5 overflow-hidden hover:border-white/20 hover:bg-white/10 transition-all cursor-pointer group"
                 >
-                  {relatedPost.featured_image_url && (
-                    <div className="aspect-video bg-gradient-to-br from-orange-900/20 to-blue-900/20 overflow-hidden">
-                      <img
-                        src={relatedPost.featured_image_url}
-                        alt={relatedPost.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                    </div>
-                  )}
-                  <div className="p-6">
+                  <BlogImage post={relatedPost} aspectRatio="16:9" />
+                  <div className="p-4">
                     {relatedPost.category && (
-                      <span className="inline-block px-2 py-1 bg-orange-500/20 text-orange-500 text-xs font-bold rounded-full mb-2">
+                      <span className="inline-block px-2 py-1 bg-orange-500/20 text-orange-500 text-xs font-semibold rounded-md mb-2">
                         {relatedPost.category}
                       </span>
                     )}
-                    <h3 className="text-lg font-bold mb-2 group-hover:text-orange-500 transition-colors">
+                    <h3 className="text-base font-bold mb-2 leading-tight group-hover:text-orange-500 transition-colors line-clamp-2">
                       {relatedPost.title}
                     </h3>
                     {relatedPost.excerpt && (
-                      <p className="text-white/60 text-sm line-clamp-2">
+                      <p className="text-neutral-400 text-sm line-clamp-2 leading-relaxed">
                         {relatedPost.excerpt}
                       </p>
                     )}

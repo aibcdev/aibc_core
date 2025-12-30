@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => {
       },
       optimizeDeps: {
         include: ['@privy-io/react-auth', '@solana/web3.js'],
+        exclude: ['@solana/web3.js'], // Exclude if causing issues
       },
       build: {
         commonjsOptions: {
@@ -37,7 +38,6 @@ export default defineConfig(({ mode }) => {
             manualChunks: {
               // Vendor chunks
               'react-vendor': ['react', 'react-dom'],
-              'router-vendor': ['react-router', 'react-router-dom'],
               // Large libraries
               'ui-vendor': ['lucide-react'],
               // Keep utilities together
@@ -49,26 +49,14 @@ export default defineConfig(({ mode }) => {
             assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
           },
         },
-        // Enable minification
-        minify: 'terser',
-        terserOptions: {
-          compress: {
-            drop_console: true, // Remove console.log in production
-            drop_debugger: true,
-            pure_funcs: ['console.log', 'console.info', 'console.debug'],
-          },
-        },
+        // Enable minification (using esbuild which is built into Vite)
+        minify: 'esbuild',
         // Source maps for production debugging (optional)
         sourcemap: false,
         // Target modern browsers for smaller bundles
         target: 'es2015',
         // Chunk size warnings
         chunkSizeWarningLimit: 1000,
-      },
-      // Optimize dependencies
-      optimizeDeps: {
-        include: ['@privy-io/react-auth', '@solana/web3.js'],
-        exclude: ['@solana/web3.js'], // Exclude if causing issues
       },
     };
 });
