@@ -167,3 +167,7 @@ Return JSON array: { "ideas": ["idea1", "idea2", ...] }`;
   const result = await generateJSON<{ ideas: string[] }>(prompt, undefined, { tier: 'basic' });
   return result.ideas || [];
 }
+
+
+
+

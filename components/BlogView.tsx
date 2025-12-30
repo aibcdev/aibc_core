@@ -4,6 +4,8 @@ import { NavProps } from '../types';
 import { BlogPost, BlogListResponse } from '../types/seo';
 import Navigation from './shared/Navigation';
 import Footer from './shared/Footer';
+import SEOMeta from './shared/SEOMeta';
+import { getDebugEndpoint } from '../services/apiClient';
 
 interface BlogViewProps extends NavProps {
   category?: string;
@@ -22,16 +24,42 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
   const [totalPages, setTotalPages] = useState(1);
   const [featuredPost, setFeaturedPost] = useState<BlogPost | null>(null);
 
+  // Generate fallback image URL for posts without featured images
+  const getFallbackImageUrl = (post: BlogPost): string | null => {
+    // #region agent log
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:getFallbackImageUrl',message:'GET FALLBACK IMAGE URL CALLED',data:{postId:post.id,hasFeaturedImageUrl:!!post.featured_image_url,featuredImageUrl:post.featured_image_url,hasTargetKeywords:!!post.target_keywords?.length,targetKeywords:post.target_keywords,title:post.title},timestamp:Date.now(),sessionId:'debug-session',runId:'fallback-image',hypothesisId:'H5'})}).catch(()=>{});
+    // #endregion
+    
+    if (post.featured_image_url) return post.featured_image_url;
+    
+    // Generate Placeholder.com image with keyword text for content-relevant images
+    const searchTerm = post.target_keywords?.[0] || post.title.split(' ').slice(0, 3).join(' ');
+    if (searchTerm) {
+      // Use Placehold.co with keyword as text overlay
+      const encodedKeyword = encodeURIComponent(searchTerm.substring(0, 50)); // Limit to 50 chars
+      const fallbackUrl = `https://placehold.co/1200x630/1a1a1a/f97316?text=${encodedKeyword}`;
+      // #region agent log
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:getFallbackImageUrl',message:'FALLBACK URL GENERATED',data:{fallbackUrl,searchTerm,encodedKeyword,postId:post.id},timestamp:Date.now(),sessionId:'debug-session',runId:'fallback-image',hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
+      return fallbackUrl;
+    }
+    // #region agent log
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:getFallbackImageUrl',message:'NO FALLBACK URL - NO SEARCH TERM',data:{postId:post.id,hasTargetKeywords:!!post.target_keywords?.length,title:post.title},timestamp:Date.now(),sessionId:'debug-session',runId:'fallback-image',hypothesisId:'H5'})}).catch(()=>{});
+    // #endregion
+    return null;
+  };
+
   // Use production API URL if on production domain
   const getApiUrl = () => {
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname;
       if (hostname.includes('aibcmedia.com') || hostname.includes('netlify')) {
         // Production backend URL
-        return 'https://aibc-backend-409115133182.us-central1.run.app';
+        return 'https://api.aibcmedia.com';
       }
     }
-    return import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    // NOTE: Prefer 127.0.0.1 over localhost to avoid IPv6 (::1) resolution issues in browsers.
+    return import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
   };
   
   const API_URL = getApiUrl();
@@ -58,7 +86,7 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
       const requestUrl = `${API_URL}/api/blog?${params}`;
       
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:58',message:'Fetching blog posts',data:{apiUrl:API_URL,requestUrl:requestUrl,hostname:typeof window !== 'undefined' ? window.location.hostname : 'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'A'})}).catch(()=>{});
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:58',message:'Fetching blog posts',data:{apiUrl:API_URL,requestUrl:requestUrl,hostname:typeof window !== 'undefined' ? window.location.hostname : 'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
       
       const response = await fetch(requestUrl, {
@@ -69,7 +97,7 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
       });
       
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:66',message:'API response received',data:{status:response.status,statusText:response.statusText,ok:response.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'A'})}).catch(()=>{});
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:66',message:'API response received',data:{status:response.status,statusText:response.statusText,ok:response.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
       
       if (!response.ok) {
@@ -77,7 +105,7 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
         console.error('Blog API error:', response.status, response.statusText, errorText);
         
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:72',message:'API error response',data:{status:response.status,errorText:errorText},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'B'})}).catch(()=>{});
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:72',message:'API error response',data:{status:response.status,errorText:errorText},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'B'})}).catch(()=>{});
         // #endregion
         
         setFeaturedPost(null);
@@ -90,7 +118,9 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
       const data: BlogListResponse = await response.json();
       
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:78',message:'Blog data received',data:{postsCount:data.posts?.length || 0,total:data.total || 0,hasPosts:!!(data.posts && data.posts.length > 0)},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'C'})}).catch(()=>{});
+      const postsWithImages = data.posts?.filter(p => p.featured_image_url).length || 0;
+      const samplePost = data.posts?.[0];
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:78',message:'Blog data received',data:{postsCount:data.posts?.length || 0,total:data.total || 0,hasPosts:!!(data.posts && data.posts.length > 0),postsWithImages,hasSamplePost:!!samplePost,samplePostFeaturedImage:samplePost?.featured_image_url,samplePostTargetKeywords:samplePost?.target_keywords},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'H3'})}).catch(()=>{});
       // #endregion
       
       // Set featured post (first post) and regular posts
@@ -99,14 +129,14 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
         setPosts(data.posts.slice(1));
         
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:82',message:'Posts set successfully',data:{featuredPost:!!data.posts[0],regularPosts:data.posts.length - 1},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'C'})}).catch(()=>{});
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:82',message:'Posts set successfully',data:{featuredPost:!!data.posts[0],regularPosts:data.posts.length - 1},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'C'})}).catch(()=>{});
         // #endregion
       } else {
         setFeaturedPost(null);
         setPosts([]);
         
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:85',message:'No posts found - showing coming soon',data:{postsArray:data.posts,postsLength:data.posts?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'C'})}).catch(()=>{});
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:85',message:'No posts found - showing coming soon',data:{postsArray:data.posts,postsLength:data.posts?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'C'})}).catch(()=>{});
         // #endregion
       }
       setTotalPages(data.totalPages || 0);
@@ -114,7 +144,7 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
       console.error('Error fetching blog posts:', error);
       
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:88',message:'Exception caught',data:{error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'D'})}).catch(()=>{});
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:88',message:'Exception caught',data:{error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'prod-debug',hypothesisId:'D'})}).catch(()=>{});
       // #endregion
       
       setFeaturedPost(null);
@@ -171,8 +201,39 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
     return colors[category || ''] || 'text-neutral-400';
   };
 
+  const baseURL = typeof window !== 'undefined' ? window.location.origin : 'https://aibcmedia.com';
+  const pageTitle = selectedCategory 
+    ? `${selectedCategory} Articles | AIBC Blog`
+    : selectedTag
+    ? `${selectedTag} Posts | AIBC Blog`
+    : 'AIBC Blog | Content Marketing & Strategy Articles';
+  const pageDescription = selectedCategory
+    ? `Explore ${selectedCategory} articles and insights on AIBC Blog. Expert content marketing strategies, tips, and guides.`
+    : selectedTag
+    ? `Browse ${selectedTag} posts on AIBC Blog. Latest content marketing insights and strategies.`
+    : 'Discover expert content marketing strategies, video marketing ideas, and brand storytelling insights on AIBC Blog. Read our latest articles and guides.';
+
   return (
     <div className="min-h-screen bg-black text-white">
+      <SEOMeta
+        title={pageTitle}
+        description={pageDescription}
+        image={`${baseURL}/favicon.svg`}
+        url={`${baseURL}/blog${selectedCategory ? `?category=${selectedCategory}` : selectedTag ? `?tag=${selectedTag}` : ''}`}
+        type="website"
+        structuredData={[
+          {
+            type: 'CollectionPage',
+            data: {
+              '@context': 'https://schema.org',
+              '@type': 'CollectionPage',
+              name: pageTitle,
+              description: pageDescription,
+              url: `${baseURL}/blog`,
+            },
+          },
+        ]}
+      />
       <Navigation onNavigate={onNavigate} />
 
       <main className="relative pt-32 pb-24 px-6">
@@ -255,17 +316,28 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
             >
               <div className="grid md:grid-cols-2 gap-0">
                 <div className="h-64 md:h-auto bg-neutral-800 relative overflow-hidden">
-                  {featuredPost.featured_image_url ? (
+                  {(featuredPost.featured_image_url || getFallbackImageUrl(featuredPost)) ? (
                     <img
-                      src={featuredPost.featured_image_url}
+                      src={featuredPost.featured_image_url || getFallbackImageUrl(featuredPost) || ''}
                       alt={featuredPost.title}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to placeholder if image fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent && !parent.querySelector('.image-placeholder')) {
+                          const placeholder = document.createElement('div');
+                          placeholder.className = 'image-placeholder absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(249,115,22,0.15),transparent_50%)] flex items-center justify-center';
+                          placeholder.innerHTML = `<div class="text-white/60 text-lg font-medium text-center px-8">${featuredPost.title}</div>`;
+                          parent.appendChild(placeholder);
+                        }
+                      }}
                     />
                   ) : (
-                    <>
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(249,115,22,0.15),transparent_50%)]"></div>
-                      <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
-                    </>
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(249,115,22,0.15),transparent_50%)] flex items-center justify-center">
+                        <div className="text-white/60 text-lg font-medium text-center px-8">{featuredPost.title}</div>
+                      </div>
                   )}
                   <div className="absolute bottom-6 left-6">
                     <span className="inline-block px-3 py-1 bg-black/50 backdrop-blur-md border border-white/10 rounded-md text-xs text-white font-medium">Featured</span>
@@ -336,14 +408,36 @@ const BlogView: React.FC<BlogViewProps> = ({ onNavigate, category, tag }) => {
                     href={`/blog/${post.slug}`}
                     className="block overflow-hidden rounded-xl border border-white/10 bg-neutral-900/20 aspect-video mb-6 relative hover:border-white/20 transition-all"
                   >
-                    {post.featured_image_url ? (
+                    {(post.featured_image_url || getFallbackImageUrl(post)) ? (
                       <img
-                        src={post.featured_image_url}
+                        src={post.featured_image_url || getFallbackImageUrl(post) || ''}
                         alt={post.title}
                         className="w-full h-full object-cover"
+                        onLoad={() => {
+                          // #region agent log
+                          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:img-onLoad',message:'IMAGE LOADED SUCCESSFULLY',data:{postId:post.id,src:post.featured_image_url || getFallbackImageUrl(post)},timestamp:Date.now(),sessionId:'debug-session',runId:'image-load',hypothesisId:'H6'})}).catch(()=>{});
+                          // #endregion
+                        }}
+                        onError={(e) => {
+                          // #region agent log
+                          const target = e.target as HTMLImageElement;
+                          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BlogView.tsx:img-onError',message:'IMAGE LOAD ERROR',data:{postId:post.id,src:target.src,hasFeaturedImageUrl:!!post.featured_image_url,featuredImageUrl:post.featured_image_url},timestamp:Date.now(),sessionId:'debug-session',runId:'image-load',hypothesisId:'H6'})}).catch(()=>{});
+                          // #endregion
+                          // Fallback to placeholder if image fails to load
+                          target.style.display = 'none';
+                          const parent = target.parentElement;
+                          if (parent && !parent.querySelector('.image-placeholder')) {
+                            const placeholder = document.createElement('div');
+                            placeholder.className = 'image-placeholder absolute inset-0 bg-gradient-to-br from-orange-500/10 via-blue-500/5 to-transparent flex items-center justify-center';
+                            placeholder.innerHTML = `<div class="text-white/40 text-sm font-medium text-center px-4">${post.title.substring(0, 40)}...</div>`;
+                            parent.appendChild(placeholder);
+                          }
+                        }}
                       />
                     ) : (
-                      <div className="absolute inset-0 bg-gradient-to-tr from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                      <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-blue-500/5 to-transparent flex items-center justify-center">
+                        <div className="text-white/40 text-sm font-medium text-center px-4">{post.title.substring(0, 40)}...</div>
+                      </div>
                     )}
                   </a>
                   <div className="flex items-center gap-3 text-xs text-neutral-500 mb-3">

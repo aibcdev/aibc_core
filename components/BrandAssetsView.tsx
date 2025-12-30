@@ -546,7 +546,7 @@ const BrandAssetsView: React.FC = () => {
 
   const handleSaveVoice = () => {
     localStorage.setItem('brandVoice', JSON.stringify(voiceSettings));
-    // Notify Content Hub
+    // Notify Content Hub and trigger content regeneration
     const event = new CustomEvent('brandAssetsUpdated', {
       detail: {
         materials,
@@ -554,11 +554,28 @@ const BrandAssetsView: React.FC = () => {
         fonts,
         voiceSettings,
         brandProfile,
-        contentPreferences
+        contentPreferences,
+        forceContentRegenerate: true // Force content regeneration when voice changes
       }
     });
     window.dispatchEvent(event);
-    alert('Brand voice settings saved! Content Hub will update with new context.');
+    
+    // Also dispatch strategy update to trigger n8n workflow with new brand voice
+    const activeStrategy = JSON.parse(localStorage.getItem('activeContentStrategy') || 'null');
+    if (activeStrategy) {
+      window.dispatchEvent(new CustomEvent('strategyUpdated', {
+        detail: {
+          strategy: activeStrategy,
+          activeStrategy: activeStrategy,
+          forceContentRegenerate: true,
+          brandVoice: voiceSettings,
+          timestamp: Date.now(),
+          source: 'BrandAssetsView',
+        }
+      }));
+    }
+    
+    alert('Brand voice settings saved! Content Hub will regenerate content with new voice.');
   };
 
   // Connected accounts state (loaded from localStorage)

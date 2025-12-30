@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, AlertCircle, ArrowRight, Instagram, Facebook, Linkedin, Mail, FileText, Music, Check, TrendingUp, Sparkles } from 'lucide-react';
+import { getDebugEndpoint } from '../services/apiClient';
+import EnhancedCompetitorAnalysis from './shared/EnhancedCompetitorAnalysis';
 
 interface PlatformData {
   platform: string;
@@ -55,6 +57,9 @@ const AnalyticsView: React.FC = () => {
   const [competitiveData, setCompetitiveData] = useState<CompetitiveComparison | null>(null);
   const [loadingCompetitive, setLoadingCompetitive] = useState(false);
   const [connectedIntegrations, setConnectedIntegrations] = useState<string[]>([]);
+  const [competitorIntelligence, setCompetitorIntelligence] = useState<any[]>([]);
+  const [brandDNA, setBrandDNA] = useState<any>(null);
+  const [marketShare, setMarketShare] = useState<any>(null);
 
   // Load connected integrations from localStorage
   useEffect(() => {
@@ -107,7 +112,7 @@ const AnalyticsView: React.FC = () => {
 
   // #region agent log
   useEffect(() => {
-    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:42',message:'AnalyticsView MOUNT',data:{analyticsLoading:analytics.isLoading,platformsCount:analytics.platforms.length,hasCompetitiveData:!!competitiveData},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:42',message:'AnalyticsView MOUNT',data:{analyticsLoading:analytics.isLoading,platformsCount:analytics.platforms.length,hasCompetitiveData:!!competitiveData},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
   }, []);
   // #endregion
 
@@ -125,6 +130,28 @@ const AnalyticsView: React.FC = () => {
       setUserName('there');
     }
 
+    // Load competitor intelligence and brand DNA from localStorage
+    const loadCompetitorData = () => {
+      try {
+        const scanResults = localStorage.getItem('lastScanResults');
+        if (scanResults) {
+          const parsed = JSON.parse(scanResults);
+          if (parsed.competitorIntelligence && Array.isArray(parsed.competitorIntelligence)) {
+            setCompetitorIntelligence(parsed.competitorIntelligence);
+          }
+          if (parsed.brandDNA) {
+            setBrandDNA(parsed.brandDNA);
+          }
+          if (parsed.marketShare) {
+            setMarketShare(parsed.marketShare);
+          }
+        }
+      } catch (e) {
+        console.error('Error loading competitor data:', e);
+      }
+    };
+
+    loadCompetitorData();
     loadAnalyticsData();
     loadCompetitiveComparison();
     
@@ -198,7 +225,7 @@ const AnalyticsView: React.FC = () => {
 
   const loadAnalyticsData = async () => {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:139',message:'loadAnalyticsData ENTRY',data:{hasLastScanResults:!!localStorage.getItem('lastScanResults'),lastScannedUsername:localStorage.getItem('lastScannedUsername')},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:139',message:'loadAnalyticsData ENTRY',data:{hasLastScanResults:!!localStorage.getItem('lastScanResults'),lastScannedUsername:localStorage.getItem('lastScannedUsername')},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
     // #endregion
     try {
       setAnalytics({ platforms: [], isLoading: true });
@@ -246,14 +273,15 @@ const AnalyticsView: React.FC = () => {
             platforms: platformData,
             isLoading: false
           });
+          return;
         } else {
           setAnalytics({ 
             platforms: [],
             isLoading: false, 
             error: 'No scan data available. Run a digital footprint scan first.' 
           });
+          return;
         }
-        return;
       }
 
       const scanData = JSON.parse(lastScanResults);
@@ -269,13 +297,18 @@ const AnalyticsView: React.FC = () => {
         platforms: platforms
       })).filter((c: any) => c.username);
 
-      // Try to call backend to scrape last 7 days of content
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      // Try to call backend to scrape last 7 days of content (with timeout and fallback)
+      // NOTE: Prefer 127.0.0.1 over localhost to avoid IPv6 (::1) resolution issues in browsers.
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
       
       try {
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:216',message:'Calling analytics API',data:{url:`${API_BASE_URL}/api/analytics/last7days`,lastUsername},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:216',message:'Calling analytics API',data:{url:`${API_BASE_URL}/api/analytics/last7days`,lastUsername},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
         // #endregion
+        // Create AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 second timeout
+        
         const response = await fetch(`${API_BASE_URL}/api/analytics/last7days`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -283,38 +316,61 @@ const AnalyticsView: React.FC = () => {
             companyUsername: lastUsername,
             companyPlatforms: platforms,
             competitors: competitorData
-          })
+          }),
+          signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:230',message:'Analytics API response',data:{ok:response.ok,status:response.status},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:230',message:'Analytics API response',data:{ok:response.ok,status:response.status},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
         // #endregion
 
         if (response.ok) {
           const result = await response.json();
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:loadAnalyticsData',message:'Analytics API result parsed',data:{success:result.success,hasData:!!result.data,hasCompany:!!result.data?.company,hasCompetitors:!!result.data?.competitors,hasInsights:!!result.data?.insights},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+          // #endregion
           
           if (result.success && result.data) {
             const { company, competitors: compData, insights } = result.data;
             
+            // #region agent log
+            fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:loadAnalyticsData',message:'Calling generatePlatformInsights',data:{hasCompany:!!company,compDataCount:compData?.length||0,platformsCount:platforms.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+            // #endregion
             // Generate platform-specific insights using AI
-            const platformData = await generatePlatformInsights(company, compData, platforms);
+            const platformData = await generatePlatformInsights(company, compData || [], platforms);
+            
+            // #region agent log
+            fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:loadAnalyticsData',message:'Platform data generated',data:{platformDataCount:platformData.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+            // #endregion
             
             setAnalytics({
               platforms: platformData,
               isLoading: false
             });
             return;
+          } else {
+            // #region agent log
+            fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:loadAnalyticsData',message:'Analytics API result invalid',data:{success:result.success,hasData:!!result.data},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+            // #endregion
           }
+        } else {
+          // #region agent log
+          const errorText = await response.text().catch(() => 'Unable to read error');
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:loadAnalyticsData',message:'Analytics API response not OK',data:{status:response.status,error:errorText.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+          // #endregion
         }
       } catch (apiError) {
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:250',message:'Analytics API FAILED',data:{error:String(apiError)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:250',message:'Analytics API FAILED',data:{error:String(apiError)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
         // #endregion
         console.warn('Analytics API call failed, using scan data:', apiError);
+        // Continue to fallback below
       }
 
       // Fallback: Generate insights from existing scan data
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:258',message:'Fallback generateInsightsFromData',data:{hasScanData:!!scanData,postsCount:scanData?.extractedContent?.posts?.length||0,competitorsCount:competitors.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:258',message:'Fallback generateInsightsFromData',data:{hasScanData:!!scanData,postsCount:scanData?.extractedContent?.posts?.length||0,competitorsCount:competitors.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
       // #endregion
       const platformData = generateInsightsFromData(
         { posts: scanData.extractedContent?.posts || [], totalEngagement: 0, avgEngagement: 0 },
@@ -394,7 +450,8 @@ const AnalyticsView: React.FC = () => {
         return;
       }
       
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      // NOTE: Prefer 127.0.0.1 over localhost to avoid IPv6 (::1) resolution issues in browsers.
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
       
       const response = await fetch(`${API_BASE_URL}/api/analytics/competitive-comparison`, {
         method: 'POST',
@@ -424,10 +481,17 @@ const AnalyticsView: React.FC = () => {
   };
 
   const generatePlatformInsights = async (company: any, competitors: any[], platforms: string[]): Promise<PlatformData[]> => {
+    // #region agent log
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:generatePlatformInsights',message:'generatePlatformInsights ENTRY',data:{hasCompany:!!company,competitorsCount:competitors?.length||0,platformsCount:platforms?.length||0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+    // #endregion
     // Use LLM to analyze content and generate insights
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    // NOTE: Prefer 127.0.0.1 over localhost to avoid IPv6 (::1) resolution issues in browsers.
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
     
     try {
+      // #region agent log
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:generatePlatformInsights',message:'Calling platform-insights API',data:{url:`${API_BASE_URL}/api/analytics/platform-insights`},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+      // #endregion
       const response = await fetch(`${API_BASE_URL}/api/analytics/platform-insights`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -438,24 +502,75 @@ const AnalyticsView: React.FC = () => {
         })
       });
 
+      // #region agent log
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:generatePlatformInsights',message:'Platform insights API response',data:{ok:response.ok,status:response.status},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+      // #endregion
+
       if (response.ok) {
         const result = await response.json();
-        if (result.success && result.platforms) {
-          return result.platforms;
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:generatePlatformInsights',message:'Platform insights result',data:{success:result.success,hasPlatforms:!!result.platforms,platformsCount:result.platforms?.length||0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+        // #endregion
+        if (result.success && result.platforms && Array.isArray(result.platforms)) {
+          // Map backend response to frontend format
+          const platformMap: Record<string, { name: string; icon: React.ReactNode; color: string }> = {
+            twitter: { name: 'X / Twitter', icon: <span className="text-xl font-bold text-white">𝕏</span>, color: 'bg-black' },
+            x: { name: 'X / Twitter', icon: <span className="text-xl font-bold text-white">𝕏</span>, color: 'bg-black' },
+            instagram: { name: 'Instagram', icon: <Instagram className="w-5 h-5" />, color: 'bg-gradient-to-br from-orange-500 to-pink-500' },
+            facebook: { name: 'Facebook', icon: <Facebook className="w-5 h-5" />, color: 'bg-blue-600' },
+            linkedin: { name: 'LinkedIn', icon: <Linkedin className="w-5 h-5" />, color: 'bg-blue-700' },
+            tiktok: { name: 'TikTok', icon: <Music className="w-5 h-5" />, color: 'bg-black' },
+          };
+          
+          return result.platforms.map((p: any) => {
+            const normalizedPlatform = (p.platform || '').toLowerCase().replace('twitter', 'x');
+            const platformInfo = platformMap[normalizedPlatform] || platformMap[p.platform?.toLowerCase()] || { name: p.platform || 'Unknown', icon: <FileText className="w-5 h-5" />, color: 'bg-gray-600' };
+            
+            return {
+              platform: platformInfo.name,
+              performance: typeof p.performance === 'number' ? p.performance : 0,
+              whatsWorking: Array.isArray(p.whatsWorking) ? p.whatsWorking : [],
+              areasForImprovement: Array.isArray(p.areasForImprovement) ? p.areasForImprovement : [],
+              icon: platformInfo.icon,
+              iconColor: platformInfo.color
+            };
+          });
         }
+      } else {
+        // #region agent log
+        const errorText = await response.text().catch(() => 'Unable to read error');
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:generatePlatformInsights',message:'Platform insights API ERROR',data:{status:response.status,error:errorText.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+        // #endregion
       }
     } catch (error) {
+      // #region agent log
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:generatePlatformInsights',message:'Platform insights API EXCEPTION',data:{error:String(error)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+      // #endregion
       console.error('Error generating platform insights:', error);
     }
 
     // Fallback: generate insights from scraped data
+    // #region agent log
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AnalyticsView.tsx:generatePlatformInsights',message:'Using fallback generateInsightsFromData',data:{hasCompany:!!company,competitorsCount:competitors?.length||0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+    // #endregion
     return generateInsightsFromData(company, competitors, platforms);
   };
 
   const generateInsightsFromData = (company: any, competitors: any[], platforms: string[]): PlatformData[] => {
     // Get actual scan data to generate brand-specific insights
     const lastScanResults = localStorage.getItem('lastScanResults');
-    const scanData = lastScanResults ? JSON.parse(lastScanResults) : null;
+    if (!lastScanResults) {
+      console.warn('[Analytics] No scan results available');
+      return [];
+    }
+    
+    let scanData;
+    try {
+      scanData = JSON.parse(lastScanResults);
+    } catch (e) {
+      console.error('[Analytics] Error parsing scan results:', e);
+      return [];
+    }
     
     const brandDNA = scanData?.brandDNA || {};
     const extractedContent = scanData?.extractedContent || {};
@@ -464,17 +579,20 @@ const AnalyticsView: React.FC = () => {
     const voice = brandDNA.voice || {};
     
     const platformMap: Record<string, { name: string; icon: React.ReactNode; color: string }> = {
+      twitter: { name: 'X / Twitter', icon: <span className="text-xl font-bold text-white">𝕏</span>, color: 'bg-black' },
+      x: { name: 'X / Twitter', icon: <span className="text-xl font-bold text-white">𝕏</span>, color: 'bg-black' },
       instagram: { name: 'Instagram', icon: <Instagram className="w-5 h-5" />, color: 'bg-gradient-to-br from-orange-500 to-pink-500' },
       facebook: { name: 'Facebook', icon: <Facebook className="w-5 h-5" />, color: 'bg-blue-600' },
       linkedin: { name: 'LinkedIn', icon: <Linkedin className="w-5 h-5" />, color: 'bg-blue-700' },
-      twitter: { name: 'Twitter', icon: <Linkedin className="w-5 h-5" />, color: 'bg-black' },
       tiktok: { name: 'TikTok', icon: <Music className="w-5 h-5" />, color: 'bg-black' },
       blog: { name: 'Blog', icon: <FileText className="w-5 h-5" />, color: 'bg-green-600' },
       email: { name: 'Email', icon: <Mail className="w-5 h-5" />, color: 'bg-black' },
     };
 
-    return platforms.map(platform => {
-      const platformInfo = platformMap[platform] || { name: platform, icon: <FileText className="w-5 h-5" />, color: 'bg-gray-600' };
+    const platformData: PlatformData[] = platforms.map(platform => {
+      // Normalize platform name (twitter -> x, etc.)
+      const normalizedPlatform = platform === 'twitter' ? 'x' : platform;
+      const platformInfo = platformMap[normalizedPlatform] || platformMap[platform] || { name: platform, icon: <FileText className="w-5 h-5" />, color: 'bg-gray-600' };
       
       // Calculate performance based on actual engagement if available
       // NO FAKE DATA - only use real metrics or show 0
@@ -484,15 +602,21 @@ const AnalyticsView: React.FC = () => {
         performance = Math.min(30, Math.max(1, Math.floor(company.avgEngagement / 100)));
       } else if (posts.length > 0) {
         // Calculate from actual posts engagement
-        const platformPosts = posts.filter((p: any) => p.platform === platform);
+        const platformPosts = posts.filter((p: any) => {
+          const pPlatform = (p.platform || '').toLowerCase();
+          return pPlatform === platform || pPlatform === normalizedPlatform || 
+                 (platform === 'twitter' && pPlatform === 'x') ||
+                 (platform === 'x' && pPlatform === 'twitter');
+        });
         if (platformPosts.length > 0) {
           const totalEngagement = platformPosts.reduce((sum: number, p: any) => {
-            const likes = p.engagement?.likes || 0;
-            const comments = p.engagement?.comments || 0;
-            const shares = p.engagement?.shares || 0;
+            const likes = p.engagement?.likes || p.likes || 0;
+            const comments = p.engagement?.comments || p.comments || 0;
+            const shares = p.engagement?.shares || p.shares || 0;
             return sum + likes + comments + shares;
           }, 0);
-          performance = Math.min(30, Math.max(0, Math.floor(totalEngagement / platformPosts.length / 100)));
+          const avgEngagement = totalEngagement / platformPosts.length;
+          performance = Math.min(30, Math.max(0, Math.floor(avgEngagement / 100)));
         }
       }
       // NO RANDOM FALLBACK - if no data, performance stays at 0
@@ -510,6 +634,9 @@ const AnalyticsView: React.FC = () => {
         iconColor: platformInfo.color
       };
     });
+    
+    // Return platform data (even if empty, so UI can show empty state)
+    return platformData;
   };
 
   const generateBrandSpecificWhatsWorking = (platform: string, posts: any[], themes: string[], voice: any, brandDNA?: any): string[] => {
@@ -734,8 +861,20 @@ const AnalyticsView: React.FC = () => {
           </div>
         )}
 
-        {/* Competitive Comparison Section */}
-        {competitiveData && (
+        {/* Enhanced Competitor Analysis Section */}
+        {competitorIntelligence && competitorIntelligence.length > 0 && (
+          <div className="mt-8">
+            <EnhancedCompetitorAnalysis
+              competitorIntelligence={competitorIntelligence}
+              brandDNA={brandDNA}
+              marketShare={marketShare}
+              userName={localStorage.getItem('lastScannedUsername') || userName}
+            />
+          </div>
+        )}
+
+        {/* Legacy Competitive Comparison Section (fallback if no competitor intelligence) */}
+        {(!competitorIntelligence || competitorIntelligence.length === 0) && competitiveData && (
           <div className="mt-8">
             <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-blue-400" />
@@ -746,20 +885,43 @@ const AnalyticsView: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-4">
                 <p className="text-xs text-white/40 uppercase mb-1">Engagement Rate</p>
-                <p className="text-2xl font-bold text-green-400">{competitiveData.companyMetrics?.estimatedEngagementRate || 'N/A'}</p>
+                <p className="text-2xl font-bold text-green-400">
+                  {competitiveData?.companyMetrics?.estimatedEngagementRate && 
+                   competitiveData.companyMetrics.estimatedEngagementRate !== 'N/A' &&
+                   competitiveData.companyMetrics.estimatedEngagementRate !== 'Unknown'
+                    ? competitiveData.companyMetrics.estimatedEngagementRate 
+                    : 'N/A'}
+                </p>
               </div>
               <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-4">
                 <p className="text-xs text-white/40 uppercase mb-1">Posting Frequency</p>
-                <p className="text-2xl font-bold text-white">{competitiveData.companyMetrics?.postingFrequency || 'N/A'}</p>
+                <p className="text-2xl font-bold text-white">
+                  {competitiveData?.companyMetrics?.postingFrequency && 
+                   competitiveData.companyMetrics.postingFrequency !== 'N/A' &&
+                   competitiveData.companyMetrics.postingFrequency !== 'Unknown'
+                    ? competitiveData.companyMetrics.postingFrequency 
+                    : 'N/A'}
+                </p>
               </div>
               <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-4">
                 <p className="text-xs text-white/40 uppercase mb-1">Top Platform</p>
-                <p className="text-2xl font-bold text-blue-400">{competitiveData.companyMetrics?.topPlatform || 'N/A'}</p>
+                <p className="text-2xl font-bold text-blue-400">
+                  {competitiveData?.companyMetrics?.topPlatform && 
+                   competitiveData.companyMetrics.topPlatform !== 'N/A' &&
+                   competitiveData.companyMetrics.topPlatform !== 'Unknown'
+                    ? competitiveData.companyMetrics.topPlatform 
+                    : 'N/A'}
+                </p>
               </div>
               <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-4">
                 <p className="text-xs text-white/40 uppercase mb-1">Market Rank</p>
                 <p className="text-2xl font-bold text-amber-400">
-                  #{competitiveData.overallRanking?.position || '?'} of {competitiveData.overallRanking?.totalCompetitors || '?'}
+                  {competitiveData?.overallRanking?.position && 
+                   typeof competitiveData.overallRanking.position === 'number' &&
+                   competitiveData?.overallRanking?.totalCompetitors &&
+                   typeof competitiveData.overallRanking.totalCompetitors === 'number'
+                    ? `#${competitiveData.overallRanking.position} of ${competitiveData.overallRanking.totalCompetitors}`
+                    : 'N/A'}
                 </p>
               </div>
             </div>

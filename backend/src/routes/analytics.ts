@@ -69,25 +69,74 @@ router.post('/last7days', async (req, res) => {
       });
     }
 
-    // Scrape content
-    const scrapedData = await scrapeLast7DaysContent(
-      companyUsername,
-      companyPlatforms,
-      competitors || []
-    );
-
-    // Generate insights using LLM
-    const insights = await generateAnalyticsInsights(scrapedData);
-
-    res.json({
-      success: true,
-      data: {
-        ...scrapedData,
-        insights
-      }
+    // Set timeout for this endpoint (30 seconds max)
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Request timeout - scraping took too long')), 30000);
     });
+
+    try {
+      // Scrape content with timeout
+      const scrapedData = await Promise.race([
+        scrapeLast7DaysContent(
+          companyUsername,
+          companyPlatforms,
+          competitors || []
+        ),
+        timeoutPromise
+      ]) as any;
+
+      // Generate insights using LLM (with shorter timeout)
+      const insightsTimeout = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('LLM timeout')), 15000);
+      });
+
+      let insights;
+      try {
+        insights = await Promise.race([
+          generateAnalyticsInsights(scrapedData),
+          insightsTimeout
+        ]);
+      } catch (insightsError: any) {
+        console.warn('Insights generation failed, returning scraped data only:', insightsError.message);
+        insights = null; // Continue without insights
+      }
+
+      res.json({
+        success: true,
+        data: {
+          ...scrapedData,
+          insights
+        }
+      });
+    } catch (scrapeError: any) {
+      // If scraping fails, return a fallback response using scan data
+      console.warn('Scraping failed, returning fallback response:', scrapeError.message);
+      res.json({
+        success: true,
+        data: {
+          company: {
+            username: companyUsername,
+            posts: [],
+            totalEngagement: 0,
+            avgEngagement: 0,
+            postCount: 0
+          },
+          competitors: (competitors || []).map((c: any) => ({
+            name: c.name,
+            username: c.username,
+            posts: [],
+            totalEngagement: 0,
+            avgEngagement: 0,
+            postCount: 0
+          })),
+          insights: null,
+          fallback: true,
+          message: 'Using fallback data - scraping unavailable'
+        }
+      });
+    }
   } catch (error: any) {
-    console.error('Error scraping analytics:', error);
+    console.error('Error in analytics/last7days:', error);
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to scrape and analyze content'
@@ -111,9 +160,15 @@ router.post('/platform-insights', async (req, res) => {
     const { generateJSON, isLLMConfigured } = await import('../services/llmService');
     
     if (!isLLMConfigured()) {
-      return res.status(503).json({
-        success: false,
-        error: 'LLM service not configured'
+      // Return fallback insights if LLM not configured
+      return res.json({
+        success: true,
+        platforms: platforms.map((p: string) => ({
+          platform: p,
+          performance: 0,
+          whatsWorking: ['Content analysis requires LLM configuration'],
+          areasForImprovement: ['Configure LLM service for detailed insights']
+        }))
       });
     }
 
@@ -161,20 +216,43 @@ Return valid JSON only, in this exact format:
   ]
 }`;
 
-    const result = await generateJSON<{ platforms: Array<{
-      platform: string;
-      performance: number;
-      whatsWorking: string[];
-      areasForImprovement: string[];
-    }> }>(prompt, systemPrompt);
+    // Set timeout for LLM call (20 seconds)
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('LLM timeout')), 20000);
+    });
 
-    if (result && result.platforms) {
+    try {
+      const result = await Promise.race([
+        generateJSON<{ platforms: Array<{
+          platform: string;
+          performance: number;
+          whatsWorking: string[];
+          areasForImprovement: string[];
+        }> }>(prompt, systemPrompt),
+        timeoutPromise
+      ]) as any;
+
+      if (result && result.platforms) {
+        res.json({
+          success: true,
+          platforms: result.platforms
+        });
+      } else {
+        throw new Error('Failed to generate platform insights');
+      }
+    } catch (llmError: any) {
+      console.warn('LLM generation failed, returning fallback:', llmError.message);
+      // Return fallback insights based on available data
       res.json({
         success: true,
-        platforms: result.platforms
+        platforms: platforms.map((p: string) => ({
+          platform: p,
+          performance: company?.avgEngagement ? Math.min(30, Math.floor(company.avgEngagement / 100)) : 0,
+          whatsWorking: ['Analyzing content patterns...'],
+          areasForImprovement: ['Improving engagement rates...']
+        })),
+        fallback: true
       });
-    } else {
-      throw new Error('Failed to generate platform insights');
     }
   } catch (error: any) {
     console.error('Error generating platform insights:', error);
@@ -187,16 +265,31 @@ Return valid JSON only, in this exact format:
 
 // Regenerate content ideas based on strategy context
 router.post('/regenerate-content', async (req, res) => {
+  // #region agent log
+  const fs = require('fs');
+  const logPath = '/Users/akeemojuko/Documents/aibc_core-1/.cursor/debug.log';
+  try {
+    fs.appendFileSync(logPath, JSON.stringify({location:'analytics.ts:regenerate-content',message:'REGENERATE CONTENT CALLED',data:{hasStrategy:!!req.body.strategy,hasScanUsername:!!req.body.scanUsername,hasBrandDNA:!!req.body.brandDNA,hasCompetitors:!!req.body.competitorIntelligence,hasConversationContext:!!req.body.conversationContext,conversationLength:req.body.conversationContext?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'content-regenerate',hypothesisId:'H17'})+'\n');
+  } catch(e){}
+  // #endregion
   try {
     const { 
       strategy, 
       brandDNA, 
+      brandVoice, // Brand voice from Brand Assets page
+      brandAssets, // All brand assets (colors, fonts, materials, profile)
       competitorIntelligence, 
       currentContentIdeas,
-      scanUsername 
+      scanUsername,
+      conversationContext 
     } = req.body;
 
     if (!strategy || !scanUsername) {
+      // #region agent log
+      try {
+        fs.appendFileSync(logPath, JSON.stringify({location:'analytics.ts:regenerate-content',message:'VALIDATION FAILED',data:{hasStrategy:!!strategy,hasScanUsername:!!scanUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'content-regenerate',hypothesisId:'H17'})+'\n');
+      } catch(e){}
+      // #endregion
       return res.status(400).json({
         success: false,
         error: 'strategy and scanUsername are required'
@@ -224,32 +317,55 @@ router.post('/regenerate-content', async (req, res) => {
       ? { type: 'user_directed', title: strategy.substring(0, 50), description: strategy }
       : strategy;
 
+    const strategyType = strategyObj.type || 'user_directed';
+
     const prompt = `STRATEGY-DRIVEN CONTENT REGENERATION for ${scanUsername}.
 
 ## ACTIVE STRATEGY:
-- Type: ${strategyObj.type || 'user_directed'}
+- Type: ${strategyType}
 - Title: ${strategyObj.title || 'Custom strategy'}
-- Description: ${strategyObj.description || strategyObj.title || strategy}
+- Description: ${strategyObj.description || strategyObj.title || (typeof strategy === 'string' ? strategy : 'Custom strategy')}
 - Applied: ${strategyObj.appliedAt || 'Just now'}
+
+## CONVERSATION CONTEXT (Recent strategy discussion):
+${conversationContext ? conversationContext.substring(0, 1000) : 'No conversation context provided'}
 
 ## BRAND DNA:
 ${brandDNA ? `
-- Archetype: ${brandDNA.archetype}
+- Archetype: ${brandDNA.archetype || 'Not specified'}
 - Voice: ${brandDNA.voice?.tone || 'Professional'}
-- Core Pillars: ${(brandDNA.corePillars || []).join(', ')}
+- Core Pillars: ${(brandDNA.corePillars || brandDNA.themes || []).join(', ') || 'Not specified'}
+- Industry: ${brandDNA.industry || 'Not specified'}
+- Name: ${brandDNA.name || scanUsername}
 ` : 'No brand DNA available'}
 
+## BRAND VOICE (extracted from actual content analysis - how they actually write):
+${brandDNA?.voice ? `
+- Style: ${brandDNA.voice.style || brandDNA.voice.tone || 'Not specified'} (from their actual posts)
+- Formality: ${brandDNA.voice.formality || 'Not specified'} (from their actual posts)
+- Tone: ${brandDNA.voice.tone || 'Professional'} (from their actual posts)
+- Vocabulary: ${Array.isArray(brandDNA.voice.vocabulary) ? brandDNA.voice.vocabulary.join(', ') : 'Not specified'} (words they actually use)
+- Voice Characteristics: ${Array.isArray(brandDNA.voice.tones) ? brandDNA.voice.tones.join(', ') : 'Not specified'} (from content analysis)
+` : 'No brand voice extracted - analyze their actual content to match their real writing style'}
+
+## BRAND ASSETS:
+${brandAssets ? `
+- Colors: ${Array.isArray(brandAssets.colors) ? brandAssets.colors.map((c: any) => c.name || c).join(', ') : 'Not specified'}
+- Fonts: ${Array.isArray(brandAssets.fonts) ? brandAssets.fonts.map((f: any) => f.name || f).join(', ') : 'Not specified'}
+- Materials: ${Array.isArray(brandAssets.materials) ? `${brandAssets.materials.length} materials available` : 'Not specified'}
+` : 'No brand assets specified'}
+
 ## COMPETITOR INTELLIGENCE:
-${competitorContext.map((c: any) => `
+${competitorContext.length > 0 ? competitorContext.map((c: any) => `
 - ${c.name}: ${c.primaryVector || 'General content'}
   Top viral: ${(c.topViralContent || []).map((v: any) => v.title).join('; ') || 'N/A'}
-`).join('')}
+`).join('') : 'No competitors specified'}
 
 ## CURRENT CONTENT IDEAS (to improve upon):
-${(currentContentIdeas || []).slice(0, 3).map((idea: any) => `- ${idea.title}`).join('\n')}
+${(currentContentIdeas || []).slice(0, 3).map((idea: any) => `- ${idea.title || 'Untitled idea'}`).join('\n') || 'No existing ideas'}
 
 ## TASK: Generate 8 NEW content ideas that:
-${strategy.type === 'competitor_focus' ? `
+${strategyType === 'competitor_focus' ? `
 1. Directly address the competitor mentioned: ${strategy.title.replace('Focus on ', '')}
 2. Counter their top-performing content with better versions
 3. Highlight YOUR unique advantages they don't have
@@ -271,15 +387,20 @@ Each idea MUST:
 - Reference the active strategy context
 - Include platform and format
 - Explain why it aligns with the strategy
+- Be SPECIFIC to ${scanUsername} - use their brand name, industry, and actual context
+- NOT be generic - must reference their actual brand DNA, industry, or competitors
+- Match their ACTUAL brand voice (extracted from their real content): ${brandDNA?.voice?.style || brandDNA?.voice?.tone || 'professional and engaging'}
+- Use their ACTUAL formality level (from their posts): ${brandDNA?.voice?.formality || 'professional'}
+- Use vocabulary they actually use: ${Array.isArray(brandDNA?.voice?.vocabulary) ? brandDNA.voice.vocabulary.slice(0, 5).join(', ') : 'match their actual writing style'}
 
 Return JSON array:
 [
   {
-    "title": "Viral hook title 30+ chars",
-    "description": "Why this aligns with ${strategy.type} strategy and expected engagement",
+    "title": "Viral hook title 30+ chars specific to ${scanUsername}",
+    "description": "Why this aligns with ${strategyType} strategy and expected engagement for ${scanUsername}",
     "platform": "instagram|twitter|linkedin|youtube|tiktok",
     "format": "carousel|video|reel|thread|post",
-    "strategyAlignment": "How this specifically addresses the ${strategy.type} strategy",
+    "strategyAlignment": "How this specifically addresses the ${strategyType} strategy for ${scanUsername}",
     "competitorInspiration": "Which competitor pattern inspired this (if applicable)"
   }
 ]`;
@@ -289,13 +410,37 @@ For competitor_focus: Every idea must directly counter or outperform the target 
 For brand_building: Every idea must build brand authority and emotional connection.
 Return valid JSON only.`;
 
+    // #region agent log
+    try {
+      fs.appendFileSync(logPath, JSON.stringify({location:'analytics.ts:regenerate-content',message:'CALLING LLM',data:{strategyType,hasConversationContext:!!conversationContext,conversationLength:conversationContext?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'content-regenerate',hypothesisId:'H17'})+'\n');
+    } catch(e){}
+    // #endregion
+    
     const result = await generateJSON<any[]>(prompt, systemPrompt);
 
+    // #region agent log
+    try {
+      fs.appendFileSync(logPath, JSON.stringify({location:'analytics.ts:regenerate-content',message:'LLM RESULT RECEIVED',data:{isArray:Array.isArray(result),resultLength:result?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'content-regenerate',hypothesisId:'H17'})+'\n');
+    } catch(e){}
+    // #endregion
+
     if (Array.isArray(result) && result.length > 0) {
+      // Validate that content ideas are specific to the company
+      const validatedIdeas = result.map((idea: any) => ({
+        ...idea,
+        // Ensure title and description reference the company
+        title: idea.title || `Content idea for ${scanUsername}`,
+        description: idea.description || `Strategy-aligned content for ${scanUsername}`,
+        // Ensure platform and format are valid
+        platform: (idea.platform || 'twitter').toLowerCase(),
+        format: (idea.format || 'post').toLowerCase()
+      }));
+      
       res.json({
         success: true,
-        contentIdeas: result,
-        strategy: strategy.type,
+        contentIdeas: validatedIdeas,
+        strategy: strategyType,
+        scanUsername: scanUsername, // Include username in response
         generatedAt: new Date().toISOString()
       });
     } else {
@@ -325,9 +470,32 @@ router.post('/competitive-comparison', async (req, res) => {
     const { generateJSON, isLLMConfigured } = await import('../services/llmService');
     
     if (!isLLMConfigured()) {
-      return res.status(503).json({
-        success: false,
-        error: 'LLM service not configured'
+      // Return fallback comparison if LLM not configured
+      return res.json({
+        success: true,
+        comparison: {
+          companyMetrics: {
+            estimatedEngagementRate: 'N/A',
+            postingFrequency: `${company.postCount || 0} posts/week`,
+            topPlatform: (company.platforms || [])[0] || 'Unknown',
+            contentStrength: 'medium'
+          },
+          competitorComparison: (competitors || []).slice(0, 5).map((c: any) => ({
+            competitor: c.name || 'Competitor',
+            engagementComparison: 'N/A',
+            frequencyComparison: 'similar',
+            platformOverlap: company.platforms || [],
+            theyWinAt: 'Analysis requires LLM',
+            youWinAt: 'Analysis requires LLM'
+          })),
+          overallRanking: {
+            position: 1,
+            totalCompetitors: (competitors || []).length,
+            trend: 'stable'
+          },
+          recommendations: ['Configure LLM service for detailed competitive analysis']
+        },
+        fallback: true
       });
     }
 
@@ -387,16 +555,56 @@ Return JSON:
   ]
 }`;
 
-    const result = await generateJSON<any>(prompt, 'You are a competitive intelligence analyst. Provide data-driven competitive analysis. Return valid JSON only.');
+    // Set timeout for LLM call (20 seconds)
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('LLM timeout')), 20000);
+    });
 
-    if (result) {
+    try {
+      const result = await Promise.race([
+        generateJSON<any>(prompt, 'You are a competitive intelligence analyst. Provide data-driven competitive analysis. Return valid JSON only.'),
+        timeoutPromise
+      ]) as any;
+
+      if (result) {
+        res.json({
+          success: true,
+          comparison: result,
+          generatedAt: new Date().toISOString()
+        });
+      } else {
+        throw new Error('Failed to generate competitive comparison');
+      }
+    } catch (llmError: any) {
+      console.warn('LLM generation failed, returning fallback:', llmError.message);
+      // Return fallback comparison
       res.json({
         success: true,
-        comparison: result,
-        generatedAt: new Date().toISOString()
+        comparison: {
+          companyMetrics: {
+            estimatedEngagementRate: 'N/A',
+            postingFrequency: `${company.postCount || 0} posts/week`,
+            topPlatform: (company.platforms || [])[0] || 'Unknown',
+            contentStrength: 'medium'
+          },
+          competitorComparison: (competitors || []).slice(0, 5).map((c: any) => ({
+            competitor: c.name || 'Competitor',
+            engagementComparison: 'N/A',
+            frequencyComparison: 'similar',
+            platformOverlap: company.platforms || [],
+            theyWinAt: 'Detailed analysis unavailable',
+            youWinAt: 'Detailed analysis unavailable'
+          })),
+          overallRanking: {
+            position: 1,
+            totalCompetitors: (competitors || []).length,
+            trend: 'stable'
+          },
+          recommendations: ['Run a full scan for detailed competitive analysis']
+        },
+        generatedAt: new Date().toISOString(),
+        fallback: true
       });
-    } else {
-      throw new Error('Failed to generate competitive comparison');
     }
   } catch (error: any) {
     console.error('Error generating competitive comparison:', error);

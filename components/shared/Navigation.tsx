@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, LogOut, Camera, FileText as FileTextIcon, Play, TrendingUp, Globe } from 'lucide-react';
 import { ViewState, NavProps } from '../../types';
 import { supabase, isSupabaseConfigured } from '../../services/supabaseClient';
+import { getDebugEndpoint } from '../../services/apiClient';
 
 const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -107,7 +108,7 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
                 // #region agent log
                 const navLog = {location:'Navigation.tsx:79',message:'LOGO clicked',data:{isLoggedIn},timestamp:Date.now(),sessionId:'debug-session',runId:'nav-click',hypothesisId:'H9'};
                 console.log('[DEBUG]', navLog);
-                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(navLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(navLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                 // #endregion
                 if (isLoggedIn) {
                   // Authenticated users should go to ingestion page, not landing
@@ -136,7 +137,7 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
                 // #region agent log
                 const navLog = {location:'Navigation.tsx:96',message:'HOME button clicked',data:{isLoggedIn,currentPath:window.location.pathname},timestamp:Date.now(),sessionId:'debug-session',runId:'nav-click',hypothesisId:'H9'};
                 console.log('[DEBUG]', navLog);
-                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(navLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(navLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                 // #endregion
                 if (isLoggedIn) {
                   // Authenticated users should go to ingestion page, not landing
@@ -155,7 +156,7 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
                 // #region agent log
                 const navLog = {location:'Navigation.tsx:111',message:'BLOG button clicked',data:{isLoggedIn},timestamp:Date.now(),sessionId:'debug-session',runId:'nav-click',hypothesisId:'H9'};
                 console.log('[DEBUG]', navLog);
-                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(navLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(navLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                 // #endregion
                 window.location.href = '/blog';
               }}
@@ -168,7 +169,7 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
                 // #region agent log
                 const navLog = {location:'Navigation.tsx:118',message:'PRICING button clicked',data:{isLoggedIn},timestamp:Date.now(),sessionId:'debug-session',runId:'nav-click',hypothesisId:'H9'};
                 console.log('[DEBUG]', navLog);
-                fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(navLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+                fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(navLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
                 // #endregion
                 onNavigate(ViewState.PRICING);
               }}
@@ -184,7 +185,7 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
               onMouseLeave={() => setShowAibcStreamDropdown(false)}
             >
               <a 
-                href="https://aibroadcasting.xyz" 
+                href="https://aibcmedia.com" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-sm font-bold hover:text-orange-400 transition-colors flex items-center gap-1"
@@ -216,7 +217,7 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
                       </div>
                       <div className="space-y-3">
                         {/* Generation Items */}
-                        <a href="https://aibcstream.com" target="_blank" rel="noopener noreferrer" className="block p-3 rounded-lg hover:bg-white/5 transition-colors group">
+                        <a href="https://aibcmedia.com" target="_blank" rel="noopener noreferrer" className="block p-3 rounded-lg hover:bg-white/5 transition-colors group">
                           <div className="text-[10px] font-bold text-blue-400 mb-1">CRYPTO MACRO</div>
                           <div className="text-sm font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">Bitcoin Breaches $100k: Market Analysis Video</div>
                           <div className="flex items-center gap-2 mt-2">
@@ -224,7 +225,7 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
                             <span className="px-2 py-0.5 bg-white/10 rounded text-[10px] text-white/60">VIDEO 1:20</span>
                           </div>
                         </a>
-                        <a href="https://aibcstream.com" target="_blank" rel="noopener noreferrer" className="block p-3 rounded-lg hover:bg-white/5 transition-colors group">
+                        <a href="https://aibcmedia.com" target="_blank" rel="noopener noreferrer" className="block p-3 rounded-lg hover:bg-white/5 transition-colors group">
                           <div className="text-[10px] font-bold text-purple-400 mb-1">TECH EARNINGS</div>
                           <div className="text-sm font-bold text-white mb-1 group-hover:text-purple-400 transition-colors">NVIDIA Q4 Earnings Call: AI Summary & Highlights</div>
                           <div className="flex items-center gap-2 mt-2">
@@ -232,7 +233,7 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
                             <span className="px-2 py-0.5 bg-white/10 rounded text-[10px] text-white/60">AUDIO 3:45</span>
                           </div>
                         </a>
-                        <a href="https://aibcstream.com" target="_blank" rel="noopener noreferrer" className="block p-3 rounded-lg hover:bg-white/5 transition-colors group">
+                        <a href="https://aibcmedia.com" target="_blank" rel="noopener noreferrer" className="block p-3 rounded-lg hover:bg-white/5 transition-colors group">
                           <div className="text-[10px] font-bold text-green-400 mb-1">REGULATION</div>
                           <div className="text-sm font-bold text-white mb-1 group-hover:text-green-400 transition-colors">SEC Approval Odds Increase: Legal Breakdown</div>
                           <div className="flex items-center gap-2 mt-2">
@@ -240,7 +241,7 @@ const Navigation: React.FC<NavProps> = ({ onNavigate }) => {
                             <span className="px-2 py-0.5 bg-white/10 rounded text-[10px] text-white/60">VIDEO 2:10</span>
                           </div>
                         </a>
-                        <a href="https://aibcstream.com" target="_blank" rel="noopener noreferrer" className="block p-3 rounded-lg hover:bg-white/5 transition-colors group">
+                        <a href="https://aibcmedia.com" target="_blank" rel="noopener noreferrer" className="block p-3 rounded-lg hover:bg-white/5 transition-colors group">
                           <div className="text-[10px] font-bold text-blue-400 mb-1">DEFI</div>
                           <div className="text-sm font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">Uniswap V4 Launch Date Confirmed</div>
                           <div className="flex items-center gap-2 mt-2">

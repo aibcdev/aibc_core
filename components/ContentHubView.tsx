@@ -27,6 +27,7 @@ const ContentHubView: React.FC = () => {
   const [assets, setAssets] = useState<ContentAsset[]>([]);
   const [statusFilter, setStatusFilter] = useState<'all' | 'suggested' | 'draft' | 'scheduled' | 'published'>('all');
   const [platformFilter, setPlatformFilter] = useState<string | null>(null);
+  const [contentTypeFilter, setContentTypeFilter] = useState<'all' | 'text' | 'audio' | 'video'>('all');
   const [username, setUsername] = useState<string | null>(null);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [regenerationMessage, setRegenerationMessage] = useState('');
@@ -168,7 +169,8 @@ const ContentHubView: React.FC = () => {
     // For LinkedIn and Twitter, use the new enterprise-level generator
     if ((isLinkedIn || isTwitter) && brandContext) {
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        // NOTE: Prefer 127.0.0.1 over localhost to avoid IPv6 (::1) resolution issues in browsers.
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
         const response = await fetch(`${API_BASE_URL}/api/social/generate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -465,7 +467,8 @@ What do you think? Drop a comment below! 👇
     
     setGeminiGenerating(true);
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      // NOTE: Prefer 127.0.0.1 over localhost to avoid IPv6 (::1) resolution issues in browsers.
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
       const response = await fetch(`${API_BASE_URL}/api/gemini/generate-image`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -538,8 +541,101 @@ What do you think? Drop a comment below! 👇
     window.dispatchEvent(new CustomEvent('contentGenerated', { detail: { count: newAssets.length } }));
   };
 
+  // Load reviewed content from n8n workflows
+  useEffect(() => {
+    const loadReviewedContent = async () => {
+      try {
+        // NOTE: Prefer 127.0.0.1 over localhost to avoid IPv6 (::1) resolution issues in browsers.
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
+        const response = await fetch(`${API_BASE_URL}/api/content-hub/reviewed`);
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.items && result.items.length > 0) {
+            const reviewedAssets: ContentAsset[] = result.items
+              .filter((item: any) => item.status === 'reviewed' || item.status === 'approved')
+              .map((item: any) => ({
+                id: item.id,
+                title: item.content.title || item.content.text?.substring(0, 50) || 'Reviewed Content',
+                description: item.content.description || item.content.text,
+                platform: item.content.platform || 'twitter',
+                status: item.status === 'approved' ? 'scheduled' : 'suggested', // Ready for company review
+                type: item.content.type || 'document',
+                timeAgo: 'Just now',
+                basedOn: 'n8n-workflow-review',
+                theme: item.content.theme,
+              }));
+            
+            setAssets(prev => {
+              // Merge with existing, avoiding duplicates
+              const existingIds = new Set(prev.map(a => a.id));
+              const newAssets = reviewedAssets.filter(a => !existingIds.has(a.id));
+              return [...newAssets, ...prev];
+            });
+          }
+        }
+      } catch (error) {
+        console.error('[Content Hub] Error loading reviewed content:', error);
+      }
+    };
+
+    loadReviewedContent();
+    // Poll every 30 seconds for new reviewed content
+    const interval = setInterval(loadReviewedContent, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     loadContent();
+    
+    // Check for recent strategy updates when component mounts
+    // This handles the case where strategy was updated while Content Hub wasn't visible
+    const checkRecentStrategyUpdate = () => {
+      try {
+        const activeStrategy = localStorage.getItem('activeContentStrategy');
+        const lastStrategyUpdate = localStorage.getItem('lastStrategyUpdate');
+        const lastContentUpdate = localStorage.getItem('lastContentHubUpdate');
+        
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:checkRecentStrategyUpdate',message:'CHECKING FOR RECENT STRATEGY UPDATE',data:{hasActiveStrategy:!!activeStrategy,lastStrategyUpdate,lastContentUpdate,timeSinceStrategyUpdate:lastStrategyUpdate ? Date.now() - parseInt(lastStrategyUpdate) : null},timestamp:Date.now(),sessionId:'debug-session',runId:'content-hub-mount',hypothesisId:'H18'})}).catch(()=>{});
+        // #endregion
+        
+        // If there's an active strategy and it was updated recently (within last 5 minutes)
+        // and we haven't updated content hub yet, trigger regeneration
+        if (activeStrategy && lastStrategyUpdate) {
+          const timeSinceUpdate = Date.now() - parseInt(lastStrategyUpdate);
+          const lastUpdate = lastContentUpdate ? parseInt(lastContentUpdate) : 0;
+          
+          // If strategy was updated more recently than content hub was updated
+          if (parseInt(lastStrategyUpdate) > lastUpdate && timeSinceUpdate < 5 * 60 * 1000) {
+            console.log('🔄 Content Hub: Detected recent strategy update, triggering regeneration');
+            // #region agent log
+            fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:checkRecentStrategyUpdate',message:'TRIGGERING REGENERATION FROM RECENT UPDATE',data:{timeSinceUpdate,lastStrategyUpdate,lastContentUpdate},timestamp:Date.now(),sessionId:'debug-session',runId:'content-hub-mount',hypothesisId:'H18'})}).catch(()=>{});
+            // #endregion
+            
+            // Dispatch a strategy update event to trigger regeneration
+            const strategy = JSON.parse(activeStrategy);
+            const strategyEvent = new CustomEvent('strategyUpdated', {
+              detail: {
+                strategy,
+                activeStrategy: strategy,
+                forceContentRegenerate: true,
+                timestamp: parseInt(lastStrategyUpdate),
+                source: 'mount-check',
+                fromMount: true
+              }
+            });
+            window.dispatchEvent(strategyEvent);
+          }
+        }
+      } catch (e) {
+        console.error('Error checking recent strategy update:', e);
+      }
+    };
+    
+    // Check for recent updates after a short delay to ensure component is fully mounted
+    const checkTimer = setTimeout(checkRecentStrategyUpdate, 500);
     
     // Listen for new scan started - clear all state
     const handleNewScanStarted = (event: CustomEvent) => {
@@ -568,14 +664,93 @@ What do you think? Drop a comment below! 👇
       }, 500);
     };
     
-    // Listen for brand assets updates
-    const handleBrandAssetsUpdate = () => {
-      console.log('📥 Brand assets updated - enhancing content ideas...');
+    // Listen for brand assets updates - CRITICAL: Must regenerate content via backend
+    const handleBrandAssetsUpdate = async () => {
+      console.log('📥 Brand assets updated - regenerating content ideas...');
       setRegenerationMessage('Updating based on brand assets...');
       setIsRegenerating(true);
-      enhanceContentIdeas().then(() => {
-        setTimeout(() => setIsRegenerating(false), 1000);
-      });
+      
+      try {
+        // Call backend to regenerate content based on brand assets
+        // NOTE: Prefer 127.0.0.1 over localhost to avoid IPv6 (::1) resolution issues in browsers.
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
+        const cachedResults = localStorage.getItem('lastScanResults');
+        const parsed = cachedResults ? JSON.parse(cachedResults) : {};
+        const currentUsername = localStorage.getItem('lastScannedUsername');
+        
+        if (!currentUsername) {
+          console.error('⚠️ Content Hub: No username found - cannot regenerate content');
+          setIsRegenerating(false);
+          return;
+        }
+        
+        // Load brand assets from localStorage
+        const brandAssets = {
+          materials: JSON.parse(localStorage.getItem('brandMaterials') || '[]'),
+          colors: JSON.parse(localStorage.getItem('brandColors') || '[]'),
+          fonts: JSON.parse(localStorage.getItem('brandFonts') || '[]'),
+          profile: JSON.parse(localStorage.getItem('brandProfile') || '{}'),
+          voice: JSON.parse(localStorage.getItem('brandVoice') || '{}'),
+          contentPreferences: JSON.parse(localStorage.getItem('contentPreferences') || '{}')
+        };
+        
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleBrandAssetsUpdate',message:'CALLING REGENERATE-CONTENT FOR BRAND ASSETS',data:{hasBrandDNA:!!parsed.brandDNA,hasBrandAssets:!!brandAssets,currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'content-hub-brand-assets',hypothesisId:'H20'})}).catch(()=>{});
+        // #endregion
+        
+        const response = await fetch(`${API_BASE_URL}/api/analytics/regenerate-content`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            strategy: { type: 'brand_assets_update', description: 'Brand assets updated' },
+            brandDNA: parsed.brandDNA,
+            brandAssets: brandAssets, // Include brand assets in request
+            competitorIntelligence: parsed.competitorIntelligence,
+            currentContentIdeas: parsed.contentIdeas,
+            scanUsername: currentUsername
+          })
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.contentIdeas && Array.isArray(result.contentIdeas)) {
+            console.log(`✅ Content Hub: Received ${result.contentIdeas.length} brand-asset-aligned ideas`);
+            
+            // Update localStorage with new ideas
+            parsed.contentIdeas = result.contentIdeas;
+            parsed.scanUsername = currentUsername;
+            parsed.username = currentUsername;
+            parsed.lastBrandAssetsUpdate = Date.now();
+            localStorage.setItem('lastScanResults', JSON.stringify(parsed));
+            localStorage.setItem('lastContentHubUpdate', Date.now().toString());
+            
+            // Convert new ideas to assets format
+            const newAssets: ContentAsset[] = result.contentIdeas.map((idea: any, index: number) => ({
+              id: `brand_assets_${Date.now()}_${index}`,
+              title: idea.title || `Brand Asset Idea ${index + 1}`,
+              description: idea.description || '',
+              platform: (idea.platform || 'twitter').toUpperCase(),
+              status: 'suggested',
+              type: idea.format === 'video' || idea.format === 'reel' ? 'video' : 
+                    idea.format === 'carousel' ? 'carousel' :
+                    idea.format === 'thread' ? 'thread' : 'document',
+              timeAgo: 'Just now',
+              theme: idea.brandAlignment || '',
+              basedOn: 'brand-assets'
+            }));
+            
+            // Update UI immediately
+            setAssets(newAssets);
+            setRegenerationMessage('Content updated based on brand assets!');
+          }
+        }
+      } catch (error) {
+        console.error('Error regenerating content for brand assets:', error);
+        // Fallback to local enhancement
+        await enhanceContentIdeas();
+      }
+      
+      setTimeout(() => setIsRegenerating(false), 1000);
     };
     
     // Listen for competitor added events
@@ -586,7 +761,8 @@ What do you think? Drop a comment below! 👇
       setIsRegenerating(true);
       
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        // NOTE: Prefer 127.0.0.1 over localhost to avoid IPv6 (::1) resolution issues in browsers.
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
         const cachedResults = localStorage.getItem('lastScanResults');
         const parsed = cachedResults ? JSON.parse(cachedResults) : {};
         
@@ -618,71 +794,284 @@ What do you think? Drop a comment below! 👇
       setTimeout(() => setIsRegenerating(false), 1000);
     };
     
-    // Listen for strategy updates - CRITICAL: Force content regeneration via backend
+    // Listen for strategy updates - REAL-TIME SYNC: Force content regeneration via backend
     const handleStrategyUpdate = async (event: CustomEvent) => {
-      console.log('📥 Strategy updated - regenerating content ideas...', event.detail);
-      const { forceContentRegenerate, activeStrategy, strategy } = event.detail;
+      // #region agent log
+      const getDebugEndpoint = () => 'http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d';
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleStrategyUpdate',message:'STRATEGY UPDATE EVENT RECEIVED',data:{hasForceRegenerate:!!event.detail.forceContentRegenerate,hasActiveStrategy:!!event.detail.activeStrategy,hasStrategy:!!event.detail.strategy,hasMessages:!!event.detail.messages,messagesCount:event.detail.messages?.length||0,strategyType:event.detail.strategy?.type,source:event.detail.source},timestamp:Date.now(),sessionId:'debug-session',runId:'content-hub-update',hypothesisId:'H17'})}).catch(()=>{});
+      // #endregion
+      console.log('📥 Content Hub: Strategy updated event received!', event.detail);
+      const { forceContentRegenerate, activeStrategy, strategy, messages } = event.detail;
       
-      // Show regeneration indicator
+      // REAL-TIME SYNC: Always regenerate when strategy changes
+      // Even if forceContentRegenerate is false, check if strategy actually changed
+      const currentStrategy = localStorage.getItem('activeContentStrategy');
+      const newStrategy = strategy || activeStrategy;
+      
+      // If strategy changed, force regeneration
+      if (newStrategy && currentStrategy) {
+        try {
+          const parsedCurrent = JSON.parse(currentStrategy);
+          const strategyChanged = JSON.stringify(parsedCurrent) !== JSON.stringify(newStrategy);
+          if (strategyChanged) {
+            console.log('🔄 Content Hub: Strategy changed, forcing regeneration');
+            // Force regeneration
+            event.detail.forceContentRegenerate = true;
+          }
+        } catch (e) {
+          // If can't parse, assume changed
+          event.detail.forceContentRegenerate = true;
+        }
+      }
+      
+      // CRITICAL: Strategy update event ALWAYS means regenerate - the event itself indicates strategy changed
+      // Extract strategy from messages if not provided
+      if (!activeStrategy && !strategy && !event.detail.strategy && messages && Array.isArray(messages)) {
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleStrategyUpdate',message:'EXTRACTING STRATEGY FROM MESSAGES',data:{messagesCount:messages.length,lastMessageRole:messages[messages.length-1]?.role},timestamp:Date.now(),sessionId:'debug-session',runId:'content-hub-update',hypothesisId:'H17'})}).catch(()=>{});
+        // #endregion
+        // Get the last user message (most recent user request)
+        const userMessages = messages.filter((m: any) => m.role === 'user');
+        const lastUserMessage = userMessages[userMessages.length - 1];
+        if (lastUserMessage) {
+          console.log('📥 Content Hub: Extracting strategy from user message:', lastUserMessage.content.substring(0, 100));
+          // Create a strategy object from the user's message
+          event.detail.strategy = {
+            type: 'user_directed',
+            title: lastUserMessage.content.substring(0, 50) + (lastUserMessage.content.length > 50 ? '...' : ''),
+            description: lastUserMessage.content,
+            fromConversation: true,
+            appliedAt: new Date().toISOString()
+          };
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleStrategyUpdate',message:'STRATEGY EXTRACTED FROM MESSAGE',data:{strategyType:event.detail.strategy.type,strategyTitle:event.detail.strategy.title},timestamp:Date.now(),sessionId:'debug-session',runId:'content-hub-update',hypothesisId:'H17'})}).catch(()=>{});
+          // #endregion
+        }
+      }
+      
+      // CRITICAL: Strategy update event = ALWAYS regenerate (ignore flags, event itself indicates change)
+      const shouldRegenerate = true; // Always regenerate when strategy update event is received
+      
+      // #region agent log
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleStrategyUpdate',message:'FORCING REGENERATION - strategy update event',data:{hasActiveStrategy:!!activeStrategy,hasStrategy:!!strategy,hasEventStrategy:!!event.detail.strategy,hasMessages:!!messages,messagesCount:messages?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'content-hub-update',hypothesisId:'H17'})}).catch(()=>{});
+      // #endregion
+      
+      // If no strategy object but we have messages, create a strategy from the conversation
+      if (!activeStrategy && !strategy && !event.detail.strategy && messages && messages.length > 0) {
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleStrategyUpdate',message:'CREATING STRATEGY FROM MESSAGES',data:{messagesCount:messages.length,lastMessage:messages[messages.length-1]?.content?.substring(0,100)},timestamp:Date.now(),sessionId:'debug-session',runId:'content-hub-update',hypothesisId:'H17'})}).catch(()=>{});
+        // #endregion
+        const lastUserMessage = messages.filter((m: any) => m.role === 'user').pop();
+        if (lastUserMessage) {
+          event.detail.strategy = {
+            type: 'user_directed',
+            title: lastUserMessage.content.substring(0, 50),
+            description: lastUserMessage.content,
+            fromConversation: true
+          };
+          console.log('📝 Content Hub: Created strategy from conversation:', event.detail.strategy);
+        }
+      }
+      
+      // If still no strategy, create a default one to ensure regeneration happens
+      if (!activeStrategy && !strategy && !event.detail.strategy) {
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleStrategyUpdate',message:'CREATING DEFAULT STRATEGY',data:{forceContentRegenerate:shouldRegenerate},timestamp:Date.now(),sessionId:'debug-session',runId:'content-hub-update',hypothesisId:'H17'})}).catch(()=>{});
+        // #endregion
+        event.detail.strategy = {
+          type: 'user_directed',
+          title: 'Strategy Update',
+          description: 'Content strategy updated',
+          fromEvent: true
+        };
+        console.log('📝 Content Hub: Created default strategy to ensure regeneration');
+      }
+      
+      // Show regeneration indicator immediately
       setRegenerationMessage('Applying strategy update...');
       setIsRegenerating(true);
       
-      if (forceContentRegenerate && (activeStrategy || strategy)) {
+      // Always clear assets immediately for instant feedback
+      setAssets([]);
+      localStorage.removeItem('productionAssets');
+      
+      // Get current username to ensure we're matching the right company
+      const currentUsername = localStorage.getItem('lastScannedUsername');
+      if (!currentUsername) {
+        console.error('⚠️ Content Hub: No username found - cannot regenerate content');
+        setIsRegenerating(false);
+        return;
+      }
+      
+      // REAL-TIME SYNC: Use the strategy from event (may have been extracted from conversation)
+      // If no strategy exists but we have messages, create one from the last user message
+      let finalStrategy = strategy || activeStrategy || event.detail.strategy;
+      
+      if (!finalStrategy && messages && Array.isArray(messages) && messages.length > 0) {
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleStrategyUpdate',message:'CREATING STRATEGY FROM MESSAGES - FINAL CHECK',data:{messagesCount:messages.length},timestamp:Date.now(),sessionId:'debug-session',runId:'content-hub-update',hypothesisId:'H17'})}).catch(()=>{});
+        // #endregion
+        const userMessages = messages.filter((m: any) => m.role === 'user');
+        const lastUserMessage = userMessages[userMessages.length - 1];
+        if (lastUserMessage) {
+          finalStrategy = {
+            type: 'user_directed',
+            title: lastUserMessage.content.substring(0, 50) + (lastUserMessage.content.length > 50 ? '...' : ''),
+            description: lastUserMessage.content,
+            fromConversation: true,
+            appliedAt: new Date().toISOString()
+          };
+          console.log('📝 Content Hub: Created final strategy from user message:', finalStrategy.title);
+        }
+      }
+      
+      // If still no strategy but shouldRegenerate is true, create a default one
+      if (!finalStrategy && shouldRegenerate) {
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleStrategyUpdate',message:'CREATING DEFAULT STRATEGY FOR REGENERATION',data:{shouldRegenerate},timestamp:Date.now(),sessionId:'debug-session',runId:'content-hub-update',hypothesisId:'H17'})}).catch(()=>{});
+        // #endregion
+        finalStrategy = {
+          type: 'user_directed',
+          title: 'Content Strategy Update',
+          description: 'Regenerating content based on strategy update',
+          fromEvent: true,
+          appliedAt: new Date().toISOString()
+        };
+        console.log('📝 Content Hub: Created default strategy to ensure regeneration');
+      }
+      
+      // #region agent log
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleStrategyUpdate',message:'FINAL STRATEGY CHECK',data:{shouldRegenerate,hasFinalStrategy:!!finalStrategy,strategyType:finalStrategy?.type,strategyTitle:finalStrategy?.title},timestamp:Date.now(),sessionId:'debug-session',runId:'content-hub-update',hypothesisId:'H17'})}).catch(()=>{});
+      // #endregion
+      
+      // CRITICAL: Always regenerate when strategy update event is received (shouldRegenerate is always true now)
+      // Even if finalStrategy is not set, we should still regenerate with whatever strategy data we have
+      if (shouldRegenerate) {
         console.log('🔄 Content Hub: Force regenerating content from backend based on new strategy');
         // #region agent log - H12: Check if strategy update clears assets
-        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleStrategyUpdate',message:'CLEARING ASSETS - STRATEGY UPDATE',data:{forceContentRegenerate,hasStrategy:!!(activeStrategy||strategy)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H12'})}).catch(()=>{});
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleStrategyUpdate',message:'CLEARING ASSETS - STRATEGY UPDATE',data:{forceContentRegenerate:shouldRegenerate,hasStrategy:!!finalStrategy,currentUsername},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H12'})}).catch(()=>{});
         // #endregion
-        // Clear current assets first
-        setAssets([]);
-        localStorage.removeItem('productionAssets');
         
         try {
           // Call backend to regenerate content based on strategy
-          const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+          // NOTE: Prefer 127.0.0.1 over localhost to avoid IPv6 (::1) resolution issues in browsers.
+          const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
           const cachedResults = localStorage.getItem('lastScanResults');
           const parsed = cachedResults ? JSON.parse(cachedResults) : {};
+          
+          // Validate username match before regenerating
+          const cachedUsername = parsed.scanUsername || parsed.username;
+          if (cachedUsername && cachedUsername.toLowerCase() !== currentUsername.toLowerCase()) {
+            console.error(`⚠️ Content Hub: Username mismatch during strategy update! Current: ${currentUsername}, Cached: ${cachedUsername}`);
+            setIsRegenerating(false);
+            return;
+          }
+          
+          // REAL-TIME SYNC: Include conversation context if available
+          const conversationContext = messages ? messages.map((m: any) => `${m.role}: ${m.content}`).join('\n') : '';
+          
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:768',message:'CALLING REGENERATE-CONTENT API',data:{hasStrategy:!!finalStrategy,hasBrandDNA:!!parsed.brandDNA,hasCompetitors:!!parsed.competitorIntelligence,competitorCount:parsed.competitorIntelligence?.length||0,hasConversationContext:!!conversationContext,conversationLength:conversationContext.length,currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'content-hub-update',hypothesisId:'H11'})}).catch(()=>{});
+          // #endregion
+          // Use ONLY brand voice extracted from actual content (from brandDNA) - NOT manual settings
+          // Brand voice should come from analyzing their actual posts, like asking ChatGPT "Write a paragraph explaining [COMPANY]"
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleStrategyUpdate',message:'USING EXTRACTED BRAND VOICE',data:{hasBrandDNA:!!parsed.brandDNA,hasBrandDNAVoice:!!parsed.brandDNA?.voice,voiceStyle:parsed.brandDNA?.voice?.style,voiceTone:parsed.brandDNA?.voice?.tone},timestamp:Date.now(),sessionId:'debug-session',runId:'content-hub-update',hypothesisId:'H19'})}).catch(()=>{});
+          // #endregion
           
           const response = await fetch(`${API_BASE_URL}/api/analytics/regenerate-content`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              strategy: strategy || activeStrategy,
-              brandDNA: parsed.brandDNA,
+              strategy: finalStrategy || { type: 'user_directed', title: 'Strategy Update', description: 'Content strategy updated' }, // Ensure strategy is always provided
+              brandDNA: parsed.brandDNA, // brandDNA contains voice extracted from actual content
               competitorIntelligence: parsed.competitorIntelligence,
               currentContentIdeas: parsed.contentIdeas,
-              scanUsername: localStorage.getItem('lastScannedUsername')
+              scanUsername: currentUsername, // Use current username explicitly
+              conversationContext: conversationContext.substring(0, 2000) // Include conversation context
             })
           });
           
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:781',message:'REGENERATE API RESPONSE',data:{ok:response.ok,status:response.status},timestamp:Date.now(),sessionId:'debug-session',runId:'content-hub-update',hypothesisId:'H11'})}).catch(()=>{});
+          // #endregion
+          
           if (response.ok) {
             const result = await response.json();
-            if (result.success && result.contentIdeas) {
-              console.log(`✅ Content Hub: Received ${result.contentIdeas.length} strategy-aligned ideas`);
+            // #region agent log
+            fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:handleStrategyUpdate',message:'BACKEND RESPONSE RECEIVED',data:{success:result.success,hasContentIdeas:!!result.contentIdeas,contentIdeasCount:result.contentIdeas?.length||0,currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'content-hub-update',hypothesisId:'H17'})}).catch(()=>{});
+            // #endregion
+            if (result.success && result.contentIdeas && Array.isArray(result.contentIdeas)) {
+              console.log(`✅ Content Hub: Received ${result.contentIdeas.length} strategy-aligned ideas for ${currentUsername}`);
               
-              // Update localStorage with new ideas
+              // Update localStorage with new ideas - REPLACE, don't merge
+              // Ensure username is set correctly
               parsed.contentIdeas = result.contentIdeas;
+              parsed.scanUsername = currentUsername; // Ensure username is set
+              parsed.username = currentUsername; // Also set username field
               parsed.lastStrategyUpdate = Date.now();
+              parsed.strategyContext = strategy || activeStrategy;
               localStorage.setItem('lastScanResults', JSON.stringify(parsed));
               
-              // Update UI
+              // Mark that Content Hub was updated (so we don't regenerate again unnecessarily)
+              localStorage.setItem('lastContentHubUpdate', Date.now().toString());
+              
+              // Convert new ideas to assets format immediately
+              const newAssets: ContentAsset[] = result.contentIdeas.map((idea: any, index: number) => ({
+                id: `strategy_${Date.now()}_${index}`,
+                title: idea.title || `Strategy Idea ${index + 1}`,
+                description: idea.description || idea.strategyAlignment || '',
+                platform: (idea.platform || 'twitter').toUpperCase(),
+                status: 'suggested',
+                type: idea.format === 'video' || idea.format === 'reel' ? 'video' : 
+                      idea.format === 'carousel' ? 'carousel' :
+                      idea.format === 'thread' ? 'thread' : 'document',
+                timeAgo: 'Just now',
+                theme: idea.competitorInspiration || idea.strategyAlignment,
+                basedOn: 'strategy-update'
+              }));
+              
+              // Update UI immediately with new assets
+              setAssets(newAssets);
+              setRegenerationMessage(`✅ ${newAssets.length} new ideas generated`);
+              
+              // Save to localStorage for persistence
+              localStorage.setItem('productionAssets', JSON.stringify(newAssets));
+              
+              // Dispatch event to notify other components
+              window.dispatchEvent(new CustomEvent('contentRegenerated', {
+                detail: { 
+                  strategy: strategy || activeStrategy,
+                  contentCount: result.contentIdeas.length,
+                  timestamp: Date.now(),
+                  username: currentUsername
+                }
+              }));
+              
+              // Force a reload to ensure UI updates
+              setTimeout(() => {
+                loadContent();
+                setIsRegenerating(false);
+              }, 500);
+            } else {
+              console.error('Backend returned success but no content ideas');
               await loadContent();
+              setTimeout(() => setIsRegenerating(false), 1000);
             }
           } else {
-            console.error('Failed to regenerate content from backend');
+            const errorText = await response.text();
+            console.error('Failed to regenerate content from backend:', response.status, errorText);
             await loadContent();
+            setTimeout(() => setIsRegenerating(false), 1000);
           }
         } catch (error) {
           console.error('Error calling regenerate-content:', error);
-          await loadContent();
+          // Fallback to local enhancement if backend fails
+          await enhanceContentIdeas();
+          setTimeout(() => setIsRegenerating(false), 1000);
         }
-        
-        // Also enhance with strategy context
-        await enhanceContentIdeas();
-        setTimeout(() => setIsRegenerating(false), 1000);
-      } else {
-        await enhanceContentIdeas();
-        setTimeout(() => setIsRegenerating(false), 1000);
       }
+      // Note: shouldRegenerate is always true when strategy update event is received, so regeneration always happens
     };
     
     // Listen for competitor updates
@@ -740,14 +1129,35 @@ What do you think? Drop a comment below! 👇
       loadContent();
     };
     
+    // Set up event listeners with explicit logging
+    console.log('🔧 Content Hub: Setting up event listeners...');
+    
     window.addEventListener('newScanStarted', handleNewScanStarted as EventListener);
     window.addEventListener('brandAssetsUpdated', handleBrandAssetsUpdate);
-    window.addEventListener('strategyUpdated', handleStrategyUpdate as EventListener);
+    
+    // CRITICAL: Strategy update listener - must be set up correctly
+    const strategyListener = ((event: Event) => {
+      // #region agent log
+      const getDebugEndpoint = () => 'http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d';
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:strategyListener',message:'EVENT LISTENER FIRED',data:{hasDetail:!!(event as CustomEvent).detail,hasStrategy:!!(event as CustomEvent).detail?.strategy,hasMessages:!!(event as CustomEvent).detail?.messages},timestamp:Date.now(),sessionId:'debug-session',runId:'content-hub-update',hypothesisId:'H10'})}).catch(()=>{});
+      // #endregion
+      handleStrategyUpdate(event as CustomEvent);
+    }) as EventListener;
+    window.addEventListener('strategyUpdated', strategyListener);
+    // #region agent log
+    const getDebugEndpoint = () => 'http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d';
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:928',message:'EVENT LISTENER REGISTERED',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'content-hub-init',hypothesisId:'H10'})}).catch(()=>{});
+    // #endregion
+    console.log('✅ Content Hub: strategyUpdated event listener registered');
+    
     window.addEventListener('competitorUpdated', handleCompetitorUpdate as EventListener);
     window.addEventListener('competitorAdded', handleCompetitorAdded as EventListener);
     window.addEventListener('scanComplete', handleScanComplete as EventListener);
     window.addEventListener('analyticsUpdated', handleAnalyticsUpdate as EventListener);
     window.addEventListener('dataChanged', handleDataChange as EventListener);
+    
+    // Test event listener is working
+    console.log('✅ Content Hub: All event listeners registered');
     
     // Periodic refresh (every 5 minutes) to check for new data
     const periodicRefresh = setInterval(() => {
@@ -758,13 +1168,14 @@ What do you think? Drop a comment below! 👇
     return () => {
       window.removeEventListener('newScanStarted', handleNewScanStarted as EventListener);
       window.removeEventListener('brandAssetsUpdated', handleBrandAssetsUpdate);
-      window.removeEventListener('strategyUpdated', handleStrategyUpdate as EventListener);
+      window.removeEventListener('strategyUpdated', strategyListener);
       window.removeEventListener('competitorUpdated', handleCompetitorUpdate as EventListener);
       window.removeEventListener('competitorAdded', handleCompetitorAdded as EventListener);
       window.removeEventListener('scanComplete', handleScanComplete as EventListener);
       window.removeEventListener('analyticsUpdated', handleAnalyticsUpdate as EventListener);
       window.removeEventListener('dataChanged', handleDataChange as EventListener);
       clearInterval(periodicRefresh);
+      if (checkTimer) clearTimeout(checkTimer);
     };
   }, []);
 
@@ -922,8 +1333,28 @@ What do you think? Drop a comment below! 👇
     const debugLastScanResults = localStorage.getItem('lastScanResults');
     let debugParsedResults: any = null;
     try { debugParsedResults = debugLastScanResults ? JSON.parse(debugLastScanResults) : null; } catch(e) {}
-    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:loadContent:ENTRY',message:'loadContent START',data:{lastScannedUsername:localStorage.getItem('lastScannedUsername'),lastScanId:localStorage.getItem('lastScanId'),hasLastScanResults:!!debugLastScanResults,contentIdeasInCache:debugParsedResults?.contentIdeas?.length||0,cacheKeys:debugParsedResults?Object.keys(debugParsedResults):[]},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1-H5'})}).catch(()=>{});
+    const currentUsername = localStorage.getItem('lastScannedUsername');
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:loadContent:ENTRY',message:'loadContent START',data:{lastScannedUsername:currentUsername,lastScanId:localStorage.getItem('lastScanId'),hasLastScanResults:!!debugLastScanResults,contentIdeasInCache:debugParsedResults?.contentIdeas?.length||0,cacheKeys:debugParsedResults?Object.keys(debugParsedResults):[],cachedUsername:debugParsedResults?.scanUsername||debugParsedResults?.username},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1-H5'})}).catch(()=>{});
     // #endregion
+    
+    // CRITICAL: Validate username match BEFORE loading any content
+    if (debugLastScanResults && currentUsername) {
+      try {
+        const parsed = JSON.parse(debugLastScanResults);
+        const cachedUsername = parsed.scanUsername || parsed.username;
+        if (cachedUsername && cachedUsername.toLowerCase() !== currentUsername.toLowerCase()) {
+          console.log(`⚠️ Content Hub: Username mismatch! Current: ${currentUsername}, Cached: ${cachedUsername} - Clearing cache`);
+          // Clear cache if username doesn't match
+          localStorage.removeItem('lastScanResults');
+          localStorage.removeItem('productionAssets');
+          setAssets([]);
+          return; // Don't load content for wrong company
+        }
+      } catch (e) {
+        console.error('Error validating username:', e);
+      }
+    }
+    
     try {
       // Load brand assets for context
       const brandMaterials = JSON.parse(localStorage.getItem('brandMaterials') || '[]');
@@ -1322,11 +1753,30 @@ What do you think? Drop a comment below! 👇
     }
   };
 
+  // Helper function to categorize content by type
+  const getContentCategory = (asset: ContentAsset): 'text' | 'audio' | 'video' => {
+    if (asset.type === 'video' || asset.type === 'reel') return 'video';
+    if (asset.type === 'podcast' || asset.type === 'audio') return 'audio';
+    return 'text'; // document, thread, carousel, image are all text-based
+  };
+
   const filteredAssets = assets.filter(asset => {
     if (statusFilter !== 'all' && asset.status !== statusFilter) return false;
     if (platformFilter && asset.platform.toUpperCase() !== platformFilter.toUpperCase()) return false;
+    if (contentTypeFilter !== 'all') {
+      const category = getContentCategory(asset);
+      if (category !== contentTypeFilter) return false;
+    }
     return true;
   });
+
+  // Count assets by content type
+  const contentTypeCounts = {
+    all: assets.length,
+    text: assets.filter(a => getContentCategory(a) === 'text').length,
+    audio: assets.filter(a => getContentCategory(a) === 'audio').length,
+    video: assets.filter(a => getContentCategory(a) === 'video').length,
+  };
 
   // #region agent log - H6: Check render state
   fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ContentHubView.tsx:RENDER',message:'Render cycle state',data:{assetsLength:assets.length,filteredAssetsLength:filteredAssets.length,statusFilter,platformFilter,firstAssetStatus:assets[0]?.status||'no-assets',firstAssetPlatform:assets[0]?.platform||'no-assets'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
@@ -1404,8 +1854,30 @@ What do you think? Drop a comment below! 👇
 
       {/* Filters */}
       <div className="space-y-4 mb-6">
+        {/* Content Type Filters - PRIMARY FILTER */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-white/40 font-bold mr-2">TYPE:</span>
+          {(['all', 'text', 'audio', 'video'] as const).map(type => (
+            <button
+              key={type}
+              onClick={() => setContentTypeFilter(type)}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+                contentTypeFilter === type
+                  ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50'
+                  : 'bg-white/5 text-white/40 hover:text-white/60 border border-white/10'
+              }`}
+            >
+              {type === 'text' && <FileText className="w-3 h-3" />}
+              {type === 'audio' && <Mic2 className="w-3 h-3" />}
+              {type === 'video' && <Video className="w-3 h-3" />}
+              {type.toUpperCase()} {type !== 'all' && `(${contentTypeCounts[type]})`}
+            </button>
+          ))}
+        </div>
+
         {/* Status Filters */}
         <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-white/40 font-bold mr-2">STATUS:</span>
           {(['all', 'suggested', 'draft', 'scheduled', 'published'] as const).map(status => (
             <button
               key={status}
@@ -1494,10 +1966,39 @@ What do you think? Drop a comment below! 👇
                 <span className="text-[10px] text-white/30">{asset.timeAgo}</span>
                 {asset.status === 'suggested' && (
                   <button 
-                    onClick={() => handleSelectIdea(asset)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const category = getContentCategory(asset);
+                      // If audio or video, navigate to production room
+                      if (category === 'audio' || category === 'video') {
+                        // Store the asset info for production room
+                        localStorage.setItem('productionRoomRequest', JSON.stringify({
+                          type: category,
+                          asset: {
+                            title: asset.title,
+                            description: asset.description,
+                            platform: asset.platform,
+                            theme: asset.theme
+                          },
+                          timestamp: Date.now()
+                        }));
+                        // Navigate to production room
+                        window.dispatchEvent(new CustomEvent('navigateToPage', { 
+                          detail: { page: 'production' } 
+                        }));
+                        // Also update URL if using router
+                        if (window.location.pathname !== '/productionroom') {
+                          window.history.pushState({}, '', '/productionroom');
+                          window.dispatchEvent(new PopStateEvent('popstate'));
+                        }
+                      } else {
+                        // Text content - use existing flow
+                        handleSelectIdea(asset);
+                      }
+                    }}
                     className="px-3 py-1.5 bg-orange-500 hover:bg-orange-400 text-white text-xs font-bold rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                   >
-                    Start Creating
+                    {getContentCategory(asset) === 'audio' || getContentCategory(asset) === 'video' ? 'Create' : 'Start Creating'}
                   </button>
                 )}
                 {asset.status === 'draft' && (

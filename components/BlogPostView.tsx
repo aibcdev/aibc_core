@@ -21,10 +21,11 @@ const BlogPostView: React.FC<BlogPostViewProps> = ({ onNavigate, slug }) => {
       const hostname = window.location.hostname;
       if (hostname.includes('aibcmedia.com') || hostname.includes('netlify')) {
         // Production backend URL
-        return 'https://aibc-backend-409115133182.us-central1.run.app';
+        return 'https://api.aibcmedia.com';
       }
     }
-    return import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    // NOTE: Prefer 127.0.0.1 over localhost to avoid IPv6 (::1) resolution issues in browsers.
+    return import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
   };
   
   const API_URL = getApiUrl();
@@ -36,8 +37,28 @@ const BlogPostView: React.FC<BlogPostViewProps> = ({ onNavigate, slug }) => {
   useEffect(() => {
     if (post) {
       fetchRelatedPosts();
+      fetchInternalLinks();
     }
   }, [post]);
+
+  const fetchInternalLinks = async () => {
+    if (!post) return;
+    try {
+      const response = await fetch(`${API_URL}/api/blog/${post.slug}/internal-links?inject=true`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.contentWithLinks) {
+          setContentWithLinks(data.contentWithLinks);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching internal links:', error);
+      // Fallback to original content
+      if (post) {
+        setContentWithLinks(post.content || '');
+      }
+    }
+  };
 
   const fetchPost = async () => {
     setLoading(true);
@@ -48,6 +69,8 @@ const BlogPostView: React.FC<BlogPostViewProps> = ({ onNavigate, slug }) => {
       }
       const data: BlogPost = await response.json();
       setPost(data);
+      // Initialize content with original content
+      setContentWithLinks(data.content || '');
     } catch (error) {
       console.error('Error fetching blog post:', error);
     } finally {
@@ -127,25 +150,63 @@ const BlogPostView: React.FC<BlogPostViewProps> = ({ onNavigate, slug }) => {
   }
 
   const baseURL = typeof window !== 'undefined' ? window.location.origin : 'https://aibcmedia.com';
-  const structuredData = post ? [
-    {
-      type: 'BlogPosting',
-      data: {
-        '@context': 'https://schema.org',
-        '@type': 'BlogPosting',
-        headline: post.title,
-        description: post.meta_description || post.excerpt || post.title,
-        image: post.featured_image_url || `${baseURL}/favicon.svg`,
-        datePublished: post.published_at || post.created_at,
-        dateModified: post.updated_at || post.published_at || post.created_at,
-        author: {
-          '@type': 'Person',
-          name: post.author || 'AIBC',
-        },
-        url: `${baseURL}/blog/${post.slug}`,
-      },
-    },
-  ] : undefined;
+  const [structuredData, setStructuredData] = useState<Array<{ type: string; data: object }> | undefined>(undefined);
+  
+  useEffect(() => {
+    if (post) {
+      // Fetch comprehensive structured data from backend
+      fetch(`${API_URL}/api/blog/${post.slug}/structured-data`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.structuredData) {
+            setStructuredData(data.structuredData);
+          } else {
+            // Fallback to basic structured data
+            setStructuredData([
+              {
+                type: 'BlogPosting',
+                data: {
+                  '@context': 'https://schema.org',
+                  '@type': 'BlogPosting',
+                  headline: post.title,
+                  description: post.meta_description || post.excerpt || post.title,
+                  image: post.featured_image_url || `${baseURL}/favicon.svg`,
+                  datePublished: post.published_at || post.created_at,
+                  dateModified: post.updated_at || post.published_at || post.created_at,
+                  author: {
+                    '@type': 'Person',
+                    name: post.author || 'AIBC',
+                  },
+                  url: `${baseURL}/blog/${post.slug}`,
+                },
+              },
+            ]);
+          }
+        })
+        .catch(() => {
+          // Fallback on error
+          setStructuredData([
+            {
+              type: 'BlogPosting',
+              data: {
+                '@context': 'https://schema.org',
+                '@type': 'BlogPosting',
+                headline: post.title,
+                description: post.meta_description || post.excerpt || post.title,
+                image: post.featured_image_url || `${baseURL}/favicon.svg`,
+                datePublished: post.published_at || post.created_at,
+                dateModified: post.updated_at || post.published_at || post.created_at,
+                author: {
+                  '@type': 'Person',
+                  name: post.author || 'AIBC',
+                },
+                url: `${baseURL}/blog/${post.slug}`,
+              },
+            },
+          ]);
+        });
+    }
+  }, [post, API_URL, baseURL]);
 
   return (
     <div className="min-h-screen bg-[#050505] text-white">
@@ -157,6 +218,10 @@ const BlogPostView: React.FC<BlogPostViewProps> = ({ onNavigate, slug }) => {
           url={`${baseURL}/blog/${post.slug}`}
           type="article"
           structuredData={structuredData}
+          author={post.author}
+          publishedTime={post.published_at}
+          modifiedTime={post.updated_at}
+          keywords={post.target_keywords}
         />
       )}
       <Navigation onNavigate={onNavigate} />
@@ -209,15 +274,25 @@ const BlogPostView: React.FC<BlogPostViewProps> = ({ onNavigate, slug }) => {
             </button>
           </div>
 
-          {post.featured_image_url && (
+          {(post.featured_image_url || (post.target_keywords?.[0] ? (() => {
+            const keyword = post.target_keywords[0].substring(0, 50);
+            return `https://placehold.co/1200x630/1a1a1a/f97316?text=${encodeURIComponent(keyword)}`;
+          })() : null)) ? (
             <div className="mb-8 rounded-xl overflow-hidden">
               <img
-                src={post.featured_image_url}
+                src={post.featured_image_url || (post.target_keywords?.[0] ? (() => {
+                  const keyword = post.target_keywords[0].substring(0, 50);
+                  return `https://placehold.co/1200x630/1a1a1a/f97316?text=${encodeURIComponent(keyword)}`;
+                })() : '')}
                 alt={post.title}
                 className="w-full h-auto"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
               />
             </div>
-          )}
+          ) : null}
 
           {/* Article Content */}
           <div
@@ -234,8 +309,9 @@ const BlogPostView: React.FC<BlogPostViewProps> = ({ onNavigate, slug }) => {
               [&_.lead]:text-xl [&_.lead]:text-white/90 [&_.lead]:font-medium [&_.lead]:mb-6 [&_.lead]:leading-relaxed
               [&_h2]:mt-12 [&_h2]:mb-6 [&_h3]:mt-8 [&_h3]:mb-4
               [&_p]:mb-6 [&_ul]:mb-6 [&_ol]:mb-6
-              [&_li]:mb-2"
-            dangerouslySetInnerHTML={{ __html: post.content }}
+              [&_li]:mb-2
+              [&_a.internal-link]:text-orange-400 [&_a.internal-link]:font-medium"
+            dangerouslySetInnerHTML={{ __html: contentWithLinks || post.content }}
           />
 
           {/* Sign Up CTA */}

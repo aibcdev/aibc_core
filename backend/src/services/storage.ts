@@ -73,6 +73,13 @@ class StorageService {
   }
 
   /**
+   * Get all scans (for strategy route)
+   */
+  getAllScans(): ScanResult[] {
+    return Array.from(this.scans.values());
+  }
+
+  /**
    * Delete old scans (cleanup)
    */
   deleteOldScans(olderThanDays: number = 30): number {

@@ -19,16 +19,18 @@ export function getApiBaseUrl(): string {
   }
   
   // Local development - AIBC backend
-  return 'http://localhost:3001';
+  // NOTE: Prefer 127.0.0.1 over localhost to avoid IPv6 (::1) resolution issues in browsers.
+  return 'http://127.0.0.1:3001';
 }
 
 const API_BASE_URL = getApiBaseUrl();
 
 /**
- * Get debug logging endpoint (uses AIBC backend)
+ * Get debug logging endpoint (uses debug server)
  */
 export function getDebugEndpoint(): string {
-  return `${getApiBaseUrl()}/api/debug/log`;
+  // Use the debug server endpoint directly (not the API backend)
+  return 'http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d';
 }
 
 /**
@@ -82,19 +84,45 @@ async function fetchWithRetry(
  * Check backend health
  */
 export async function checkBackendHealth(): Promise<{ healthy: boolean; message?: string }> {
+  const API_BASE_URL = getApiBaseUrl();
+  // #region agent log
+  fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apiClient.ts:checkBackendHealth',message:'HEALTH CHECK START',data:{API_BASE_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'health-check',hypothesisId:'H1'})}).catch(()=>{});
+  // #endregion
   try {
-    const response = await fetchWithRetry(`${API_BASE_URL}/health`, {
+    // Use a shorter timeout for health check (5 seconds)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const healthCheckStart = Date.now();
+    const response = await fetch(`${API_BASE_URL}/health`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-    }, 1); // Only 1 retry for health check
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    const elapsed = Date.now() - healthCheckStart;
+
+    // #region agent log
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apiClient.ts:checkBackendHealth',message:'HEALTH CHECK RESPONSE',data:{ok:response.ok,status:response.status,statusText:response.statusText,elapsed,API_BASE_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'health-check',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
 
     if (response.ok) {
       return { healthy: true };
     }
     return { healthy: false, message: `Backend returned ${response.status}` };
   } catch (error: any) {
+    // #region agent log
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apiClient.ts:checkBackendHealth',message:'HEALTH CHECK ERROR',data:{errorName:error?.name,errorMessage:error?.message,API_BASE_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'health-check',hypothesisId:'H2'})}).catch(()=>{});
+    // #endregion
+    if (error.name === 'AbortError') {
+      return { 
+        healthy: false, 
+        message: 'Backend health check timed out (5s). Server may be slow or unreachable.' 
+      };
+    }
     return { 
       healthy: false, 
       message: error.message || 'Cannot connect to backend server' 
@@ -223,6 +251,10 @@ export async function startScan(
   scanType: 'standard' | 'deep' = 'standard',
   connectedAccounts?: Record<string, string>
 ): Promise<ScanResponse> {
+  const API_BASE_URL = getApiBaseUrl();
+  // #region agent log
+  fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apiClient.ts:startScan',message:'START SCAN CALL',data:{username,platforms:platforms.length,scanType,API_BASE_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'start-scan',hypothesisId:'H1'})}).catch(()=>{});
+  // #endregion
   try {
     clearScanCache(username);
 
@@ -236,6 +268,7 @@ export async function startScan(
       }
     })();
     
+    const startScanStart = Date.now();
     const response = await fetchWithRetry(`${API_BASE_URL}/api/scan/start`, {
       method: 'POST',
       headers: {
@@ -248,6 +281,11 @@ export async function startScan(
         connectedAccounts: accountsToUse,
       }),
     });
+    const elapsed = Date.now() - startScanStart;
+
+    // #region agent log
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apiClient.ts:startScan',message:'START SCAN RESPONSE',data:{ok:response.ok,status:response.status,elapsed,API_BASE_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'start-scan',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
 
     if (!response.ok) {
       let errorMessage = 'Failed to start scan';
@@ -260,8 +298,15 @@ export async function startScan(
       throw new Error(errorMessage);
     }
 
-    return await response.json();
+    const result = await response.json();
+    // #region agent log
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apiClient.ts:startScan',message:'START SCAN SUCCESS',data:{success:result?.success,hasScanId:!!result?.scanId,elapsed},timestamp:Date.now(),sessionId:'debug-session',runId:'start-scan',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
+    return result;
   } catch (error: any) {
+    // #region agent log
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apiClient.ts:startScan',message:'START SCAN ERROR',data:{errorName:error?.name,errorMessage:error?.message,API_BASE_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'start-scan',hypothesisId:'H2'})}).catch(()=>{});
+    // #endregion
     console.error('Start scan error:', error);
     // Provide more specific error messages
     if (error.message?.includes('fetch') || error.message?.includes('network') || error.name === 'TypeError' || error.name === 'AbortError') {
@@ -362,18 +407,38 @@ export async function pollScanStatus(
         const statusResponse = await getScanStatus(scanId);
         consecutiveErrors = 0; // Reset error count on success
         
+        // #region agent log
+        const getDebugEndpoint = () => 'http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d';
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apiClient.ts:375',message:'POLL STATUS RESPONSE',data:{scanId,success:statusResponse.success,hasScan:!!statusResponse.scan,status:statusResponse.scan?.status,progress:statusResponse.scan?.progress,pollCount},timestamp:Date.now(),sessionId:'debug-session',runId:'poll-status',hypothesisId:'H10'})}).catch(()=>{});
+        // #endregion
+        
         if (statusResponse.success && statusResponse.scan) {
           onUpdate(statusResponse.scan);
 
           if (statusResponse.scan.status === 'complete') {
+            // #region agent log
+            fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apiClient.ts:381',message:'STATUS IS COMPLETE - FETCHING RESULTS',data:{scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'poll-status',hypothesisId:'H10'})}).catch(()=>{});
+            // #endregion
             const results = await getScanResults(scanId);
+            // #region agent log
+            fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apiClient.ts:383',message:'RESULTS FETCHED - RESOLVING',data:{scanId,success:results.success,hasData:!!results.data},timestamp:Date.now(),sessionId:'debug-session',runId:'poll-status',hypothesisId:'H10'})}).catch(()=>{});
+            // #endregion
             resolve(results);
           } else if (statusResponse.scan.status === 'error') {
+            // #region agent log
+            fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apiClient.ts:385',message:'STATUS IS ERROR',data:{scanId,error:statusResponse.scan.error},timestamp:Date.now(),sessionId:'debug-session',runId:'poll-status',hypothesisId:'H10'})}).catch(()=>{});
+            // #endregion
             reject(new Error(statusResponse.scan.error || 'Scan failed'));
           } else {
+            // #region agent log
+            fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apiClient.ts:387',message:'STATUS NOT COMPLETE - CONTINUING POLL',data:{scanId,status:statusResponse.scan.status,willPollAgain:true},timestamp:Date.now(),sessionId:'debug-session',runId:'poll-status',hypothesisId:'H10'})}).catch(()=>{});
+            // #endregion
             setTimeout(poll, interval);
           }
         } else {
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'apiClient.ts:389',message:'STATUS RESPONSE INVALID',data:{scanId,success:statusResponse.success,error:statusResponse.error},timestamp:Date.now(),sessionId:'debug-session',runId:'poll-status',hypothesisId:'H10'})}).catch(()=>{});
+          // #endregion
           reject(new Error(statusResponse.error || 'Failed to get scan status'));
         }
       } catch (error: any) {

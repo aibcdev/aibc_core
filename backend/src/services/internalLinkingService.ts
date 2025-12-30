@@ -1,247 +1,262 @@
 /**
- * Internal Linking Service - Automatic contextual linking between related posts
+ * Internal Linking Service - Automatic internal link suggestions and placement
  */
 
-import { listBlogPosts, getBlogPostById, updateBlogPost } from './seoContentService';
 import { BlogPost } from '../types/seo';
+import { listBlogPosts } from './seoContentService';
 
-/**
- * Extract keywords from content
- */
-function extractKeywords(content: string, minLength: number = 4): string[] {
-  const words = content
-    .toLowerCase()
-    .replace(/<[^>]*>/g, ' ') // Remove HTML tags
-    .replace(/[^\w\s]/g, ' ') // Remove punctuation
-    .split(/\s+/)
-    .filter(word => word.length >= minLength);
+export interface InternalLink {
+  text: string;
+  url: string;
+  anchorText: string;
+  relevance: number;
+}
 
-  // Count frequency
-  const wordCount: Record<string, number> = {};
-  words.forEach(word => {
-    wordCount[word] = (wordCount[word] || 0) + 1;
-  });
-
-  // Return top keywords (appearing at least 2 times)
-  return Object.entries(wordCount)
-    .filter(([_, count]) => count >= 2)
-    .sort(([_, a], [__, b]) => b - a)
-    .slice(0, 20)
-    .map(([word]) => word);
+export interface LinkSuggestion {
+  keyword: string;
+  targetPost: BlogPost;
+  context: string;
+  relevance: number;
 }
 
 /**
- * Find related posts based on keywords and categories
+ * Find internal link opportunities in content
  */
-async function findRelatedPosts(
+export async function findInternalLinkOpportunities(
   post: BlogPost,
-  limit: number = 10
-): Promise<Array<{ post: BlogPost; score: number }>> {
-  const allPosts = await listBlogPosts({ status: 'published', limit: 1000 });
-  
-  // Extract keywords from current post
-  const postKeywords = new Set([
-    ...extractKeywords(post.title + ' ' + post.content),
-    ...(post.target_keywords || []).map(k => k.toLowerCase()),
-  ]);
+  allPosts: BlogPost[]
+): Promise<LinkSuggestion[]> {
+  const suggestions: LinkSuggestion[] = [];
+  const content = post.content || '';
+  const contentLower = content.toLowerCase();
 
-  const related: Array<{ post: BlogPost; score: number }> = [];
+  // Extract potential keywords from the post (from title, keywords, category)
+  const postKeywords: string[] = [];
+  if (post.title) {
+    postKeywords.push(...extractKeywords(post.title));
+  }
+  if (post.target_keywords) {
+    postKeywords.push(...post.target_keywords);
+  }
+  if (post.category) {
+    postKeywords.push(post.category);
+  }
 
-  for (const otherPost of allPosts.posts) {
-    if (otherPost.id === post.id) continue; // Skip self
+  // Find other posts that could be linked
+  for (const targetPost of allPosts) {
+    if (targetPost.id === post.id || targetPost.status !== 'published') {
+      continue;
+    }
 
-    let score = 0;
+    // Check if target post's keywords appear in current post's content
+    let relevance = 0;
+    let matchedKeyword = '';
+
+    if (targetPost.title) {
+      const titleKeywords = extractKeywords(targetPost.title);
+      for (const keyword of titleKeywords) {
+        if (keyword.length > 3 && contentLower.includes(keyword.toLowerCase())) {
+          relevance += 5;
+          matchedKeyword = keyword;
+        }
+      }
+    }
+
+    if (targetPost.target_keywords) {
+      for (const keyword of targetPost.target_keywords) {
+        if (keyword.length > 3 && contentLower.includes(keyword.toLowerCase())) {
+          relevance += 3;
+          if (!matchedKeyword) matchedKeyword = keyword;
+        }
+      }
+    }
 
     // Category match
-    if (post.category && otherPost.category === post.category) {
-      score += 10;
+    if (targetPost.category && post.category === targetPost.category) {
+      relevance += 2;
     }
 
-    // Tag matches
-    if (post.tags && otherPost.tags) {
-      const commonTags = post.tags.filter(tag => otherPost.tags!.includes(tag));
-      score += commonTags.length * 5;
+    // Tag overlap
+    if (targetPost.tags && post.tags) {
+      const commonTags = targetPost.tags.filter(tag => post.tags!.includes(tag));
+      relevance += commonTags.length;
     }
 
-    // Keyword matches in title
-    const otherTitleKeywords = extractKeywords(otherPost.title);
-    const titleMatches = otherTitleKeywords.filter(k => postKeywords.has(k));
-    score += titleMatches.length * 3;
+    if (relevance > 0) {
+      // Find context where keyword appears
+      const keywordLower = matchedKeyword.toLowerCase();
+      const keywordIndex = contentLower.indexOf(keywordLower);
+      let context = '';
+      
+      if (keywordIndex !== -1) {
+        const start = Math.max(0, keywordIndex - 50);
+        const end = Math.min(content.length, keywordIndex + matchedKeyword.length + 50);
+        context = content.substring(start, end);
+      } else {
+        // Use excerpt or description as context
+        context = post.excerpt || post.meta_description || '';
+      }
 
-    // Keyword matches in content
-    const otherContentKeywords = extractKeywords(otherPost.content);
-    const contentMatches = otherContentKeywords.filter(k => postKeywords.has(k));
-    score += contentMatches.length * 1;
-
-    // Keyword match in target keywords
-    if (post.target_keywords && otherPost.target_keywords) {
-      const commonTargetKeywords = post.target_keywords.filter(k =>
-        otherPost.target_keywords!.some(ok => ok.toLowerCase() === k.toLowerCase())
-      );
-      score += commonTargetKeywords.length * 8;
-    }
-
-    if (score > 0) {
-      related.push({ post: otherPost, score });
+      suggestions.push({
+        keyword: matchedKeyword,
+        targetPost,
+        context,
+        relevance,
+      });
     }
   }
 
-  // Sort by score and return top results
-  return related.sort((a, b) => b.score - a.score).slice(0, limit);
+  // Sort by relevance and return top suggestions
+  return suggestions
+    .sort((a, b) => b.relevance - a.relevance)
+    .slice(0, 10);
 }
 
 /**
- * Find anchor text opportunities in content
+ * Extract keywords from text (simple implementation)
  */
-function findAnchorTextOpportunities(
-  content: string,
-  targetPost: BlogPost
-): Array<{ text: string; position: number; score: number }> {
-  const opportunities: Array<{ text: string; position: number; score: number }> = [];
-  const targetKeywords = new Set([
-    ...extractKeywords(targetPost.title),
-    ...(targetPost.target_keywords || []).map(k => k.toLowerCase()),
-  ]);
+function extractKeywords(text: string): string[] {
+  // Remove common stop words and extract meaningful phrases
+  const stopWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'can']);
+  
+  const words = text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(word => word.length > 3 && !stopWords.has(word));
 
-  // Extract sentences and phrases from content
-  const sentences = content
-    .replace(/<[^>]*>/g, ' ')
-    .split(/[.!?]+/)
-    .map(s => s.trim())
-    .filter(s => s.length > 10);
+  // Extract 2-3 word phrases
+  const phrases: string[] = [];
+  for (let i = 0; i < words.length - 1; i++) {
+    const phrase = `${words[i]} ${words[i + 1]}`;
+    if (phrase.length > 5) {
+      phrases.push(phrase);
+    }
+  }
 
-  sentences.forEach((sentence, index) => {
-    const words = sentence.toLowerCase().split(/\s+/);
-    
-    // Check for keyword matches
-    words.forEach((word, wordIndex) => {
-      if (targetKeywords.has(word)) {
-        // Find phrase containing this word (2-5 words)
-        const start = Math.max(0, wordIndex - 2);
-        const end = Math.min(words.length, wordIndex + 3);
-        const phrase = words.slice(start, end).join(' ');
+  return [...words, ...phrases].slice(0, 20);
+}
 
-        opportunities.push({
-          text: sentence.substring(
-            sentence.toLowerCase().indexOf(phrase),
-            sentence.toLowerCase().indexOf(phrase) + phrase.length
-          ),
-          position: index,
-          score: 5,
-        });
-      }
-    });
+/**
+ * Generate internal links for a post's content
+ */
+export async function generateInternalLinks(post: BlogPost): Promise<InternalLink[]> {
+  // Get all published posts
+  const allPostsResult = await listBlogPosts({ status: 'published', limit: 1000 });
+  const allPosts = allPostsResult.posts;
+
+  // Find link opportunities
+  const suggestions = await findInternalLinkOpportunities(post, allPosts);
+
+  // Convert to InternalLink format
+  const links: InternalLink[] = suggestions.map(suggestion => ({
+    text: suggestion.keyword,
+    url: `/blog/${suggestion.targetPost.slug}`,
+    anchorText: suggestion.targetPost.title,
+    relevance: suggestion.relevance,
+  }));
+
+  return links;
+}
+
+/**
+ * Inject internal links into content
+ */
+export function injectInternalLinks(content: string, links: InternalLink[]): string {
+  let modifiedContent = content;
+
+  // Sort links by relevance and text length (longer first to avoid partial matches)
+  const sortedLinks = [...links].sort((a, b) => {
+    if (b.relevance !== a.relevance) {
+      return b.relevance - a.relevance;
+    }
+    return b.text.length - a.text.length;
   });
 
-  return opportunities.sort((a, b) => b.score - a.score);
-}
+  // Inject links (limit to 3-5 links per post to avoid over-optimization)
+  const linksToInject = sortedLinks.slice(0, 5);
+  const usedPositions = new Set<number>();
 
-/**
- * Insert internal links into content
- */
-export async function addInternalLinks(
-  post: BlogPost,
-  maxLinks: number = 5
-): Promise<{ content: string; links: Array<{ url: string; text: string; postId: string }> }> {
-  const related = await findRelatedPosts(post, maxLinks * 2);
-  
-  if (related.length === 0) {
-    return { content: post.content, links: [] };
-  }
-
-  const links: Array<{ url: string; text: string; postId: string }> = [];
-  let content = post.content;
-
-  // Process each related post
-  for (const { post: relatedPost } of related.slice(0, maxLinks)) {
-    const opportunities = findAnchorTextOpportunities(content, relatedPost);
+  for (const link of linksToInject) {
+    const textLower = link.text.toLowerCase();
+    const contentLower = modifiedContent.toLowerCase();
     
-    if (opportunities.length > 0) {
-      const opportunity = opportunities[0]; // Use best opportunity
-      const linkUrl = `/blog/${relatedPost.slug}`;
-      const linkText = opportunity.text;
-      const linkHtml = `<a href="${linkUrl}" class="internal-link text-orange-500 hover:text-orange-400 underline">${linkText}</a>`;
+    // Find all occurrences
+    let searchIndex = 0;
+    while (true) {
+      const index = contentLower.indexOf(textLower, searchIndex);
+      if (index === -1) break;
 
-      // Insert link (simple replacement - can be enhanced)
-      const regex = new RegExp(escapeRegex(linkText), 'i');
-      if (regex.test(content)) {
-        content = content.replace(regex, linkHtml);
-        links.push({
-          url: linkUrl,
-          text: linkText,
-          postId: relatedPost.id,
-        });
+      // Check if this position is already used
+      if (!usedPositions.has(index)) {
+        // Check if it's not already inside a link tag
+        const before = modifiedContent.substring(Math.max(0, index - 10), index);
+        const after = modifiedContent.substring(index + link.text.length, index + link.text.length + 10);
+        
+        if (!before.includes('<a ') && !after.includes('</a>')) {
+          // Inject link
+          const beforeText = modifiedContent.substring(0, index);
+          const linkText = modifiedContent.substring(index, index + link.text.length);
+          const afterText = modifiedContent.substring(index + link.text.length);
+          
+          modifiedContent = `${beforeText}<a href="${link.url}" class="internal-link">${linkText}</a>${afterText}`;
+          usedPositions.add(index);
+          break; // Only link first occurrence of each keyword
+        }
       }
+      
+      searchIndex = index + 1;
     }
   }
 
-  return { content, links };
+  return modifiedContent;
 }
 
 /**
- * Escape regex special characters
+ * Get related posts for internal linking
  */
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+export async function getRelatedPostsForLinking(
+  post: BlogPost,
+  limit: number = 5
+): Promise<BlogPost[]> {
+  const allPostsResult = await listBlogPosts({ status: 'published', limit: 1000 });
+  const allPosts = allPostsResult.posts;
+
+  const suggestions = await findInternalLinkOpportunities(post, allPosts);
+  
+  return suggestions
+    .slice(0, limit)
+    .map(s => s.targetPost);
 }
 
 /**
- * Build topic clusters (hub-and-spoke model)
- */
-export async function buildTopicClusters(topic: string): Promise<{
-  pillar: BlogPost | null;
-  supporting: BlogPost[];
-}> {
-  const allPosts = await listBlogPosts({ status: 'published', limit: 1000 });
-  const topicLower = topic.toLowerCase();
-
-  // Find pillar post (longest, most comprehensive post about the topic)
-  let pillar: BlogPost | null = null;
-  let maxWordCount = 0;
-
-  for (const post of allPosts.posts) {
-    const matchesTopic =
-      post.title.toLowerCase().includes(topicLower) ||
-      post.target_keywords?.some(k => k.toLowerCase().includes(topicLower)) ||
-      post.content.toLowerCase().includes(topicLower);
-
-    if (matchesTopic && (post.word_count || 0) > maxWordCount) {
-      pillar = post;
-      maxWordCount = post.word_count || 0;
-    }
-  }
-
-  // Find supporting posts (related but more specific)
-  const supporting: BlogPost[] = [];
-  if (pillar) {
-    const related = await findRelatedPosts(pillar, 10);
-    supporting.push(...related.map(r => r.post).filter(p => p.id !== pillar!.id));
-  }
-
-  return { pillar, supporting };
-}
-
-/**
- * Update post with internal links
+ * Update a post with internal links
  */
 export async function updatePostWithInternalLinks(postId: string): Promise<BlogPost | null> {
+  const { getBlogPostById, updateBlogPost } = await import('./seoContentService');
+  
   const post = await getBlogPostById(postId);
-  if (!post) return null;
+  if (!post || !post.content) {
+    return null;
+  }
 
-  const { content: updatedContent, links } = await addInternalLinks(post);
-
-  // Store links metadata
-  const internalLinks: Record<string, string> = {};
-  links.forEach(link => {
-    internalLinks[link.postId] = link.url;
-  });
-
-  // Update post with new content and links
-  const updated = await updateBlogPost(postId, {
+  // Generate internal links
+  const links = await generateInternalLinks(post);
+  
+  // Inject links into content
+  const updatedContent = injectInternalLinks(post.content, links);
+  
+  // Update the post
+  const updatedPost = await updateBlogPost(postId, {
     content: updatedContent,
-    internal_links: internalLinks,
   });
-
-  return updated;
+  
+  return updatedPost;
 }
 
+/**
+ * Add internal links to content (alias for injectInternalLinks for backward compatibility)
+ */
+export function addInternalLinks(content: string, links: InternalLink[]): string {
+  return injectInternalLinks(content, links);
+}

@@ -19,3 +19,7 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
 
 -- Add comment
 COMMENT ON TABLE subscriptions IS 'User subscription data synced from Stripe';
+
+
+
+

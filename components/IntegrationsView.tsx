@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link2, Check, HelpCircle, Plus, ChevronRight, BarChart2, Linkedin, Instagram, Play, Mic2, Globe, Mail, ShoppingBag, Sparkles, Heart, Zap, ExternalLink, X, Save, Loader2, AlertCircle, CheckCircle, Search } from 'lucide-react';
+import { getDebugEndpoint } from '../services/apiClient';
 
 interface Integration {
   id: string;
@@ -28,7 +29,7 @@ interface VerificationResult {
 
 const IntegrationsView: React.FC = () => {
   // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'IntegrationsView.tsx:27',message:'IntegrationsView RENDER',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
+  fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'IntegrationsView.tsx:27',message:'IntegrationsView RENDER',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H6'})}).catch(()=>{});
   // #endregion
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
@@ -102,7 +103,8 @@ const IntegrationsView: React.FC = () => {
     // Keeping for potential future use
     try {
       const cleanHandle = handle.replace('@', '').trim();
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      // NOTE: Prefer 127.0.0.1 over localhost to avoid IPv6 (::1) resolution issues in browsers.
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
       const response = await fetch(`${API_BASE_URL}/api/verify-handle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -179,7 +181,8 @@ const IntegrationsView: React.FC = () => {
 
     try {
       // Call backend to verify the handle
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      // NOTE: Prefer 127.0.0.1 over localhost to avoid IPv6 (::1) resolution issues in browsers.
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
       const response = await fetch(`${API_BASE_URL}/api/verify-handle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -338,3 +338,7 @@
 - "People in or regularly in your targeted locations"
 - English language initially
 - No exclusions initially (optimize after 2 weeks)
+
+
+
+

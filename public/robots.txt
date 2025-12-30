@@ -3,12 +3,34 @@ Allow: /
 
 # Sitemaps
 Sitemap: https://aibcmedia.com/api/sitemap.xml
+Sitemap: https://aibcmedia.com/api/blog/sitemap.xml
 
 # Disallow admin and API endpoints
 Disallow: /api/
 Disallow: /admin/
 Disallow: /dashboard/
+Disallow: /login
+Disallow: /signin
+Disallow: /reset-password
+Disallow: /scan
+Disallow: /audit
+Disallow: /onboarding
 
-# Allow blog
+# Allow public pages
+Allow: /
 Allow: /blog
+Allow: /blog/*
+Allow: /pricing
+Allow: /privacy-policy
+Allow: /terms-of-service
+
+# Crawl-delay for aggressive bots
+User-agent: AhrefsBot
+Crawl-delay: 10
+
+User-agent: SemrushBot
+Crawl-delay: 10
+
+User-agent: DotBot
+Crawl-delay: 10
 

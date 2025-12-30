@@ -6,10 +6,50 @@ import {
 import { ViewState, NavProps } from '../types';
 import Navigation from './shared/Navigation';
 import Footer from './shared/Footer';
+import SEOMeta from './shared/SEOMeta';
+// Removed: generateOrganizationStructuredData import - structured data is defined inline below
 
 const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  
+  const baseURL = typeof window !== 'undefined' ? window.location.origin : 'https://aibcmedia.com';
+  const structuredData = [
+    {
+      type: 'Organization',
+      data: {
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: 'AIBC',
+        url: baseURL,
+        logo: `${baseURL}/favicon.svg`,
+        description: 'AI-powered content platform for brands. Generate video marketing ideas, content strategies, and brand storytelling.',
+        sameAs: [
+          'https://twitter.com/aibcmedia',
+          'https://linkedin.com/company/aibcmedia',
+        ],
+        contactPoint: {
+          '@type': 'ContactPoint',
+          contactType: 'Customer Support',
+          email: 'support@aibcmedia.com',
+        },
+      },
+    },
+    {
+      type: 'WebSite',
+      data: {
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: 'AIBC',
+        url: baseURL,
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: `${baseURL}/blog?search={search_term_string}`,
+          'query-input': 'required name=search_term_string',
+        },
+      },
+    },
+  ];
   
   // Check if user is authenticated before allowing scan
   const handleStartScan = useCallback(() => {
@@ -68,6 +108,14 @@ const LandingView: React.FC<NavProps> = ({ onNavigate }) => {
 
   return (
     <div className="min-h-screen bg-[#050505] text-white">
+      <SEOMeta
+        title="AIBC | The AI Content Platform - Generate Video Marketing Ideas & Content Strategies"
+        description="AI-powered content platform for brands. Generate video marketing ideas, content strategies, and brand storytelling with AIBC. Transform your content creation workflow."
+        image={`${baseURL}/favicon.svg`}
+        url={baseURL}
+        type="website"
+        structuredData={structuredData}
+      />
       <Navigation onNavigate={onNavigate} />
 
       <main className="pt-16">

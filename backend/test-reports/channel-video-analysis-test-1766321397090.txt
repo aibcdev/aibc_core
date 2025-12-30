@@ -1,0 +1,119 @@
+
+================================================================================
+CHANNEL-BASED VIDEO ANALYSIS TEST REPORT
+================================================================================
+Test Date: 2025-12-21T12:49:57.090Z
+Total Subjects: 3
+Successful Scans: 3
+Failed Scans: 0
+
+SUMMARY STATISTICS
+--------------------------------------------------------------------------------
+Average Scan Duration: 126.59s
+Total Videos Fetched from Channels: 0
+Total Videos Analyzed: 6
+OUTPUT Only Verification: 3/3 passed
+Channels Detected: 3/3
+Video Analysis Executed: 3/3
+Competitors Enriched: 3/3
+
+DETAILED RESULTS
+================================================================================
+
+1. Airbnb (large company)
+--------------------------------------------------------------------------------
+Status: ✅ SUCCESS
+Duration: 128.33s
+Platforms: youtube, twitter, instagram, linkedin
+
+OUTPUT Only Verification:
+  Verified: ✅ YES
+  Posts Analyzed: 5
+  Videos Found in Posts: 0
+
+Channel Detection & Video Fetching:
+  Channels Detected: youtube, tiktok, instagram
+  Videos Fetched from Channels: 0
+  Expected Channels: youtube, instagram
+  Channels Match Expected: ✅ YES
+
+Video Analysis:
+  Executed: ✅ YES
+  Videos Analyzed: 3
+  Insights Generated: ✅ YES
+  Top Performers: 1
+  Success Factors: 10
+  Style Patterns: 9
+
+Competitor Intelligence:
+  Competitors Found: 4
+  Video Insights Added: ✅ YES
+
+
+2. Notion (medium company)
+--------------------------------------------------------------------------------
+Status: ✅ SUCCESS
+Duration: 135.44s
+Platforms: youtube, twitter, instagram, linkedin
+
+OUTPUT Only Verification:
+  Verified: ✅ YES
+  Posts Analyzed: 8
+  Videos Found in Posts: 0
+
+Channel Detection & Video Fetching:
+  Channels Detected: youtube, tiktok, instagram
+  Videos Fetched from Channels: 0
+  Expected Channels: youtube
+  Channels Match Expected: ✅ YES
+
+Video Analysis:
+  Executed: ✅ YES
+  Videos Analyzed: 3
+  Insights Generated: ✅ YES
+  Top Performers: 1
+  Success Factors: 10
+  Style Patterns: 9
+
+Competitor Intelligence:
+  Competitors Found: 6
+  Video Insights Added: ✅ YES
+
+
+3. Linear (small company)
+--------------------------------------------------------------------------------
+Status: ✅ SUCCESS
+Duration: 116.01s
+Platforms: youtube, twitter, instagram, linkedin
+
+OUTPUT Only Verification:
+  Verified: ✅ YES
+  Posts Analyzed: 6
+  Videos Found in Posts: 0
+
+Channel Detection & Video Fetching:
+  Channels Detected: youtube, instagram
+  Videos Fetched from Channels: 0
+  Expected Channels: youtube
+  Channels Match Expected: ✅ YES
+
+Video Analysis:
+  Executed: ✅ YES
+  Videos Analyzed: 0
+  Insights Generated: ❌ NO
+  Top Performers: 0
+  Success Factors: 0
+  Style Patterns: 0
+
+Competitor Intelligence:
+  Competitors Found: 4
+  Video Insights Added: ✅ YES
+
+
+================================================================================
+RECOMMENDATIONS
+================================================================================
+⚠️  No videos fetched from channels
+   Recommendation: Check channel video fetching logic
+
+================================================================================

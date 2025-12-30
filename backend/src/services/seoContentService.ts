@@ -44,7 +44,7 @@ function calculateWordCount(content: string): number {
  * Convert database row to BlogPost
  */
 function dbRowToBlogPost(row: any): BlogPost {
-  return {
+  const post = {
     id: row.id,
     slug: row.slug,
     title: row.title,
@@ -67,6 +67,12 @@ function dbRowToBlogPost(row: any): BlogPost {
     internal_links: row.internal_links || {},
     structured_data: row.structured_data || {},
   };
+  
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'seoContentService.ts:dbRowToBlogPost',message:'DB ROW TO BLOG POST',data:{postId:post.id,slug:post.slug,hasFeaturedImageUrl:!!post.featured_image_url,featuredImageUrl:post.featured_image_url,hasTargetKeywords:!!post.target_keywords?.length,targetKeywords:post.target_keywords},timestamp:Date.now(),sessionId:'debug-session',runId:'db-conversion',hypothesisId:'H3'})}).catch(()=>{});
+  // #endregion
+  
+  return post;
 }
 
 /**

@@ -11,43 +11,41 @@ export const CONTENT_TEMPLATES: Record<ContentTemplate['type'], ContentTemplate>
     name: 'How-To Guide',
     example_keywords: ['how to create video content', 'how to start content marketing'],
     structure: `
-# {TITLE} - Complete Guide
+# {TITLE}
 
-## Introduction
-{Introduction paragraph that hooks the reader and mentions the target keyword. Explain what they'll learn and why it matters.}
+{Opening hook - 2-3 paragraphs. Start with why this matters or a relatable scenario. Clearly state what they'll learn.}
 
 ## What You'll Need
-{List of prerequisites, tools, or resources needed}
+{2-3 paragraphs listing prerequisites, tools, or resources with brief explanations of why each matters}
 
 ## Step-by-Step Instructions
 
 ### Step 1: {Action}
-{Detailed instructions for the first step}
+{2-3 paragraphs with detailed instructions. Include why this step matters and what to watch out for.}
 
 ### Step 2: {Action}
-{Detailed instructions for the second step}
+{2-3 paragraphs with detailed instructions. Build naturally on step 1.}
 
 ### Step 3: {Action}
-{Detailed instructions for the third step}
+{2-3 paragraphs with detailed instructions. Continue the natural flow.}
 
-{Continue with additional steps as needed}
+{Continue with additional steps - each should be 2-3 paragraphs with natural transitions}
 
 ## Tips for Success
-{Key tips and best practices}
+{3-4 paragraphs with key tips and best practices. Explain why each tip matters.}
 
 ## Common Mistakes to Avoid
-{What not to do and why}
+{2-3 paragraphs on what not to do and why. Use examples to illustrate.}
 
-## Conclusion
-{Summary of key points and call to action}
+{Natural conclusion - 2-3 paragraphs summarizing key points without using "In conclusion"}
 
 ## Frequently Asked Questions
 
-**Q: {Common question}**
-A: {Answer}
+<p><strong>Q: {Common question}?</strong></p>
+<p>A: {Natural, conversational answer - 2-3 sentences}</p>
 
-**Q: {Another question}**
-A: {Answer}
+<p><strong>Q: {Another question}?</strong></p>
+<p>A: {Natural, conversational answer - 2-3 sentences}</p>
 `,
   },
   'list': {
@@ -58,30 +56,28 @@ A: {Answer}
     structure: `
 # {TITLE}
 
-## Introduction
-{Introduction that explains the value of the list and why these items were selected. Mention the target keyword naturally.}
+{Opening hook - 2-3 paragraphs. Explain why this list matters and how it was curated. Mention the target keyword naturally.}
 
 ## {Title Item 1}
-{Description and why it's on the list}
+{3-4 paragraphs: Description, why it's on the list, who it's best for, and what makes it stand out. Use examples.}
 
 ## {Title Item 2}
-{Description and why it's on the list}
+{3-4 paragraphs: Description, why it's on the list, who it's best for, and what makes it stand out. Flow naturally from item 1.}
 
 ## {Title Item 3}
-{Description and why it's on the list}
+{3-4 paragraphs: Description, why it's on the list, who it's best for, and what makes it stand out. Continue the narrative.}
 
-{Continue with additional items}
+{Continue with additional items - each should be 3-4 paragraphs with depth}
 
 ## How to Choose the Right Option
-{Guide for readers to make a decision based on their needs}
+{3-4 paragraphs guiding readers to make a decision based on their needs. Include decision framework.}
 
-## Conclusion
-{Summary and recommendation}
+{Natural conclusion - 2-3 paragraphs summarizing key points and recommendations}
 
 ## Frequently Asked Questions
 
-**Q: {Common question}**
-A: {Answer}
+<p><strong>Q: {Common question}?</strong></p>
+<p>A: {Natural, conversational answer - 2-3 sentences}</p>
 `,
   },
   'guide': {
@@ -90,56 +86,42 @@ A: {Answer}
     name: 'Ultimate Guide',
     example_keywords: ['complete guide to video marketing', 'ultimate content marketing strategy'],
     structure: `
-# {TITLE} - Ultimate Guide
+# {TITLE}
 
-## Table of Contents
-1. {Section 1}
-2. {Section 2}
-3. {Section 3}
-{Add more sections}
+{Opening hook - 2-3 paragraphs that immediately engage. Start with a question, surprising fact, or relatable scenario. Clearly state what they'll learn.}
 
-## Introduction
-{Comprehensive introduction that covers what the guide will teach, who it's for, and why it matters. Naturally include the target keyword.}
+## {Main Topic 1}
+{3-5 paragraphs covering the first major topic. Flow naturally, use examples, tell mini-stories. End with a takeaway.}
 
-## Chapter 1: {Topic}
-{In-depth coverage of the first major topic}
+## {Main Topic 2}
+{3-5 paragraphs covering the second major topic. Build on previous section naturally.}
 
 ### {Sub-topic}
-{Detailed explanation}
+{2-3 paragraphs diving deeper into a specific aspect}
 
-### {Sub-topic}
-{Detailed explanation}
+## {Main Topic 3}
+{3-5 paragraphs covering the third major topic. Keep the narrative flowing.}
 
-## Chapter 2: {Topic}
-{In-depth coverage of the second major topic}
+{Continue with additional main topics as needed - each should be 3-5 paragraphs with natural flow}
 
-## Chapter 3: {Topic}
-{In-depth coverage of the third major topic}
+## Putting It All Together
+{2-3 paragraphs that synthesize the key concepts and show how they connect}
 
-{Continue with additional chapters as needed}
+## Common Mistakes to Avoid
+{2-3 paragraphs on what not to do, with explanations of why}
 
-## Case Studies and Examples
-{Real-world examples that illustrate the concepts}
+## Next Steps
+{2-3 paragraphs on actionable next steps readers can take immediately}
 
-## Best Practices
-{Key recommendations based on industry standards and experience}
-
-## Common Pitfalls
-{What to avoid and why}
-
-## Tools and Resources
-{Recommended tools, software, or additional resources}
-
-## Conclusion
-{Summary of key takeaways and next steps}
+{Natural conclusion - 2-3 paragraphs summarizing key takeaways without using "In conclusion"}
 
 ## Frequently Asked Questions
 
-**Q: {Question}**
-A: {Answer}
+<p><strong>Q: {Common question}?</strong></p>
+<p>A: {Natural, conversational answer - 2-3 sentences}</p>
 
-**Q: {Question}**
-A: {Answer}
+<p><strong>Q: {Another question}?</strong></p>
+<p>A: {Natural, conversational answer - 2-3 sentences}</p>
 `,
   },
   'comparison': {
@@ -150,28 +132,28 @@ A: {Answer}
     structure: `
 # {TITLE}: Which is Better?
 
-## Introduction
-{Introduction that explains what's being compared and why it matters to the reader. Include the target keyword.}
+{Opening hook - 2-3 paragraphs. Explain what's being compared and why it matters. Include the target keyword. Set up the comparison naturally.}
 
 ## {Option 1} Overview
-{Description of the first option}
+{3-4 paragraphs describing the first option. Explain what it is, who it's for, and its core characteristics.}
 
 ### Pros
-{Advantages}
+{2-3 paragraphs on advantages. Explain why each matters with examples.}
 
 ### Cons
-{Disadvantages}
+{2-3 paragraphs on disadvantages. Be honest and balanced.}
 
 ## {Option 2} Overview
-{Description of the second option}
+{3-4 paragraphs describing the second option. Flow naturally from option 1.}
 
 ### Pros
-{Advantages}
+{2-3 paragraphs on advantages. Compare contextually to option 1.}
 
 ### Cons
-{Disadvantages}
+{2-3 paragraphs on disadvantages. Be honest and balanced.}
 
 ## Side-by-Side Comparison
+{2-3 paragraphs introducing the comparison, then use a table format}
 
 | Feature | {Option 1} | {Option 2} |
 |---------|-----------|-----------|
@@ -180,21 +162,20 @@ A: {Answer}
 {Continue with more rows}
 
 ## When to Choose {Option 1}
-{Situations where the first option is better}
+{3-4 paragraphs on situations where the first option is better. Use specific scenarios.}
 
 ## When to Choose {Option 2}
-{Situations where the second option is better}
+{3-4 paragraphs on situations where the second option is better. Use specific scenarios.}
 
 ## Real-World Examples
-{Examples of each option in action}
+{3-4 paragraphs with examples of each option in action. Tell mini-stories.}
 
-## Conclusion
-{Recommendation based on different use cases}
+{Natural conclusion - 2-3 paragraphs with recommendations based on different use cases}
 
 ## Frequently Asked Questions
 
-**Q: {Question}**
-A: {Answer}
+<p><strong>Q: {Question}?</strong></p>
+<p>A: {Natural, conversational answer - 2-3 sentences}</p>
 `,
   },
   'case-study': {
@@ -205,49 +186,47 @@ A: {Answer}
     structure: `
 # {TITLE}: A Case Study
 
-## Introduction
-{Introduction that sets up the case study and explains why it's relevant. Include the target keyword.}
+{Opening hook - 2-3 paragraphs. Set up the case study with a compelling story. Explain why it's relevant. Include the target keyword.}
 
 ## The Challenge
-{What problem or goal was being addressed}
+{3-4 paragraphs describing the problem or goal. Make it relatable and specific.}
 
 ## Background
-{Context about the brand, situation, or company}
+{3-4 paragraphs providing context about the brand, situation, or company. Set the stage for the story.}
 
 ## Strategy Overview
-{The approach that was taken}
+{3-4 paragraphs explaining the approach that was taken. Why this strategy? What was the thinking?}
 
 ## Implementation
-{How the strategy was executed}
+{2-3 paragraphs introducing how the strategy was executed}
 
 ### Phase 1: {Stage}
-{Details}
+{2-3 paragraphs with details. What happened? What challenges arose?}
 
 ### Phase 2: {Stage}
-{Details}
+{2-3 paragraphs with details. Build on phase 1 naturally.}
 
 ### Phase 3: {Stage}
-{Details}
+{2-3 paragraphs with details. Continue the narrative.}
 
 ## Results
-{Measurable outcomes and achievements}
+{3-4 paragraphs on measurable outcomes and achievements. Tell the story of success.}
 
 ### Key Metrics
-{Specific numbers and improvements}
+{2-3 paragraphs on specific numbers and improvements. Explain what they mean.}
 
 ## Lessons Learned
-{What worked well and what could be improved}
+{3-4 paragraphs on what worked well and what could be improved. Be honest and insightful.}
 
 ## Takeaways for Your Brand
-{How readers can apply these insights}
+{3-4 paragraphs on how readers can apply these insights. Make it actionable.}
 
-## Conclusion
-{Summary and final thoughts}
+{Natural conclusion - 2-3 paragraphs summarizing key points and final thoughts}
 
 ## Frequently Asked Questions
 
-**Q: {Question}**
-A: {Answer}
+<p><strong>Q: {Question}?</strong></p>
+<p>A: {Natural, conversational answer - 2-3 sentences}</p>
 `,
   },
   'tools': {
@@ -258,41 +237,38 @@ A: {Answer}
     structure: `
 # {TITLE}: Complete Resource Guide
 
-## Introduction
-{Introduction explaining the purpose of the tools/resources list and who it's for. Include the target keyword.}
+{Opening hook - 2-3 paragraphs. Explain the purpose of the tools/resources list and who it's for. Include the target keyword.}
 
 ## {Category 1} Tools
 
 ### {Tool 1}
-- **What it is:** {Description}
-- **Best for:** {Use case}
-- **Price:** {Pricing}
-- **Why we recommend it:** {Reasoning}
+{3-4 paragraphs covering: What it is, who it's best for, pricing context, and why it's recommended. Use examples and real use cases.}
 
 ### {Tool 2}
-{Same structure}
+{3-4 paragraphs with same structure. Flow naturally from tool 1.}
 
 ## {Category 2} Tools
 
 ### {Tool 1}
-{Structure as above}
+{3-4 paragraphs with same structure. Continue the narrative.}
+
+{Continue with additional categories and tools - each tool should be 3-4 paragraphs}
 
 ## How to Choose the Right Tools
-{Guide for selecting tools based on needs and budget}
+{3-4 paragraphs guiding selection based on needs and budget. Include decision framework.}
 
 ## Free vs Paid Options
-{Comparison and recommendations}
+{3-4 paragraphs comparing and making recommendations. When is free enough? When is paid worth it?}
 
 ## Getting Started
-{Step-by-step guide to start using these tools}
+{3-4 paragraphs with step-by-step guide to start using these tools. Make it actionable.}
 
-## Conclusion
-{Summary and recommendations}
+{Natural conclusion - 2-3 paragraphs summarizing key points and recommendations}
 
 ## Frequently Asked Questions
 
-**Q: {Question}**
-A: {Answer}
+<p><strong>Q: {Question}?</strong></p>
+<p>A: {Natural, conversational answer - 2-3 sentences}</p>
 `,
   },
 };

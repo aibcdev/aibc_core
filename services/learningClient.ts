@@ -7,7 +7,7 @@ const getApiUrl = () => {
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     if (hostname.includes('aibcmedia.com') || hostname.includes('netlify')) {
-      return 'https://aibc-backend-409115133182.us-central1.run.app';
+      return 'https://api.aibcmedia.com';
     }
   }
   return import.meta.env.VITE_API_URL || 'http://localhost:3001';

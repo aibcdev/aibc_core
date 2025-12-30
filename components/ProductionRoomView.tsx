@@ -33,10 +33,36 @@ const ProductionRoomView: React.FC = () => {
   const [isRequesting, setIsRequesting] = useState(false);
   
   // Credits
-  const [creditBalance, setCreditBalance] = useState({ credits: 50, used: 0 });
+  const [creditBalance, setCreditBalance] = useState({ credits: 50 });
   
   // Load existing requests and credits on mount
   useEffect(() => {
+    // Check if there's a pending request from Content Hub
+    const pendingRequest = localStorage.getItem('productionRoomRequest');
+    if (pendingRequest) {
+      try {
+        const request = JSON.parse(pendingRequest);
+        console.log('📥 Production Room: Found pending request from Content Hub', request);
+        
+        // Pre-fill the form with the request data
+        if (request.type === 'audio' || request.type === 'video') {
+          setOutputType(request.type);
+        }
+        
+        // Store the asset info for reference (can be used in description or title)
+        if (request.asset) {
+          // You could pre-fill description or title here if needed
+          console.log('📝 Asset info available:', request.asset);
+        }
+        
+        // Clear the request after reading it
+        localStorage.removeItem('productionRoomRequest');
+      } catch (e) {
+        console.error('Error parsing production room request:', e);
+        localStorage.removeItem('productionRoomRequest');
+      }
+    }
+    
     // Load production queue from localStorage
     const savedQueue = localStorage.getItem('productionQueue');
     if (savedQueue) {
@@ -90,7 +116,7 @@ const ProductionRoomView: React.FC = () => {
     
     // Load credit balance
     const balance = getCreditBalance();
-    setCreditBalance({ credits: balance.credits, used: balance.used || 0 });
+    setCreditBalance({ credits: balance.credits });
   }, []);
   
   // Save queue to localStorage whenever it changes
@@ -119,11 +145,13 @@ const ProductionRoomView: React.FC = () => {
     return 'Pro';
   };
   
-  // Calculate wallet utilization
+  // Calculate wallet utilization (based on credits remaining)
   const getWalletUtilization = () => {
-    const total = creditBalance.credits + creditBalance.used;
-    if (total === 0) return 0;
-    return Math.round((creditBalance.used / total) * 100);
+    const total = 100; // Assume 100 credits as baseline for percentage
+    const remaining = creditBalance.credits;
+    if (total <= 0) return 0;
+    const used = Math.max(0, total - remaining);
+    return Math.round((used / total) * 100);
   };
   
   // Format time ago
@@ -185,18 +213,19 @@ const ProductionRoomView: React.FC = () => {
       
       // Update balance
       const newBalance = getCreditBalance();
-      setCreditBalance({ credits: newBalance.credits, used: (newBalance.used || 0) + cost });
+      setCreditBalance({ credits: newBalance.credits });
       
       // Add to inbox for admin review - THIS IS THE KEY WORKFLOW
       // Request goes to admin panel, admin completes content, sends back via inbox
-      addToInbox({
-        type: outputType,
-        title: newRequest.title,
-        description: `Production request: ${newRequest.description}. User: ${localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!).email : 'unknown'}`,
-        preview: null,
+      const userEmail = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!).email : 'unknown';
+      addToInbox(
+        outputType === 'audio' ? 'audio' : 'video', // addToInbox only accepts 'audio' | 'video'
+        newRequest.title,
+        `Production request: ${newRequest.description}. User: ${userEmail}`,
+        '', // content - empty for now, admin will add
         cost,
-        status: 'pending_review' // Admin will review and complete
-      });
+        { status: 'pending_review', requestId: newRequest.id } // metadata
+      );
       
       // Show user that request is queued for admin review
       alert(`Request submitted! Your ${outputType} request has been queued for production. You'll receive it in your inbox once completed. Cost: ${cost} credits.`);
@@ -523,7 +552,7 @@ const ProductionRoomView: React.FC = () => {
                     <div className="w-2 h-2 rounded-full bg-orange-600"></div>
                     <span className="text-white/60">Spent</span>
                   </div>
-                  <span className="text-white font-medium">{creditBalance.used} Credits</span>
+                  <span className="text-white font-medium">{100 - creditBalance.credits} Credits</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <div className="flex items-center gap-2">

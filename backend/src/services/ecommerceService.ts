@@ -181,3 +181,7 @@ Return the description (150-200 words).`;
   const description = await generateText(prompt, undefined, { tier: 'basic' });
   return description.trim();
 }
+
+
+
+

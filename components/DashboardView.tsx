@@ -23,6 +23,7 @@ import BrandAssetsView from './BrandAssetsView';
 import IntegrationsView from './IntegrationsView';
 import SettingsView from './SettingsView';
 import InboxView from './InboxView';
+import KeywordsView from './KeywordsView';
 import Navigation from './shared/Navigation';
 import Footer from './shared/Footer';
 
@@ -41,7 +42,7 @@ interface Task {
   notificationEmail?: string;
 }
 
-type DashboardPage = 'dashboard' | 'contentHub' | 'strategy' | 'production' | 'calendar' | 'assets' | 'integrations' | 'competitors' | 'analytics' | 'settings' | 'inbox';
+type DashboardPage = 'dashboard' | 'contentHub' | 'strategy' | 'production' | 'calendar' | 'assets' | 'integrations' | 'competitors' | 'analytics' | 'settings' | 'inbox' | 'keywords';
 
 // Page to URL mapping
 const PAGE_TO_URL: Record<DashboardPage, string> = {
@@ -56,6 +57,7 @@ const PAGE_TO_URL: Record<DashboardPage, string> = {
   'analytics': '/analytics',
   'settings': '/settings',
   'inbox': '/inbox',
+  'keywords': '/keywords',
 };
 
 interface DashboardViewProps extends NavProps {
@@ -90,7 +92,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
     const handleNavigateToPage = (event: CustomEvent) => {
       const { page, assetId } = event.detail;
       // Handle all valid dashboard pages
-      const validPages: DashboardPage[] = ['dashboard', 'contentHub', 'strategy', 'production', 'calendar', 'assets', 'integrations', 'competitors', 'analytics', 'settings', 'inbox'];
+      const validPages: DashboardPage[] = ['dashboard', 'contentHub', 'strategy', 'production', 'calendar', 'assets', 'integrations', 'competitors', 'analytics', 'settings', 'inbox', 'keywords'];
       if (validPages.includes(page as DashboardPage)) {
         setCurrentPage(page as DashboardPage);
         // If assetId is provided, we could select that asset in Production Room
@@ -1584,6 +1586,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
              <SidebarItem label="Brand Assets" active={currentPage === 'assets'} onClick={() => { setCurrentPage('assets'); setSidebarOpen(false); }} />
              <SidebarItem label="Integrations" active={currentPage === 'integrations'} onClick={() => { setCurrentPage('integrations'); setSidebarOpen(false); }} />
              <SidebarItem label="Analytics" active={currentPage === 'analytics'} onClick={() => { setCurrentPage('analytics'); setSidebarOpen(false); }} />
+             <SidebarItem label="Keywords" active={currentPage === 'keywords'} onClick={() => { setCurrentPage('keywords'); setSidebarOpen(false); }} />
              <div className="mt-4 pt-4 border-t border-white/5">
                <SidebarItem label="Settings" active={currentPage === 'settings'} onClick={() => { setCurrentPage('settings'); setSidebarOpen(false); }} />
                {isAdmin() && (
@@ -2277,7 +2280,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                                           const timeout = setTimeout(async () => {
                                             setCompetitorVerification({ isVerifying: true, verified: false });
                                             try {
-                                              const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+                                              // NOTE: Prefer 127.0.0.1 over localhost to avoid IPv6 (::1) resolution issues in browsers.
+                                              const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
                                               const response = await fetch(`${API_BASE_URL}/api/verify-competitor`, {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json' },
@@ -2437,7 +2441,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                                         setCompetitorVerification({ ...competitorVerification, isVerifying: true });
                                         
                                         try {
-                                          const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+                                          // NOTE: Prefer 127.0.0.1 over localhost to avoid IPv6 (::1) resolution issues in browsers.
+                                          const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
                                           
                                           // Run quick microscan
                                           const competitorName = competitorVerification.profile.name || newCompetitor.name;
@@ -3257,6 +3262,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, initialPage }
                               // Now navigate to landing (auth is already cleared)
                               onNavigate(ViewState.LANDING);
                             }} onNavigate={onNavigate} />}
+            {currentPage === 'keywords' && <KeywordsView />}
 
         </main>
 
@@ -3675,12 +3681,20 @@ const generateDetailedBrandDescription = (
 
   const brandName = scanUsername?.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || 'this brand';
   const displayName = brandName.charAt(0).toUpperCase() + brandName.slice(1);
-  const industry = brandDNA?.industry || brandDNA?.niche || 'their industry';
-  const archetype = brandDNA?.archetype || 'The Creator';
-  const voiceTones = brandDNA?.voice?.tones || brandDNA?.tones || ['energetic', 'authentic', 'engaging'];
-  const corePillars = brandDNA?.corePillars || brandDNA?.values || ['authenticity', 'engagement', 'value'];
+  
+  // CRITICAL: Use actual brand data, not generic fallbacks
+  // If we don't have real data, return a message instead of generating false descriptions
+  const industry = brandDNA?.industry || brandDNA?.niche || null;
+  const archetype = brandDNA?.archetype || null;
+  const voiceTones = brandDNA?.voice?.tones || brandDNA?.tones || [];
+  const corePillars = brandDNA?.corePillars || brandDNA?.values || [];
   const themes = brandDNA?.themes || brandDNA?.contentThemes || [];
   const bio = brandDNA?.bio || brandDNA?.description || brandDNA?.summary || '';
+  
+  // If we have no real data, don't generate a false description
+  if (!industry && !bio && themes.length === 0 && voiceTones.length === 0) {
+    return `Run a digital footprint scan for ${displayName} to generate a comprehensive brand description based on their actual online presence and content.`;
+  }
   
   // Extract platform presence from scan data
   const platforms: string[] = [];
@@ -3688,76 +3702,75 @@ const generateDetailedBrandDescription = (
     platforms.push(...(Array.isArray(brandDNA.platforms) ? brandDNA.platforms : Object.keys(brandDNA.platforms)));
   }
   
-  // Build comprehensive description
-  let description = `${displayName}'s digital footprint reveals a ${archetype.toLowerCase()} brand `;
-  description += `poised for growth in the ${industry} sector. `;
+  // Build comprehensive description using ONLY real data
+  let description = '';
   
   if (bio) {
-    description += `${bio} `;
+    // Use actual bio as the foundation
+    description = `${displayName}: ${bio}\n\n`;
+  } else if (industry) {
+    description = `${displayName} operates in the ${industry} sector. `;
   } else {
-    description += `The brand embodies ${voiceTones.slice(0, 2).join(' and ')} communication, `;
-    description += `emphasizing ${corePillars.slice(0, 2).join(' and ')} as core differentiators. `;
+    description = `${displayName}'s digital presence analysis:\n\n`;
   }
   
-  // Platform-specific strategies
-  description += `\n\nPlatform Strategy:\n`;
+  // Only add archetype if we have it
+  if (archetype) {
+    description += `Brand Archetype: ${archetype}\n\n`;
+  }
   
-  const platformStrategies: Record<string, string> = {
-    'twitter': 'X (Twitter) suggests a knack for viral hooks and timely reactions, making it ideal for real-time engagement and trend participation.',
-    'x': 'X (Twitter) suggests a knack for viral hooks and timely reactions, making it ideal for real-time engagement and trend participation.',
-    'linkedin': 'LinkedIn indicates potential for professional networking and brand appeal, positioning the brand as a thought leader in their space.',
-    'instagram': 'Instagram is highlighted as a platform for video-first content, which the brand aims to grow through authentic visual storytelling.',
-    'youtube': 'YouTube serves as a hub for long-form content, interviews, and structured, high-value content that builds deeper audience connections.',
-    'tiktok': 'TikTok offers opportunities for short-form, high-energy content that captures attention and drives viral moments.',
-    'reddit': 'Reddit (r/' + (themes[0]?.toLowerCase() || 'community') + ') is prime for observing fan sentiment and discussion, understanding audience needs.',
-    'discord': 'Discord and Telegram serve as hubs for real-time engagement with passionate community members, fostering direct connections.',
-    'telegram': 'Discord and Telegram serve as hubs for real-time engagement with passionate community members, fostering direct connections.'
-  };
+  // Only add voice tones if we have them
+  if (voiceTones.length > 0) {
+    description += `Brand Voice: ${voiceTones.join(', ')}\n\n`;
+  }
   
-  // Add platform strategies based on available data
-  const mentionedPlatforms = new Set<string>();
-  platforms.forEach(p => {
-    const platformKey = p.toLowerCase().replace('twitter', 'x');
-    if (platformStrategies[platformKey] && !mentionedPlatforms.has(platformKey)) {
-      description += `• ${platformStrategies[platformKey]}\n`;
-      mentionedPlatforms.add(platformKey);
+  // Only add core pillars if we have them
+  if (corePillars.length > 0) {
+    description += `Core Values: ${corePillars.join(', ')}\n\n`;
+  }
+  
+  // Only add themes if we have them
+  if (themes.length > 0) {
+    description += `Content Themes: ${themes.join(', ')}\n\n`;
+  }
+  
+  // Only add platform strategies if we have platform data
+  if (platforms.length > 0) {
+    description += `Platform Presence: ${platforms.join(', ')}\n\n`;
+  }
+  
+  // Only add content strategy if we have themes or voice data
+  if (themes.length > 0 || voiceTones.length > 0) {
+    description += `Content Strategy:\n`;
+    if (themes.length > 0) {
+      description += `The brand focuses on ${themes.slice(0, 3).join(', ')} content. `;
     }
-  });
-  
-  // Add default platforms if none specified
-  if (mentionedPlatforms.size === 0) {
-    description += `• X (Twitter): Ideal for viral hooks and timely reactions\n`;
-    description += `• LinkedIn: Professional networking and brand appeal\n`;
-    description += `• Instagram: Video-first content and visual storytelling\n`;
-    description += `• YouTube: Long-form content, interviews, and structured content\n`;
-  }
-  
-  // Content strategy
-  description += `\n\nContent Strategy:\n`;
-  description += `The brand focuses on ${themes.length > 0 ? themes.slice(0, 3).join(', ') : 'authentic engagement'} content, `;
-  description += `emphasizing ${voiceTones.slice(0, 2).join(' and ')} messaging that drives audience engagement. `;
-  description += `Content types include ${themes.length > 0 ? 'themed content' : 'short-form videos, interviews, and lighthearted banter'}, `;
-  description += `all designed to build brand-friendly professionalism while maintaining authentic connection with the audience. `;
-  
-  // Monetization and growth
-  if (strategicInsights.length > 0 || competitorIntelligence.length > 0) {
-    description += `\n\nGrowth Opportunities:\n`;
-    description += `Monetization and brand deals are key focus areas, with opportunities for `;
-    description += `sponsored content, partnerships, and community-driven revenue streams. `;
-    if (competitorIntelligence.length > 0) {
-      description += `Competitors like ${competitorIntelligence.slice(0, 2).map((c: any) => c.name).join(' and ')} `;
-      description += `are gaining market share, highlighting the need for differentiated content strategy. `;
+    if (voiceTones.length > 0) {
+      description += `Brand voice emphasizes ${voiceTones.slice(0, 2).join(' and ')} messaging. `;
     }
+    description += `\n`;
   }
   
-  // Brand personality summary
-  description += `\n\nBrand Personality:\n`;
-  description += `The brand maintains a ${voiceTones[0] || 'high-energy'} visual vibe, `;
-  description += `combining ${corePillars.slice(0, 2).join(' and ')} to create a unique position in the ${industry} space. `;
-  description += `The approach balances structured, high-value content with authentic, spontaneous engagement, `;
-  description += `creating a brand that resonates with audiences seeking both entertainment and meaningful connection.`;
+  // Only add competitor insights if we have them
+  if (competitorIntelligence.length > 0) {
+    description += `Competitive Landscape:\n`;
+    description += `Key competitors include ${competitorIntelligence.slice(0, 3).map((c: any) => c.name).join(', ')}. `;
+    if (strategicInsights.length > 0) {
+      description += `Strategic insights suggest ${strategicInsights[0]?.title || 'opportunities for growth'}. `;
+    }
+    description += `\n`;
+  }
   
-  return description;
+  // Only add strategic insights if we have them
+  if (strategicInsights.length > 0) {
+    description += `Strategic Recommendations:\n`;
+    strategicInsights.slice(0, 3).forEach((insight: any) => {
+      description += `• ${insight.title || insight.description || insight}\n`;
+    });
+    description += `\n`;
+  }
+  
+  return description.trim() || `Run a digital footprint scan for ${displayName} to generate a comprehensive brand description based on their actual online presence.`;
 };
 
 // Generate strategic insights based on actual scan data

@@ -5,10 +5,12 @@
 import { getNextKeywordToTarget } from './keywordService';
 import { generateBlogPost } from './contentGeneratorService';
 import { ContentGenerationRequest } from '../types/seo';
-import { addInternalLinks, updatePostWithInternalLinks } from './internalLinkingService';
+import { injectInternalLinks, updatePostWithInternalLinks } from './internalLinkingService';
 import { analyzeContentSEO } from './contentOptimizationService';
 import { updateBlogPost, getBlogPostById } from './seoContentService';
 import { recordPerformance } from './seoAnalyticsService';
+import { getHolidayKeyword, getHolidayContentIdea, getTopHolidayEvent } from './holidayEventService';
+import { trackKeyword } from './keywordService';
 
 export interface PipelineResult {
   success: boolean;
@@ -26,9 +28,41 @@ export async function executeContentPipeline(): Promise<PipelineResult> {
   const steps: Array<{ step: string; success: boolean; message?: string }> = [];
   
   try {
-    // Step 1: Get next keyword
+    // Step 1: Get next keyword (prioritize holiday keywords if available)
     steps.push({ step: 'keyword_selection', success: false });
-    const keyword = await getNextKeywordToTarget();
+    
+    // Check for holiday/event keywords first (30% chance to use holiday keyword if available)
+    let keyword = null;
+    const useHolidayKeyword = Math.random() < 0.3; // 30% chance
+    
+    if (useHolidayKeyword) {
+      const holidayKeywordStr = getHolidayKeyword();
+      if (holidayKeywordStr) {
+        // Check if this keyword exists, if not create it
+        const { getKeyword } = await import('./keywordService');
+        let holidayKeyword = await getKeyword(holidayKeywordStr);
+        
+        if (!holidayKeyword) {
+          // Create holiday keyword with high priority
+          const topEvent = getTopHolidayEvent();
+          holidayKeyword = await trackKeyword({
+            keyword: holidayKeywordStr,
+            search_volume: 1500, // Estimated high volume for holiday keywords
+            competition_score: 30, // Moderate competition
+            status: 'targeting',
+          });
+          console.log(`[Content Pipeline] Created holiday keyword: "${holidayKeywordStr}" for ${topEvent?.name || 'event'}`);
+        }
+        
+        keyword = holidayKeyword;
+      }
+    }
+    
+    // Fall back to regular keyword selection if no holiday keyword
+    if (!keyword) {
+      keyword = await getNextKeywordToTarget();
+    }
+    
     if (!keyword) {
       return {
         success: false,
@@ -36,7 +70,13 @@ export async function executeContentPipeline(): Promise<PipelineResult> {
         steps: [{ step: 'keyword_selection', success: false, message: 'No keywords found' }],
       };
     }
-    steps[steps.length - 1] = { step: 'keyword_selection', success: true, message: `Selected: ${keyword.keyword}` };
+    
+    const isHolidayKeyword = useHolidayKeyword && getHolidayKeyword() === keyword.keyword;
+    steps[steps.length - 1] = { 
+      step: 'keyword_selection', 
+      success: true, 
+      message: `Selected: ${keyword.keyword}${isHolidayKeyword ? ' (Holiday/Event)' : ''}` 
+    };
 
     // Step 2: Generate content
     steps.push({ step: 'content_generation', success: false });

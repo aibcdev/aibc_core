@@ -1,23 +1,41 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import LandingView from './components/LandingView';
-import LoginView from './components/LoginView';
-import SignInView from './components/SignInView';
-import ResetPasswordView from './components/ResetPasswordView';
-import IngestionView from './components/IngestionView';
-import AuditView from './components/AuditView';
-import OnboardingView from './components/OnboardingView';
-import VectorsView from './components/VectorsView';
-import DashboardView from './components/DashboardView';
-import PricingView from './components/PricingView';
-import AdminView from './components/AdminView';
-import InboxView from './components/InboxView';
-import BlogView from './components/BlogView';
-import BlogPostView from './components/BlogPostView';
-import PrivacyPolicyView from './components/PrivacyPolicyView';
-import TermsOfServiceView from './components/TermsOfServiceView';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { ViewState } from './types';
 import { supabase, isSupabaseConfigured } from './services/supabaseClient';
+import { getDebugEndpoint } from './services/apiClient';
+
+// Lazy load components for code splitting
+const LandingView = lazy(() => import('./components/LandingView'));
+const LoginView = lazy(() => import('./components/LoginView'));
+const SignInView = lazy(() => import('./components/SignInView'));
+const ResetPasswordView = lazy(() => import('./components/ResetPasswordView'));
+const IngestionView = lazy(() => import('./components/IngestionView'));
+const AuditView = lazy(() => import('./components/AuditView'));
+const OnboardingView = lazy(() => import('./components/OnboardingView'));
+const VectorsView = lazy(() => import('./components/VectorsView'));
+const DashboardView = lazy(() => import('./components/DashboardView'));
+const PricingView = lazy(() => import('./components/PricingView'));
+const AdminView = lazy(() => import('./components/AdminView'));
+const InboxView = lazy(() => import('./components/InboxView'));
+const BlogView = lazy(() => import('./components/BlogView'));
+const BlogPostView = lazy(() => import('./components/BlogPostView'));
+const BlogCategoryView = lazy(() => import('./components/BlogCategoryView'));
+const BlogTagView = lazy(() => import('./components/BlogTagView'));
+const BlogKeywordView = lazy(() => import('./components/BlogKeywordView'));
+const PrivacyPolicyView = lazy(() => import('./components/PrivacyPolicyView'));
+const TermsOfServiceView = lazy(() => import('./components/TermsOfServiceView'));
+const MarketingIdeasView = lazy(() => import('./components/MarketingIdeasView'));
+const VsHiringView = lazy(() => import('./components/VsHiringView'));
+const ContentMarketingView = lazy(() => import('./components/ContentMarketingView'));
+
+// Loading fallback component
+const LoadingFallback = () => (
+  <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+    <div className="animate-pulse">
+      <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+    </div>
+  </div>
+);
 
 // URL path to view/page mapping
 const URL_TO_VIEW: Record<string, { view: ViewState; page?: string }> = {
@@ -44,6 +62,9 @@ const URL_TO_VIEW: Record<string, { view: ViewState; page?: string }> = {
   '/blog': { view: ViewState.BLOG },
   '/privacy-policy': { view: ViewState.PRIVACY_POLICY },
   '/terms-of-service': { view: ViewState.TERMS_OF_SERVICE },
+  '/marketing-ideas': { view: ViewState.MARKETING_IDEAS },
+  '/vs-hiring': { view: ViewState.VS_HIRING },
+  '/content-marketing': { view: ViewState.CONTENT_MARKETING },
 };
 
 // Page to URL mapping (for navigation)
@@ -59,15 +80,25 @@ const PAGE_TO_URL: Record<string, string> = {
   'analytics': '/analytics',
   'settings': '/settings',
   'inbox': '/inbox',
+  'keywords': '/keywords',
 };
 
 function App() {
+  // #region agent log
+  React.useEffect(() => {
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:App',message:'APP COMPONENT MOUNTED',data:{pathname:window.location.pathname},timestamp:Date.now(),sessionId:'debug-session',runId:'frontend-init',hypothesisId:'H22'})}).catch(()=>{});
+  }, []);
+  // #endregion
+  
   const [view, setView] = useState<ViewState>(ViewState.LANDING);
   const [dashboardPage, setDashboardPage] = useState<string>('dashboard');
   const [username, setUsername] = useState<string>('');
   const [scanType, setScanType] = useState<'basic' | 'deep'>('basic');
   const [isInitializing, setIsInitializing] = useState(true); // Start true to prevent flash
   const [blogSlug, setBlogSlug] = useState<string>('');
+  const [blogCategory, setBlogCategory] = useState<string>('');
+  const [blogTag, setBlogTag] = useState<string>('');
+  const [blogKeyword, setBlogKeyword] = useState<string>('');
 
   // Parse URL on mount to determine initial view
   const getViewFromURL = useCallback(() => {
@@ -78,8 +109,28 @@ function App() {
     }
     // Check for blog post route (e.g., /blog/some-post-slug)
     if (path.startsWith('/blog/')) {
-      const slug = path.replace('/blog/', '');
-      return { view: ViewState.BLOG_POST, slug };
+      const remaining = path.replace('/blog/', '');
+      
+      // Check for category route
+      if (remaining.startsWith('category/')) {
+        const category = remaining.replace('category/', '');
+        return { view: ViewState.BLOG_CATEGORY, category };
+      }
+      
+      // Check for tag route
+      if (remaining.startsWith('tag/')) {
+        const tag = remaining.replace('tag/', '');
+        return { view: ViewState.BLOG_TAG, tag };
+      }
+      
+      // Check for keyword route
+      if (remaining.startsWith('keyword/')) {
+        const keyword = remaining.replace('keyword/', '');
+        return { view: ViewState.BLOG_KEYWORD, keyword };
+      }
+      
+      // Otherwise it's a blog post slug
+      return { view: ViewState.BLOG_POST, slug: remaining };
     }
     return { view: ViewState.LANDING };
   }, []);
@@ -109,10 +160,21 @@ function App() {
         
         // Handle public routes (no auth needed)
         if (urlMapping.view === ViewState.BLOG || urlMapping.view === ViewState.BLOG_POST ||
+            urlMapping.view === ViewState.BLOG_CATEGORY || urlMapping.view === ViewState.BLOG_TAG ||
+            urlMapping.view === ViewState.BLOG_KEYWORD ||
             urlMapping.view === ViewState.PRIVACY_POLICY || urlMapping.view === ViewState.TERMS_OF_SERVICE) {
           setView(urlMapping.view);
           if (urlMapping.view === ViewState.BLOG_POST && 'slug' in urlMapping) {
             setBlogSlug((urlMapping as any).slug);
+          }
+          if (urlMapping.view === ViewState.BLOG_CATEGORY && 'category' in urlMapping) {
+            setBlogCategory((urlMapping as any).category);
+          }
+          if (urlMapping.view === ViewState.BLOG_TAG && 'tag' in urlMapping) {
+            setBlogTag((urlMapping as any).tag);
+          }
+          if (urlMapping.view === ViewState.BLOG_KEYWORD && 'keyword' in urlMapping) {
+            setBlogKeyword((urlMapping as any).keyword);
           }
           setIsInitializing(false);
           return;
@@ -152,12 +214,25 @@ function App() {
             }
           } else if (urlMapping.view === ViewState.PRICING) {
             setView(ViewState.PRICING);
-          } else if (urlMapping.view === ViewState.BLOG || urlMapping.view === ViewState.BLOG_POST) {
+          } else if (urlMapping.view === ViewState.BLOG || urlMapping.view === ViewState.BLOG_POST ||
+                     urlMapping.view === ViewState.BLOG_CATEGORY || urlMapping.view === ViewState.BLOG_TAG ||
+                     urlMapping.view === ViewState.BLOG_KEYWORD) {
             setView(urlMapping.view);
             if (urlMapping.view === ViewState.BLOG_POST && 'slug' in urlMapping) {
               setBlogSlug((urlMapping as any).slug);
             }
-          } else if (urlMapping.view === ViewState.PRIVACY_POLICY || urlMapping.view === ViewState.TERMS_OF_SERVICE) {
+            if (urlMapping.view === ViewState.BLOG_CATEGORY && 'category' in urlMapping) {
+              setBlogCategory((urlMapping as any).category);
+            }
+            if (urlMapping.view === ViewState.BLOG_TAG && 'tag' in urlMapping) {
+              setBlogTag((urlMapping as any).tag);
+            }
+            if (urlMapping.view === ViewState.BLOG_KEYWORD && 'keyword' in urlMapping) {
+              setBlogKeyword((urlMapping as any).keyword);
+            }
+          } else if (urlMapping.view === ViewState.PRIVACY_POLICY || urlMapping.view === ViewState.TERMS_OF_SERVICE ||
+                     urlMapping.view === ViewState.MARKETING_IDEAS || urlMapping.view === ViewState.VS_HIRING ||
+                     urlMapping.view === ViewState.CONTENT_MARKETING) {
             setView(urlMapping.view);
           } else if (urlMapping.view === ViewState.INGESTION) {
             // Only go to ingestion if explicitly navigating to /scan
@@ -194,12 +269,25 @@ function App() {
             // Production: require auth
             if (urlMapping.view === ViewState.PRICING) {
               setView(ViewState.PRICING);
-            } else if (urlMapping.view === ViewState.BLOG || urlMapping.view === ViewState.BLOG_POST) {
+            } else if (urlMapping.view === ViewState.BLOG || urlMapping.view === ViewState.BLOG_POST ||
+                       urlMapping.view === ViewState.BLOG_CATEGORY || urlMapping.view === ViewState.BLOG_TAG ||
+                       urlMapping.view === ViewState.BLOG_KEYWORD) {
               setView(urlMapping.view);
               if (urlMapping.view === ViewState.BLOG_POST && 'slug' in urlMapping) {
                 setBlogSlug((urlMapping as any).slug);
               }
-            } else if (urlMapping.view === ViewState.PRIVACY_POLICY || urlMapping.view === ViewState.TERMS_OF_SERVICE) {
+              if (urlMapping.view === ViewState.BLOG_CATEGORY && 'category' in urlMapping) {
+                setBlogCategory((urlMapping as any).category);
+              }
+              if (urlMapping.view === ViewState.BLOG_TAG && 'tag' in urlMapping) {
+                setBlogTag((urlMapping as any).tag);
+              }
+              if (urlMapping.view === ViewState.BLOG_KEYWORD && 'keyword' in urlMapping) {
+                setBlogKeyword((urlMapping as any).keyword);
+              }
+            } else if (urlMapping.view === ViewState.PRIVACY_POLICY || urlMapping.view === ViewState.TERMS_OF_SERVICE ||
+                       urlMapping.view === ViewState.MARKETING_IDEAS || urlMapping.view === ViewState.VS_HIRING ||
+                       urlMapping.view === ViewState.CONTENT_MARKETING) {
               setView(urlMapping.view);
             } else if (urlMapping.view === ViewState.LOGIN) {
               setView(ViewState.LOGIN);
@@ -242,6 +330,15 @@ function App() {
       }
       if (urlMapping.view === ViewState.BLOG_POST && 'slug' in urlMapping) {
         setBlogSlug((urlMapping as any).slug);
+      }
+      if (urlMapping.view === ViewState.BLOG_CATEGORY && 'category' in urlMapping) {
+        setBlogCategory((urlMapping as any).category);
+      }
+      if (urlMapping.view === ViewState.BLOG_TAG && 'tag' in urlMapping) {
+        setBlogTag((urlMapping as any).tag);
+      }
+      if (urlMapping.view === ViewState.BLOG_KEYWORD && 'keyword' in urlMapping) {
+        setBlogKeyword((urlMapping as any).keyword);
       }
     };
     
@@ -315,11 +412,11 @@ function App() {
     // #region agent log
     const navLog = {location:'App.tsx:276',message:'navigate CALLED',data:{newView,page,isLoggedIn,hasAuthToken:!!authToken,hasUser:!!user},timestamp:Date.now(),sessionId:'debug-session',runId:'app-navigate',hypothesisId:'H9'};
     console.log('[DEBUG]', navLog);
-    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(navLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(navLog)}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
     // #endregion
     
     // Public routes that are always accessible (even when logged in)
-    const publicRoutes = [ViewState.PRICING, ViewState.BLOG, ViewState.BLOG_POST, ViewState.PRIVACY_POLICY, ViewState.TERMS_OF_SERVICE];
+    const publicRoutes = [ViewState.PRICING, ViewState.BLOG, ViewState.BLOG_POST, ViewState.PRIVACY_POLICY, ViewState.TERMS_OF_SERVICE, ViewState.MARKETING_IDEAS, ViewState.VS_HIRING, ViewState.CONTENT_MARKETING];
     
     // If user is logged in, restrict navigation
     if (isLoggedIn) {
@@ -333,6 +430,9 @@ function App() {
         else if (newView === ViewState.BLOG_POST && page) newPath = `/blog/${page}`;
         else if (newView === ViewState.PRIVACY_POLICY) newPath = '/privacy-policy';
         else if (newView === ViewState.TERMS_OF_SERVICE) newPath = '/terms-of-service';
+        else if (newView === ViewState.MARKETING_IDEAS) newPath = '/marketing-ideas';
+        else if (newView === ViewState.VS_HIRING) newPath = '/vs-hiring';
+        else if (newView === ViewState.CONTENT_MARKETING) newPath = '/content-marketing';
         window.history.pushState(null, '', newPath);
         window.scrollTo(0, 0);
         return;
@@ -341,7 +441,7 @@ function App() {
       // If trying to go to landing or login pages, redirect to ingestion
       if (newView === ViewState.LANDING || newView === ViewState.LOGIN || newView === ViewState.SIGNIN) {
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:295',message:'navigate REDIRECT - logged in user to ingestion',data:{attemptedView:newView},timestamp:Date.now(),sessionId:'debug-session',runId:'app-navigate',hypothesisId:'H9'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:295',message:'navigate REDIRECT - logged in user to ingestion',data:{attemptedView:newView},timestamp:Date.now(),sessionId:'debug-session',runId:'app-navigate',hypothesisId:'H9'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
         // #endregion
         setView(ViewState.INGESTION);
         window.history.pushState(null, '', '/scan');
@@ -355,7 +455,7 @@ function App() {
       } else {
         // Block other views - redirect to ingestion
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:308',message:'navigate BLOCKED - redirecting to ingestion',data:{attemptedView:newView},timestamp:Date.now(),sessionId:'debug-session',runId:'app-navigate',hypothesisId:'H9'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:308',message:'navigate BLOCKED - redirecting to ingestion',data:{attemptedView:newView},timestamp:Date.now(),sessionId:'debug-session',runId:'app-navigate',hypothesisId:'H9'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
         // #endregion
         setView(ViewState.INGESTION);
         window.history.pushState(null, '', '/scan');
@@ -370,7 +470,7 @@ function App() {
           newView !== ViewState.RESET_PASSWORD &&
           newView !== ViewState.LANDING) {
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:320',message:'navigate BLOCKED - redirecting to login',data:{attemptedView:newView},timestamp:Date.now(),sessionId:'debug-session',runId:'app-navigate',hypothesisId:'H9'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:320',message:'navigate BLOCKED - redirecting to login',data:{attemptedView:newView},timestamp:Date.now(),sessionId:'debug-session',runId:'app-navigate',hypothesisId:'H9'})}).catch((e)=>console.warn('[DEBUG] Log fetch failed:',e));
         // #endregion
         setView(ViewState.LOGIN);
         window.history.pushState(null, '', '/login');
@@ -392,6 +492,9 @@ function App() {
     else if (newView === ViewState.ONBOARDING) newPath = '/onboarding';
     else if (newView === ViewState.ADMIN) newPath = '/admin';
     else if (newView === ViewState.BLOG) newPath = '/blog';
+    else if (newView === ViewState.MARKETING_IDEAS) newPath = '/marketing-ideas';
+    else if (newView === ViewState.VS_HIRING) newPath = '/vs-hiring';
+    else if (newView === ViewState.CONTENT_MARKETING) newPath = '/content-marketing';
     else if (newView === ViewState.DASHBOARD) {
       if (page) {
         setDashboardPage(page);
@@ -439,6 +542,9 @@ function App() {
       {currentView === ViewState.BLOG_POST && <BlogPostView onNavigate={navigate} slug={blogSlug} />}
       {currentView === ViewState.PRIVACY_POLICY && <PrivacyPolicyView onNavigate={navigate} />}
       {currentView === ViewState.TERMS_OF_SERVICE && <TermsOfServiceView onNavigate={navigate} />}
+      {currentView === ViewState.MARKETING_IDEAS && <MarketingIdeasView onNavigate={navigate} />}
+      {currentView === ViewState.VS_HIRING && <VsHiringView onNavigate={navigate} />}
+      {currentView === ViewState.CONTENT_MARKETING && <ContentMarketingView onNavigate={navigate} />}
     </>
   );
 }

@@ -9,7 +9,9 @@
     "start": "node dist/server.js",
     "install-playwright": "npx playwright install chromium",
     "postinstall": "npx playwright install chromium || true",
-    "init-keywords": "tsx scripts/initialize-keywords.ts"
+    "init-keywords": "tsx scripts/initialize-keywords.ts",
+    "test:video-analysis": "ts-node scripts/testVideoAnalysis.ts",
+    "test:channel-videos": "ts-node scripts/testChannelVideoAnalysis.ts"
   },
   "keywords": [],
   "author": "",

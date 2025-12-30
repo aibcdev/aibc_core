@@ -2,7 +2,7 @@
  * Sitemap Service - Dynamic XML sitemap generation
  */
 
-import { listBlogPosts } from './seoContentService';
+import { listBlogPosts, getCategories, getTags } from './seoContentService';
 import { BlogPost } from '../types/seo';
 
 export interface SitemapUrl {
@@ -94,6 +94,67 @@ export async function generateBlogSitemap(): Promise<string> {
 }
 
 /**
+ * Generate sitemap for categories
+ */
+export async function generateCategorySitemap(): Promise<string> {
+  const baseURL = getBaseURL();
+  const urls: SitemapUrl[] = [];
+
+  const categories = await getCategories();
+  
+  for (const category of categories) {
+    const categorySlug = category.toLowerCase().replace(/\s+/g, '-');
+    urls.push({
+      loc: `${baseURL}/blog/category/${encodeURIComponent(categorySlug)}`,
+      changefreq: 'weekly',
+      priority: 0.7,
+    });
+  }
+
+  return generateSitemapXML(urls);
+}
+
+/**
+ * Generate sitemap for tags
+ */
+export async function generateTagSitemap(): Promise<string> {
+  const baseURL = getBaseURL();
+  const urls: SitemapUrl[] = [];
+
+  const tags = await getTags();
+  
+  for (const tag of tags) {
+    const tagSlug = tag.toLowerCase().replace(/\s+/g, '-');
+    urls.push({
+      loc: `${baseURL}/blog/tag/${encodeURIComponent(tagSlug)}`,
+      changefreq: 'weekly',
+      priority: 0.6,
+    });
+  }
+
+  return generateSitemapXML(urls);
+}
+
+/**
+ * Generate sitemap index (for large sites)
+ */
+export function generateSitemapIndex(sitemaps: Array<{ loc: string; lastmod?: string }>): string {
+  const sitemapEntries = sitemaps.map(sitemap => {
+    let entry = `  <sitemap>\n    <loc>${escapeXML(sitemap.loc)}</loc>\n`;
+    if (sitemap.lastmod) {
+      entry += `    <lastmod>${sitemap.lastmod}</lastmod>\n`;
+    }
+    entry += '  </sitemap>';
+    return entry;
+  }).join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${sitemapEntries}
+</sitemapindex>`;
+}
+
+/**
  * Generate complete sitemap (all pages)
  */
 export async function generateFullSitemap(): Promise<string> {
@@ -104,7 +165,9 @@ export async function generateFullSitemap(): Promise<string> {
   urls.push(
     { loc: baseURL, changefreq: 'daily', priority: 1.0 },
     { loc: `${baseURL}/pricing`, changefreq: 'monthly', priority: 0.8 },
-    { loc: `${baseURL}/blog`, changefreq: 'daily', priority: 0.9 }
+    { loc: `${baseURL}/blog`, changefreq: 'daily', priority: 0.9 },
+    { loc: `${baseURL}/privacy-policy`, changefreq: 'yearly', priority: 0.3 },
+    { loc: `${baseURL}/terms-of-service`, changefreq: 'yearly', priority: 0.3 }
   );
 
   // Get all published blog posts
@@ -120,6 +183,31 @@ export async function generateFullSitemap(): Promise<string> {
       });
     }
   }
+
+  // Add category pages
+  const categories = await getCategories();
+  for (const category of categories) {
+    const categorySlug = category.toLowerCase().replace(/\s+/g, '-');
+    urls.push({
+      loc: `${baseURL}/blog/category/${encodeURIComponent(categorySlug)}`,
+      changefreq: 'weekly',
+      priority: 0.6,
+    });
+  }
+
+  // Add tag pages
+  const tags = await getTags();
+  for (const tag of tags) {
+    const tagSlug = tag.toLowerCase().replace(/\s+/g, '-');
+    urls.push({
+      loc: `${baseURL}/blog/tag/${encodeURIComponent(tagSlug)}`,
+      changefreq: 'weekly',
+      priority: 0.5,
+    });
+  }
+
+  // Note: Keyword pages are dynamic and generated on-demand, so we don't include them in the main sitemap
+  // They can be added to a separate sitemap if needed
 
   return generateSitemapXML(urls);
 }

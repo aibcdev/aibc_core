@@ -477,3 +477,7 @@ Add these as negative keywords to avoid irrelevant traffic:
 6. **A/B test** headlines and descriptions
 7. **Scale winning ads** and pause underperformers
 8. **Expand to Microsoft Ads** after Google Ads proves successful
+
+
+
+

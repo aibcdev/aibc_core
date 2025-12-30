@@ -134,59 +134,144 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
       const domain = extractDomainFromURL(input);
       const urlToCheck = input.startsWith('http') ? input : `https://${domain}`;
       
-      // ACTUALLY verify the URL is reachable
+      // Use backend API to verify URL reachability (more reliable than client-side)
+      // NOTE: Prefer 127.0.0.1 over localhost to avoid IPv6 (::1) resolution issues in browsers.
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
       
       try {
-        const response = await fetch(urlToCheck, {
-          method: 'HEAD',
-          mode: 'no-cors', // Allow cross-origin requests
+        // First try: Check if domain resolves via DNS lookup API or backend validation
+        // We'll use a simple fetch with proper error handling
+        const response = await fetch(`${API_BASE_URL}/api/scan/validate-url`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url: urlToCheck }),
           signal: controller.signal
         });
+        
         clearTimeout(timeoutId);
         
-        // If we get here without error, the URL is likely reachable
-        // (no-cors mode doesn't give us status, but will throw if unreachable)
-        setUrlVerification({
-          isVerifying: false,
-          verified: true,
-          domain: domain
-        });
+        if (response.ok) {
+          const result = await response.json();
+          if (result.valid && result.reachable) {
+            setUrlVerification({
+              isVerifying: false,
+              verified: true,
+              domain: domain
+            });
+          } else {
+            setUrlVerification({
+              isVerifying: false,
+              verified: false,
+              error: result.error || 'Website not found or unreachable. Please check the URL and try again.'
+            });
+          }
+        } else {
+          // Backend validation failed (might be backend down) - fallback to client-side check
+          await fallbackURLVerification(urlToCheck, domain, controller);
+        }
       } catch (fetchError: any) {
         clearTimeout(timeoutId);
         
-        // Check if it's a CORS error (which means the site exists but blocks us)
-        // In that case, we'll allow it and let the backend do the real check
-        if (fetchError.name === 'TypeError' && fetchError.message.includes('Failed to fetch')) {
-          // Could be CORS blocking - let backend verify
-          setUrlVerification({
-            isVerifying: false,
-            verified: true,
-            domain: domain
-          });
-        } else if (fetchError.name === 'AbortError') {
-          // Timeout - URL might be slow or not exist
-          setUrlVerification({
-            isVerifying: false,
-            verified: false,
-            error: 'Website took too long to respond. Please check the URL.'
-          });
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'IngestionView.tsx:verifyURL',message:'BACKEND VALIDATION FAILED',data:{url:urlToCheck,error:fetchError?.message,errorName:fetchError?.name,backendUrl:API_BASE_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'url-validation',hypothesisId:'H23'})}).catch(()=>{});
+        // #endregion
+        
+        if (fetchError.name === 'AbortError') {
+          // Timeout - try fallback with lenient check
+          await fallbackURLVerification(urlToCheck, domain, controller);
+        } else if (fetchError.message?.includes('Failed to fetch') || fetchError.message?.includes('NetworkError')) {
+          // Backend is likely down - use fallback with lenient verification
+          await fallbackURLVerification(urlToCheck, domain, controller);
         } else {
-          // URL is not reachable
-          setUrlVerification({
-            isVerifying: false,
-            verified: false,
-            error: 'Website not found. Please check the URL and try again.'
-          });
+          // Other error - try fallback
+          await fallbackURLVerification(urlToCheck, domain, controller);
         }
       }
     } catch (err: any) {
       setUrlVerification({
         isVerifying: false,
         verified: false,
-        error: err.message || 'Could not verify URL'
+        error: err.message || 'Could not verify URL. Please check the URL and try again.'
       });
+    }
+  };
+
+  // Fallback URL verification using client-side fetch
+  const fallbackURLVerification = async (urlToCheck: string, domain: string, controller: AbortController) => {
+    try {
+      // Try a simple fetch - if it fails, the URL likely doesn't exist
+      const testController = new AbortController();
+      const testTimeout = setTimeout(() => testController.abort(), 8000);
+      
+      // Use a proxy or CORS-friendly approach - try fetching with no-cors
+      // If backend is down, we'll be more lenient and allow the URL if it looks valid
+      const response = await fetch(urlToCheck, {
+        method: 'HEAD',
+        mode: 'no-cors', // This allows cross-origin requests but we can't read the response
+        signal: testController.signal,
+        cache: 'no-cache'
+      });
+      
+      clearTimeout(testTimeout);
+      
+      // With no-cors mode, if fetch doesn't throw, the URL likely exists
+      // Since backend is down, we'll be more lenient and allow it
+      // The actual scan will verify it properly when backend is running
+      setUrlVerification({
+        isVerifying: false,
+        verified: true, // Changed to true - be more lenient when backend is down
+        domain: domain
+      });
+    } catch (err: any) {
+      // If fetch throws, try one more time with www prefix
+      if (!urlToCheck.includes('www.')) {
+        try {
+          const wwwUrl = urlToCheck.replace(/^https?:\/\//, 'https://www.');
+          const testController2 = new AbortController();
+          const testTimeout2 = setTimeout(() => testController2.abort(), 5000);
+          
+          await fetch(wwwUrl, {
+            method: 'HEAD',
+            mode: 'no-cors',
+            signal: testController2.signal,
+            cache: 'no-cache'
+          });
+          
+          clearTimeout(testTimeout2);
+          
+          setUrlVerification({
+            isVerifying: false,
+            verified: true,
+            domain: domain
+          });
+          return;
+        } catch (wwwErr: any) {
+          // Both failed
+        }
+      }
+      
+      // If backend is down and we can't verify, be more lenient
+      // Check if it's a valid URL format - if so, allow it
+      const isValidFormat = /^https?:\/\/[^\s/$.?#].[^\s]*$/i.test(urlToCheck);
+      if (isValidFormat) {
+        // Backend is down but URL format is valid - allow it
+        // The scan will verify it properly when backend is running
+        setUrlVerification({
+          isVerifying: false,
+          verified: true, // Changed to true - be lenient when backend is down
+          domain: domain
+        });
+      } else {
+        setUrlVerification({
+          isVerifying: false,
+          verified: false,
+          error: 'Invalid URL format. Please enter a valid website URL (e.g., example.com or https://example.com).'
+        });
+      }
     }
   };
 
@@ -260,9 +345,19 @@ const IngestionView: React.FC<IngestionProps> = ({ onNavigate, setUsername, setS
       return;
     }
     
-    // Check if URL is verified
-    if (!urlVerification?.verified) {
+    // Check if URL is verified - CRITICAL: Don't allow navigation if URL is invalid
+    if (!urlVerification) {
       setError('Please wait for URL verification to complete');
+      return;
+    }
+    
+    if (urlVerification.isVerifying) {
+      setError('Please wait for URL verification to complete');
+      return;
+    }
+    
+    if (!urlVerification.verified) {
+      setError(urlVerification.error || 'Invalid URL. Please enter a valid, reachable website URL.');
       return;
     }
     

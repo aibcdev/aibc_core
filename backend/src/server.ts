@@ -22,6 +22,15 @@ import localizationRoutes from './routes/localization';
 import videoAudioRoutes from './routes/videoAudio';
 import ecommerceRoutes from './routes/ecommerce';
 import enterpriseSecurityRoutes from './routes/enterpriseSecurity';
+import platformsRoutes from './routes/platforms';
+import n8nRoutes from './routes/n8n';
+import strategyRoutes from './routes/strategy';
+import contentHubRoutes from './routes/contentHub';
+import massContentRoutes from './routes/massContent';
+import organicTrafficRoutes from './routes/organicTraffic';
+import contentQualityRoutes from './routes/contentQuality';
+import keywordsRoutes from './routes/keywords';
+import competitorTipsRoutes from './routes/competitorTips';
 
 dotenv.config();
 
@@ -93,6 +102,19 @@ app.use('/api/video', videoAudioRoutes);
 app.use('/api/audio', videoAudioRoutes);
 app.use('/api/ecommerce', ecommerceRoutes);
 app.use('/api/enterprise/security', enterpriseSecurityRoutes);
+app.use('/api/platforms', platformsRoutes);
+app.use('/api/n8n', n8nRoutes);
+app.use('/api/strategy', strategyRoutes);
+app.use('/api/content-hub', contentHubRoutes);
+app.use('/api/mass-content', massContentRoutes);
+app.use('/api/organic-traffic', organicTrafficRoutes);
+app.use('/api/content-quality', contentQualityRoutes);
+app.use('/api/keywords', keywordsRoutes);
+app.use('/api/competitor-tips', competitorTipsRoutes);
+
+// Gemini API routes
+import geminiRoutes from './routes/gemini';
+app.use('/api/gemini', geminiRoutes);
 
 // Verify handle endpoint (quick verification for integrations)
 app.post('/api/verify-handle', async (req, res) => {
@@ -250,6 +272,23 @@ Return JSON: { "response": "your helpful response", "actions": ["action1", "acti
   }
 });
 
+// Root route - API server info
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'AIBC Media API Server',
+    status: 'running',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      scan: '/api/scan',
+      analytics: '/api/analytics',
+      blog: '/api/blog',
+      docs: '/api/docs'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Health check (early in the file for quick startup detection)
 app.get('/health', (req, res) => {
   res.json({ 
@@ -265,14 +304,74 @@ app.get('/health', (req, res) => {
 if (process.env.ENABLE_CONTENT_SCHEDULER !== 'false') {
   setImmediate(async () => {
     try {
+      // #region agent log
+      const fs = require('fs');
+      const logPath = '/Users/akeemojuko/Documents/aibc_core-1/.cursor/debug.log';
+      try {
+        fs.appendFileSync(logPath, JSON.stringify({location:'server.ts:305',message:'INITIALIZING SCHEDULER',data:{enabled:process.env.ENABLE_CONTENT_SCHEDULER,time:process.env.CONTENT_GENERATION_TIME||'09:00',timezone:process.env.TIMEZONE||'America/New_York'},timestamp:Date.now(),sessionId:'debug-session',runId:'scheduler-init',hypothesisId:'H1'})+'\n');
+      } catch(e){}
+      // #endregion
       const { scheduleDailyContentGeneration } = await import('./cron/seoContentScheduler');
       scheduleDailyContentGeneration(
         process.env.CONTENT_GENERATION_TIME || '09:00',
         process.env.TIMEZONE || 'America/New_York'
       );
       console.log('✅ Content scheduler initialized');
-    } catch (error) {
+      // #region agent log
+      try {
+        fs.appendFileSync(logPath, JSON.stringify({location:'server.ts:312',message:'SCHEDULER INITIALIZED',data:{success:true},timestamp:Date.now(),sessionId:'debug-session',runId:'scheduler-init',hypothesisId:'H1'})+'\n');
+      } catch(e){}
+      // #endregion
+    } catch (error: any) {
       console.warn('⚠️ Content scheduler not available (node-cron may not be installed)');
+      // #region agent log
+      const fs = require('fs');
+      const logPath = '/Users/akeemojuko/Documents/aibc_core-1/.cursor/debug.log';
+      try {
+        fs.appendFileSync(logPath, JSON.stringify({location:'server.ts:315',message:'SCHEDULER INIT FAILED',data:{error:error?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'scheduler-init',hypothesisId:'H1'})+'\n');
+      } catch(e){}
+      // #endregion
+    }
+  });
+} else {
+  // #region agent log
+  const fs = require('fs');
+  const logPath = '/Users/akeemojuko/Documents/aibc_core-1/.cursor/debug.log';
+  try {
+    fs.appendFileSync(logPath, JSON.stringify({location:'server.ts:304',message:'SCHEDULER DISABLED',data:{enableContentScheduler:process.env.ENABLE_CONTENT_SCHEDULER},timestamp:Date.now(),sessionId:'debug-session',runId:'scheduler-init',hypothesisId:'H1'})+'\n');
+  } catch(e){}
+  // #endregion
+}
+
+// Initialize mass content scheduler (AGGRESSIVE: 5000+ posts daily for 1M pages)
+if (process.env.ENABLE_MASS_CONTENT_SCHEDULER !== 'false') {
+  setImmediate(async () => {
+    try {
+      const { scheduleMassContentGeneration, scheduleLocationContentGeneration } = await import('./cron/massContentScheduler');
+      const postsPerDay = parseInt(process.env.MASS_CONTENT_POSTS_PER_DAY || '5000', 10); // AGGRESSIVE default
+      
+      scheduleMassContentGeneration(
+        process.env.MASS_CONTENT_TIME || '02:00',
+        process.env.TIMEZONE || 'America/New_York',
+        postsPerDay
+      );
+      
+      scheduleLocationContentGeneration(
+        0, // Sunday
+        process.env.LOCATION_CONTENT_TIME || '03:00',
+        process.env.TIMEZONE || 'America/New_York'
+      );
+      
+      // Pre-generate templates for speed
+      const { templateCache } = await import('./services/contentTemplateCache');
+      templateCache.preGenerateTemplates().catch(err => {
+        console.warn('Template pre-generation error:', err);
+      });
+      
+      console.log(`✅ AGGRESSIVE mass content scheduler initialized: ${postsPerDay} posts/day`);
+      console.log(`🚀 Parallel processing: 20 workers, bulk inserts, instant indexing`);
+    } catch (error) {
+      console.warn('⚠️ Mass content scheduler not available:', error);
     }
   });
 }

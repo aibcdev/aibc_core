@@ -144,10 +144,12 @@ function isValidUrl(urlString: string): boolean {
   }
 }
 
-async function isUrlReachable(url: string): Promise<boolean> {
+export async function isUrlReachable(url: string): Promise<boolean> {
+  const controller = new AbortController();
+  let timeoutId: NodeJS.Timeout | null = null;
+  
   try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
       
       // Use GET with proper headers to avoid being blocked
       const response = await fetch(url, {
@@ -163,29 +165,54 @@ async function isUrlReachable(url: string): Promise<boolean> {
           }
       });
       
-      clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId);
       
-      // Accept any 2xx or 3xx response (3xx means redirect was followed)
-      if (response.ok || (response.status >= 200 && response.status < 400)) {
+      // Only accept 2xx responses as truly reachable
+      // 3xx redirects are followed, so if we get here with ok=true, it's reachable
+      if (response.ok) {
         console.log(`URL ${url} is reachable (status: ${response.status})`);
         return true;
       }
       
-      console.log(`URL ${url} returned status ${response.status}`);
-      return false;
-  } catch (error: any) {
-      // Some sites block but still exist - check for specific errors
-      const errorMessage = error.message || '';
-      
-      // These errors usually mean the site exists but blocked us
-      if (errorMessage.includes('CERT') || 
-          errorMessage.includes('SSL') ||
-          errorMessage.includes('ENOTFOUND') === false) {
-        console.log(`URL ${url} check encountered: ${errorMessage} - assuming reachable`);
-        return true; // Assume reachable, let scraper handle it
+      // 4xx and 5xx mean the site exists but returned an error
+      // We'll consider these "reachable" since the domain exists
+      if (response.status >= 400 && response.status < 600) {
+        console.log(`URL ${url} exists but returned error status ${response.status}`);
+        return true; // Domain exists, just has an error page
       }
       
-      console.log(`URL ${url} is not reachable: ${error.message}`);
+      console.log(`URL ${url} returned unexpected status ${response.status}`);
+      return false;
+  } catch (error: any) {
+      if (timeoutId) clearTimeout(timeoutId);
+      
+      const errorMessage = error.message || '';
+      const errorName = error.name || '';
+      
+      // DNS/Network errors mean the URL doesn't exist
+      if (errorName === 'AbortError') {
+        console.log(`URL ${url} check timed out - not reachable`);
+        return false;
+      }
+      
+      if (errorMessage.includes('ENOTFOUND') || 
+          errorMessage.includes('getaddrinfo') ||
+          errorMessage.includes('DNS') ||
+          errorMessage.includes('network') ||
+          errorMessage.includes('Failed to fetch')) {
+        console.log(`URL ${url} is not reachable: ${errorMessage}`);
+        return false;
+      }
+      
+      // SSL/CERT errors might mean the site exists but has cert issues
+      // We'll be conservative and say it's not reachable for validation purposes
+      if (errorMessage.includes('CERT') || errorMessage.includes('SSL')) {
+        console.log(`URL ${url} has SSL/CERT issues - marking as not reachable for validation`);
+        return false;
+      }
+      
+      // Unknown error - be conservative
+      console.log(`URL ${url} check failed with unknown error: ${errorMessage}`);
       return false;
   }
 }
@@ -386,8 +413,15 @@ export async function startScan(
           addLog(scanId, `[VALIDATION] URL reachable via www prefix`);
         }
       }
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:414',message:'URL REACHABILITY CHECK',data:{urlToValidate,reachable},timestamp:Date.now(),sessionId:'debug-session',runId:'url-validation',hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
+      
       if (!reachable) {
         addLog(scanId, `[WARNING] URL not reachable (${urlToValidate}) - continuing with LLM-only + constructed URLs`);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:415',message:'URL NOT REACHABLE WARNING',data:{urlToValidate},timestamp:Date.now(),sessionId:'debug-session',runId:'url-validation',hypothesisId:'H1'})}).catch(()=>{});
+        // #endregion
       } else {
       addLog(scanId, `[VALIDATION] URL is valid and reachable`);
       }
@@ -1120,16 +1154,25 @@ Return ONLY a JSON array of ${minThemes} theme strings:
         
         try {
           const additionalNeeded = minCompetitors - competitorCount;
-          const competitorPrompt = `Generate ${additionalNeeded} REAL competitors for "${username}" in their industry.
+          // Use brandIdentity industry if available (from STEP 0)
+          const industry = brandIdentity?.industry || researchData.profile?.industry || 'their industry';
+          const competitorPrompt = `Generate ${additionalNeeded} REAL competitors for "${username}" in the ${industry} industry.
+
+CRITICAL REQUIREMENTS:
+1. ALL competitors MUST be in the EXACT SAME industry: ${industry}
+2. DO NOT include social media platforms (Facebook, TikTok, Pinterest, Instagram, Twitter, LinkedIn, YouTube) - these are NOT competitors
+3. DO NOT include companies from unrelated industries (e.g., if ${username} is a health oil company, do NOT include indulgent snack companies)
+4. Only include DIRECT competitors - companies that sell similar products/services in the same market
 
 Existing competitors: ${researchData.competitors?.map((c: any) => c.name).join(', ') || 'None'}
 Brand context: ${researchData.profile?.bio || username}
+Industry: ${industry}
 Industry themes: ${researchData.content_themes?.join(', ') || 'General'}
 
 Return ONLY a JSON array of competitor objects. Use REAL company names, not placeholders:
 [
   {
-    "name": "Real Company Name",
+    "name": "Real Company Name (in ${industry} industry)",
     "threatLevel": "HIGH|MEDIUM|LOW",
     "primaryVector": "Platform - content strategy",
     "theirAdvantage": "Specific advantage",
@@ -1316,6 +1359,10 @@ Return JSON array of actionable recommendations with metrics:
     let competitorIntelligence: any[] = [];
     let marketShare: any = null;
     
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:1348',message:'COMPETITOR GENERATION START',data:{username,hasValidatedContent:!!validatedContent,postsCount:validatedContent?.posts?.length||0,hasBrandIdentity:!!brandIdentity,brandIdentityIndustry:brandIdentity?.industry,brandIdentityNiche:brandIdentity?.niche},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-gen',hypothesisId:'H2'})}).catch(()=>{});
+    // #endregion
+    
     // CRITICAL: Use brand identity niche as PRIMARY source, fall back to content detection
     const detectedNiche = detectNicheFromContent(
       (validatedContent.posts || []).map((p: any) => p.content).join(' '),
@@ -1325,6 +1372,10 @@ Return JSON array of actionable recommendations with metrics:
     
     // Brand identity niche is MORE reliable than content detection
     const nicheHint = brandIdentity?.niche || brandIdentity?.industry || detectedNiche;
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:1361',message:'NICHE DETECTED',data:{nicheHint,detectedNiche,brandIdentityNiche:brandIdentity?.niche,brandIdentityIndustry:brandIdentity?.industry},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-gen',hypothesisId:'H6'})}).catch(()=>{});
+    // #endregion
     
     if (brandIdentity?.niche) {
       addLog(scanId, `[COMPETITORS] Using brand identity niche: "${brandIdentity.niche}"`);
@@ -1340,7 +1391,7 @@ Return JSON array of actionable recommendations with metrics:
     // ALWAYS call generateCompetitorIntelligence to ensure we have competitors
     // Use LLM knowledge base (no dependency on scraping)
     try {
-      const competitorData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier, platforms, websiteTextContent, nicheHint, identityCompetitors);
+      const competitorData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier, platforms, websiteTextContent, nicheHint, identityCompetitors, brandIdentity);
       
       // Handle new format with marketShare
       if (competitorData && competitorData.competitors && Array.isArray(competitorData.competitors)) {
@@ -1387,7 +1438,7 @@ Return JSON array of actionable recommendations with metrics:
         addLog(scanId, `[WARNING] Only ${competitorIntelligence.length} competitors found (minimum ${minCompetitors}) - retrying...`);
         // Retry with more explicit prompt
         try {
-          const retryData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier, platforms, websiteTextContent, nicheHint, identityCompetitors);
+          const retryData: any = await generateCompetitorIntelligence(validatedContent, brandDNA, username, scanTier, platforms, websiteTextContent, nicheHint, identityCompetitors, brandIdentity);
           if (retryData && retryData.competitors && Array.isArray(retryData.competitors) && retryData.competitors.length >= minCompetitors) {
             competitorIntelligence = retryData.competitors;
             marketShare = retryData.marketShare;
@@ -1398,16 +1449,74 @@ Return JSON array of actionable recommendations with metrics:
         }
       }
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:1435',message:'COMPETITORS BEFORE VALIDATION',data:{count:competitorIntelligence.length,competitors:competitorIntelligence.map((c:any)=>c.name)},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-gen',hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
+      
+      // CRITICAL FINAL VALIDATION LAYER: Filter inappropriate competitors before returning
+      const inappropriateKeywords = [
+        'lornabliss', 'rileyreid', 'miakhalifa', 'porn', 'adult', 'xxx', 'explicit',
+        'escort', 'prostitute', 'stripper', 'camgirl', 'onlyfans', 'pornhub',
+        'xvideos', 'redtube', 'youporn', 'adultfilm', 'pornstar', 'sexworker'
+      ];
+      const filteredCompetitors = competitorIntelligence.filter((comp: any) => {
+        if (!comp || !comp.name) return false;
+        const compLower = comp.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const isInappropriate = inappropriateKeywords.some(keyword => compLower.includes(keyword));
+        if (isInappropriate) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:1445',message:'FINAL VALIDATION BLOCKED',data:{compName:comp.name,compLower},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-gen',hypothesisId:'H5'})}).catch(()=>{});
+          // #endregion
+          addLog(scanId, `[VALIDATION] 🚫 BLOCKED inappropriate competitor: "${comp.name}"`);
+          return false;
+        }
+        return true;
+      });
+      
+      if (filteredCompetitors.length < competitorIntelligence.length) {
+        addLog(scanId, `[VALIDATION] Filtered ${competitorIntelligence.length - filteredCompetitors.length} inappropriate competitors`);
+        competitorIntelligence = filteredCompetitors;
+      }
+      
+      // #region agent log
+      const competitorNames = competitorIntelligence.map((c:any)=>c?.name||'unnamed').filter(Boolean);
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:1455',message:'COMPETITORS AFTER VALIDATION',data:{count:competitorIntelligence.length,competitors:competitorNames},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-gen',hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:1485',message:'CHECKING COMPETITOR COUNT',data:{length:competitorIntelligence.length,type:typeof competitorIntelligence.length},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-gen',hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
+      
       if (competitorIntelligence.length > 0) {
         addLog(scanId, `[SUCCESS] Competitor intelligence analyzed - ${competitorIntelligence.length} competitors identified`);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:1486',message:'COMPETITOR SUCCESS LOGGED',data:{count:competitorIntelligence.length},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-gen',hypothesisId:'H5'})}).catch(()=>{});
+        // #endregion
       } else {
         addLog(scanId, `[ERROR] CRITICAL: No competitors generated - this is a required feature`);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:1489',message:'COMPETITOR ERROR - NO COMPETITORS',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-gen',hypothesisId:'H5'})}).catch(()=>{});
+        // #endregion
       }
       
       if (marketShare) {
         addLog(scanId, `[SUCCESS] Market share estimated at ${marketShare.percentage}% of ${marketShare.industry}`);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:1492',message:'MARKET SHARE LOGGED',data:{percentage:marketShare.percentage,industry:marketShare.industry},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-gen',hypothesisId:'H5'})}).catch(()=>{});
+        // #endregion
       }
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:1505',message:'BEFORE COMPETITOR CATCH BLOCK',data:{competitorCount:competitorIntelligence.length},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-gen',hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:1544',message:'COMPETITOR GENERATION TRY BLOCK COMPLETE',data:{competitorCount:competitorIntelligence.length,willContinueToContentIdeas:true},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-gen',hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
     } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:1495',message:'COMPETITOR GENERATION ERROR',data:{error:error?.message,stack:error?.stack?.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-gen',hypothesisId:'H6'})}).catch(()=>{});
+      // #endregion
       addLog(scanId, `[ERROR] CRITICAL: Competitor intelligence generation failed: ${error.message}`);
       console.error(`[SCAN ${scanId}] Competitor generation error:`, error);
       
@@ -1437,11 +1546,24 @@ Return JSON array of actionable recommendations with metrics:
         }
       }
     }
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:1544',message:'AFTER COMPETITOR GENERATION TRY-CATCH',data:{competitorCount:competitorIntelligence.length,hasMarketShare:!!marketShare,willProceedToContentIdeas:true},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-gen',hypothesisId:'H5'})}).catch(()=>{});
+    // #endregion
 
     // Generate Content Ideas based on brand DNA and content themes
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:1548',message:'BEFORE CONTENT IDEAS GENERATION',data:{competitorCount:competitorIntelligence.length,strategicInsightsCount:strategicInsights?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'content-ideas',hypothesisId:'H7'})}).catch(()=>{});
+    // #endregion
     addLog(scanId, `[DEBUG] ✅ Reached content ideas section - competitor count: ${competitorIntelligence.length}, strategic insights: ${strategicInsights?.length || 0}`);
     addLog(scanId, `[CONTENT] Starting content ideas generation...`);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:1528',message:'UPDATING PROGRESS TO 99',data:{scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'content-ideas',hypothesisId:'H7'})}).catch(()=>{});
+    // #endregion
     storage.updateScan(scanId, { progress: 99 });
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:1529',message:'PROGRESS UPDATED TO 99',data:{scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'content-ideas',hypothesisId:'H7'})}).catch(()=>{});
+    // #endregion
     let contentIdeas: any[] = [];
     try {
       const { generateJSON } = await import('./llmService');
@@ -2120,22 +2242,156 @@ Understand what ${brandName} actually does, then create viral content that beats
       addLog(scanId, `[CRITICAL ERROR] Content ideas is EMPTY at results assembly! This should never happen.`);
     }
     
+    // VIDEO ANALYSIS: Analyze client video outputs to enrich insights
+    let videoAnalysis: any = null;
+    try {
+      addLog(scanId, `[VIDEO ANALYSIS] Starting video analysis of client outputs...`);
+      const { videoAnalysisAgent } = await import('./agents/videoAnalysisAgent');
+      
+      // Extract videos from validatedContent
+      const videos: Array<{
+        url: string;
+        platform?: string;
+        title?: string;
+        description?: string;
+        duration?: number;
+        views?: number;
+        engagement?: any;
+        metadata?: any;
+      }> = [];
+      
+      // Extract videos from posts - check both media_urls and post content text
+      if (validatedContent.posts && Array.isArray(validatedContent.posts)) {
+        const videoUrlPattern = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|tiktok\.com\/@[\w.]+\/video\/|instagram\.com\/reel\/|facebook\.com\/watch\/|vimeo\.com\/[\d]+|[\w-]+\.(?:mp4|mov|avi|webm|mkv|m4v)(?:\?|$))/gi;
+        
+        validatedContent.posts.forEach((post: any) => {
+          const foundUrls = new Set<string>();
+          
+          // Check media_urls first
+          if (post.media_urls && Array.isArray(post.media_urls)) {
+            post.media_urls.forEach((url: string) => {
+              if (url && (
+                url.includes('youtube.com') || url.includes('youtu.be') ||
+                url.includes('tiktok.com') || url.includes('instagram.com/reel') ||
+                url.includes('facebook.com/watch') || url.includes('vimeo.com') ||
+                url.match(/\.(mp4|mov|avi|webm|mkv|m4v)(\?|$)/i)
+              )) {
+                foundUrls.add(url);
+              }
+            });
+          }
+          
+          // Also check post content text for video URLs
+          if (post.content) {
+            const matches = post.content.match(videoUrlPattern);
+            if (matches) {
+              matches.forEach((url: string) => {
+                // Normalize YouTube URLs
+                let normalizedUrl = url;
+                if (url.includes('youtu.be/')) {
+                  const videoId = url.split('youtu.be/')[1]?.split('?')[0]?.split('&')[0];
+                  if (videoId) normalizedUrl = `https://www.youtube.com/watch?v=${videoId}`;
+                } else if (!url.startsWith('http')) {
+                  normalizedUrl = `https://${url}`;
+                }
+                foundUrls.add(normalizedUrl);
+              });
+            }
+          }
+          
+          // Add all found video URLs
+          foundUrls.forEach((url) => {
+            videos.push({
+              url,
+              platform: post.platform,
+              title: post.content?.substring(0, 100),
+              description: post.content,
+              views: post.views,
+              engagement: {
+                likes: post.likes,
+                shares: post.shares,
+                comments: post.comments,
+              },
+              metadata: post,
+            });
+          });
+        });
+      }
+      
+      // Also check for channel references in social links
+      const hasChannels = discoveredSocialLinks && (
+        discoveredSocialLinks.youtube || 
+        discoveredSocialLinks.tiktok || 
+        discoveredSocialLinks.instagram
+      );
+      
+      if (videos.length > 0 || hasChannels) {
+        if (videos.length > 0) {
+          addLog(scanId, `[VIDEO ANALYSIS] Found ${videos.length} videos in posts to analyze`);
+        }
+        if (hasChannels) {
+          addLog(scanId, `[VIDEO ANALYSIS] Detected channel references - will fetch 2-3 videos from channels to establish style`);
+        }
+        
+        const videoAnalysisResult = await videoAnalysisAgent.execute('analyze-client-videos', {
+          videos,
+          brandName: username,
+          industry: brandIdentity?.industry,
+          extractedContent: validatedContent,
+          socialLinks: discoveredSocialLinks, // Pass social links to fetch from channels
+        });
+        
+        videoAnalysis = videoAnalysisResult;
+        addLog(scanId, `[VIDEO ANALYSIS] ✅ Analyzed ${videoAnalysisResult.videoInsights?.length || 0} videos`);
+        addLog(scanId, `[VIDEO ANALYSIS] Top performers: ${videoAnalysisResult.aggregatedInsights?.topPerformingVideos?.length || 0}`);
+        addLog(scanId, `[VIDEO ANALYSIS] Success factors identified: ${videoAnalysisResult.aggregatedInsights?.commonSuccessFactors?.length || 0}`);
+        
+        // Enrich competitor intelligence with video insights
+        if (videoAnalysisResult.aggregatedInsights && competitorIntelligence.length > 0) {
+          competitorIntelligence = competitorIntelligence.map((competitor: any) => ({
+            ...competitor,
+            videoInsights: {
+              recommendedStyle: videoAnalysisResult.aggregatedInsights.stylePatterns?.[0] || null,
+              contentPatterns: videoAnalysisResult.aggregatedInsights.contentPatterns || [],
+              successFactors: videoAnalysisResult.aggregatedInsights.commonSuccessFactors || [],
+            },
+          }));
+          addLog(scanId, `[VIDEO ANALYSIS] ✅ Enriched ${competitorIntelligence.length} competitors with video insights`);
+        }
+        
+        // Add video insights to validatedContent for downstream use
+        validatedContent.videoInsights = videoAnalysisResult.videoInsights;
+        validatedContent.videoAnalysis = videoAnalysisResult.aggregatedInsights;
+      } else {
+        addLog(scanId, `[VIDEO ANALYSIS] No videos found in client outputs`);
+      }
+    } catch (videoError: any) {
+      // Don't fail scan if video analysis fails
+      console.warn('[Scan Service] Video analysis failed:', videoError);
+      addLog(scanId, `[VIDEO ANALYSIS] ⚠️ Video analysis error: ${videoError.message}`);
+    }
+    
     // Build scan stats to show users what they got
     const scanStats = {
       postsAnalyzed: validatedContent.posts?.length || 0,
       competitorsFound: competitorIntelligence?.length || 0,
       themesIdentified: validatedContent.content_themes?.length || 0,
       contentIdeasGenerated: contentIdeas?.length || 0,
+      videosAnalyzed: videoAnalysis?.videoInsights?.length || 0,
       scanTier: scanTier,
       isDeepScan: scanTier === 'deep',
       hasMarketAnalysis: !!(researchData?.market_analysis),
       hasStrategicRecommendations: !!(researchData?.strategic_recommendations && researchData.strategic_recommendations.length > 0),
-      strategicRecommendationsCount: researchData?.strategic_recommendations?.length || 0
+      strategicRecommendationsCount: researchData?.strategic_recommendations?.length || 0,
+      hasVideoAnalysis: !!videoAnalysis
     };
     
-    addLog(scanId, `[SCAN STATS] ${scanTier.toUpperCase()} scan - Posts: ${scanStats.postsAnalyzed}, Competitors: ${scanStats.competitorsFound}, Themes: ${scanStats.themesIdentified}, Ideas: ${scanStats.contentIdeasGenerated}`);
+    addLog(scanId, `[SCAN STATS] ${scanTier.toUpperCase()} scan - Posts: ${scanStats.postsAnalyzed}, Competitors: ${scanStats.competitorsFound}, Themes: ${scanStats.themesIdentified}, Ideas: ${scanStats.contentIdeasGenerated}, Videos: ${scanStats.videosAnalyzed}`);
     if (scanTier === 'deep') {
       addLog(scanId, `[DEEP SCAN EXTRAS] Market Analysis: ${scanStats.hasMarketAnalysis ? 'Yes' : 'No'}, Strategic Recommendations: ${scanStats.strategicRecommendationsCount}`);
+    }
+    if (scanStats.hasVideoAnalysis) {
+      addLog(scanId, `[VIDEO ANALYSIS] ✅ Video insights available for analytics, content hub, and strategy`);
     }
     
     const results = {
@@ -2143,28 +2399,78 @@ Understand what ${brandName} actually does, then create viral content that beats
       brandDNA,
       marketShare,
       strategicInsights,
-      competitorIntelligence,
+      competitorIntelligence, // Now enriched with video insights
       socialLinks: discoveredSocialLinks, // Add discovered social links
       contentIdeas: contentIdeas || [], // Add generated content ideas - ensure it's never undefined
       scanStats, // Add scan statistics for UI display
       marketAnalysis: researchData?.market_analysis || null, // Deep scan only
-      strategicRecommendations: researchData?.strategic_recommendations || [] // Deep scan only
+      strategicRecommendations: researchData?.strategic_recommendations || [], // Deep scan only
+      videoAnalysis: videoAnalysis || null // Video analysis results
     };
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:2398',message:'BEFORE SCAN COMPLETION',data:{scanId,hasResults:!!results,competitorCount:competitorIntelligence?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H8'})}).catch(()=>{});
+    // #endregion
+    
     storage.updateScan(scanId, {
       progress: 100,
       status: 'complete',
       results,
       completedAt: new Date().toISOString()
     });
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:2403',message:'SCAN MARKED AS COMPLETE',data:{scanId,status:'complete',progress:100},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H8'})}).catch(()=>{});
+    // #endregion
 
     addLog(scanId, `[SUCCESS] Brand DNA extracted successfully`);
     addLog(scanId, `[SUCCESS] Strategic insights generated`);
     addLog(scanId, `[SUCCESS] Competitor intelligence analyzed`);
+    if (videoAnalysis) {
+      addLog(scanId, `[SUCCESS] Video analysis completed - ${videoAnalysis.videoInsights?.length || 0} videos analyzed`);
+    }
     addLog(scanId, `[METRICS] Content Posts: ${validatedContent.posts.length}`);
     addLog(scanId, `[METRICS] Content Themes: ${validatedContent.content_themes.length}`);
     addLog(scanId, `[METRICS] Extraction Confidence: ${Math.round(validatedContent.extraction_confidence * 100)}%`);
+    if (videoAnalysis) {
+      addLog(scanId, `[METRICS] Videos Analyzed: ${videoAnalysis.videoInsights?.length || 0}`);
+    }
+
+    // Trigger n8n workflow for Master CMO Agent orchestration
+    try {
+      const { triggerMasterCMOWorkflow } = await import('./agents/masterCMOAgent');
+      const { isN8nConfigured } = await import('./n8nService');
+      
+      if (isN8nConfigured()) {
+        addLog(scanId, `[N8N] Triggering Master CMO workflow...`);
+        const workflowResult = await triggerMasterCMOWorkflow({
+          scanId,
+          brandDNA,
+          extractedContent: validatedContent, // Already includes videoInsights and videoAnalysis
+          competitorIntelligence, // Already enriched with video insights
+          strategicInsights,
+          brandIdentity,
+          username,
+          workflowType: 'scan-complete',
+        });
+        
+        if (workflowResult.success) {
+          addLog(scanId, `[N8N] Master CMO workflow triggered successfully`);
+        } else {
+          addLog(scanId, `[N8N] Workflow trigger failed: ${workflowResult.error}`);
+        }
+      } else {
+        addLog(scanId, `[N8N] n8n not configured, skipping workflow trigger`);
+      }
+    } catch (n8nError: any) {
+      // Don't fail scan if n8n workflow fails
+      console.warn('[Scan Service] n8n workflow trigger failed:', n8nError);
+      addLog(scanId, `[N8N] Workflow trigger error: ${n8nError.message}`);
+    }
   } catch (error: any) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:2466',message:'OUTER CATCH BLOCK - SCAN FAILED',data:{scanId,error:error?.message,stack:error?.stack?.substring(0,300)},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-error',hypothesisId:'H9'})}).catch(()=>{});
+    // #endregion
     console.error(`Scan ${scanId} failed:`, error);
     addLog(scanId, `[ERROR] Scan failed: ${error.message}`);
     
@@ -2176,6 +2482,9 @@ Understand what ${brandName} actually does, then create viral content that beats
       progress: 100
     });
     addLog(scanId, `[REJECTED] Scan failed quality validation - no fallback data provided`);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:2477',message:'SCAN MARKED AS ERROR',data:{scanId,status:'error'},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-error',hypothesisId:'H9'})}).catch(()=>{});
+    // #endregion
   }
 }
 
@@ -4618,12 +4927,13 @@ async function extractOutputContent(
   platform: string
 ): Promise<any> {
   if (!isLLMConfigured()) {
-    // Fallback mock data
+    // Return empty data structure instead of mock data
     return {
-      profile: { bio: 'Sample bio' },
+      profile: { bio: '' },
       posts: [],
       content_themes: [],
-      extraction_confidence: 0.5,
+      extraction_confidence: 0,
+      error: 'LLM not configured - cannot extract content',
     };
   }
 
@@ -4798,26 +5108,40 @@ async function extractBrandDNA(validatedContent: any, scanTier: ScanTier = 'basi
     const allPosts = (validatedContent.posts || []).map((p: any) => p.content).join('\n\n');
     const combinedText = allPosts.substring(0, 50000);
 
-    const systemPrompt = 'You are a brand strategist expert. Analyze content and extract brand DNA. Always return valid JSON.';
-    const prompt = `Analyze this brand's content to extract their unique DNA:
+    const systemPrompt = 'You are analyzing a company\'s actual content to understand their real brand voice. Extract accurate information from their actual posts. Always return valid JSON.';
+    
+    // Get company name from content or use placeholder
+    const companyName = validatedContent.profile?.bio?.split(' ').slice(0, 3).join(' ') || 'this company';
+    
+    const prompt = combinedText && combinedText.length > 0 ? `You are analyzing actual content from a company. Read their posts below and extract their REAL brand voice - how they actually communicate, not generic descriptions.
 
-Content:
+ACTUAL COMPANY CONTENT (their real posts):
 ${combinedText}
 
+TASK: Based on their ACTUAL content above, analyze how this company actually writes and communicates.
+
+This is like asking: "Write a paragraph explaining [COMPANY] based on their actual content" - extract their REAL voice from their REAL posts.
+
+Analyze:
+1. How do they actually write? (Look at sentence length, word choice, punctuation style in their posts)
+2. What tone do they actually use? (Read their posts - are they casual, formal, technical, friendly?)
+3. What words/phrases do they actually use repeatedly? (Extract from their actual posts)
+4. How do they structure their messages? (Short sentences? Long paragraphs? Questions? Statements?)
+5. What's their actual personality based on their content? (Not what they claim, but what their writing shows)
+
 Extract:
-
 1. Brand Archetype (choose ONE from: The Architect, The Hero, The Sage, The Explorer, The Creator, The Ruler, The Caregiver, The Innocent, The Magician, The Outlaw, The Lover, The Jester):
-   - Most fitting archetype based on their content
+   - Most fitting archetype based on their ACTUAL content
 
-2. Voice & Tone:
-   - Writing style (formal, casual, technical, etc.)
-   - Vocabulary patterns (list 5-10 key words)
-   - Sentence structure (short, long, varied)
-   - Emotional tone (professional, friendly, humorous, etc.)
-   - Primary voice tones (list 3, e.g., "Systematic", "Transparent", "Dense", "Bold", "Analytical", "Creative")
+2. Voice & Tone (from their ACTUAL posts):
+   - Writing style: How they actually write (e.g., "conversational with technical depth", "short punchy statements", "detailed explanations") - be specific based on their posts
+   - Formality: Their actual formality level from their posts (formal, casual, professional-casual, etc.)
+   - Tone: Their actual tone from their posts (friendly, authoritative, humorous, serious, etc.)
+   - Vocabulary: List 5-10 actual words/phrases they use repeatedly in their posts
+   - Primary voice tones: List 3 characteristics of how they actually communicate (e.g., "Systematic", "Transparent", "Dense", "Bold", "Analytical", "Creative") - based on their actual writing
 
 3. Content Themes:
-   - Main topics they discuss (list 3-5)
+   - Main topics they actually discuss (list 3-5)
    - Value propositions
    - Messaging pillars
 
@@ -4836,14 +5160,14 @@ Return ONLY valid JSON:
 {
   "archetype": "The Architect",
   "voice": {
-    "style": "...",
-    "formality": "...",
-    "tone": "...",
-    "vocabulary": ["..."],
-    "tones": ["Systematic", "Transparent", "Dense"]
+    "style": "Their actual writing style based on their posts (be specific, e.g., 'conversational with technical depth', 'short punchy statements')",
+    "formality": "Their actual formality level from their posts (formal, casual, professional-casual, etc.)",
+    "tone": "Their actual tone from their posts (friendly, authoritative, humorous, serious, etc.)",
+    "vocabulary": ["actual", "words", "they", "use", "repeatedly", "in", "their", "posts"],
+    "tones": ["Their", "actual", "voice", "characteristics", "from", "content"]
   },
-  "themes": ["..."],
-  "corePillars": ["...", "...", "..."],
+  "themes": ["Main topics they actually discuss"],
+  "corePillars": ["What they actually communicate about"],
   "visual_identity": {
     "colors": ["..."],
     "style": "..."
@@ -4852,9 +5176,32 @@ Return ONLY valid JSON:
     "frequency": "...",
     "best_content_types": ["..."]
   }
+}` : `No content available to analyze. Return minimal structure:
+{
+  "archetype": "The Architect",
+  "voice": {
+    "style": "professional",
+    "formality": "professional",
+    "tone": "professional",
+    "vocabulary": [],
+    "tones": ["Professional"]
+  },
+  "themes": [],
+  "corePillars": [],
+  "visual_identity": {},
+  "engagement_patterns": {}
 }`;
 
     const parsed: any = await generateJSON(prompt, systemPrompt, { tier: scanTier });
+    
+    // #region agent log
+    const fs = require('fs');
+    const logPath = '/Users/akeemojuko/Documents/aibc_core-1/.cursor/debug.log';
+    try {
+      fs.appendFileSync(logPath, JSON.stringify({location:'scanService.ts:extractBrandDNA',message:'BRAND VOICE EXTRACTED',data:{hasVoice:!!parsed.voice,voiceStyle:parsed.voice?.style,voiceTone:parsed.voice?.tone,voiceFormality:parsed.voice?.formality,vocabularyCount:parsed.voice?.vocabulary?.length||0,tonesCount:parsed.voice?.tones?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'brand-dna-extraction',hypothesisId:'H20'})+'\n');
+    } catch(e){}
+    // #endregion
+    
     // Ensure required fields
     return {
       archetype: parsed.archetype || 'The Architect',
@@ -5572,20 +5919,28 @@ async function generateCompetitorIntelligence(
   platforms: string[] = [],
   websiteTextContent?: string,
   nicheHint?: string,
-  knownCompetitors?: string[]  // From LLM identity layer - these are verified competitors
+  knownCompetitors?: string[],  // From LLM identity layer - these are verified competitors
+  brandIdentity?: any  // Brand identity from STEP 0 - contains industry
 ): Promise<any> {
   // Always try to generate competitors - even with minimal data, we can use LLM knowledge
   const hasRealContent = validatedContent.posts && validatedContent.posts.length > 0;
   const hasRealProfile =
     validatedContent.profile &&
     validatedContent.profile.bio &&
-    validatedContent.profile.bio !== 'Sample bio' &&
+    validatedContent.profile.bio.trim().length > 0 &&
     !validatedContent.profile.bio.includes('Profile for');
   const hasThemes = validatedContent.content_themes && validatedContent.content_themes.length > 0;
 
-  if (!hasRealContent && !hasRealProfile && !hasThemes && !username) {
-    console.log('No data available for competitor analysis - using LLM knowledge base');
-  }
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:5786',message:'COMPETITOR GEN DATA CHECK',data:{hasRealContent,hasRealProfile,hasThemes,username,postsCount:validatedContent?.posts?.length||0,bio:validatedContent?.profile?.bio?.substring(0,50)||'none',themesCount:validatedContent?.content_themes?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-gen',hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+      
+      if (!hasRealContent && !hasRealProfile && !hasThemes && !username) {
+        console.log('No data available for competitor analysis - using LLM knowledge base');
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:5794',message:'WARNING NO DATA',data:{username},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-gen',hypothesisId:'H2'})}).catch(()=>{});
+        // #endregion
+      }
 
   if (!isLLMConfigured()) {
     console.error('LLM not configured - cannot generate competitors');
@@ -5634,6 +5989,8 @@ async function generateCompetitorIntelligence(
       nicheOverride = 'Decentralized Video Infrastructure';
     }
     
+    // CRITICAL: Use brandIdentity industry FIRST for accurate filtering (passed as parameter)
+    const industryForFiltering = brandDNA?.industry || brandIdentity?.industry || nicheOverride || nicheHint || nicheIndicators || 'general';
     const nicheContext = nicheOverride || nicheHint || nicheIndicators || 'general';
     
     // If we have known competitors from the identity layer, use them as ground truth
@@ -5641,7 +5998,24 @@ async function generateCompetitorIntelligence(
       ? knownCompetitors.join(', ')
       : '';
 
-    const prompt = `Layered competitor map for ${brandName} in the ${nicheContext} industry.
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:5955',message:'INDUSTRY DETECTION',data:{brandName,industryForFiltering,brandDNAIndustry:brandDNA?.industry,brandIdentityIndustry:brandIdentity?.industry,nicheOverride,nicheHint,nicheIndicators,knownCompetitorsCount:knownCompetitors?.length||0,knownCompetitorsList},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-gen',hypothesisId:'H5'})}).catch(()=>{});
+    // #endregion
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:5964',message:'LLM PROMPT GENERATION',data:{brandName,industryForFiltering,hasRealContent,hasRealProfile,hasThemes,combinedTextLength:combinedText?.length||0,bioLength:bio?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-gen',hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
+    
+    const prompt = `Layered competitor map for ${brandName} in the ${industryForFiltering} industry.
+
+CRITICAL REQUIREMENTS - READ CAREFULLY:
+1. ${brandName} is in the ${industryForFiltering} industry - ALL competitors MUST be in this EXACT industry
+2. DO NOT include social media platforms (Facebook, Meta, TikTok, Pinterest, Instagram, Twitter, X, LinkedIn, YouTube, Snapchat, Reddit, Discord) - these are NOT competitors, they are platforms
+3. DO NOT include companies from unrelated industries - if ${brandName} is in ${industryForFiltering}, competitors MUST also be in ${industryForFiltering}
+4. Only include DIRECT competitors - companies that sell similar products/services in the same ${industryForFiltering} market
+5. VERIFY each competitor: Ask yourself "Does this company sell the same type of product/service as ${brandName} in ${industryForFiltering}?" If NO, exclude it
+6. If you cannot find 3-5 accurate competitors in ${industryForFiltering}, return fewer competitors rather than including wrong ones
+7. ABSOLUTELY FORBIDDEN: Do NOT include adult performers, adult content creators, or any inappropriate/vulgar competitors. Only include legitimate businesses in ${industryForFiltering}
 
 ${knownCompetitorsList ? `VERIFIED COMPETITORS (from prior research - USE THESE):
 ${knownCompetitorsList}
@@ -5673,9 +6047,14 @@ CONTEXT:
 TASK:
 1) Return EXACTLY 3-5 competitors - NO MORE. These must be the CLOSEST, most DIRECT competitors only.
 2) ALL competitors must be in the EXACT SAME industry as ${brandName}. NO industry fusion or cross-industry mixing.
-   - If ${brandName} sells athletic wear, only return athletic wear competitors (NOT general fashion, NOT nutrition, NOT unrelated sports companies)
-   - If ${brandName} is a crypto launchpad, only return crypto launchpad competitors (NOT exchanges, NOT wallets, NOT general crypto)
+   - If ${brandName} sells athletic wear, only return athletic wear competitors (NOT general fashion, NOT nutrition, NOT unrelated sports companies, NOT social media platforms)
+   - If ${brandName} is a crypto launchpad, only return crypto launchpad competitors (NOT exchanges, NOT wallets, NOT general crypto, NOT social media platforms)
+   - If ${brandName} is in ${industryForFiltering}, competitors MUST be in ${industryForFiltering} - NO exceptions
 3) PRIMARY = direct competitor (same product/service), SECONDARY = adjacent competitor (related but not identical)
+4) VALIDATION: Before including each competitor, verify:
+   - Is it a social media platform? If YES, EXCLUDE
+   - Is it in ${industryForFiltering}? If NO, EXCLUDE
+   - Does it sell similar products/services? If NO, EXCLUDE
 4) For EACH competitor, provide DETAILED posting analysis:
    - Which platforms they dominate
    - Their posting frequency and best times
@@ -5734,7 +6113,13 @@ RETURN JSON ONLY:
     // Use generateJSON for more reliable parsing
     let competitorData: any;
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:6074',message:'CALLING LLM FOR COMPETITORS',data:{industryForFiltering,hasKnownCompetitors:!!knownCompetitorsList},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-gen',hypothesisId:'H6'})}).catch(()=>{});
+      // #endregion
       competitorData = await generateJSON(prompt, systemPrompt, { tier: scanTier });
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:6077',message:'LLM COMPETITOR RESULT',data:{hasCompetitors:!!competitorData?.competitors,competitorCount:competitorData?.competitors?.length||0,competitorNames:competitorData?.competitors?.map((c:any)=>c.name).join(',')||'none'},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-gen',hypothesisId:'H6'})}).catch(()=>{});
+      // #endregion
     } catch (jsonError) {
       const { generateText } = await import('./llmService');
       const text = await generateText(prompt, systemPrompt, { tier: scanTier });
@@ -5768,19 +6153,52 @@ RETURN JSON ONLY:
         return false;
       };
 
-      // CRITICAL: Filter out competitors from wrong industries
+      // CRITICAL: Filter out competitors from wrong industries AND social media platforms
       const isWrongIndustryCompetitor = (compName: string, industry: string): boolean => {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:5995',message:'FILTER CHECK START',data:{compName,industry},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-filter',hypothesisId:'H4'})}).catch(()=>{});
+        // #endregion
+        
         const compLower = compName.toLowerCase().replace(/[^a-z0-9]/g, '');
         const industryLower = industry.toLowerCase();
         
         console.log(`[FILTER DEBUG] Checking competitor: "${compName}" (normalized: "${compLower}") in industry: "${industry}"`);
         
+        // CRITICAL: BLACKLIST - Filter out inappropriate/vulgar content (adult performers, explicit content)
+        // This is a safety filter to prevent inappropriate competitors from appearing
+        const inappropriateKeywords = [
+          'lornabliss', 'rileyreid', 'miakhalifa', 'porn', 'adult', 'xxx', 'explicit',
+          'escort', 'prostitute', 'stripper', 'camgirl', 'onlyfans', 'pornhub',
+          'xvideos', 'redtube', 'youporn', 'adultfilm', 'pornstar', 'sexworker'
+        ];
+        const isInappropriate = inappropriateKeywords.some(keyword => compLower.includes(keyword));
+        if (isInappropriate) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:6010',message:'FILTER BLOCKED INAPPROPRIATE',data:{compName,compLower,matchedKeyword:inappropriateKeywords.find(k=>compLower.includes(k))},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-filter',hypothesisId:'H4'})}).catch(()=>{});
+          // #endregion
+          console.log(`[FILTER] 🚫 BLOCKING inappropriate competitor "${compName}" - contains inappropriate keywords`);
+          return true;
+        }
+        
+        // CRITICAL: Filter out social media platforms - they are NOT competitors
+        const socialMediaPlatforms = [
+          'facebook', 'meta', 'instagram', 'twitter', 'x', 'linkedin', 
+          'youtube', 'tiktok', 'pinterest', 'snapchat', 'reddit', 
+          'discord', 'telegram', 'whatsapp', 'messenger', 'wechat'
+        ];
+        const isSocialPlatform = socialMediaPlatforms.some(platform => compLower.includes(platform));
+        if (isSocialPlatform) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:6020',message:'FILTER BLOCKED SOCIAL PLATFORM',data:{compName},timestamp:Date.now(),sessionId:'debug-session',runId:'competitor-filter',hypothesisId:'H4'})}).catch(()=>{});
+          // #endregion
+          console.log(`[FILTER] ✅ REMOVING social media platform "${compName}" - platforms are NOT competitors`);
+          return true;
+        }
+        
         // Travel companies that should ONLY appear for travel brands
         const travelCompanies = ['vrbo', 'bookingcom', 'booking', 'expedia', 'tripadvisor', 'agoda', 'hotelscom', 'kayak', 'trivago', 'airbnb'];
         const isTravelCompetitor = travelCompanies.some(t => compLower.includes(t));
         const isTravelIndustry = industryLower.includes('travel') || industryLower.includes('hotel') || industryLower.includes('rental') || industryLower.includes('hospitality') || industryLower.includes('accommodation') || industryLower.includes('vacation');
-        
-        console.log(`[FILTER DEBUG] isTravelCompetitor: ${isTravelCompetitor}, isTravelIndustry: ${isTravelIndustry}`);
         
         // If it's a travel competitor but NOT a travel industry, filter it out
         if (isTravelCompetitor && !isTravelIndustry) {
@@ -5791,19 +6209,29 @@ RETURN JSON ONLY:
         // Athletic companies that should ONLY appear for athletic/apparel brands  
         const athleticCompanies = ['nike', 'adidas', 'puma', 'underarmour', 'lululemon', 'reebok', 'newbalance', 'asics', 'gymshark'];
         const isAthleticCompetitor = athleticCompanies.some(a => compLower.includes(a));
-        // Athletic industry = apparel/footwear/fitness, but NOT video games/simulation
         const isAthleticIndustry = (industryLower.includes('athletic') || industryLower.includes('apparel') || industryLower.includes('footwear') || industryLower.includes('fitness') || industryLower.includes('sportswear'));
         const isGameIndustry = industryLower.includes('game') || industryLower.includes('simulation') || industryLower.includes('gaming') || industryLower.includes('esport');
         
         // If it's an athletic competitor but the industry is games/simulation (not athletic apparel), filter it out
         if (isAthleticCompetitor && isGameIndustry) {
-          console.log(`[FILTER] Removing athletic competitor "${compName}" from game industry "${industry}"`);
+          console.log(`[FILTER] ✅ REMOVING athletic competitor "${compName}" from game industry "${industry}"`);
           return true;
         }
         
         // If it's an athletic competitor and NOT an athletic industry at all, filter it out
         if (isAthleticCompetitor && !isAthleticIndustry && !isGameIndustry) {
-          console.log(`[FILTER] Removing athletic competitor "${compName}" from unrelated industry "${industry}"`);
+          console.log(`[FILTER] ✅ REMOVING athletic competitor "${compName}" from unrelated industry "${industry}"`);
+          return true;
+        }
+        
+        // Health/Nutrition companies - filter out indulgent snacks for health oil companies
+        const healthOilKeywords = ['oil', 'supplement', 'health', 'wellness', 'nutrition', 'organic', 'natural'];
+        const indulgentSnackKeywords = ['snack', 'candy', 'chocolate', 'cookie', 'chip', 'treat', 'dessert', 'sweet'];
+        const isHealthOilIndustry = healthOilKeywords.some(k => industryLower.includes(k));
+        const isIndulgentSnack = indulgentSnackKeywords.some(k => compLower.includes(k));
+        
+        if (isHealthOilIndustry && isIndulgentSnack) {
+          console.log(`[FILTER] ✅ REMOVING indulgent snack competitor "${compName}" from health oil industry "${industry}"`);
           return true;
         }
         
@@ -5890,7 +6318,10 @@ RETURN JSON ONLY:
       };
 
       if (competitorData.competitors && Array.isArray(competitorData.competitors)) {
-        const industry = competitorData.marketShare?.industry || nicheContext || '';
+        // CRITICAL: Use brandIdentity industry FIRST (passed as parameter), then marketShare, then nicheContext
+        // This ensures we filter competitors correctly based on actual brand industry
+        const industry = brandDNA?.industry || brandIdentity?.industry || competitorData.marketShare?.industry || nicheContext || '';
+        console.log(`[COMPETITOR FILTER] Using industry: "${industry}" for filtering competitors`);
         const competitors = applyPrimarySecondaryOverlay(normalizeCompetitors(competitorData.competitors, industry));
         if (competitors.length === 0) {
           console.error('No valid competitors after filtering:', competitorData.competitors);

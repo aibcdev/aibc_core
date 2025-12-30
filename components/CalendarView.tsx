@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Video, Image as ImageIcon, FileText, Clock, X, Users, User, Calendar, MessageSquare, Send, Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { getDebugEndpoint } from '../services/apiClient';
 
 interface CalendarEvent {
   id: string;
-  date: number;
+  date: number | Date | string; // Support multiple date formats for compatibility
   title: string;
   description: string;
   type: 'video' | 'image' | 'document' | 'social' | 'email' | 'pr';
@@ -43,16 +44,24 @@ const CalendarView: React.FC = () => {
   useEffect(() => {
     const loadEvents = () => {
       try {
+        // #region agent log
+        // #endregion
         // Get scheduled content from Production Room (stored in localStorage)
         const calendarEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
         const productionAssets = JSON.parse(localStorage.getItem('productionAssets') || '[]');
         
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CalendarView.tsx:loadEvents',message:'CALENDAR DATA LOADED',data:{calendarEventsCount:calendarEvents.length,productionAssetsCount:productionAssets.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H7'})}).catch(()=>{});
+        // #endregion
+        
         // Convert to CalendarEvent format
         const scheduledEvents: CalendarEvent[] = calendarEvents.map((event: any) => {
-          const eventDate = new Date(event.date);
+          // Handle both ISO string and Date object formats
+          const eventDate = event.date instanceof Date ? event.date : new Date(event.date);
+          // Store full date object for proper month/year matching
           return {
             id: event.id,
-            date: eventDate.getDate(),
+            date: eventDate, // Store full Date object instead of just day number
             title: event.title,
             description: event.description || '',
             type: event.type === 'thread' || event.type === 'reel' || event.type === 'carousel' ? 'social' : 
@@ -65,8 +74,8 @@ const CalendarView: React.FC = () => {
                        event.platform === 'LinkedIn' ? 'green' : 'black',
             platform: event.platform,
             status: event.status?.toLowerCase() || 'scheduled',
-            createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            deadline: eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            createdAt: event.createdAt || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            deadline: event.deadline || eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
             tasks: [],
             comments: []
           };
@@ -76,10 +85,11 @@ const CalendarView: React.FC = () => {
         const scheduledAssets = productionAssets
           .filter((asset: any) => asset.status === 'scheduled' && asset.scheduledDate)
           .map((asset: any) => {
-            const eventDate = new Date(asset.scheduledDate);
+            const eventDate = asset.scheduledDate instanceof Date ? asset.scheduledDate : new Date(asset.scheduledDate);
+            // Store full date object for proper month/year matching
             return {
               id: asset.id,
-              date: eventDate.getDate(),
+              date: eventDate, // Store full Date object instead of just day number
               title: asset.title,
               description: asset.description || '',
               type: asset.type === 'thread' || asset.type === 'reel' || asset.type === 'carousel' ? 'social' : 
@@ -104,6 +114,11 @@ const CalendarView: React.FC = () => {
         const uniqueEvents = Array.from(
           new Map(allEvents.map(event => [event.id, event])).values()
         );
+        
+        // #region agent log
+        
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CalendarView.tsx:loadEvents',message:'EVENTS PROCESSED',data:{scheduledEventsCount:scheduledEvents.length,scheduledAssetsCount:scheduledAssets.length,uniqueEventsCount:uniqueEvents.length,eventDates:uniqueEvents.map(e=>e.date instanceof Date ? e.date.toISOString() : String(e.date)).slice(0,5)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H7'})}).catch(()=>{});
+        // #endregion
         
         setEvents(uniqueEvents);
       } catch (e) {
@@ -131,9 +146,10 @@ const CalendarView: React.FC = () => {
         const tasksWithCalendar = tasks.filter((t: any) => t.addToCalendar && t.dueDate);
         const taskEvents: CalendarEvent[] = tasksWithCalendar.map((task: any) => {
           const dueDate = task.dueDate instanceof Date ? task.dueDate : new Date(task.dueDate);
+          // Store full date object for proper month/year matching
           return {
             id: `task_${task.id}`,
-            date: dueDate.getDate(),
+            date: dueDate, // Store full Date object instead of just day number
             title: task.title,
             description: task.description || '',
             type: 'document',
@@ -273,20 +289,29 @@ const CalendarView: React.FC = () => {
             <div className="grid grid-cols-7 gap-2">
               {calendarDays.map((day, index) => {
                 const dayEvents = events.filter(e => {
-                  // Handle both date formats
-                  if (typeof e.date === 'number') {
+                  if (!day) return false;
+                  
+                  // Handle both Date object and number formats
+                  let eventDate: Date;
+                  if (e.date instanceof Date) {
+                    eventDate = e.date;
+                  } else if (typeof e.date === 'number') {
+                    // Legacy format: just day number - try to match if in current month
+                    // This is a fallback for old data
                     return e.date === day;
                   } else {
-                    // If date is stored as string, parse it
+                    // String format - parse it
                     try {
-                      const eventDate = new Date(e.date);
-                      return eventDate.getDate() === day && 
-                             eventDate.getMonth() === currentMonth.getMonth() && 
-                             eventDate.getFullYear() === currentMonth.getFullYear();
+                      eventDate = new Date(e.date);
                     } catch {
                       return false;
                     }
                   }
+                  
+                  // Match by day, month, and year
+                  return eventDate.getDate() === day && 
+                         eventDate.getMonth() === currentMonth.getMonth() && 
+                         eventDate.getFullYear() === currentMonth.getFullYear();
                 });
                 const today = new Date();
                 const isToday = day === today.getDate() && 

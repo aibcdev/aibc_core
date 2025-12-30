@@ -192,6 +192,57 @@ router.get('/user/:username/latest', (req, res) => {
   });
 });
 
+// Validate URL reachability
+router.post('/validate-url', async (req, res) => {
+  const { url } = req.body;
+
+  if (!url) {
+    return res.status(400).json({
+      valid: false,
+      reachable: false,
+      error: 'URL is required'
+    });
+  }
+
+  try {
+    const { isUrlReachable } = await import('../services/scanService');
+    const reachable = await isUrlReachable(url);
+    
+    if (!reachable) {
+      // Try with www prefix
+      const wwwUrl = url.replace(/^https?:\/\//, '').replace(/^www\./, '');
+      const wwwReachable = await isUrlReachable(`https://www.${wwwUrl}`);
+      
+      if (wwwReachable) {
+        return res.json({
+          valid: true,
+          reachable: true,
+          url: `https://www.${wwwUrl}`
+        });
+      }
+      
+      return res.json({
+        valid: true,
+        reachable: false,
+        error: 'Website not found or unreachable. Please check the URL and try again.'
+      });
+    }
+    
+    return res.json({
+      valid: true,
+      reachable: true,
+      url: url
+    });
+  } catch (error: any) {
+    console.error('URL validation error:', error);
+    return res.json({
+      valid: false,
+      reachable: false,
+      error: error.message || 'Could not validate URL'
+    });
+  }
+});
+
 // Verify a handle/username exists on a platform
 router.post('/verify', async (req, res) => {
   const { username, platform, verificationType = 'quick' } = req.body;

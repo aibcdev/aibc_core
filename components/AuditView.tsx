@@ -72,14 +72,46 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
   useEffect(() => {
     let mounted = true;
     
+    // CRITICAL: Reset scanStartedRef when component mounts or username changes
+    // This ensures a new scan can start even if the component was previously mounted
+    // Also check if username changed - if so, definitely reset to allow new scan
+    const currentUsername = username || localStorage.getItem('lastScannedUsername') || '';
+    const lastUsername = localStorage.getItem('lastScanUsernameForRef') || '';
+    const usernameChanged = currentUsername && currentUsername !== lastUsername;
+    
+    if (usernameChanged || !scanStartedRef.current) {
+      scanStartedRef.current = false;
+      if (currentUsername) {
+        localStorage.setItem('lastScanUsernameForRef', currentUsername);
+      }
+      // #region agent log
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:useEffect',message:'RESET scanStartedRef',data:{username,currentUsername,lastUsername,usernameChanged,previousValue:scanStartedRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H19'})}).catch(()=>{});
+      // #endregion
+    } else {
+      // #region agent log
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:useEffect',message:'KEEPING scanStartedRef',data:{username,currentUsername,lastUsername,scanStartedRefValue:scanStartedRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H19'})}).catch(()=>{});
+      // #endregion
+    }
+    
     const performScan = async () => {
-      if (scanStartedRef.current) {
+      // CRITICAL: Also check if username changed - if so, allow scan even if ref is true
+      const performScanUsername = username || localStorage.getItem('lastScannedUsername') || '';
+      const refUsername = localStorage.getItem('lastScanUsernameForRef') || '';
+      const shouldAllowScan = !scanStartedRef.current || (performScanUsername && performScanUsername !== refUsername);
+      
+      if (!shouldAllowScan) {
         // #region agent log
-        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:performScan',message:'performScan SKIPPED (already started)',data:{usernameProp:username},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H7'})}).catch(()=>{});
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:performScan',message:'performScan SKIPPED (already started)',data:{usernameProp:username,performScanUsername,refUsername,scanStartedRefValue:scanStartedRef.current,shouldAllowScan},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H7'})}).catch(()=>{});
         // #endregion
         return;
       }
       scanStartedRef.current = true;
+      if (performScanUsername) {
+        localStorage.setItem('lastScanUsernameForRef', performScanUsername);
+      }
+      // #region agent log
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:performScan',message:'SET scanStartedRef to true',data:{usernameProp:username,performScanUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H19'})}).catch(()=>{});
+      // #endregion
 
       const scanUsername = username || localStorage.getItem('lastScannedUsername') || '';
       
@@ -151,45 +183,124 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
         
         addLog(`[SYSTEM] Connecting to backend services...`);
         
-        // Check backend health first
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-          addLog(`[SYSTEM] Connecting to backend: ${API_BASE_URL}`);
+        // Check backend health first with timeout
+        // NOTE: Prefer 127.0.0.1 over localhost to avoid IPv6 (::1) resolution issues in browsers.
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
+        addLog(`[SYSTEM] Connecting to backend: ${API_BASE_URL}`);
         
-        const healthCheck = await checkBackendHealth();
+        // Add timeout wrapper for health check with instrumentation
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:158',message:'BEFORE HEALTH CHECK',data:{scanUsername,API_BASE_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H1'})}).catch(()=>{});
+        // #endregion
+        
+        const healthCheckStartTime = Date.now();
+        const healthCheckPromise = checkBackendHealth().then(result => {
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:162',message:'HEALTH CHECK RESOLVED',data:{healthy:result.healthy,message:result.message,elapsed:Date.now()-healthCheckStartTime},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H1'})}).catch(()=>{});
+          // #endregion
+          return result;
+        }).catch(err => {
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:166',message:'HEALTH CHECK ERROR',data:{error:err?.message,elapsed:Date.now()-healthCheckStartTime},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H2'})}).catch(()=>{});
+          // #endregion
+          return { healthy: false, message: err?.message || 'Health check failed' };
+        });
+        
+        const timeoutPromise = new Promise<{ healthy: boolean; message?: string }>((resolve) => {
+          setTimeout(() => {
+            // #region agent log
+            fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:172',message:'HEALTH CHECK TIMEOUT',data:{elapsed:Date.now()-healthCheckStartTime},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H1'})}).catch(()=>{});
+            // #endregion
+            resolve({ healthy: false, message: 'Health check timed out after 6 seconds' });
+          }, 6000);
+        });
+        
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:177',message:'AWAITING HEALTH CHECK RACE',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H1'})}).catch(()=>{});
+        // #endregion
+        
+        const healthCheck = await Promise.race([healthCheckPromise, timeoutPromise]);
+        
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:182',message:'HEALTH CHECK RACE COMPLETE',data:{healthy:healthCheck.healthy,message:healthCheck.message,elapsed:Date.now()-healthCheckStartTime},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H1'})}).catch(()=>{});
+        // #endregion
+        
         if (!healthCheck.healthy) {
-          addLog(`[ERROR] Cannot connect to backend server: ${healthCheck.message || 'Network error'}`);
-          addLog(`[INFO] Backend URL: ${API_BASE_URL}`);
-            addLog(`[INFO] Please ensure the backend server is running`);
-            addLog(`[INFO] You can proceed anyway - some features may be limited`);
-            setTimeout(() => { if (mounted) setShowButton(true); }, 3000);
-            return;
-          }
+          addLog(`[WARNING] Backend health check: ${healthCheck.message || 'Network error'}`);
+          addLog(`[WARNING] Backend URL: ${API_BASE_URL}`);
+          addLog(`[WARNING] Continuing scan attempt, but backend connection may fail...`);
+          // Don't return - continue with scan attempt (it will fail if backend is down)
+        } else {
+          addLog(`[SYSTEM] Backend connection verified`);
+        }
         
-        addLog(`[SYSTEM] Backend connection verified`);
-        
-        // Get scan type from localStorage or prop
+        // Get scan type from localStorage or prop (MUST be declared before use in logs)
         const finalScanType = scanType || localStorage.getItem('lastScanType') || 'basic';
         const scanTypeParam = finalScanType === 'deep' ? 'deep' : 'standard';
         
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:194',message:'BEFORE START SCAN API CALL',data:{scanUsername,platforms:platforms.length,scanTypeParam},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H2'})}).catch(()=>{});
+        // #endregion
+        
         addLog(`[SYSTEM] Scan mode: ${finalScanType.toUpperCase()}${finalScanType === 'deep' ? ' - Enhanced Analysis' : ''}`);
         
-        let scanResponse;
+        let scanResponse: any = null;
+        let backendDownTimeout: NodeJS.Timeout | null = null;
+        const startScanStartTime = Date.now();
         try {
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:200',message:'CALLING startScan API',data:{scanUsername,platforms:platforms.length,scanTypeParam},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H2'})}).catch(()=>{});
+          // #endregion
           scanResponse = await startScan(scanUsername, platforms, scanTypeParam);
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:203',message:'startScan API RETURNED',data:{success:scanResponse?.success,hasScanId:!!scanResponse?.scanId,elapsed:Date.now()-startScanStartTime},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H2'})}).catch(()=>{});
+          // #endregion
         } catch (fetchError: any) {
-          // Handle network errors specifically
-          if (fetchError.message?.includes('fetch') || fetchError.message?.includes('network') || fetchError.message?.includes('Failed to fetch') || fetchError.message?.includes('Load failed')) {
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:206',message:'startScan API ERROR',data:{error:fetchError?.message,errorName:fetchError?.name,elapsed:Date.now()-startScanStartTime},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H3'})}).catch(()=>{});
+          // #endregion
+          // Handle network errors specifically - catch ALL backend connection errors
+          const errorMsg = (fetchError?.message || '').toLowerCase();
+          const errorName = fetchError?.name || '';
+          
+          // Check for any backend connection error indicators
+          const isBackendError = 
+            errorMsg.includes('fetch') || 
+            errorMsg.includes('network') || 
+            errorMsg.includes('failed to fetch') || 
+            errorMsg.includes('load failed') ||
+            errorMsg.includes('cannot connect') ||
+            errorMsg.includes('backend server') ||
+            errorMsg.includes('connection') ||
+            errorName === 'TypeError' || 
+            errorName === 'NetworkError' ||
+            errorName === 'AbortError';
+          
+          if (isBackendError) {
             addLog(`[ERROR] Cannot connect to backend server`);
-            addLog(`[INFO] Please ensure the backend server is running on ${API_BASE_URL}`);
-            addLog(`[INFO] You can proceed anyway - some features may be limited`);
-            setTimeout(() => { if (mounted) setShowButton(true); }, 3000);
-            return;
+            addLog(`[ERROR] Please ensure the backend server is running on ${API_BASE_URL}`);
+            addLog(`[ERROR] Start the backend with: cd backend && npm run dev`);
+            addLog(`[ERROR] Scan cannot proceed without backend connection.`);
+            // Do NOT enable PROCEED button - scan must complete successfully
+            // #region agent log
+            fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:backendDown',message:'BACKEND DOWN - NOT ENABLING PROCEED',data:{mounted,errorMsg,errorName},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
+            // Do NOT return - let the error propagate so user sees the error
+            // The scan will fail and user will understand they need to start backend
+            throw fetchError;
           }
           throw fetchError;
         }
         
-        if (!scanResponse.success || !scanResponse.scanId) {
-          throw new Error(scanResponse.error || 'Failed to start scan');
+        if (!scanResponse || !scanResponse.success || !scanResponse.scanId) {
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:scanResponseInvalid',message:'SCAN RESPONSE INVALID',data:{hasResponse:!!scanResponse,success:scanResponse?.success,hasScanId:!!scanResponse?.scanId,error:scanResponse?.error},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-init',hypothesisId:'H4'})}).catch(()=>{});
+          // #endregion
+          addLog(`[ERROR] Failed to start scan: ${scanResponse?.error || 'Unknown error'}`);
+          addLog(`[ERROR] Scan cannot proceed without a valid scan ID.`);
+          // Do NOT enable PROCEED button - scan must complete successfully
+          // Throw error so it's caught by outer catch block
+          throw new Error(scanResponse?.error || 'Failed to start scan - no scan ID received');
         }
 
         const scanId = scanResponse.scanId;
@@ -212,8 +323,14 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
         
         // Background poll - use REAL backend logs
         pollScanStatus(scanId, (status) => {
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:262',message:'POLL CALLBACK FIRED',data:{scanId,status:status?.status,progress:status?.progress,logsCount:status?.logs?.length||0,mounted},timestamp:Date.now(),sessionId:'debug-session',runId:'poll-callback',hypothesisId:'H11'})}).catch(()=>{});
+          // #endregion
           if (!mounted) return;
           if (status.status === 'complete') {
+            // #region agent log
+            fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:264',message:'SCAN COMPLETE DETECTED IN CALLBACK',data:{scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'poll-callback',hypothesisId:'H11'})}).catch(()=>{});
+            // #endregion
             scanComplete = true;
           }
           if (status.logs) {
@@ -288,6 +405,9 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
             }
           }
         }).then(results => {
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:338',message:'POLL PROMISE RESOLVED',data:{scanId,success:results.success,hasData:!!results.data,dataKeys:results.data?Object.keys(results.data):[],mounted},timestamp:Date.now(),sessionId:'debug-session',runId:'poll-resolve',hypothesisId:'H11'})}).catch(()=>{});
+          // #endregion
           if (results.success && results.data) {
             scanResults = results.data;
             // Store complete scan results with username for validation
@@ -349,13 +469,34 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
               fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:scanComplete',message:'Proceed ENABLED (real results ready)',data:{scanUsername,scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-complete',hypothesisId:'H7'})}).catch(()=>{});
               // #endregion
             }
+          } else {
+            // Scan completed but no results - do NOT enable PROCEED button
+            // User must wait for scan to complete successfully
+            addLog(`[WARNING] Scan completed but no results available. Please wait for scan to complete.`);
+            // Do NOT enable proceed button - scan must complete successfully
           }
         }).catch(err => {
           // #region agent log
           fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:292',message:'pollScanStatus ERROR',data:{error:err?.message||'unknown',scanId},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-poll',hypothesisId:'H4'})}).catch(()=>{});
           // #endregion
           console.error('Background poll error:', err);
+          addLog(`[ERROR] Scan encountered an error: ${err.message}`);
+          addLog(`[ERROR] Scan must complete successfully before proceeding. Please try again.`);
+          // Do NOT enable proceed button on error - scan must complete successfully
         });
+        
+        // REMOVED: Safety timeout that enables proceed button
+        // PROCEED button should ONLY appear when scan completes successfully with results
+        
+        // REMOVED: Do not enable PROCEED button when backend is down
+        // User must wait for scan to complete successfully - no shortcuts
+        // If backend is down, scan will fail and user will see error message
+        // PROCEED button should ONLY appear when scan completes successfully with results
+        
+        // Cleanup on unmount
+        return () => {
+          // No timeouts to clear - we removed the safety timeouts
+        };
 
         // Platform stages are now dynamic - only show if platform was actually scanned
         // The backend logs will determine which platforms exist
@@ -421,10 +562,12 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
         setProgress(100);
 
         // UI stages finished, but do NOT allow Proceed until backend confirms completion and results are stored.
+        // CRITICAL: Do NOT enable PROCEED button here - wait for scanComplete event with real results
         addLog(`[SYSTEM] UI stages complete. Waiting for backend scan completion...`);
         // #region agent log
         fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:uiComplete',message:'UI stages complete (waiting for backend)',data:{scanUsername,lastScanId:localStorage.getItem('lastScanId')},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-ui',hypothesisId:'H7'})}).catch(()=>{});
         // #endregion
+        // DO NOT set showButton here - it will be set only when scanComplete event fires with real results
 
       } catch (err: any) {
         console.error('Scan error:', err);
@@ -432,8 +575,13 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
           const errorMsg = err.message || 'Failed to start scan';
           setError(errorMsg);
           addLog(`[ERROR] ${errorMsg}`);
-          addLog(`[INFO] You can proceed anyway - some features may be limited`);
-          setTimeout(() => { if (mounted) setShowButton(true); }, 3000);
+          addLog(`[ERROR] Scan cannot proceed without backend connection.`);
+          addLog(`[ERROR] Please ensure the backend server is running on http://localhost:3001`);
+          addLog(`[ERROR] Start the backend with: cd backend && npm run dev`);
+          // Do NOT enable proceed button on error - scan must complete successfully
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:outerCatch',message:'OUTER CATCH - NOT ENABLING PROCEED',data:{mounted,errorMsg},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-error',hypothesisId:'H6'})}).catch(()=>{});
+          // #endregion
         }
       }
     };
@@ -463,9 +611,14 @@ const AuditView: React.FC<AuditProps> = ({ onNavigate, username, scanType = 'bas
 
     return () => { 
       // #region agent log
-      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:cleanup',message:'useEffect CLEANUP',data:{mounted},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-cleanup',hypothesisId:'H2'})}).catch(()=>{});
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:cleanup',message:'useEffect CLEANUP',data:{mounted,username},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-cleanup',hypothesisId:'H2'})}).catch(()=>{});
       // #endregion
       mounted = false;
+      // CRITICAL: Reset scanStartedRef on cleanup so new scans can start
+      scanStartedRef.current = false;
+      // #region agent log
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuditView.tsx:cleanup',message:'RESET scanStartedRef on cleanup',data:{username},timestamp:Date.now(),sessionId:'debug-session',runId:'scan-cleanup',hypothesisId:'H19'})}).catch(()=>{});
+      // #endregion
       // pollScanStatus handles its own cleanup, no manual interval needed
     };
   }, [username]);

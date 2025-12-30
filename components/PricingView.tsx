@@ -5,6 +5,7 @@ import { getUserSubscription, SubscriptionTier } from '../services/subscriptionS
 import { createCheckoutSession, getPrices } from '../services/stripeService';
 import Navigation from './shared/Navigation';
 import Footer from './shared/Footer';
+import SEOMeta from './shared/SEOMeta';
 
 const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
@@ -247,8 +248,29 @@ const PricingView: React.FC<NavProps> = ({ onNavigate }) => {
     setSelectedCategories(newSet);
   };
 
+  const baseURL = typeof window !== 'undefined' ? window.location.origin : 'https://aibcmedia.com';
+  
   return (
     <div id="pricing-view" className="min-h-screen bg-[#050505] text-white">
+      <SEOMeta
+        title="Pricing | AIBC - AI Content Platform Plans & Pricing"
+        description="Choose the right AIBC plan for your content needs. From free tier to enterprise solutions. Generate unlimited video marketing ideas, content strategies, and brand storytelling."
+        image={`${baseURL}/favicon.svg`}
+        url={`${baseURL}/pricing`}
+        type="website"
+        structuredData={[
+          {
+            type: 'WebPage',
+            data: {
+              '@context': 'https://schema.org',
+              '@type': 'WebPage',
+              name: 'AIBC Pricing',
+              description: 'AIBC pricing plans for content marketing and video marketing automation',
+              url: `${baseURL}/pricing`,
+            },
+          },
+        ]}
+      />
       <Navigation onNavigate={onNavigate} />
       <main className="pt-16 px-4 sm:px-6 lg:px-8 pb-20">
         {/* Hero Section */}

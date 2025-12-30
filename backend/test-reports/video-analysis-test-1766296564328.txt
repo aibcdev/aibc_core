@@ -1,0 +1,127 @@
+
+================================================================================
+5-AGENT VIDEO ANALYSIS TEST REPORT
+================================================================================
+Test Date: 2025-12-21T05:56:04.328Z
+Total Subjects: 5
+Successful Scans: 5
+Failed Scans: 0
+
+SUMMARY STATISTICS
+--------------------------------------------------------------------------------
+Average Scan Duration: 150.21s
+Total Videos Found: 0
+Total Videos Analyzed: 0
+OUTPUT Only Verification: 5/5 passed
+Video Analysis Executed: 0/5
+Competitors Enriched: 0/5
+
+DETAILED RESULTS
+================================================================================
+
+1. MrBeast (creator)
+--------------------------------------------------------------------------------
+Status: ✅ SUCCESS
+Duration: 107.88s
+Platforms: youtube, twitter, instagram, tiktok
+
+OUTPUT Only Verification:
+  Verified: ✅ YES
+  Posts Analyzed: 8
+  Videos Found: 0
+
+Video Analysis:
+  Executed: ❌ NO
+
+Competitor Intelligence:
+  Competitors Found: 5
+  Video Insights Added: ❌ NO
+
+
+2. Airbnb (company)
+--------------------------------------------------------------------------------
+Status: ✅ SUCCESS
+Duration: 278.32s
+Platforms: youtube, twitter, instagram, linkedin
+
+OUTPUT Only Verification:
+  Verified: ✅ YES
+  Posts Analyzed: 7
+  Videos Found: 0
+
+Video Analysis:
+  Executed: ❌ NO
+
+Competitor Intelligence:
+  Competitors Found: 5
+  Video Insights Added: ❌ NO
+
+
+3. Nike (company)
+--------------------------------------------------------------------------------
+Status: ✅ SUCCESS
+Duration: 127.44s
+Platforms: youtube, twitter, instagram, tiktok
+
+OUTPUT Only Verification:
+  Verified: ✅ YES
+  Posts Analyzed: 8
+  Videos Found: 0
+
+Video Analysis:
+  Executed: ❌ NO
+
+Competitor Intelligence:
+  Competitors Found: 5
+  Video Insights Added: ❌ NO
+
+
+4. Gary Vaynerchuk (creator)
+--------------------------------------------------------------------------------
+Status: ✅ SUCCESS
+Duration: 119.56s
+Platforms: youtube, twitter, instagram, linkedin
+
+OUTPUT Only Verification:
+  Verified: ✅ YES
+  Posts Analyzed: 8
+  Videos Found: 0
+
+Video Analysis:
+  Executed: ❌ NO
+
+Competitor Intelligence:
+  Competitors Found: 6
+  Video Insights Added: ❌ NO
+
+
+5. Tesla (company)
+--------------------------------------------------------------------------------
+Status: ✅ SUCCESS
+Duration: 117.83s
+Platforms: youtube, twitter, instagram, linkedin
+
+OUTPUT Only Verification:
+  Verified: ✅ YES
+  Posts Analyzed: 8
+  Videos Found: 0
+
+Video Analysis:
+  Executed: ❌ NO
+
+Competitor Intelligence:
+  Competitors Found: 7
+  Video Insights Added: ❌ NO
+
+
+================================================================================
+RECOMMENDATIONS
+================================================================================
+⚠️  Video Analysis: Not all scans executed video analysis
+   Recommendation: Check video extraction and analysis logic
+⚠️  Competitor Enrichment: Not all competitors enriched with video insights
+   Recommendation: Verify video insights are being added to competitors
+⚠️  No videos found in any scans
+   Recommendation: Check video URL detection logic
+
+================================================================================

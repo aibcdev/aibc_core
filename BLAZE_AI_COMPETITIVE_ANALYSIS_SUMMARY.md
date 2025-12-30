@@ -350,3 +350,7 @@ Based on typical B2B SaaS ad performance and Blaze.ai's positioning:
 - $22,500-75,000 in new MRR (assuming $150-300 LTV)
 - Break-even within 2-3 months
 - Positive ROI by month 4
+
+
+
+

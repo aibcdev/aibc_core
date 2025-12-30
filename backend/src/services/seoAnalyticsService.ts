@@ -4,7 +4,7 @@
  */
 
 import { ContentPerformance, BlogPost } from '../types/seo';
-import { listBlogPosts } from './seoContentService';
+import { listBlogPosts, getBlogPostById } from './seoContentService';
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
 
 // In-memory storage (fallback if Supabase not configured)
@@ -327,5 +327,226 @@ export async function getPostPerformanceSummary(postId: string): Promise<{
     averagePosition: avgPosition > 0 ? avgPosition : undefined,
     clickThroughRate,
     trend,
+  };
+}
+
+/**
+ * Analyze SEO impact - which posts are helping SEO and organic traffic
+ */
+export async function analyzeSEOImpact(days: number = 30): Promise<{
+  overallImpact: {
+    totalOrganicTraffic: number;
+    totalImpressions: number;
+    averagePosition: number;
+    clickThroughRate: number;
+    trend: 'improving' | 'declining' | 'stable';
+  };
+  topPerformers: Array<{
+    postId: string;
+    title: string;
+    slug: string;
+    views: number;
+    clicks: number;
+    impressions: number;
+    avgPosition?: number;
+    ctr: number;
+    trend: 'up' | 'down' | 'stable';
+    seoScore?: number;
+    publishedAt?: string;
+    impactScore: number; // Calculated score based on multiple factors
+  }>;
+  underperformers: Array<{
+    postId: string;
+    title: string;
+    slug: string;
+    views: number;
+    clicks: number;
+    impressions: number;
+    seoScore?: number;
+    publishedAt?: string;
+    recommendations: string[];
+  }>;
+  insights: {
+    bestPerformingCategory?: string;
+    bestPerformingTags?: string[];
+    averageDaysToFirstTraffic?: number;
+    postsHelpingSEO: number;
+    postsNeedingImprovement: number;
+  };
+}> {
+  const allPosts = await listBlogPosts({ status: 'published', limit: 1000 });
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
+
+  // Get performance for all posts
+  const postAnalyses = await Promise.all(
+    allPosts.posts.map(async (post) => {
+      const performance = await getPostPerformance(post.id, days);
+      const summary = await getPostPerformanceSummary(post.id);
+      
+      const totalImpressions = performance.reduce((sum, p) => sum + (p.impressions || 0), 0);
+      const avgPosition = performance
+        .filter(p => p.avg_position)
+        .reduce((sum, p, _, arr) => sum + (p.avg_position || 0) / arr.length, 0) || undefined;
+
+      // Calculate impact score (weighted combination of metrics)
+      // Higher views, clicks, better position = higher score
+      const impactScore = 
+        (summary.totalViews * 0.3) +
+        (summary.totalClicks * 0.5) +
+        (avgPosition ? (100 - avgPosition) * 10 : 0) + // Better position = higher score
+        (summary.clickThroughRate * 100) +
+        ((post.seo_score || 0) * 0.2);
+
+      return {
+        postId: post.id,
+        title: post.title,
+        slug: post.slug,
+        views: summary.totalViews,
+        clicks: summary.totalClicks,
+        impressions: totalImpressions,
+        avgPosition,
+        ctr: summary.clickThroughRate,
+        trend: summary.trend,
+        seoScore: post.seo_score,
+        publishedAt: post.published_at,
+        impactScore,
+        category: post.category,
+        tags: post.tags || [],
+      };
+    })
+  );
+
+  // Sort by impact score
+  postAnalyses.sort((a, b) => b.impactScore - a.impactScore);
+
+  // Calculate overall metrics
+  const totalViews = postAnalyses.reduce((sum, p) => sum + p.views, 0);
+  const totalClicks = postAnalyses.reduce((sum, p) => sum + p.clicks, 0);
+  const totalImpressions = postAnalyses.reduce((sum, p) => sum + p.impressions, 0);
+  const avgPosition = postAnalyses
+    .filter(p => p.avgPosition)
+    .reduce((sum, p, _, arr) => sum + (p.avgPosition || 0) / arr.length, 0);
+  const overallCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+
+  // Determine overall trend
+  const postsWithTrend = postAnalyses.filter(p => p.trend !== 'stable');
+  const upTrends = postsWithTrend.filter(p => p.trend === 'up').length;
+  const downTrends = postsWithTrend.filter(p => p.trend === 'down').length;
+  let overallTrend: 'improving' | 'declining' | 'stable' = 'stable';
+  if (upTrends > downTrends * 1.5) overallTrend = 'improving';
+  else if (downTrends > upTrends * 1.5) overallTrend = 'declining';
+
+  // Top performers (top 10)
+  const topPerformers = postAnalyses.slice(0, 10).map(p => ({
+    postId: p.postId,
+    title: p.title,
+    slug: p.slug,
+    views: p.views,
+    clicks: p.clicks,
+    impressions: p.impressions,
+    avgPosition: p.avgPosition,
+    ctr: p.ctr,
+    trend: p.trend,
+    seoScore: p.seoScore,
+    publishedAt: p.publishedAt,
+    impactScore: Math.round(p.impactScore),
+  }));
+
+  // Underperformers (bottom 10 with some traffic but low performance)
+  const underperformers = postAnalyses
+    .filter(p => p.impressions > 0 && p.views < 10 && p.clicks < 2)
+    .slice(0, 10)
+    .map(p => {
+      const recommendations: string[] = [];
+      if (!p.seoScore || p.seoScore < 70) {
+        recommendations.push('Improve SEO score (currently ' + (p.seoScore || 0) + ')');
+      }
+      if (p.avgPosition && p.avgPosition > 50) {
+        recommendations.push('Optimize for better search rankings (currently position ' + Math.round(p.avgPosition) + ')');
+      }
+      if (p.ctr < 1) {
+        recommendations.push('Improve title and meta description to increase click-through rate');
+      }
+      if (p.views === 0) {
+        recommendations.push('Promote this post to increase visibility');
+      }
+      if (recommendations.length === 0) {
+        recommendations.push('Monitor performance and consider updating content');
+      }
+
+      return {
+        postId: p.postId,
+        title: p.title,
+        slug: p.slug,
+        views: p.views,
+        clicks: p.clicks,
+        impressions: p.impressions,
+        seoScore: p.seoScore,
+        publishedAt: p.publishedAt,
+        recommendations,
+      };
+    });
+
+  // Calculate insights
+  const categoryPerformance: Record<string, { views: number; count: number }> = {};
+  const tagPerformance: Record<string, { views: number; count: number }> = {};
+
+  postAnalyses.forEach(p => {
+    if (p.category) {
+      if (!categoryPerformance[p.category]) {
+        categoryPerformance[p.category] = { views: 0, count: 0 };
+      }
+      categoryPerformance[p.category].views += p.views;
+      categoryPerformance[p.category].count += 1;
+    }
+    (p.tags || []).forEach(tag => {
+      if (!tagPerformance[tag]) {
+        tagPerformance[tag] = { views: 0, count: 0 };
+      }
+      tagPerformance[tag].views += p.views;
+      tagPerformance[tag].count += 1;
+    });
+  });
+
+  const bestCategory = Object.entries(categoryPerformance)
+    .sort((a, b) => (b[1].views / b[1].count) - (a[1].views / a[1].count))[0]?.[0];
+
+  const bestTags = Object.entries(tagPerformance)
+    .sort((a, b) => (b[1].views / b[1].count) - (a[1].views / a[1].count))
+    .slice(0, 5)
+    .map(([tag]) => tag);
+
+  // Calculate average days to first traffic
+  const postsWithTraffic = postAnalyses.filter(p => p.views > 0 && p.publishedAt);
+  let totalDaysToTraffic = 0;
+  let postsWithDaysData = 0;
+
+  // This would require tracking when first traffic occurred, simplified here
+  // In a real implementation, you'd track the first performance record date
+
+  const postsHelpingSEO = postAnalyses.filter(p => 
+    p.views > 50 || p.clicks > 5 || (p.avgPosition && p.avgPosition <= 20)
+  ).length;
+
+  const postsNeedingImprovement = underperformers.length;
+
+  return {
+    overallImpact: {
+      totalOrganicTraffic: totalViews,
+      totalImpressions,
+      averagePosition: avgPosition > 0 ? avgPosition : 0,
+      clickThroughRate: overallCTR,
+      trend: overallTrend,
+    },
+    topPerformers,
+    underperformers,
+    insights: {
+      bestPerformingCategory: bestCategory,
+      bestPerformingTags: bestTags,
+      averageDaysToFirstTraffic: postsWithDaysData > 0 ? totalDaysToTraffic / postsWithDaysData : undefined,
+      postsHelpingSEO,
+      postsNeedingImprovement,
+    },
   };
 }

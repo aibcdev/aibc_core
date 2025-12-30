@@ -3,6 +3,8 @@
  * Fetches actual data from APIs/storage and scan results
  */
 
+import { getDebugEndpoint } from './apiClient';
+
 export interface AnalyticsData {
   // New dashboard KPIs
   postsThisWeek: number; // Posts created this week
@@ -12,6 +14,7 @@ export interface AnalyticsData {
   contentPending: number; // Content items pending review/approval
   newInsights: number; // New insights generated
   newInsightsChange?: number; // Change vs last week (+/-)
+  lastUpdated?: string; // ISO timestamp of when data was last updated
   trends: {
     posts: string;
     engagement: string;
@@ -106,14 +109,14 @@ function calculateBrandVoiceMatch(): number {
  */
 function calculateDashboardKPIs() {
   // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboardData.ts:107',message:'calculateDashboardKPIs ENTRY',data:{hasLastScanResults:!!localStorage.getItem('lastScanResults'),lastScannedUsername:localStorage.getItem('lastScannedUsername')},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+  fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboardData.ts:107',message:'calculateDashboardKPIs ENTRY',data:{hasLastScanResults:!!localStorage.getItem('lastScanResults'),lastScannedUsername:localStorage.getItem('lastScannedUsername')},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
   // #endregion
   try {
     const scanResults = localStorage.getItem('lastScanResults');
     const scanData = scanResults ? JSON.parse(scanResults) : null;
     
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboardData.ts:112',message:'scanData parsed',data:{hasScanData:!!scanData,postsCount:scanData?.extractedContent?.posts?.length||0,contentIdeasCount:scanData?.contentIdeas?.length||0,scanUsername:scanData?.scanUsername||'none'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboardData.ts:112',message:'scanData parsed',data:{hasScanData:!!scanData,postsCount:scanData?.extractedContent?.posts?.length||0,contentIdeasCount:scanData?.contentIdeas?.length||0,scanUsername:scanData?.scanUsername||'none'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
     // #endregion
     
     const posts = scanData?.extractedContent?.posts || [];
@@ -123,7 +126,7 @@ function calculateDashboardKPIs() {
     const hasTimestamp = !!samplePost.timestamp;
     const hasDate = !!samplePost.date;
     const hasCreatedAt = !!samplePost.createdAt;
-    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboardData.ts:119',message:'POST STRUCTURE INSPECTION',data:{totalPosts:posts.length,postKeys,samplePostKeys:postKeys,hasTimestamp,hasDate,hasCreatedAt,timestampValue:samplePost.timestamp,dateValue:samplePost.date,createdAtValue:samplePost.createdAt},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboardData.ts:119',message:'POST STRUCTURE INSPECTION',data:{totalPosts:posts.length,postKeys,samplePostKeys:postKeys,hasTimestamp,hasDate,hasCreatedAt,timestampValue:samplePost.timestamp,dateValue:samplePost.date,createdAtValue:samplePost.createdAt},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
     // #endregion
     
     // Filter posts from the last 7 days only
@@ -156,7 +159,7 @@ function calculateDashboardKPIs() {
     }
     
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboardData.ts:120',message:'POSTS THIS WEEK calculation',data:{totalPosts:posts.length,postsThisWeek,sevenDaysAgo:new Date(sevenDaysAgo).toISOString(),now:new Date(now).toISOString(),postsWithTimestamps:posts.filter((p:any)=>p.timestamp||p.date||p.createdAt).length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboardData.ts:120',message:'POSTS THIS WEEK calculation',data:{totalPosts:posts.length,postsThisWeek,sevenDaysAgo:new Date(sevenDaysAgo).toISOString(),now:new Date(now).toISOString(),postsWithTimestamps:posts.filter((p:any)=>p.timestamp||p.date||p.createdAt).length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
     // #endregion
     const postsThisWeekChange = undefined;
     
@@ -177,11 +180,35 @@ function calculateDashboardKPIs() {
       }
     });
     
-    const engagementThisWeek =
-      posts.reduce((sum: number, post: any) => {
-        const engagement = post.engagement || {};
-        return sum + (engagement.likes || 0) + (engagement.shares || 0) + (engagement.comments || 0);
-      }, 0) || 0;
+    // Calculate engagement from posts in the last 7 days only (FIXED)
+    let engagementThisWeek = 0;
+    if (posts.length > 0) {
+      const postsWithTimestamps = posts.filter((post: any) => {
+        return post.timestamp || post.date || post.createdAt || post.time || post.publishedAt;
+      });
+      
+      if (postsWithTimestamps.length > 0) {
+        // Filter posts from last 7 days and sum their engagement
+        const postsThisWeek = postsWithTimestamps.filter((post: any) => {
+          const postDate = post.timestamp || post.date || post.createdAt || post.time || post.publishedAt;
+          if (!postDate) return false;
+          const postTime = typeof postDate === 'string' ? new Date(postDate).getTime() : (typeof postDate === 'number' ? postDate : null);
+          if (!postTime || isNaN(postTime)) return false;
+          return postTime >= sevenDaysAgo;
+        });
+        
+        // Sum engagement only from posts in the last 7 days
+        engagementThisWeek = postsThisWeek.reduce((sum: number, post: any) => {
+          const engagement = post.engagement || {};
+          return sum + (engagement.likes || 0) + (engagement.shares || 0) + (engagement.comments || 0);
+        }, 0);
+      }
+    }
+    
+    // #region agent log
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboardData.ts:182',message:'ENGAGEMENT THIS WEEK calculation',data:{totalPosts:posts.length,postsThisWeekCount:posts.filter((p:any)=>{const pd=p.timestamp||p.date||p.createdAt;const pt=typeof pd==='string'?new Date(pd).getTime():(typeof pd==='number'?pd:null);return pt&&!isNaN(pt)&&pt>=sevenDaysAgo}).length,engagementThisWeek},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
+    
     const engagementThisWeekChange = undefined;
     
     const contentPending = (scanData?.contentIdeas || []).length || 0;
@@ -206,6 +233,9 @@ function calculateDashboardKPIs() {
       }
     }
     
+    // Get last updated timestamp from scan data
+    const lastUpdated = scanData?.timestamp || scanData?.scanTimestamp || scanData?.lastUpdated || scanData?.completedAt || localStorage.getItem('lastScanTimestamp');
+    
     return {
       postsThisWeek,
       postsThisWeekChange,
@@ -216,6 +246,7 @@ function calculateDashboardKPIs() {
       contentPending,
       newInsights,
       newInsightsChange,
+      lastUpdated: lastUpdated || new Date().toISOString(), // Fallback to now if no timestamp
     };
   } catch (e) {
     console.error('Error calculating dashboard KPIs:', e);

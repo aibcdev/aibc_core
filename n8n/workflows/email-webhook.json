@@ -1,0 +1,104 @@
+{
+  "name": "Email Webhook Workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "email-webhook",
+      "name": "Email Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "email-trigger"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.AIBC_API_URL }}/api/n8n/webhook/email-trigger",
+        "authentication": "none",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "={{ $json.body.email }}"
+            },
+            {
+              "name": "subject",
+              "value": "={{ $json.body.subject }}"
+            },
+            {
+              "name": "body",
+              "value": "={{ $json.body.body }}"
+            }
+          ]
+        }
+      },
+      "id": "process-email",
+      "name": "Process Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.AIBC_API_URL }}/api/n8n/workflow/orchestrate",
+        "authentication": "none",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "workflowType",
+              "value": "custom"
+            },
+            {
+              "name": "emailData",
+              "value": "={{ $json }}"
+            }
+          ]
+        }
+      },
+      "id": "trigger-content",
+      "name": "Trigger Content Generation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [650, 300]
+    }
+  ],
+  "connections": {
+    "Email Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Email": {
+      "main": [
+        [
+          {
+            "node": "Trigger Content Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+}
+
+
+
+
+

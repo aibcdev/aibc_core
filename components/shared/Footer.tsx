@@ -52,6 +52,44 @@ For questions about our cookie practices, contact us at privacy@aibcmedia.com.`
 
             {/* Links */}
             <div className="flex flex-wrap items-center gap-6 text-sm text-white/60">
+              {/* Marketing Pages - SEO & Ad Optimization */}
+              <a 
+                href="/marketing-ideas"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onNavigate?.(ViewState.MARKETING_IDEAS);
+                }}
+                className="hover:text-white transition-colors"
+                data-seo-track="footer-link"
+                data-page="marketing-ideas"
+              >
+                Marketing Ideas
+              </a>
+              <a 
+                href="/vs-hiring"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onNavigate?.(ViewState.VS_HIRING);
+                }}
+                className="hover:text-white transition-colors"
+                data-seo-track="footer-link"
+                data-page="vs-hiring"
+              >
+                Don't Hire, Use AI
+              </a>
+              <a 
+                href="/content-marketing"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onNavigate?.(ViewState.CONTENT_MARKETING);
+                }}
+                className="hover:text-white transition-colors"
+                data-seo-track="footer-link"
+                data-page="content-marketing"
+              >
+                Content Marketing
+              </a>
+              {/* Legal Links */}
               <button 
                 onClick={() => onNavigate?.(ViewState.PRIVACY_POLICY)} 
                 className="hover:text-white transition-colors"

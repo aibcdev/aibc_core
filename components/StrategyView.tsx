@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Sparkles, AlertCircle, TrendingUp, Target, MessageSquare, Loader2 } from 'lucide-react';
-import { getLatestScanResults } from '../services/apiClient';
+import { getLatestScanResults, getDebugEndpoint } from '../services/apiClient';
 
 interface StrategyMessage {
   id: string;
@@ -44,18 +44,29 @@ const StrategyView: React.FC = () => {
   useEffect(() => {
     loadScanData();
     loadStrategyData();
+    loadConversation(); // Load saved conversation
     
     // Listen for new scan started - clear all state
     const handleNewScanStarted = (event: CustomEvent) => {
       console.log('🧹 Strategy: New scan started, clearing all state');
       const { username, isRescan } = event.detail;
       
+      // #region agent log
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleNewScanStarted',message:'NEW SCAN STARTED - CLEARING STATE',data:{username,isRescan,currentMessagesCount:messages.length},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-clear',hypothesisId:'H15'})}).catch(()=>{});
+      // #endregion
       // Clear all strategy state
       setStrategicInsights([]);
       setBrandDNA(null);
       setCompetitorIntelligence([]);
       setScanUsername(null);
-      setMessages([]); // Clear conversation history
+      // DON'T clear messages here - they should persist unless it's a different username
+      // Only clear if username changed
+      if (username && username !== scanUsername) {
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleNewScanStarted',message:'USERNAME CHANGED - CLEARING MESSAGES',data:{oldUsername:scanUsername,newUsername:username},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-clear',hypothesisId:'H15'})}).catch(()=>{});
+        // #endregion
+        setMessages([]); // Only clear if username changed
+      }
       setStrategyPlans([]);
       // DON'T clear input - user might be typing
       // setInput('');
@@ -66,15 +77,25 @@ const StrategyView: React.FC = () => {
       localStorage.removeItem('lastScanTimestamp');
       localStorage.removeItem('activeContentStrategy');
       localStorage.removeItem('strategyPlans');
-      localStorage.removeItem('strategyConversation'); // Clear saved conversation
-      localStorage.removeItem('strategyMessages'); // Clear any saved messages
+      // CRITICAL: Only clear conversation if username changed - preserve conversation for same user
+      if (username && username !== scanUsername) {
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleNewScanStarted',message:'CLEARING CONVERSATION STORAGE - USERNAME CHANGED',data:{oldUsername:scanUsername,newUsername:username},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-clear',hypothesisId:'H15'})}).catch(()=>{});
+        // #endregion
+        localStorage.removeItem('strategyConversation'); // Only clear if username changed
+        localStorage.removeItem('strategyMessages'); // Only clear if username changed
+      }
       
       console.log('✅ Strategy: All cache cleared for', isRescan ? 'rescan' : 'new scan');
       
       // Reload data for new scan
+      // CRITICAL: Load conversation FIRST, then scan data, to prevent messages from being cleared
       setTimeout(() => {
-        loadScanData();
-        loadStrategyData();
+        loadConversation(); // Load conversation FIRST
+        setTimeout(() => {
+          loadScanData();
+          loadStrategyData();
+        }, 100); // Small delay to ensure conversation loads before scan data
       }, 500);
     };
     
@@ -82,7 +103,7 @@ const StrategyView: React.FC = () => {
     const handleScanComplete = (event: CustomEvent) => {
       const { username, results } = event.detail || {};
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleScanComplete',message:'scanComplete EVENT RECEIVED',data:{username,hasResults:!!results,hasBrandDNA:!!results?.brandDNA},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-scan-complete',hypothesisId:'H3'})}).catch(()=>{});
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleScanComplete',message:'scanComplete EVENT RECEIVED',data:{username,hasResults:!!results,hasBrandDNA:!!results?.brandDNA},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-scan-complete',hypothesisId:'H3'})}).catch(()=>{});
       // #endregion
       console.log('📥 Strategy: Scan completed - reloading strategy data...', username);
       if (results) {
@@ -95,18 +116,36 @@ const StrategyView: React.FC = () => {
         }
       }
       // Also reload from cache/API to ensure consistency
+      // IMPORTANT: Don't clear messages or input when scan completes - preserve conversation
       loadScanData();
+      // Reload conversation to ensure it's still there
+      loadConversation();
     };
     
     // Listen for username changes
     const handleUsernameChange = () => {
       const newUsername = localStorage.getItem('lastScannedUsername');
       if (newUsername && newUsername !== scanUsername) {
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleUsernameChange',message:'USERNAME CHANGED',data:{oldUsername:scanUsername,newUsername,currentMessagesCount:messages.length},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-username-change',hypothesisId:'H15'})}).catch(()=>{});
+        // #endregion
         console.log('📥 Username changed - reloading strategy data...');
         setStrategicInsights([]);
         setBrandDNA(null);
         setCompetitorIntelligence([]);
-        loadScanData();
+        // IMPORTANT: Only clear messages if username actually changed
+        if (newUsername !== scanUsername) {
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleUsernameChange',message:'CLEARING MESSAGES - USERNAME CHANGED',data:{oldUsername:scanUsername,newUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-username-change',hypothesisId:'H15'})}).catch(()=>{});
+          // #endregion
+          setMessages([]); // Only clear when username changes
+        }
+        // IMPORTANT: Don't clear input when username changes - preserve user's typing
+        // Load conversation FIRST, then scan data
+        loadConversation();
+        setTimeout(() => {
+          loadScanData();
+        }, 100);
       }
     };
     
@@ -170,13 +209,35 @@ const StrategyView: React.FC = () => {
   }, [scanUsername]);
 
   useEffect(() => {
-    // Only generate AI message - insights should come from backend strategicInsights via generateInsightsFromData
-    if (brandDNA || competitorIntelligence.length > 0) {
-      generateInitialAIMessage();
+    // Only generate AI message if we have data AND no existing conversation
+    // This prevents overwriting conversation history
+    // CRITICAL: Add delay to ensure loadConversation has completed first
+    if ((brandDNA || competitorIntelligence.length > 0) && messages.length === 0) {
+      // #region agent log
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:useEffect-messages',message:'CHECKING IF SHOULD GENERATE INITIAL MESSAGE',data:{hasBrandDNA:!!brandDNA,competitorCount:competitorIntelligence.length,messagesCount:messages.length},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-init',hypothesisId:'H15'})}).catch(()=>{});
+      // #endregion
+      // Small delay to ensure loadConversation has run first
+      const timer = setTimeout(() => {
+        // Double-check messages are still empty (conversation might have loaded)
+        if (messages.length === 0) {
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:useEffect-messages',message:'GENERATING INITIAL MESSAGE',data:{messagesCount:messages.length},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-init',hypothesisId:'H15'})}).catch(()=>{});
+          // #endregion
+          generateInitialAIMessage();
+        } else {
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:useEffect-messages',message:'SKIPPING INITIAL MESSAGE - CONVERSATION EXISTS',data:{messagesCount:messages.length},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-init',hypothesisId:'H15'})}).catch(()=>{});
+          // #endregion
+        }
+      }, 500); // Increased delay to ensure loadConversation completes
+      return () => clearTimeout(timer);
     }
-  }, [brandDNA, competitorIntelligence]);
+  }, [brandDNA, competitorIntelligence, messages.length]);
 
   const loadScanData = async () => {
+    // #region agent log
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:loadScanData',message:'LOAD SCAN DATA CALLED',data:{currentMessagesCount:messages.length,scanUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-load',hypothesisId:'H16'})}).catch(()=>{});
+    // #endregion
     setIsLoadingData(true);
     try {
       // Try localStorage first
@@ -236,6 +297,11 @@ const StrategyView: React.FC = () => {
       }
     } finally {
       setIsLoadingData(false);
+      // CRITICAL: After loading scan data, restore conversation to prevent messages from being lost
+      // This ensures messages persist even if loadScanData triggers re-renders
+      setTimeout(() => {
+        loadConversation();
+      }, 50);
     }
   };
 
@@ -348,6 +414,13 @@ const StrategyView: React.FC = () => {
   };
 
   const generateInitialAIMessage = () => {
+    // CRITICAL: Only generate initial message if there are no existing messages
+    // This preserves conversation history
+    if (messages.length > 0) {
+      console.log('⏭️ Skipping initial message - conversation already exists');
+      return;
+    }
+    
     const competitorCount = competitorIntelligence.length;
     const brandName = scanUsername || brandDNA?.name || 'your brand';
     const industry = brandDNA?.industry || 'your sector';
@@ -371,12 +444,28 @@ const StrategyView: React.FC = () => {
     
     message += `How can I assist with your content strategy today?`;
     
-    setMessages([{
-      id: '1',
+    const initialMessage: StrategyMessage = {
+      id: 'initial_' + Date.now(),
       role: 'assistant',
       content: message,
       timestamp: new Date()
-    }]);
+    };
+    
+    // Only set if no messages exist
+    setMessages([initialMessage]);
+    
+    // Save initial message to conversation
+    if (scanUsername) {
+      const conversationData = {
+        username: scanUsername,
+        messages: [initialMessage].map(m => ({
+          ...m,
+          timestamp: m.timestamp.toISOString()
+        })),
+        lastUpdated: Date.now()
+      };
+      localStorage.setItem('strategyConversation', JSON.stringify(conversationData));
+    }
   };
 
   useEffect(() => {
@@ -397,6 +486,86 @@ const StrategyView: React.FC = () => {
       console.error('Error loading strategy data:', e);
     }
   };
+
+  // Load saved conversation from localStorage
+  const loadConversation = () => {
+    // #region agent log
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:loadConversation',message:'LOAD CONVERSATION CALLED',data:{currentMessagesCount:messages.length},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-load',hypothesisId:'H15'})}).catch(()=>{});
+    // #endregion
+    try {
+      const currentUsername = localStorage.getItem('lastScannedUsername');
+      if (!currentUsername) {
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:loadConversation',message:'NO USERNAME - CANNOT LOAD',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-load',hypothesisId:'H15'})}).catch(()=>{});
+        // #endregion
+        console.log('⚠️ No username found - cannot load conversation');
+        return;
+      }
+      
+      const stored = localStorage.getItem('strategyConversation');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Only load if it's for the current username
+        if (parsed.username === currentUsername && Array.isArray(parsed.messages) && parsed.messages.length > 0) {
+          const loadedMessages = parsed.messages.map((m: any) => ({
+            ...m,
+            timestamp: new Date(m.timestamp)
+          }));
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:loadConversation',message:'LOADING MESSAGES',data:{count:loadedMessages.length,username:currentUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-load',hypothesisId:'H15'})}).catch(()=>{});
+          // #endregion
+          console.log(`✅ Loading ${loadedMessages.length} messages from conversation history for ${currentUsername}`);
+          setMessages(loadedMessages);
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:loadConversation',message:'MESSAGES SET',data:{count:loadedMessages.length},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-load',hypothesisId:'H15'})}).catch(()=>{});
+          // #endregion
+          console.log(`✅ Conversation loaded successfully`);
+        } else {
+          // #region agent log
+          fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:loadConversation',message:'INVALID CONVERSATION',data:{hasUsername:!!parsed.username,usernameMatch:parsed.username===currentUsername,hasMessages:Array.isArray(parsed.messages),messageCount:parsed.messages?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-load',hypothesisId:'H15'})}).catch(()=>{});
+          // #endregion
+          console.log('⚠️ No valid conversation found in storage', { 
+            hasUsername: !!parsed.username, 
+            usernameMatch: parsed.username === currentUsername,
+            hasMessages: Array.isArray(parsed.messages),
+            messageCount: parsed.messages?.length || 0
+          });
+        }
+      } else {
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:loadConversation',message:'NO CONVERSATION IN STORAGE',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-load',hypothesisId:'H15'})}).catch(()=>{});
+        // #endregion
+        console.log('⚠️ No conversation stored in localStorage');
+      }
+      // IMPORTANT: Don't clear input when loading conversation
+      // Input state is preserved separately
+    } catch (e) {
+      // #region agent log
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:loadConversation',message:'ERROR LOADING CONVERSATION',data:{error:String(e)},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-load',hypothesisId:'H15'})}).catch(()=>{});
+      // #endregion
+      console.error('❌ Error loading conversation:', e);
+    }
+  };
+
+  // Save conversation to localStorage whenever messages change
+  useEffect(() => {
+    if (messages.length > 0 && scanUsername) {
+      const conversationData = {
+        username: scanUsername,
+        messages: messages.map(m => ({
+          ...m,
+          timestamp: m.timestamp.toISOString()
+        })),
+        lastUpdated: Date.now()
+      };
+      localStorage.setItem('strategyConversation', JSON.stringify(conversationData));
+      console.log(`💾 Saved ${messages.length} messages to conversation history`);
+    } else if (messages.length === 0 && scanUsername) {
+      // Don't clear conversation if we just don't have messages yet
+      // Only clear if username changed
+      console.log('⚠️ No messages to save, but username is set:', scanUsername);
+    }
+  }, [messages, scanUsername]);
 
   const saveStrategyPlan = (plan: StrategyPlan) => {
     const updated = [...strategyPlans, plan];
@@ -451,17 +620,28 @@ const StrategyView: React.FC = () => {
     };
     localStorage.setItem('activeContentStrategy', JSON.stringify(activeStrategy));
     
-    // Dispatch events to notify ALL components - with forceRegenerate flag
+    // REAL-TIME SYNC: Dispatch events to notify ALL components - with forceRegenerate flag
     console.log('📡 Strategy: Dispatching strategyUpdated event with forceRegenerate');
-    window.dispatchEvent(new CustomEvent('strategyUpdated', {
+    
+    // Include conversation messages for context
+    const strategyEvent = new CustomEvent('strategyUpdated', {
       detail: { 
         strategy: plan,
         activeStrategy,
         timestamp: Date.now(),
         source: 'StrategyView',
-        forceContentRegenerate: true // Tell Content Hub to regenerate
+        forceContentRegenerate: true, // Tell Content Hub to regenerate
+        messages: messages, // Include conversation for context
+        conversationSummary: messages.slice(-3).map(m => m.content).join(' ') // Last 3 messages
       }
-    }));
+    });
+    
+    window.dispatchEvent(strategyEvent);
+    
+    // Also dispatch immediately to ensure Content Hub receives it
+    setTimeout(() => {
+      window.dispatchEvent(strategyEvent);
+    }, 100);
     
     // Also dispatch a general data change event
     window.dispatchEvent(new CustomEvent('dataChanged', {
@@ -487,12 +667,12 @@ const StrategyView: React.FC = () => {
 
   const handleSend = async () => {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleSend',message:'handleSend CALLED',data:{input:input,inputLength:input.length,isLoading},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H7'})}).catch(()=>{});
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleSend',message:'handleSend CALLED',data:{input:input,inputLength:input.length,isLoading},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H7'})}).catch(()=>{});
     // #endregion
     
     if (!input.trim() || isLoading) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleSend',message:'handleSend BLOCKED',data:{reason:!input.trim()?'empty input':'loading',input},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H7'})}).catch(()=>{});
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleSend',message:'handleSend BLOCKED',data:{reason:!input.trim()?'empty input':'loading',input},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H7'})}).catch(()=>{});
       // #endregion
       return;
     }
@@ -505,31 +685,58 @@ const StrategyView: React.FC = () => {
     };
 
     const userInput = input; // Save before clearing
-    setMessages(prev => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    console.log(`💬 Adding user message. Total messages: ${updatedMessages.length}`);
+    setMessages(updatedMessages);
     setInput('');
     setIsLoading(true);
+    
+    // Save conversation immediately
+    if (scanUsername) {
+      const conversationData = {
+        username: scanUsername,
+        messages: updatedMessages.map(m => ({
+          ...m,
+          timestamp: m.timestamp.toISOString()
+        })),
+        lastUpdated: Date.now()
+      };
+      localStorage.setItem('strategyConversation', JSON.stringify(conversationData));
+      console.log(`💾 Saved conversation immediately with ${updatedMessages.length} messages`);
+    } else {
+      console.warn('⚠️ No scanUsername - cannot save conversation');
+    }
 
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleSend',message:'Processing strategy request',data:{userInput},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H7'})}).catch(()=>{});
+    fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleSend',message:'Processing strategy request',data:{userInput},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H7'})}).catch(()=>{});
     // #endregion
 
     try {
-      // Call backend API for real strategy processing
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/strategy/process`, {
+      // Use ONLY brand voice extracted from actual content (from brandDNA) - NOT manual settings
+      // Brand voice comes from analyzing their actual posts during the scan
+      // #region agent log
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleSend',message:'USING EXTRACTED BRAND VOICE FOR N8N',data:{hasBrandDNA:!!brandDNA,hasBrandDNAVoice:!!brandDNA?.voice,voiceStyle:brandDNA?.voice?.style,voiceTone:brandDNA?.voice?.tone},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-dispatch',hypothesisId:'H19'})}).catch(()=>{});
+      // #endregion
+      
+      // Call backend API for real strategy processing - triggers n8n workflow
+      // NOTE: Prefer 127.0.0.1 over localhost to avoid IPv6 (::1) resolution issues in browsers.
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001'}/api/strategy/process`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userInput,
           username: scanUsername,
-          brandDNA,
-          competitors: competitorIntelligence.map(c => c.name)
+          scanUsername: scanUsername,
+          brandDNA, // brandDNA contains voice extracted from actual content analysis
+          competitors: competitorIntelligence.map(c => c.name),
+          competitorIntelligence: competitorIntelligence,
         })
       });
 
       if (response.ok) {
         const result = await response.json();
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleSend',message:'API response OK',data:{hasResult:!!result,newCompetitors:result.contentUpdates?.newCompetitors},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H7'})}).catch(()=>{});
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleSend',message:'API response OK',data:{hasResult:!!result,newCompetitors:result.contentUpdates?.newCompetitors},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H7'})}).catch(()=>{});
         // #endregion
         
         const assistantMessage: StrategyMessage = {
@@ -538,7 +745,25 @@ const StrategyView: React.FC = () => {
           content: result.response || generateAIResponse(userInput).content,
           timestamp: new Date()
         };
-        setMessages(prev => [...prev, assistantMessage]);
+        let updatedMessages: StrategyMessage[] = [];
+        setMessages(prev => {
+          updatedMessages = [...prev, assistantMessage];
+          console.log(`💬 Messages updated: ${updatedMessages.length} total (added assistant response)`);
+          // Save conversation with assistant response
+          if (scanUsername) {
+            const conversationData = {
+              username: scanUsername,
+              messages: updatedMessages.map(m => ({
+                ...m,
+                timestamp: m.timestamp.toISOString()
+              })),
+              lastUpdated: Date.now()
+            };
+            localStorage.setItem('strategyConversation', JSON.stringify(conversationData));
+            console.log(`💾 Saved conversation with ${updatedMessages.length} messages`);
+          }
+          return updatedMessages;
+        });
         
         // Check if user requested adding competitors - detect from input
         const lowerInput = userInput.toLowerCase();
@@ -587,18 +812,78 @@ const StrategyView: React.FC = () => {
         }
         
         // Dispatch event to update content hub with proper strategy object
-        if (result.contentUpdates) {
-          // Create a strategy object from the user input
-          const strategyObj = {
-            type: 'user_directed',
-            title: userInput.substring(0, 50) + (userInput.length > 50 ? '...' : ''),
-            description: userInput,
-            appliedAt: new Date().toISOString()
-          };
+        // Always dispatch strategy update, even if no contentUpdates in response
+        const strategyObj = result.strategy || {
+          type: 'user_directed',
+          title: userInput.substring(0, 50) + (userInput.length > 50 ? '...' : ''),
+          description: userInput,
+          appliedAt: new Date().toISOString()
+        };
+        
+        // Save strategy to localStorage for persistence
+        localStorage.setItem('activeContentStrategy', JSON.stringify(strategyObj));
+        // Save timestamp of strategy update so Content Hub can detect recent updates
+        localStorage.setItem('lastStrategyUpdate', Date.now().toString());
+        
+        console.log('📡 Strategy: Dispatching strategyUpdated event with forceRegenerate', strategyObj);
+        
+        // CRITICAL: Use updatedMessages from setMessages callback, not stale closure
+        const currentMessages = updatedMessages.length > 0 ? updatedMessages : messages;
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleSend',message:'DISPATCHING strategyUpdated EVENT',data:{hasStrategy:!!strategyObj,strategyType:strategyObj.type,hasMessages:!!currentMessages,messagesCount:currentMessages.length,usingUpdated:updatedMessages.length>0,scanUsername},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-dispatch',hypothesisId:'H18'})}).catch(()=>{});
+        // #endregion
+        
+        // REAL-TIME SYNC: Dispatch strategyUpdated event - CRITICAL for content hub update
+        const strategyEvent = new CustomEvent('strategyUpdated', { 
+          detail: { 
+            strategy: strategyObj, 
+            activeStrategy: strategyObj,
+            updates: result.contentUpdates, 
+            forceContentRegenerate: true,
+            timestamp: Date.now(),
+            source: 'StrategyView',
+            username: scanUsername,
+            messages: currentMessages, // Use updated messages
+            conversationSummary: currentMessages.slice(-3).map(m => m.content).join(' ') // Last 3 messages
+          }
+        });
+        window.dispatchEvent(strategyEvent);
+        // #region agent log
+        fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleSend',message:'strategyUpdated EVENT DISPATCHED',data:{eventType:'strategyUpdated',hasDetail:!!strategyEvent.detail,messagesInEvent:strategyEvent.detail.messages?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-dispatch',hypothesisId:'H18'})}).catch(()=>{});
+        // #endregion
+        
+        // Dispatch again after short delay to ensure Content Hub receives it
+        setTimeout(() => {
+          window.dispatchEvent(strategyEvent);
+        }, 100);
+        console.log('✅ Strategy: strategyUpdated event dispatched');
+        
+        // Also dispatch dataChanged event to ensure all components update
+        window.dispatchEvent(new CustomEvent('dataChanged', {
+          detail: {
+            eventType: 'strategyUpdated',
+            strategy: strategyObj,
+            forceContentRegenerate: true,
+            timestamp: Date.now(),
+            source: 'StrategyView'
+          }
+        }));
+        
+        // Force a small delay then dispatch again to ensure content hub receives it
+        setTimeout(() => {
+          console.log('📡 Strategy: Re-dispatching strategyUpdated event to ensure content hub receives it');
           window.dispatchEvent(new CustomEvent('strategyUpdated', { 
-            detail: { strategy: strategyObj, updates: result.contentUpdates, forceContentRegenerate: true }
+            detail: { 
+              strategy: strategyObj, 
+              activeStrategy: strategyObj,
+              updates: result.contentUpdates, 
+              forceContentRegenerate: true,
+              timestamp: Date.now(),
+              source: 'StrategyView',
+              username: scanUsername
+            }
           }));
-        }
+        }, 100);
       } else {
         // Fallback to local generation
         const aiResponse = generateAIResponse(userInput);
@@ -623,13 +908,22 @@ const StrategyView: React.FC = () => {
         };
         
         // Still dispatch strategy update for local content regeneration
+        localStorage.setItem('activeContentStrategy', JSON.stringify(strategyObj));
+        console.log('📡 Strategy: Dispatching strategyUpdated event (fallback)', strategyObj);
         window.dispatchEvent(new CustomEvent('strategyUpdated', { 
-          detail: { strategy: strategyObj, forceContentRegenerate: true }
+          detail: { 
+            strategy: strategyObj, 
+            activeStrategy: strategyObj,
+            forceContentRegenerate: true,
+            timestamp: Date.now(),
+            source: 'StrategyView',
+            username: scanUsername
+          }
         }));
       }
     } catch (error) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleSend',message:'API call FAILED',data:{error:String(error)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H7'})}).catch(()=>{});
+      fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleSend',message:'API call FAILED',data:{error:String(error)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H7'})}).catch(()=>{});
       // #endregion
       
       // Fallback to local generation
@@ -640,7 +934,22 @@ const StrategyView: React.FC = () => {
         content: aiResponse.content,
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages(prev => {
+        const newMessages = [...prev, assistantMessage];
+        // Save conversation
+        if (scanUsername) {
+          const conversationData = {
+            username: scanUsername,
+            messages: newMessages.map(m => ({
+              ...m,
+              timestamp: m.timestamp.toISOString()
+            })),
+            lastUpdated: Date.now()
+          };
+          localStorage.setItem('strategyConversation', JSON.stringify(conversationData));
+        }
+        return newMessages;
+      });
       
       if (aiResponse.plan) {
         saveStrategyPlan(aiResponse.plan);

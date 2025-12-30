@@ -1,0 +1,106 @@
+
+================================================================================
+CHANNEL-BASED VIDEO ANALYSIS TEST REPORT
+================================================================================
+Test Date: 2025-12-21T12:41:59.993Z
+Total Subjects: 3
+Successful Scans: 3
+Failed Scans: 0
+
+SUMMARY STATISTICS
+--------------------------------------------------------------------------------
+Average Scan Duration: 228.28s
+Total Videos Fetched from Channels: 0
+Total Videos Analyzed: 0
+OUTPUT Only Verification: 3/3 passed
+Channels Detected: 3/3
+Video Analysis Executed: 0/3
+Competitors Enriched: 0/3
+
+DETAILED RESULTS
+================================================================================
+
+1. Airbnb (large company)
+--------------------------------------------------------------------------------
+Status: ✅ SUCCESS
+Duration: 108.17s
+Platforms: youtube, twitter, instagram, linkedin
+
+OUTPUT Only Verification:
+  Verified: ✅ YES
+  Posts Analyzed: 7
+  Videos Found in Posts: 0
+
+Channel Detection & Video Fetching:
+  Channels Detected: youtube, tiktok, instagram
+  Videos Fetched from Channels: 0
+  Expected Channels: youtube, instagram
+  Channels Match Expected: ✅ YES
+
+Video Analysis:
+  Executed: ❌ NO
+
+Competitor Intelligence:
+  Competitors Found: 4
+  Video Insights Added: ❌ NO
+
+
+2. Notion (medium company)
+--------------------------------------------------------------------------------
+Status: ✅ SUCCESS
+Duration: 111.22s
+Platforms: youtube, twitter, instagram, linkedin
+
+OUTPUT Only Verification:
+  Verified: ✅ YES
+  Posts Analyzed: 12
+  Videos Found in Posts: 0
+
+Channel Detection & Video Fetching:
+  Channels Detected: youtube, tiktok, instagram
+  Videos Fetched from Channels: 0
+  Expected Channels: youtube
+  Channels Match Expected: ✅ YES
+
+Video Analysis:
+  Executed: ❌ NO
+
+Competitor Intelligence:
+  Competitors Found: 4
+  Video Insights Added: ❌ NO
+
+
+3. Linear (small company)
+--------------------------------------------------------------------------------
+Status: ✅ SUCCESS
+Duration: 465.44s
+Platforms: youtube, twitter, instagram, linkedin
+
+OUTPUT Only Verification:
+  Verified: ✅ YES
+  Posts Analyzed: 7
+  Videos Found in Posts: 0
+
+Channel Detection & Video Fetching:
+  Channels Detected: youtube, instagram
+  Videos Fetched from Channels: 0
+  Expected Channels: youtube
+  Channels Match Expected: ✅ YES
+
+Video Analysis:
+  Executed: ❌ NO
+
+Competitor Intelligence:
+  Competitors Found: 4
+  Video Insights Added: ❌ NO
+
+
+================================================================================
+RECOMMENDATIONS
+================================================================================
+⚠️  No videos fetched from channels
+   Recommendation: Check channel video fetching logic
+⚠️  Video Analysis: Not all scans executed video analysis
+⚠️  Competitor Enrichment: Not all competitors enriched with video insights
+
+================================================================================
