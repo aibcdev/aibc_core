@@ -46,6 +46,15 @@ const StrategyView: React.FC = () => {
     loadStrategyData();
     loadConversation(); // Load saved conversation
     
+    // OpenManus-style: Proactively suggest marketing ideas after data loads
+    const suggestionTimer = setTimeout(() => {
+      if (scanUsername && brandDNA && !isLoadingData && messages.length <= 1) {
+        generateProactiveSuggestions();
+      }
+    }, 2000); // Wait 2 seconds after data loads
+    
+    return () => clearTimeout(suggestionTimer);
+    
     // Listen for new scan started - clear all state
     const handleNewScanStarted = (event: CustomEvent) => {
       console.log('🧹 Strategy: New scan started, clearing all state');
@@ -739,10 +748,16 @@ const StrategyView: React.FC = () => {
         fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleSend',message:'API response OK',data:{hasResult:!!result,newCompetitors:result.contentUpdates?.newCompetitors},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H7'})}).catch(()=>{});
         // #endregion
         
+        // Include marketing suggestions in response if available
+        let responseContent = result.response || generateAIResponse(userInput).content;
+        if (result.marketingSuggestions && result.marketingSuggestions.length > 0) {
+          responseContent += `\n\n**Marketing Suggestions:**\n${result.marketingSuggestions.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}`;
+        }
+        
         const assistantMessage: StrategyMessage = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: result.response || generateAIResponse(userInput).content,
+          content: responseContent,
           timestamp: new Date()
         };
         let updatedMessages: StrategyMessage[] = [];
@@ -839,6 +854,7 @@ const StrategyView: React.FC = () => {
             strategy: strategyObj, 
             activeStrategy: strategyObj,
             updates: result.contentUpdates, 
+            marketingSuggestions: result.marketingSuggestions || [],
             forceContentRegenerate: true,
             timestamp: Date.now(),
             source: 'StrategyView',
@@ -851,6 +867,11 @@ const StrategyView: React.FC = () => {
         // #region agent log
         fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StrategyView.tsx:handleSend',message:'strategyUpdated EVENT DISPATCHED',data:{eventType:'strategyUpdated',hasDetail:!!strategyEvent.detail,messagesInEvent:strategyEvent.detail.messages?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'strategy-dispatch',hypothesisId:'H18'})}).catch(()=>{});
         // #endregion
+        
+        // OpenManus-style: Generate new suggestions after response (iterative loop)
+        setTimeout(() => {
+          generateProactiveSuggestions();
+        }, 2000); // Wait 2 seconds after response
         
         // Dispatch again after short delay to ensure Content Hub receives it
         setTimeout(() => {
@@ -877,6 +898,7 @@ const StrategyView: React.FC = () => {
               strategy: strategyObj, 
               activeStrategy: strategyObj,
               updates: result.contentUpdates, 
+              marketingSuggestions: result.marketingSuggestions || [],
               forceContentRegenerate: true,
               timestamp: Date.now(),
               source: 'StrategyView',
@@ -983,6 +1005,107 @@ const StrategyView: React.FC = () => {
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     return `${diffDays}d ago`;
+  };
+
+  /**
+   * Generate proactive marketing suggestions (OpenManus-style)
+   */
+  const generateProactiveSuggestions = async () => {
+    if (!scanUsername || !brandDNA || isLoading) return;
+
+    try {
+      console.log('[Strategy] Generating proactive marketing suggestions...');
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
+      
+      const response = await fetch(`${API_BASE_URL}/api/strategy/suggest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: scanUsername,
+          brandDNA,
+          competitorIntelligence,
+          conversationHistory: messages.slice(-5).map(m => ({
+            role: m.role,
+            content: m.content,
+          })),
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        if (result.success && result.suggestions?.length > 0) {
+          const suggestionsText = `**Proactive Marketing Suggestions:**\n\n${result.suggestions.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}`;
+          
+          const suggestionMessage: StrategyMessage = {
+            id: `suggestion_${Date.now()}`,
+            role: 'assistant',
+            content: suggestionsText,
+            timestamp: new Date(),
+          };
+
+          setMessages(prev => {
+            // Only add if not already present
+            const exists = prev.some(m => m.id === suggestionMessage.id);
+            if (exists) return prev;
+            
+            const updated = [...prev, suggestionMessage];
+            
+            // Save conversation
+            if (scanUsername) {
+              const conversationData = {
+                username: scanUsername,
+                messages: updated.map(m => ({
+                  ...m,
+                  timestamp: m.timestamp.toISOString(),
+                })),
+                lastUpdated: Date.now(),
+              };
+              localStorage.setItem('strategyConversation', JSON.stringify(conversationData));
+            }
+            
+            return updated;
+          });
+
+          // Update Content Hub with content ideas from suggestions
+          if (result.contentIdeas?.length > 0) {
+            const contentIdeas = result.contentIdeas.map((ci: any) => ci.contentIdea).filter(Boolean);
+            
+            // Dispatch event to update Content Hub
+            window.dispatchEvent(new CustomEvent('strategyUpdated', {
+              detail: {
+                strategy: {
+                  type: 'proactive_suggestions',
+                  title: 'Proactive Marketing Suggestions',
+                  description: suggestionsText,
+                  appliedAt: new Date().toISOString(),
+                },
+                contentIdeas,
+                forceContentRegenerate: true,
+                timestamp: Date.now(),
+                source: 'StrategyView',
+                username: scanUsername,
+              },
+            }));
+
+            // Also update localStorage for Content Hub
+            const scanResults = localStorage.getItem('lastScanResults');
+            if (scanResults) {
+              try {
+                const parsed = JSON.parse(scanResults);
+                parsed.contentIdeas = [...(parsed.contentIdeas || []), ...contentIdeas];
+                parsed.lastUpdated = Date.now();
+                localStorage.setItem('lastScanResults', JSON.stringify(parsed));
+              } catch (e) {
+                console.error('Error updating scan results with suggestions:', e);
+              }
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      console.warn('[Strategy] Failed to generate proactive suggestions:', error.message);
+    }
   };
 
   const generateAIResponse = (userInput: string): { content: string; plan?: StrategyPlan } => {

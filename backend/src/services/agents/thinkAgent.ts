@@ -22,6 +22,9 @@ interface ThinkContext {
 // Simple in-memory storage for agent memory
 const agentMemory = new Map<string, any[]>();
 
+import { browserAgent } from './browserAgent';
+import { getFeedbackStats, getLearningInsights } from '../feedbackService';
+
 /**
  * Think Agent implementation
  */
@@ -47,6 +50,12 @@ export const thinkAgent = {
         return await processRequest(context);
       case 'analyze-research':
         return await analyzeResearch(context);
+      case 'plan-strategy-execution':
+        return await planStrategyExecution(context);
+      case 'evaluate-strategy-options':
+        return await evaluateStrategyOptions(context);
+      case 'refine-strategy-based-on-feedback':
+        return await refineStrategyBasedOnFeedback(context);
       default:
         throw new Error(`Unknown think task: ${task}`);
     }
@@ -383,6 +392,192 @@ export function clearMemory(key?: string): void {
     agentMemory.delete(key);
   } else {
     agentMemory.clear();
+  }
+}
+
+/**
+ * Plan multi-step strategy execution
+ */
+async function planStrategyExecution(context: ThinkContext): Promise<any> {
+  const { brandData, goals, strategicInsights } = context;
+
+  if (!brandData) {
+    throw new Error('Brand data required for strategy planning');
+  }
+
+  try {
+    const prompt = `Create a detailed multi-step execution plan for the following strategy goal.
+
+BRAND DATA:
+${JSON.stringify(brandData, null, 2)}
+
+GOALS:
+${goals ? JSON.stringify(goals, null, 2) : 'Not specified'}
+
+STRATEGIC INSIGHTS:
+${strategicInsights ? JSON.stringify(strategicInsights, null, 2) : 'Not specified'}
+
+Create a step-by-step execution plan that:
+1. Breaks down the strategy into actionable steps
+2. Identifies dependencies between steps
+3. Estimates time/resources needed
+4. Identifies potential risks and mitigation strategies
+5. Defines success metrics for each step
+
+Return as JSON with keys: steps (array of {name, description, dependencies, estimatedTime, risks, successMetrics}), overallTimeline, criticalPath, riskMitigation.`;
+
+    const systemPrompt = 'You are an expert strategy planner. Create detailed, executable multi-step plans.';
+
+    const result = await generateJSON<any>(prompt, systemPrompt, { tier: 'deep' });
+
+    return {
+      success: true,
+      plan: result,
+      generatedAt: new Date().toISOString(),
+    };
+  } catch (error: any) {
+    console.error('[Think Agent] Strategy planning error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Evaluate strategy options with browser research
+ */
+async function evaluateStrategyOptions(context: ThinkContext): Promise<any> {
+  const { options, criteria, brandData } = context;
+
+  if (!options || options.length === 0) {
+    throw new Error('Options required for strategy evaluation');
+  }
+
+  try {
+    // Use browser agent to gather real-time market data if needed
+    let marketData = null;
+    if (brandData?.name) {
+      try {
+        const browserResult = await browserAgent.execute('gather-market-intelligence', {
+          searchQuery: `${brandData.name} ${brandData.industry || ''} strategy`,
+          username: brandData.name,
+        });
+        if (browserResult.success) {
+          marketData = browserResult.data;
+        }
+      } catch (error: any) {
+        console.warn('[Think Agent] Browser research failed, continuing without:', error.message);
+      }
+    }
+
+    const prompt = `Evaluate the following strategy options with deep analysis.
+
+OPTIONS:
+${JSON.stringify(options, null, 2)}
+
+CRITERIA:
+${criteria ? JSON.stringify(criteria, null, 2) : 'Maximize value, minimize risk, align with brand'}
+
+MARKET DATA:
+${marketData ? JSON.stringify(marketData, null, 2) : 'No market data available'}
+
+BRAND CONTEXT:
+${brandData ? JSON.stringify(brandData, null, 2) : 'No brand data'}
+
+For each option, provide:
+1. Strengths and weaknesses
+2. Alignment with brand and goals
+3. Market feasibility (based on market data if available)
+4. Risk assessment
+5. Resource requirements
+6. Expected outcomes
+7. Recommendation score (0-1)
+
+Return as JSON with keys: evaluations (array of {option, strengths, weaknesses, alignment, feasibility, risks, resources, outcomes, score}), recommendedOption, reasoning, comparison.`;
+
+    const systemPrompt = 'You are an expert strategy evaluator. Provide thorough, data-driven evaluations.';
+
+    const result = await generateJSON<any>(prompt, systemPrompt, { tier: 'deep' });
+
+    return {
+      success: true,
+      evaluations: result.evaluations || [],
+      recommendedOption: result.recommendedOption,
+      reasoning: result.reasoning,
+      comparison: result.comparison,
+      marketDataUsed: !!marketData,
+      evaluatedAt: new Date().toISOString(),
+    };
+  } catch (error: any) {
+    console.error('[Think Agent] Strategy evaluation error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Refine strategy based on feedback
+ */
+async function refineStrategyBasedOnFeedback(context: ThinkContext): Promise<any> {
+  const { brandData, goals } = context;
+
+  if (!brandData) {
+    throw new Error('Brand data required for strategy refinement');
+  }
+
+  try {
+    // Get learning insights from feedback
+    const insights = getLearningInsights(brandData.name || brandData.username);
+    const stats = getFeedbackStats(brandData.name || brandData.username);
+
+    const prompt = `Refine the content strategy based on feedback and performance data.
+
+BRAND DATA:
+${JSON.stringify(brandData, null, 2)}
+
+CURRENT GOALS:
+${goals ? JSON.stringify(goals, null, 2) : 'Not specified'}
+
+FEEDBACK STATISTICS:
+- Total Feedback: ${stats.totalFeedback}
+- Approval Rate: ${(stats.approvalRate * 100).toFixed(1)}%
+- Average Quality: ${(stats.averageQuality * 100).toFixed(1)}%
+
+SUCCESSFUL PATTERNS:
+${insights.successfulPatterns.length > 0 ? insights.successfulPatterns.map(p => `- ${p}`).join('\n') : 'None identified'}
+
+FAILED PATTERNS:
+${insights.failedPatterns.length > 0 ? insights.failedPatterns.map(p => `- ${p}`).join('\n') : 'None identified'}
+
+RECOMMENDATIONS:
+${insights.recommendations.length > 0 ? insights.recommendations.map(r => `- ${r}`).join('\n') : 'None'}
+
+Refine the strategy to:
+1. Leverage successful patterns
+2. Address failed patterns
+3. Implement recommendations
+4. Improve approval rates and quality scores
+5. Better align with brand voice and goals
+
+Return as JSON with keys: refinedStrategy, changes (array of changes made), expectedImprovements, implementationSteps.`;
+
+    const systemPrompt = 'You are an expert strategy optimizer. Refine strategies based on data and feedback.';
+
+    const result = await generateJSON<any>(prompt, systemPrompt, { tier: 'deep' });
+
+    return {
+      success: true,
+      refinedStrategy: result.refinedStrategy,
+      changes: result.changes || [],
+      expectedImprovements: result.expectedImprovements,
+      implementationSteps: result.implementationSteps || [],
+      basedOnFeedback: {
+        totalFeedback: stats.totalFeedback,
+        approvalRate: stats.approvalRate,
+        averageQuality: stats.averageQuality,
+      },
+      refinedAt: new Date().toISOString(),
+    };
+  } catch (error: any) {
+    console.error('[Think Agent] Strategy refinement error:', error);
+    throw error;
   }
 }
 

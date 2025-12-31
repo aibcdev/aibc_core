@@ -88,8 +88,8 @@ export async function bulkCreatePosts(
           continue;
         }
 
-        if (data) {
-          results.push(...data.map(dbRowToBlogPost));
+        if (data && Array.isArray(data)) {
+          results.push(...data.map((row: any) => dbRowToBlogPost(row)));
         }
       } catch (error) {
         console.error(`Exception in bulk insert chunk ${i + 1}:`, error);

@@ -49,6 +49,7 @@ router.get('/', async (req, res) => {
     // #endregion
     
     // Ensure we always return the correct structure
+    // Return 200 even if no posts found (not an error condition)
     const response = {
       posts: result.posts || [],
       total: result.total || 0,
@@ -57,18 +58,26 @@ router.get('/', async (req, res) => {
       totalPages: result.totalPages || 0,
     };
     
-    res.json(response);
+    // Log if no posts found (for debugging)
+    if (response.posts.length === 0) {
+      console.log(`[Blog API] No posts found for query:`, params);
+    } else {
+      console.log(`[Blog API] Returning ${response.posts.length} posts (total: ${response.total})`);
+    }
+    
+    res.status(200).json(response);
   } catch (error: any) {
-    console.error('Error listing blog posts:', error);
-    // Return empty result structure instead of error object
-    res.status(500).json({
+    console.error('[Blog API] Error listing blog posts:', error);
+    // Return 200 with empty structure instead of 500 error
+    // This prevents frontend from treating it as a fatal error
+    const response = {
       posts: [],
       total: 0,
       page: parseInt(req.query.page as string) || 1,
       limit: parseInt(req.query.limit as string) || 10,
       totalPages: 0,
-      error: error.message || 'Failed to list blog posts',
-    });
+    };
+    res.status(200).json(response);
   }
 });
 
@@ -351,6 +360,7 @@ router.delete('/:id', async (req, res) => {
 
 /**
  * POST /api/blog/fix-existing - Fix existing blog posts (add images, fix formatting)
+ * Refactored to use blogPostFixService
  */
 router.post('/fix-existing', async (req, res) => {
   try {
@@ -358,111 +368,32 @@ router.post('/fix-existing', async (req, res) => {
     fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'blog.ts:POST /api/blog/fix-existing',message:'FIX EXISTING POSTS REQUEST',data:{hostname:req.hostname},timestamp:Date.now(),sessionId:'debug-session',runId:'blog-fix',hypothesisId:'H5'})}).catch(()=>{});
     // #endregion
     
-    const { generateFeaturedImage } = await import('../services/contentGeneratorService');
+    const { fixBlogPosts } = await import('../services/blogPostFixService');
     
     // Get all published posts
     const allPosts = await listBlogPosts({ status: 'published', limit: 1000 });
     
-    let fixed = 0;
-    let errors = 0;
-    const currentYear = new Date().getFullYear();
-    
-    for (const post of allPosts.posts || []) {
-      try {
-        let needsUpdate = false;
-        const updates: any = {};
-        
-        // Fix HTML formatting issues
-        if (post.content) {
-          let processedContent = post.content;
-          
-          // Remove markdown code block wrappers (```html ... ```)
-          processedContent = processedContent.replace(/^```html\s*/i, '');
-          processedContent = processedContent.replace(/\s*```\s*$/i, '');
-          processedContent = processedContent.trim();
-          
-          // Remove Table of Contents
-          processedContent = processedContent.replace(
-            /<h2><strong>Table of Contents<\/strong><\/h2>[\s\S]*?(?=<h2|<h3|$)/gi,
-            ''
-          );
-          processedContent = processedContent.replace(
-            /<h2>Table of Contents<\/h2>[\s\S]*?(?=<h2|<h3|$)/gi,
-            ''
-          );
-          processedContent = processedContent.replace(
-            /## Table of Contents[\s\S]*?(?=##|$)/gi,
-            ''
-          );
-          
-          // Fix broken HTML tags
-          processedContent = processedContent.replace(
-            /<(\w+)[^>]*[<>{}[\]\\|`~!@#$%^&*+=?;:'"][^>]*>/gi,
-            (match) => {
-              const tagName = match.match(/<(\w+)/)?.[1];
-              if (tagName && ['h2', 'h3', 'p', 'ul', 'ol', 'li', 'strong', 'em', 'a', 'div', 'span'].includes(tagName.toLowerCase())) {
-                return `<${tagName}>`;
-              }
-              return '';
-            }
-          );
-          
-          // Fix double-closed tags
-          processedContent = processedContent.replace(/<\/strong><\/strong>/gi, '</strong>');
-          processedContent = processedContent.replace(/<\/em><\/em>/gi, '</em>');
-          
-          // Ensure headings are emboldened
-          processedContent = processedContent.replace(
-            /<h2>([^<]+)<\/h2>/gi,
-            '<h2><strong>$1</strong></h2>'
-          );
-          processedContent = processedContent.replace(
-            /<h3>([^<]+)<\/h3>/gi,
-            '<h3><strong>$1</strong></h3>'
-          );
-          
-          // Replace 2024 with current year
-          processedContent = processedContent.replace(/\b2024\b/g, currentYear.toString());
-          
-          if (processedContent !== post.content) {
-            updates.content = processedContent;
-            needsUpdate = true;
-          }
-        }
-        
-        // Add featured image if missing
-        if (!post.featured_image_url && post.target_keywords?.[0]) {
-          const keyword = post.target_keywords[0];
-          const imageUrl = await generateFeaturedImage(post.title, keyword, post.category);
-          if (imageUrl) {
-            updates.featured_image_url = imageUrl;
-            needsUpdate = true;
-          }
-        }
-        
-        if (needsUpdate) {
-          await updateBlogPost(post.id, updates);
-          fixed++;
-          
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'blog.ts:POST /api/blog/fix-existing',message:'POST FIXED',data:{postId:post.id,slug:post.slug,hasContentUpdate:!!updates.content,hasImageUpdate:!!updates.featured_image_url},timestamp:Date.now(),sessionId:'debug-session',runId:'blog-fix',hypothesisId:'H5'})}).catch(()=>{});
-          // #endregion
-        }
-      } catch (error: any) {
-        console.error(`Error fixing post ${post.id}:`, error);
-        errors++;
-      }
+    if (!allPosts.posts || allPosts.posts.length === 0) {
+      return res.json({
+        success: true,
+        total: 0,
+        fixed: 0,
+        errors: 0,
+      });
     }
     
+    // Fix all posts using the centralized service
+    const result = await fixBlogPosts(allPosts.posts);
+    
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'blog.ts:POST /api/blog/fix-existing',message:'FIX EXISTING POSTS COMPLETE',data:{totalPosts:allPosts.posts?.length || 0,fixed,errors},timestamp:Date.now(),sessionId:'debug-session',runId:'blog-fix',hypothesisId:'H5'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'blog.ts:POST /api/blog/fix-existing',message:'FIX EXISTING POSTS COMPLETE',data:{totalPosts:allPosts.posts.length,fixed:result.fixed,errors:result.errors},timestamp:Date.now(),sessionId:'debug-session',runId:'blog-fix',hypothesisId:'H5'})}).catch(()=>{});
     // #endregion
     
     res.json({
       success: true,
-      total: allPosts.posts?.length || 0,
-      fixed,
-      errors,
+      total: allPosts.posts.length,
+      fixed: result.fixed,
+      errors: result.errors,
     });
   } catch (error: any) {
     console.error('Error fixing existing posts:', error);
@@ -470,6 +401,32 @@ router.post('/fix-existing', async (req, res) => {
     fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'blog.ts:POST /api/blog/fix-existing',message:'FIX EXISTING POSTS ERROR',data:{error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'blog-fix',hypothesisId:'H5'})}).catch(()=>{});
     // #endregion
     res.status(500).json({ error: error.message || 'Failed to fix existing posts' });
+  }
+});
+
+/**
+ * POST /api/blog/fix-post/:id - Fix a single blog post
+ */
+router.post('/fix-post/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { getBlogPostById } = await import('../services/seoContentService');
+    const { fixBlogPost } = await import('../services/blogPostFixService');
+    
+    const post = await getBlogPostById(id);
+    if (!post) {
+      return res.status(404).json({ error: 'Blog post not found' });
+    }
+    
+    const fixedPost = await fixBlogPost(post);
+    
+    res.json({
+      success: true,
+      post: fixedPost,
+    });
+  } catch (error: any) {
+    console.error('Error fixing post:', error);
+    res.status(500).json({ error: error.message || 'Failed to fix post' });
   }
 });
 

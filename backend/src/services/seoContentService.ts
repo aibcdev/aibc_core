@@ -43,7 +43,7 @@ function calculateWordCount(content: string): number {
 /**
  * Convert database row to BlogPost
  */
-function dbRowToBlogPost(row: any): BlogPost {
+export function dbRowToBlogPost(row: any): BlogPost {
   const post = {
     id: row.id,
     slug: row.slug,

@@ -34,28 +34,34 @@ export const PROVIDER_CONFIG: Record<Provider, { name: string; model: string; co
 };
 
 // Get provider for scan tier
+// Check process.env directly to ensure we always have the latest values
 export function getProviderForTier(tier: ScanTier, forceProvider?: Provider): Provider {
   if (forceProvider) return forceProvider;
+  
+  // Check environment variables directly (not constants) to ensure we have latest values
+  const geminiKey = process.env.GEMINI_API_KEY || GEMINI_API_KEY;
+  const deepseekKey = process.env.DEEPSEEK_API_KEY || DEEPSEEK_API_KEY;
+  const openaiKey = process.env.OPENAI_API_KEY || OPENAI_API_KEY;
   
   switch (tier) {
     case 'basic':
       // Basic scan: Use Gemini 2.0 Flash (FREE tier - 250 requests/day, much better than 2.5-flash)
-      if (GEMINI_API_KEY) return 'gemini-2-flash';
-      if (DEEPSEEK_API_KEY) return 'deepseek';
+      if (geminiKey) return 'gemini-2-flash';
+      if (deepseekKey) return 'deepseek';
       throw new Error('No LLM configured for basic scans. Set GEMINI_API_KEY.');
       
     case 'deep':
       // Deep scan: Use Gemini 2.0 Flash (250 requests/day free tier)
-      if (GEMINI_API_KEY) return 'gemini-2-flash';
-      if (DEEPSEEK_API_KEY) return 'deepseek-r1';
-      if (OPENAI_API_KEY) return 'openai';
+      if (geminiKey) return 'gemini-2-flash';
+      if (deepseekKey) return 'deepseek-r1';
+      if (openaiKey) return 'openai';
       throw new Error('No LLM configured for deep scans. Set GEMINI_API_KEY.');
       
     case 'test':
       // Test mode: Use Gemini 2.0 Flash for testing (250 requests/day)
-      if (GEMINI_API_KEY) return 'gemini-2-flash';
-      if (DEEPSEEK_API_KEY) return 'deepseek-r1';
-      if (OPENAI_API_KEY) return 'openai';
+      if (geminiKey) return 'gemini-2-flash';
+      if (deepseekKey) return 'deepseek-r1';
+      if (openaiKey) return 'openai';
       throw new Error('No LLM configured for testing.');
       
     default:
@@ -301,7 +307,11 @@ export async function generateJSON<T = any>(
  * Check if LLM is configured
  */
 export function isLLMConfigured(): boolean {
-  return !!(GEMINI_API_KEY || DEEPSEEK_API_KEY || OPENAI_API_KEY);
+  // Check process.env directly to ensure we always have the latest values
+  const geminiKey = process.env.GEMINI_API_KEY || GEMINI_API_KEY;
+  const deepseekKey = process.env.DEEPSEEK_API_KEY || DEEPSEEK_API_KEY;
+  const openaiKey = process.env.OPENAI_API_KEY || OPENAI_API_KEY;
+  return !!(geminiKey || deepseekKey || openaiKey);
 }
 
 /**

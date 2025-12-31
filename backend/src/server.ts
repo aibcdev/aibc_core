@@ -26,6 +26,7 @@ import platformsRoutes from './routes/platforms';
 import n8nRoutes from './routes/n8n';
 import strategyRoutes from './routes/strategy';
 import contentHubRoutes from './routes/contentHub';
+import scrapingRoutes from './routes/scraping';
 import massContentRoutes from './routes/massContent';
 import organicTrafficRoutes from './routes/organicTraffic';
 import contentQualityRoutes from './routes/contentQuality';
@@ -106,6 +107,7 @@ app.use('/api/platforms', platformsRoutes);
 app.use('/api/n8n', n8nRoutes);
 app.use('/api/strategy', strategyRoutes);
 app.use('/api/content-hub', contentHubRoutes);
+app.use('/api/scraping', scrapingRoutes);
 app.use('/api/mass-content', massContentRoutes);
 app.use('/api/organic-traffic', organicTrafficRoutes);
 app.use('/api/content-quality', contentQualityRoutes);
@@ -317,6 +319,14 @@ if (process.env.ENABLE_CONTENT_SCHEDULER !== 'false') {
         process.env.TIMEZONE || 'America/New_York'
       );
       console.log('✅ Content scheduler initialized');
+      
+      // Initialize blog maintenance scheduler (runs at 10 AM, after content generation)
+      const { scheduleBlogMaintenance } = await import('./cron/blogMaintenanceScheduler');
+      scheduleBlogMaintenance(
+        process.env.BLOG_MAINTENANCE_TIME || '10:00',
+        process.env.TIMEZONE || 'America/New_York'
+      );
+      console.log('✅ Blog maintenance scheduler initialized');
       // #region agent log
       try {
         fs.appendFileSync(logPath, JSON.stringify({location:'server.ts:312',message:'SCHEDULER INITIALIZED',data:{success:true},timestamp:Date.now(),sessionId:'debug-session',runId:'scheduler-init',hypothesisId:'H1'})+'\n');

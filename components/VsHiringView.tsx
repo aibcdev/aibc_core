@@ -250,3 +250,4 @@ const VsHiringView: React.FC<NavProps> = ({ onNavigate }) => {
 export default VsHiringView;
 
 
+

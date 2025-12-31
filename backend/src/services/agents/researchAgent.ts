@@ -1,10 +1,14 @@
 /**
  * Research Agent
- * Integrates with SerpAPI, NewsAPI, Wikipedia, Apify for enhanced research
+ * Integrates with NewsAPI, Wikipedia, and browser automation for enhanced research
  * CRITICAL: Filters low engagement content and spots competitor big successes
+ * Enhanced with browser automation for deep competitor analysis
+ * Uses only free APIs - no paid services required
  */
 
 import { generateJSON } from '../llmService';
+import { browserAgent } from './browserAgent';
+import { analyzeDigitalFootprint, scrapeCompetitorContent, getAnalyticsData } from '../scrapingAPIService';
 
 interface ResearchContext {
   brandName?: string;
@@ -12,6 +16,7 @@ interface ResearchContext {
   competitors?: any[];
   keywords?: string[];
   timeframe?: string;
+  website?: string;
 }
 
 /**
@@ -33,6 +38,18 @@ export const researchAgent = {
         return await analyzeTrends(context);
       case 'research-brand':
         return await researchBrand(context);
+      case 'browser-research':
+        return await browserResearch(context);
+      case 'analyze-competitor-content':
+        return await analyzeCompetitorContent(context);
+      case 'gather-market-intelligence-browser':
+        return await gatherMarketIntelligenceBrowser(context);
+      case 'analyze-digital-footprint':
+        return await analyzeDigitalFootprintResearch(context);
+      case 'scrape-competitor':
+        return await scrapeCompetitorResearch(context);
+      case 'get-analytics-data':
+        return await getAnalyticsDataResearch(context);
       default:
         throw new Error(`Unknown research task: ${task}`);
     }
@@ -50,14 +67,21 @@ async function researchBrand(context: ResearchContext): Promise<any> {
   };
 
   try {
-    // SerpAPI search
-    if (process.env.SERPAPI_KEY && brandName) {
+    // Browser-based search (free, no API key needed)
+    if (brandName) {
       try {
-        const serpResults = await searchWithSerpAPI(brandName, industry);
-        results.sources.push('serpapi');
-        results.data.serpapi = serpResults;
+        const searchQuery = industry ? `${brandName} ${industry}` : brandName;
+        const browserResult = await browserAgent.execute('gather-market-intelligence', {
+          searchQuery,
+          username: brandName,
+        });
+        
+        if (browserResult.success) {
+          results.sources.push('browser-automation');
+          results.data.browserSearch = browserResult.data;
+        }
       } catch (error: any) {
-        console.warn('[Research Agent] SerpAPI error:', error.message);
+        console.warn('[Research Agent] Browser search error:', error.message);
       }
     }
 
@@ -299,51 +323,33 @@ async function gatherMarketIntelligence(context: ResearchContext): Promise<any> 
 }
 
 /**
- * Analyze trends using SerpAPI
+ * Analyze trends using browser automation (free)
  */
 async function analyzeTrends(context: ResearchContext): Promise<any> {
   const { keywords = [], timeframe = '7d' } = context;
   const trends: any[] = [];
 
-  if (!process.env.SERPAPI_KEY) {
-    console.warn('[Research Agent] SerpAPI key not configured');
-    return { trends: [] };
-  }
-
   for (const keyword of keywords) {
     try {
-      const results = await searchWithSerpAPI(keyword);
-      trends.push({
-        keyword,
-        results: results.organic_results?.slice(0, 10) || [],
-        timeframe,
+      // Use browser automation for search (free, no API key needed)
+      const browserResult = await browserAgent.execute('gather-market-intelligence', {
+        searchQuery: keyword,
       });
+      
+      if (browserResult.success) {
+        trends.push({
+          keyword,
+          results: browserResult.data?.results || [],
+          timeframe,
+          source: 'browser-automation',
+        });
+      }
     } catch (error: any) {
       console.warn(`[Research Agent] Trend analysis failed for ${keyword}:`, error.message);
     }
   }
 
   return { trends };
-}
-
-/**
- * Search using SerpAPI
- */
-async function searchWithSerpAPI(query: string, industry?: string): Promise<any> {
-  const apiKey = process.env.SERPAPI_KEY;
-  if (!apiKey) {
-    throw new Error('SerpAPI key not configured');
-  }
-
-  const searchQuery = industry ? `${query} ${industry}` : query;
-  const url = `https://serpapi.com/search.json?q=${encodeURIComponent(searchQuery)}&api_key=${apiKey}`;
-
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`SerpAPI request failed: ${response.statusText}`);
-  }
-
-  return await response.json() as any;
 }
 
 /**
@@ -414,5 +420,238 @@ async function searchWithApify(actorId: string, input: any): Promise<any> {
   }
 
   return await response.json() as any;
+}
+
+/**
+ * Use browser automation for deep research
+ */
+async function browserResearch(context: ResearchContext): Promise<any> {
+  const { brandName, keywords } = context;
+
+  if (!brandName && !keywords?.length) {
+    throw new Error('Brand name or keywords required for browser research');
+  }
+
+  try {
+    const searchQuery = keywords?.join(' ') || brandName || '';
+    const browserResult = await browserAgent.execute('gather-market-intelligence', {
+      searchQuery,
+      username: brandName,
+    });
+
+    if (!browserResult.success) {
+      throw new Error(browserResult.error || 'Browser research failed');
+    }
+
+    return {
+      success: true,
+      data: {
+        browserResearch: browserResult.data,
+        sources: ['browser-automation'],
+      },
+      researchedAt: new Date().toISOString(),
+    };
+  } catch (error: any) {
+    console.error('[Research Agent] Browser research error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Analyze competitor content using browser automation
+ */
+async function analyzeCompetitorContent(context: ResearchContext): Promise<any> {
+  const { competitors = [] } = context;
+  const analyzed: any[] = [];
+
+  for (const competitor of competitors) {
+    try {
+      // Get competitor website URL
+      const competitorUrl = competitor.website || competitor.url;
+      if (!competitorUrl) {
+        console.warn(`[Research Agent] No URL for competitor ${competitor.name}, skipping browser analysis`);
+        analyzed.push(competitor);
+        continue;
+      }
+
+      // Use browser agent to analyze competitor content
+      const browserResult = await browserAgent.execute('analyze-competitor-content', {
+        url: competitorUrl,
+        competitorIntelligence: [competitor],
+      });
+
+      if (browserResult.success) {
+        analyzed.push({
+          ...competitor,
+          browserAnalysis: browserResult.data,
+          analyzedAt: new Date().toISOString(),
+        });
+      } else {
+        analyzed.push(competitor); // Include original if analysis fails
+      }
+    } catch (error: any) {
+      console.warn(`[Research Agent] Browser analysis failed for ${competitor.name}:`, error.message);
+      analyzed.push(competitor); // Include original if analysis fails
+    }
+  }
+
+  return {
+    competitors: analyzed,
+    totalAnalyzed: analyzed.length,
+    browserAnalysisUsed: true,
+  };
+}
+
+/**
+ * Gather market intelligence using browser automation
+ */
+async function gatherMarketIntelligenceBrowser(context: ResearchContext): Promise<any> {
+  const { brandName, industry, keywords } = context;
+
+  const searchQueries = [
+    brandName ? `${brandName} ${industry || ''}`.trim() : null,
+    industry ? `${industry} trends 2025` : null,
+    keywords?.join(' ') || null,
+  ].filter(Boolean) as string[];
+
+  const results: any[] = [];
+
+  for (const query of searchQueries) {
+    try {
+      const browserResult = await browserAgent.execute('gather-market-intelligence', {
+        searchQuery: query,
+        username: brandName,
+      });
+
+      if (browserResult.success) {
+        results.push({
+          query,
+          data: browserResult.data,
+        });
+      }
+    } catch (error: any) {
+      console.warn(`[Research Agent] Market intelligence gathering failed for "${query}":`, error.message);
+    }
+  }
+
+  return {
+    success: true,
+    data: {
+      marketIntelligence: results,
+      sources: ['browser-automation'],
+    },
+    gatheredAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Analyze digital footprint using scraping APIs
+ */
+async function analyzeDigitalFootprintResearch(context: ResearchContext): Promise<any> {
+  const { brandName } = context;
+
+  if (!brandName) {
+    throw new Error('Brand name required for digital footprint analysis');
+  }
+
+  try {
+    const footprint = await analyzeDigitalFootprint(brandName);
+    
+    return {
+      success: true,
+      data: footprint,
+      analyzedAt: new Date().toISOString(),
+    };
+  } catch (error: any) {
+    console.error('[Research Agent] Digital footprint analysis error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Scrape competitor content using scraping APIs
+ */
+async function scrapeCompetitorResearch(context: ResearchContext): Promise<any> {
+  const { competitors = [] } = context;
+  const scraped: any[] = [];
+
+  for (const competitor of competitors) {
+    try {
+      const competitorUrl = competitor.website || competitor.url;
+      if (!competitorUrl) {
+        continue;
+      }
+
+      const result = await scrapeCompetitorContent(competitorUrl, competitor.name || '');
+      
+      if (result.success) {
+        scraped.push({
+          ...competitor,
+          scrapedContent: result.data,
+          scrapedAt: new Date().toISOString(),
+        });
+      }
+    } catch (error: any) {
+      console.warn(`[Research Agent] Scraping failed for ${competitor.name}:`, error.message);
+    }
+  }
+
+  return {
+    success: true,
+    competitors: scraped,
+    totalScraped: scraped.length,
+  };
+}
+
+/**
+ * Get analytics data using scraping APIs
+ */
+async function getAnalyticsDataResearch(context: ResearchContext): Promise<any> {
+  const { brandName } = context;
+
+  if (!brandName) {
+    throw new Error('Brand name required for analytics data');
+  }
+
+  try {
+    // Try to get website URL from context or search
+    let websiteUrl = context.website;
+    
+    if (!websiteUrl) {
+      // Search for brand website using browser automation (free)
+      try {
+        const searchQuery = `${brandName} official website`;
+        const browserResult = await browserAgent.execute('gather-market-intelligence', {
+          searchQuery,
+          username: brandName,
+        });
+        
+        if (browserResult.success && browserResult.data?.results?.length > 0) {
+          websiteUrl = browserResult.data.results[0].url;
+        }
+      } catch (error: any) {
+        console.warn('[Research Agent] Website search failed:', error.message);
+      }
+    }
+
+    if (websiteUrl) {
+      const analyticsResult = await getAnalyticsData(websiteUrl);
+      
+      return {
+        success: true,
+        data: analyticsResult.data,
+        source: analyticsResult.source,
+        analyzedAt: new Date().toISOString(),
+      };
+    }
+
+    return {
+      success: false,
+      error: 'Could not determine website URL',
+    };
+  } catch (error: any) {
+    console.error('[Research Agent] Analytics data error:', error);
+    throw error;
+  }
 }
 

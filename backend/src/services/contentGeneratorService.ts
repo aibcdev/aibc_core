@@ -227,7 +227,7 @@ Now write the complete, publication-ready article in HTML format. Make it sound 
   // Post-process to ensure all headings are emboldened and fix HTML issues
   let processedContent = content.trim();
   
-  // Remove Table of Contents sections (if LLM added them despite instructions)
+  // Remove Table of Contents sections (if LLM added them despite instructions) - more aggressive patterns
   processedContent = processedContent.replace(
     /<h2><strong>Table of Contents<\/strong><\/h2>[\s\S]*?(?=<h2|<h3|$)/gi,
     ''
@@ -237,7 +237,28 @@ Now write the complete, publication-ready article in HTML format. Make it sound 
     ''
   );
   processedContent = processedContent.replace(
+    /<h3><strong>Table of Contents<\/strong><\/h3>[\s\S]*?(?=<h2|<h3|$)/gi,
+    ''
+  );
+  processedContent = processedContent.replace(
+    /<h3>Table of Contents<\/h3>[\s\S]*?(?=<h2|<h3|$)/gi,
+    ''
+  );
+  processedContent = processedContent.replace(
     /## Table of Contents[\s\S]*?(?=##|$)/gi,
+    ''
+  );
+  processedContent = processedContent.replace(
+    /### Table of Contents[\s\S]*?(?=##|###|$)/gi,
+    ''
+  );
+  // Remove TOC lists
+  processedContent = processedContent.replace(
+    /<ul>[\s\S]*?Table of Contents[\s\S]*?<\/ul>/gi,
+    ''
+  );
+  processedContent = processedContent.replace(
+    /<ol>[\s\S]*?Table of Contents[\s\S]*?<\/ol>/gi,
     ''
   );
   
@@ -372,7 +393,7 @@ export async function generateBlogPost(
     // #endregion
 
     // Create blog post - Auto-publish if SEO score is good
-    const post = await createBlogPost({
+    let post = await createBlogPost({
       title,
       slug,
       author: author.name, // Assign selected author
@@ -391,6 +412,29 @@ export async function generateBlogPost(
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'contentGeneratorService.ts:generateBlogPost',message:'BLOG POST CREATED',data:{postId:post.id,slug:post.slug,hasFeaturedImageUrl:!!post.featured_image_url,featuredImageUrl:post.featured_image_url,title},timestamp:Date.now(),sessionId:'debug-session',runId:'blog-post-create',hypothesisId:'H2'})}).catch(()=>{});
     // #endregion
+
+    // Post-creation validation: Ensure image is set and content is properly formatted
+    let validatedPost = post;
+    if (!post.featured_image_url) {
+      // Image should have been set, but if not, generate it now
+      const imageUrl = await generateFeaturedImage(post.title, keyword, category);
+      if (imageUrl) {
+        const updated = await updateBlogPost(post.id, { featured_image_url: imageUrl });
+        if (updated) {
+          validatedPost = updated;
+          post.featured_image_url = imageUrl;
+          console.log(`[Content Generator] Auto-fixed missing image for post: ${post.slug}`);
+        }
+      }
+    }
+
+    // Auto-fix content formatting issues using the fix service
+    const { fixBlogPost } = await import('./blogPostFixService');
+    validatedPost = await fixBlogPost(validatedPost);
+    if (validatedPost.content !== post.content || validatedPost.featured_image_url !== post.featured_image_url) {
+      console.log(`[Content Generator] Auto-fixed formatting issues for post: ${post.slug}`);
+      Object.assign(post, validatedPost);
+    }
 
     // Calculate initial SEO score (basic)
     const seoScore = calculateBasicSEOScore(post, keyword);
@@ -509,14 +553,24 @@ function generateOptimizationSuggestions(post: BlogPost, keyword: string): strin
  * Generate featured image URL for blog post
  * Uses Unsplash Source API (free, no API key required for basic usage)
  */
-export async function generateFeaturedImage(title: string, keyword: string, category?: string): Promise<string | undefined> {
+export async function generateFeaturedImage(title: string, keyword: string, category?: string): Promise<string> {
   try {
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'contentGeneratorService.ts:generateFeaturedImage',message:'GENERATE FEATURED IMAGE CALLED',data:{title,keyword,category},timestamp:Date.now(),sessionId:'debug-session',runId:'image-gen',hypothesisId:'H1'})}).catch(()=>{});
     // #endregion
     
     // Extract main concept from title/keyword for image search
-    const searchTerm = keyword.split(' ').slice(0, 3).join(' ') || title.split(' ').slice(0, 3).join(' ');
+    // Always ensure we have a valid search term - use keyword first, then title, then fallback
+    let searchTerm = '';
+    if (keyword && keyword.trim()) {
+      searchTerm = keyword.split(' ').slice(0, 3).join(' ');
+    }
+    if (!searchTerm && title && title.trim()) {
+      searchTerm = title.split(' ').slice(0, 3).join(' ');
+    }
+    if (!searchTerm) {
+      searchTerm = 'Blog Post';
+    }
     
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'contentGeneratorService.ts:generateFeaturedImage',message:'SEARCH TERM EXTRACTED',data:{searchTerm,keyword,title},timestamp:Date.now(),sessionId:'debug-session',runId:'image-gen',hypothesisId:'H1'})}).catch(()=>{});
@@ -539,15 +593,16 @@ export async function generateFeaturedImage(title: string, keyword: string, cate
     fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'contentGeneratorService.ts:generateFeaturedImage',message:'IMAGE URL GENERATED',data:{imageUrl,searchTerm,encodedKeyword},timestamp:Date.now(),sessionId:'debug-session',runId:'image-gen',hypothesisId:'H1'})}).catch(()=>{});
     // #endregion
     
-    // Return the image URL
+    // Return the image URL - ALWAYS return a valid URL, never undefined
     return imageUrl;
   } catch (error) {
     console.warn('[Content Generator] Failed to generate featured image:', error);
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'contentGeneratorService.ts:generateFeaturedImage',message:'IMAGE GENERATION ERROR',data:{error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'image-gen',hypothesisId:'H1'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'contentGeneratorService.ts:generateFeaturedImage',message:'IMAGE GENERATION ERROR - USING FALLBACK',data:{error:error instanceof Error ? error.message : String(error),title,keyword},timestamp:Date.now(),sessionId:'debug-session',runId:'image-gen',hypothesisId:'H1'})}).catch(()=>{});
     // #endregion
-    // Return undefined if image generation fails - frontend will show placeholder
-    return undefined;
+    // ALWAYS return a valid URL - use title as fallback if all else fails
+    const fallbackText = title?.split(' ').slice(0, 3).join(' ') || 'Blog Post';
+    const encodedFallback = encodeURIComponent(fallbackText.substring(0, 50));
+    return `https://placehold.co/1200x630/1a1a1a/f97316?text=${encodedFallback}`;
   }
 }
-

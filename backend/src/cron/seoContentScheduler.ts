@@ -68,6 +68,23 @@ export function scheduleDailyContentGeneration(
         fetch('http://127.0.0.1:7242/ingest/62bd50d3-9960-40ff-8da7-b4d57e001c2d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'seoContentScheduler.ts:57',message:'GENERATION COMPLETE',data:{successCount:results.filter(r=>r.success).length,total:results.length,errors:results.filter(r=>!r.success).map(r=>r.error)},timestamp:Date.now(),sessionId:'debug-session',runId:'blog-scheduler',hypothesisId:'H3'})}).catch(()=>{});
         // #endregion
 
+        // Validate and fix generated posts
+        const { fixBlogPost } = await import('../services/blogPostFixService');
+        const { getBlogPostById } = await import('../services/seoContentService');
+        for (const result of results) {
+          if (result.success && result.postId) {
+            try {
+              const post = await getBlogPostById(result.postId);
+              if (post) {
+                await fixBlogPost(post);
+                console.log(`[Content Scheduler] Validated and fixed post: ${post.slug}`);
+              }
+            } catch (error) {
+              console.error(`[Content Scheduler] Error fixing post ${result.postId}:`, error);
+            }
+          }
+        }
+
         const successCount = results.filter(r => r.success).length;
         const publishedCount = results.filter(r => r.success && r.seoScore && r.seoScore >= 70).length;
         console.log(`[Content Scheduler] Completed: ${successCount}/${postsPerDay} posts generated successfully`);

@@ -89,6 +89,24 @@ export async function executeContentPipeline(): Promise<PipelineResult> {
     const generated = await generateBlogPost(generationRequest);
     steps[steps.length - 1] = { step: 'content_generation', success: true, message: `Generated: ${generated.post.slug}` };
 
+    // Step 2.5: Auto-fix post (images, formatting) - ensures quality before proceeding
+    steps.push({ step: 'auto_fix', success: false });
+    try {
+      const { fixBlogPost } = await import('./blogPostFixService');
+      const fixedPost = await fixBlogPost(generated.post);
+      if (fixedPost.featured_image_url !== generated.post.featured_image_url || 
+          fixedPost.content !== generated.post.content) {
+        steps[steps.length - 1] = { step: 'auto_fix', success: true, message: 'Post auto-fixed (images/formatting)' };
+        // Update the generated post reference
+        generated.post = fixedPost;
+      } else {
+        steps[steps.length - 1] = { step: 'auto_fix', success: true, message: 'Post already correct' };
+      }
+    } catch (error: any) {
+      steps[steps.length - 1] = { step: 'auto_fix', success: false, message: `Auto-fix failed: ${error.message}` };
+      // Continue anyway - post generation succeeded
+    }
+
     // Step 3: Add internal links
     steps.push({ step: 'internal_linking', success: false });
     try {

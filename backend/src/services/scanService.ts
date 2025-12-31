@@ -936,6 +936,39 @@ export async function startScan(
                 const visualCount = (content.images?.length || 0) + (content.videos?.length || 0);
                 addLog(scanId, `[SUCCESS] ${actualPlatform} profile found - ${content.text.length} chars, ${visualCount} visual assets`);
               } else if (!profileExists) {
+                // Try LLM-based discovery as last resort before giving up
+                if (isLLMConfigured()) {
+                  try {
+                    addLog(scanId, `[DISCOVERY] Constructed URL failed - trying LLM discovery for ${actualPlatform}...`);
+                    const domain = username.includes('.') ? username : `${username}.com`;
+                    const handle = await discoverSocialHandlesWithLLM(domain, actualPlatform, scanId);
+                    if (handle && typeof handle === 'string' && handle.trim().length > 1) {
+                      const llmDiscoveredUrl = getProfileUrl(handle, actualPlatform);
+                      if (llmDiscoveredUrl) {
+                        addLog(scanId, `[DISCOVERY] ✅ LLM found ${actualPlatform} handle: @${handle} -> ${llmDiscoveredUrl}`);
+                        // Try scraping the LLM-discovered URL
+                        try {
+                          const llmContent = await scrapeProfileWithRetry(llmDiscoveredUrl, actualPlatform, scanId);
+                          const llmProfileExists = await verifyProfileExists(llmContent, actualPlatform);
+                          const llmHasContent = llmContent.text && llmContent.text.length >= 10;
+                          
+                          if (llmProfileExists && llmHasContent) {
+                            verifiedPlatforms.push(actualPlatform);
+                            scrapedData.push({ platform: actualPlatform, content: llmContent });
+                            const visualCount = (llmContent.images?.length || 0) + (llmContent.videos?.length || 0);
+                            addLog(scanId, `[SUCCESS] ${actualPlatform} profile found via LLM discovery - ${llmContent.text.length} chars, ${visualCount} visual assets`);
+                            continue; // Skip to next platform
+                          }
+                        } catch (llmScrapeError: any) {
+                          addLog(scanId, `[DISCOVERY] LLM-discovered URL also failed: ${llmScrapeError.message}`);
+                        }
+                      }
+                    }
+                  } catch (llmError: any) {
+                    addLog(scanId, `[DISCOVERY] LLM discovery failed for ${actualPlatform}: ${llmError.message}`);
+                  }
+                }
+                
                 addLog(scanId, `[SKIP] ${actualPlatform} profile not found or not accessible - skipping`);
                 // #region agent log
                 fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:821',message:'SKIP - profileExists=false',data:{platform:actualPlatform,profileUrl,textLength:content.text?.length||0,textPreview:content.text?.substring(0,200)||''},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
@@ -953,6 +986,39 @@ export async function startScan(
                 // #endregion
               }
             } catch (scrapeError: any) {
+              // Try LLM-based discovery as last resort before giving up
+              if (isLLMConfigured()) {
+                try {
+                  addLog(scanId, `[DISCOVERY] Scraping failed - trying LLM discovery for ${actualPlatform}...`);
+                  const domain = username.includes('.') ? username : `${username}.com`;
+                  const handle = await discoverSocialHandlesWithLLM(domain, actualPlatform, scanId);
+                  if (handle && typeof handle === 'string' && handle.trim().length > 1) {
+                    const llmDiscoveredUrl = getProfileUrl(handle, actualPlatform);
+                    if (llmDiscoveredUrl) {
+                      addLog(scanId, `[DISCOVERY] ✅ LLM found ${actualPlatform} handle: @${handle} -> ${llmDiscoveredUrl}`);
+                      // Try scraping the LLM-discovered URL
+                      try {
+                        const llmContent = await scrapeProfileWithRetry(llmDiscoveredUrl, actualPlatform, scanId);
+                        const llmProfileExists = await verifyProfileExists(llmContent, actualPlatform);
+                        const llmHasContent = llmContent.text && llmContent.text.length >= 10;
+                        
+                        if (llmProfileExists && llmHasContent) {
+                          verifiedPlatforms.push(actualPlatform);
+                          scrapedData.push({ platform: actualPlatform, content: llmContent });
+                          const visualCount = (llmContent.images?.length || 0) + (llmContent.videos?.length || 0);
+                          addLog(scanId, `[SUCCESS] ${actualPlatform} profile found via LLM discovery - ${llmContent.text.length} chars, ${visualCount} visual assets`);
+                          continue; // Skip to next platform
+                        }
+                      } catch (llmScrapeError: any) {
+                        addLog(scanId, `[DISCOVERY] LLM-discovered URL also failed: ${llmScrapeError.message}`);
+                      }
+                    }
+                  }
+                } catch (llmError: any) {
+                  addLog(scanId, `[DISCOVERY] LLM discovery failed for ${actualPlatform}: ${llmError.message}`);
+                }
+              }
+              
               addLog(scanId, `[SKIP] ${actualPlatform} profile not accessible: ${scrapeError.message}`);
               // #region agent log
               fetch(getDebugEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scanService.ts:832',message:'SKIP - scrape error',data:{platform:actualPlatform,profileUrl,error:scrapeError.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
@@ -960,6 +1026,39 @@ export async function startScan(
             }
           }
         } else {
+          // Try LLM-based discovery when no URL could be determined
+          if (isLLMConfigured()) {
+            try {
+              addLog(scanId, `[DISCOVERY] No URL determined - trying LLM discovery for ${platform}...`);
+              const domain = username.includes('.') ? username : `${username}.com`;
+              const handle = await discoverSocialHandlesWithLLM(domain, platform, scanId);
+              if (handle && typeof handle === 'string' && handle.trim().length > 1) {
+                const llmDiscoveredUrl = getProfileUrl(handle, platform);
+                if (llmDiscoveredUrl) {
+                  addLog(scanId, `[DISCOVERY] ✅ LLM found ${platform} handle: @${handle} -> ${llmDiscoveredUrl}`);
+                  // Try scraping the LLM-discovered URL
+                  try {
+                    const llmContent = await scrapeProfileWithRetry(llmDiscoveredUrl, platform, scanId);
+                    const llmProfileExists = await verifyProfileExists(llmContent, platform);
+                    const llmHasContent = llmContent.text && llmContent.text.length >= 10;
+                    
+                    if (llmProfileExists && llmHasContent) {
+                      verifiedPlatforms.push(platform);
+                      scrapedData.push({ platform, content: llmContent });
+                      const visualCount = (llmContent.images?.length || 0) + (llmContent.videos?.length || 0);
+                      addLog(scanId, `[SUCCESS] ${platform} profile found via LLM discovery - ${llmContent.text.length} chars, ${visualCount} visual assets`);
+                      continue; // Skip to next platform
+                    }
+                  } catch (llmScrapeError: any) {
+                    addLog(scanId, `[DISCOVERY] LLM-discovered URL failed: ${llmScrapeError.message}`);
+                  }
+                }
+              }
+            } catch (llmError: any) {
+              addLog(scanId, `[DISCOVERY] LLM discovery failed for ${platform}: ${llmError.message}`);
+            }
+          }
+          
           addLog(scanId, `[SKIP] ${platform} - no profile URL could be determined`);
         }
       } catch (error: any) {
@@ -3530,7 +3629,7 @@ Return ONLY valid JSON with the structure specified in the prompt.`;
 async function discoverSocialHandlesWithLLM(domain: string, platform: string, scanId?: string): Promise<string | null> {
   try {
     if (!isLLMConfigured()) {
-      if (scanId) addLog(scanId, `[LLM] LLM not configured, cannot discover ${platform} handle`);
+      if (scanId) addLog(scanId, `[LLM] LLM not configured (set GEMINI_API_KEY, DEEPSEEK_API_KEY, or OPENAI_API_KEY) - cannot discover ${platform} handle via LLM`);
       return null;
     }
 
@@ -4623,7 +4722,9 @@ function isTraditionalBusiness(username: string, brandDNA?: any): boolean {
 
 // Use LLM to research a brand/creator directly
 async function researchBrandWithLLM(username: string, platforms: string[], scanTier: ScanTier = 'basic'): Promise<any> {
-  if (!isLLMConfigured()) {
+  const llmConfigured = isLLMConfigured();
+  if (!llmConfigured) {
+    console.error('[researchBrandWithLLM] LLM not configured. GEMINI_API_KEY:', !!process.env.GEMINI_API_KEY, 'DEEPSEEK_API_KEY:', !!process.env.DEEPSEEK_API_KEY, 'OPENAI_API_KEY:', !!process.env.OPENAI_API_KEY);
     throw new Error('No LLM API configured. Set GEMINI_API_KEY (basic) or ANTHROPIC_API_KEY (deep).');
   }
 
@@ -4805,7 +4906,9 @@ async function extractFromScrapedContent(
   platforms: string[],
   scanTier: ScanTier
 ): Promise<any> {
-  if (!isLLMConfigured()) {
+  const llmConfigured = isLLMConfigured();
+  if (!llmConfigured) {
+    console.error('[extractFromScrapedContent] LLM not configured. GEMINI_API_KEY:', !!process.env.GEMINI_API_KEY, 'DEEPSEEK_API_KEY:', !!process.env.DEEPSEEK_API_KEY, 'OPENAI_API_KEY:', !!process.env.OPENAI_API_KEY);
     throw new Error('No LLM API configured');
   }
 

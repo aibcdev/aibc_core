@@ -1,0 +1,179 @@
+{
+  "name": "Strategy Enhancement Workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "strategy-enhancement-trigger"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.AIBC_API_URL }}/api/task-planning/generate",
+        "authentication": "none",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "goal",
+              "value": "={{ $json.body.goal || 'Enhance content strategy' }}"
+            },
+            {
+              "name": "context",
+              "value": "={{ $json.body }}"
+            }
+          ]
+        }
+      },
+      "id": "generate-task-plan",
+      "name": "Generate Task Plan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.AIBC_API_URL }}/api/browser/research",
+        "authentication": "none",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "task",
+              "value": "gather-market-intelligence"
+            },
+            {
+              "name": "searchQuery",
+              "value": "={{ $json.body.searchQuery || $json.body.brandName }}"
+            }
+          ]
+        }
+      },
+      "id": "browser-research",
+      "name": "Browser Research",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [650, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.AIBC_API_URL }}/api/n8n/workflow/orchestrate",
+        "authentication": "none",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "workflowType",
+              "value": "strategy-modification"
+            },
+            {
+              "name": "brandDNA",
+              "value": "={{ $json.body.brandDNA }}"
+            },
+            {
+              "name": "strategyModification",
+              "value": "={{ $json.body.strategyModification }}"
+            }
+          ]
+        }
+      },
+      "id": "orchestrate-strategy",
+      "name": "Orchestrate Strategy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.AIBC_API_URL }}/api/feedback/add",
+        "authentication": "none",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "contentId",
+              "value": "={{ $json.results[0].agentId }}"
+            },
+            {
+              "name": "contentType",
+              "value": "strategy"
+            },
+            {
+              "name": "success",
+              "value": "={{ $json.success }}"
+            }
+          ]
+        }
+      },
+      "id": "collect-feedback",
+      "name": "Collect Feedback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Generate Task Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Task Plan": {
+      "main": [
+        [
+          {
+            "node": "Browser Research",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Orchestrate Strategy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Browser Research": {
+      "main": [
+        [
+          {
+            "node": "Orchestrate Strategy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Orchestrate Strategy": {
+      "main": [
+        [
+          {
+            "node": "Collect Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+}
+

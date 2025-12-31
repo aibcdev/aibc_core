@@ -6,6 +6,8 @@
 import { Router } from 'express';
 import { triggerMasterCMOWorkflow } from '../services/agents/masterCMOAgent';
 import { storage } from '../services/storage';
+import { generateTaskPlan } from '../services/taskPlanningService';
+import { generateJSON } from '../services/llmService';
 
 const router = Router();
 
@@ -107,8 +109,15 @@ router.post('/process', async (req, res) => {
     // #endregion
 
     if (workflowResult.success) {
+      // Generate marketing suggestions using OpenManus-style iterative process
+      const marketingSuggestions = await generateMarketingSuggestions(
+        message,
+        scanUsername,
+        brandDNA || scanData?.brandDNA,
+        workflowContext.competitorIntelligence
+      );
+
       // Get the new strategy plan from workflow results
-      // The workflow will have updated the strategy based on user's message
       const responseMessage = `Strategy modification processed. New content plan created based on: "${message}". 
       
 The n8n workflow has been triggered to:
@@ -117,6 +126,8 @@ The n8n workflow has been triggered to:
 - Research competitors (if mentioned)
 - Generate new content aligned with your modification
 
+${marketingSuggestions.length > 0 ? `\n**Marketing Suggestions:**\n${marketingSuggestions.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n` : ''}
+
 Check the Content Hub for reviewed content ready for your approval.`;
 
       res.json({
@@ -124,10 +135,12 @@ Check the Content Hub for reviewed content ready for your approval.`;
         message: responseMessage,
         response: responseMessage,
         newStrategy: workflowResult.executionId ? 'Workflow triggered' : 'Strategy updated',
+        marketingSuggestions,
         contentUpdates: {
           strategyModified: true,
           modification: message,
           workflowTriggered: true,
+          suggestionsGenerated: marketingSuggestions.length,
         },
       });
     } else {
@@ -141,6 +154,134 @@ Check the Content Hub for reviewed content ready for your approval.`;
     res.status(500).json({
       success: false,
       error: error.message || 'Unknown error processing strategy',
+    });
+  }
+});
+
+/**
+ * Generate marketing suggestions using OpenManus-style iterative process
+ */
+async function generateMarketingSuggestions(
+  userMessage: string,
+  username: string,
+  brandDNA: any,
+  competitors: any[]
+): Promise<string[]> {
+  try {
+    const prompt = `You are a marketing strategist. Based on the user's strategy request, generate 3-5 actionable marketing suggestions.
+
+USER REQUEST: "${userMessage}"
+
+BRAND CONTEXT:
+- Name: ${username}
+- Industry: ${brandDNA?.industry || 'Not specified'}
+- Brand Voice: ${brandDNA?.voice?.style || brandDNA?.voice?.tone || 'Professional'}
+- Core Themes: ${(brandDNA?.themes || brandDNA?.corePillars || []).join(', ') || 'Not specified'}
+
+COMPETITORS: ${competitors.length > 0 ? competitors.map((c: any) => c.name).join(', ') : 'None specified'}
+
+Generate marketing suggestions that:
+1. Are specific and actionable
+2. Align with the user's strategy request
+3. Consider the brand's voice and positioning
+4. Can be implemented to improve content performance
+5. Include specific tactics (e.g., "Create a weekly LinkedIn series on [topic]")
+
+Return as JSON array of strings: ["suggestion 1", "suggestion 2", ...]`;
+
+    const suggestions = await generateJSON<string[]>(prompt, 'You are an expert marketing strategist. Provide actionable, specific suggestions.', { tier: 'deep' });
+    
+    return Array.isArray(suggestions) ? suggestions.slice(0, 5) : [];
+  } catch (error: any) {
+    console.warn('[Strategy] Failed to generate marketing suggestions:', error.message);
+    return [];
+  }
+}
+
+/**
+ * POST /api/strategy/suggest
+ * Proactively suggest marketing ideas (OpenManus-style)
+ */
+router.post('/suggest', async (req, res) => {
+  try {
+    const { username, brandDNA, competitorIntelligence, conversationHistory } = req.body;
+
+    if (!username) {
+      return res.status(400).json({ success: false, error: 'Username required' });
+    }
+
+    // Generate task plan for suggestion process
+    const goal = `Generate proactive marketing suggestions for ${username} based on current strategy and market analysis`;
+    const taskPlan = await generateTaskPlan(goal, {
+      username,
+      brandDNA,
+      competitorIntelligence,
+      conversationHistory: conversationHistory?.slice(-5) || [], // Last 5 messages
+    });
+
+    // Generate suggestions using LLM
+    const prompt = `Generate 5 proactive marketing suggestions for ${username} based on:
+
+BRAND DNA:
+${JSON.stringify(brandDNA || {}, null, 2)}
+
+COMPETITORS:
+${competitorIntelligence?.map((c: any) => c.name).join(', ') || 'None'}
+
+RECENT CONVERSATION:
+${conversationHistory?.slice(-3).map((m: any) => `${m.role}: ${m.content}`).join('\n') || 'No recent conversation'}
+
+Suggestions should:
+1. Be proactive and forward-thinking
+2. Address current market opportunities
+3. Leverage brand strengths
+4. Differentiate from competitors
+5. Be immediately actionable
+
+Return as JSON array: ["suggestion 1", "suggestion 2", ...]`;
+
+    const suggestions = await generateJSON<string[]>(prompt, 'You are a proactive marketing strategist. Generate forward-thinking suggestions.', { tier: 'deep' });
+
+    // Generate content ideas for each suggestion
+    const contentIdeas = await Promise.all(
+      (Array.isArray(suggestions) ? suggestions.slice(0, 5) : []).map(async (suggestion) => {
+        const ideaPrompt = `Based on this marketing suggestion: "${suggestion}"
+
+Generate a specific content idea that implements this suggestion for ${username}.
+
+Return JSON: {
+  "title": "Content title",
+  "description": "How this implements the suggestion",
+  "platform": "linkedin|twitter|instagram|youtube",
+  "format": "post|carousel|video|thread"
+}`;
+
+        try {
+          const idea = await generateJSON<any>(ideaPrompt, 'You are a content strategist. Create specific, actionable content ideas.', { tier: 'basic' });
+          return {
+            suggestion,
+            contentIdea: idea,
+          };
+        } catch (error: any) {
+          return {
+            suggestion,
+            contentIdea: null,
+          };
+        }
+      })
+    );
+
+    res.json({
+      success: true,
+      suggestions: Array.isArray(suggestions) ? suggestions.slice(0, 5) : [],
+      contentIdeas: contentIdeas.filter(ci => ci.contentIdea),
+      taskPlan: taskPlan.id,
+    });
+  } catch (error: any) {
+    console.error('[Strategy] Suggestion generation error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to generate suggestions',
     });
   }
 });

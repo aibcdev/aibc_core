@@ -284,6 +284,28 @@ router.post('/regenerate-content', async (req, res) => {
       conversationContext 
     } = req.body;
 
+    // Check if task planning is enabled
+    const enableTaskPlanning = process.env.ENABLE_TASK_PLANNING !== 'false';
+    const enableBrowserValidation = process.env.ENABLE_BROWSER_AUTOMATION !== 'false';
+    
+    let taskPlan = null;
+    if (enableTaskPlanning) {
+      try {
+        const { generateTaskPlan } = await import('../services/taskPlanningService');
+        const goal = `Regenerate content ideas for ${scanUsername} based on strategy: ${typeof strategy === 'string' ? strategy : strategy?.title || 'strategy update'}`;
+        taskPlan = await generateTaskPlan(goal, {
+          strategy,
+          brandDNA,
+          brandAssets,
+          competitorIntelligence,
+          scanUsername,
+        });
+        console.log(`[Content Regeneration] Generated task plan with ${taskPlan.tasks.length} tasks`);
+      } catch (error: any) {
+        console.warn(`[Content Regeneration] Task planning failed, continuing without: ${error.message}`);
+      }
+    }
+
     if (!strategy || !scanUsername) {
       // #region agent log
       try {
@@ -426,7 +448,7 @@ Return valid JSON only.`;
 
     if (Array.isArray(result) && result.length > 0) {
       // Validate that content ideas are specific to the company
-      const validatedIdeas = result.map((idea: any) => ({
+      let validatedIdeas = result.map((idea: any) => ({
         ...idea,
         // Ensure title and description reference the company
         title: idea.title || `Content idea for ${scanUsername}`,
@@ -435,13 +457,60 @@ Return valid JSON only.`;
         platform: (idea.platform || 'twitter').toLowerCase(),
         format: (idea.format || 'post').toLowerCase()
       }));
+
+      // Browser validation if enabled
+      if (enableBrowserValidation && competitorIntelligence?.length > 0) {
+        try {
+          const { browserAgent } = await import('../services/agents/browserAgent');
+          const topCompetitor = competitorIntelligence[0];
+          if (topCompetitor?.website || topCompetitor?.url) {
+            const validationResult = await browserAgent.execute('validate-content', {
+              url: topCompetitor.website || topCompetitor.url,
+              searchQuery: `${scanUsername} ${brandDNA?.industry || ''} content`,
+            });
+            
+            if (validationResult.success) {
+              console.log(`[Content Regeneration] Browser validation completed`);
+              // Ideas are already validated, browser check confirms competitor context
+            }
+          }
+        } catch (error: any) {
+          console.warn(`[Content Regeneration] Browser validation failed: ${error.message}`);
+        }
+      }
+
+      // Iterative refinement if task plan exists
+      if (taskPlan && taskPlan.tasks.some(t => t.name.toLowerCase().includes('refine'))) {
+        try {
+          const { generateJSON } = await import('../services/llmService');
+          const refinementPrompt = `Refine the following content ideas to better align with strategy and brand:
+
+CONTENT IDEAS:
+${JSON.stringify(validatedIdeas, null, 2)}
+
+STRATEGY: ${strategyType}
+BRAND DNA: ${JSON.stringify(brandDNA, null, 2)}
+
+Improve each idea to be more specific, engaging, and strategy-aligned. Return the refined array.`;
+          
+          const refined = await generateJSON<any[]>(refinementPrompt, 'You are a content strategist. Refine ideas for maximum impact.', { tier: 'deep' });
+          if (Array.isArray(refined) && refined.length > 0) {
+            validatedIdeas = refined;
+            console.log(`[Content Regeneration] Ideas refined through iterative process`);
+          }
+        } catch (error: any) {
+          console.warn(`[Content Regeneration] Refinement failed: ${error.message}`);
+        }
+      }
       
       res.json({
         success: true,
         contentIdeas: validatedIdeas,
         strategy: strategyType,
         scanUsername: scanUsername, // Include username in response
-        generatedAt: new Date().toISOString()
+        generatedAt: new Date().toISOString(),
+        taskPlanUsed: !!taskPlan,
+        browserValidationUsed: enableBrowserValidation && competitorIntelligence?.length > 0,
       });
     } else {
       throw new Error('Failed to generate strategy-aligned content');

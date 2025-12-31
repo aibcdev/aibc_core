@@ -11,6 +11,24 @@ import { mediaAgent } from './mediaAgent';
 import { thinkAgent } from './thinkAgent';
 import { reviewAgent } from './reviewAgent';
 import { videoAnalysisAgent } from './videoAnalysisAgent';
+import { browserAgent } from './browserAgent';
+import {
+  generateTaskPlan,
+  getReadyTasks,
+  getParallelTasks,
+  recordTaskResult,
+  adaptPlan,
+  getPlan,
+  isPlanComplete,
+  type TaskPlan,
+  type PlanExecutionResult,
+  type PlanFeedback,
+} from '../taskPlanningService';
+import {
+  addFeedback,
+  getFeedbackForContent,
+  type FeedbackData,
+} from '../feedbackService';
 
 export interface WorkflowContext {
   scanId?: string;
@@ -34,7 +52,7 @@ export interface WorkflowContext {
 }
 
 export interface AgentTask {
-  agentType: 'research' | 'helper' | 'poster' | 'media' | 'think' | 'review' | 'video-analysis';
+  agentType: 'research' | 'helper' | 'poster' | 'media' | 'think' | 'review' | 'video-analysis' | 'browser';
   task: string;
   priority: 'high' | 'medium' | 'low';
   dependencies?: string[]; // Other agent tasks that must complete first
@@ -70,53 +88,139 @@ export async function orchestrateWorkflow(
     console.log(`[Master CMO] Competitors: ${context.competitorIntelligence?.length || 0}`);
     console.log(`[Master CMO] ========================================`);
 
+    // Check if task planning is enabled
+    const enableTaskPlanning = process.env.ENABLE_TASK_PLANNING !== 'false';
+    let taskPlan: TaskPlan | null = null;
+    let useTaskPlan = false;
+
+    if (enableTaskPlanning) {
+      try {
+        // Generate goal from workflow context
+        const goal = generateGoalFromContext(context);
+        console.log(`[Master CMO] Generating task plan for goal: ${goal}`);
+
+        taskPlan = await generateTaskPlan(goal, {
+          workflowType: context.workflowType,
+          username: context.username,
+          hasBrandDNA: !!context.brandDNA,
+          hasContent: !!context.extractedContent,
+          competitorCount: context.competitorIntelligence?.length || 0,
+        });
+
+        if (taskPlan && taskPlan.tasks.length > 0) {
+          useTaskPlan = true;
+          console.log(`[Master CMO] Using task plan with ${taskPlan.tasks.length} tasks`);
+        }
+      } catch (error: any) {
+        console.warn(`[Master CMO] Task planning failed, falling back to traditional task determination: ${error.message}`);
+      }
+    }
+
     // Determine which agents to invoke based on workflow type
-    const tasks = determineAgentTasks(context);
+    let tasks: AgentTask[] = [];
+
+    if (useTaskPlan && taskPlan) {
+      // Convert task plan tasks to AgentTasks
+      tasks = taskPlan.tasks.map(planTask => ({
+        agentType: planTask.agentType as AgentTask['agentType'],
+        task: planTask.name.toLowerCase().replace(/\s+/g, '-'),
+        priority: planTask.priority,
+        dependencies: planTask.dependencies,
+        params: planTask.params,
+      }));
+    } else {
+      // Fall back to traditional task determination
+      tasks = determineAgentTasks(context);
+    }
 
     // Execute tasks in dependency order
     const executedTasks = new Set<string>();
     const taskResults = new Map<string, AgentResult>();
+    const completedTaskIds: string[] = [];
 
-    // Sort tasks by priority and dependencies
-    const sortedTasks = sortTasksByDependencies(tasks);
+    // If using task plan, execute with plan-aware logic
+    if (useTaskPlan && taskPlan) {
+      while (!isPlanComplete(taskPlan.id)) {
+        // Get ready tasks (dependencies satisfied)
+        const readyTasks = getReadyTasks(taskPlan.id, completedTaskIds);
+        const parallelGroups = getParallelTasks(taskPlan.id, completedTaskIds);
 
-    for (const task of sortedTasks) {
-      // Check dependencies
-      if (task.dependencies && task.dependencies.length > 0) {
-        const allDepsComplete = task.dependencies.every(dep => executedTasks.has(dep));
-        if (!allDepsComplete) {
-          console.log(`[Master CMO] Task ${task.agentType} waiting for dependencies`);
-          continue;
+        if (readyTasks.length === 0 && parallelGroups.length === 0) {
+          console.warn(`[Master CMO] No ready tasks, but plan not complete. Checking for failures...`);
+          break;
+        }
+
+        // Execute parallel groups first, then individual ready tasks
+        for (const group of parallelGroups) {
+          const groupPromises = group.map(async (planTask) => {
+            const task: AgentTask = {
+              agentType: planTask.agentType as AgentTask['agentType'],
+              task: planTask.name.toLowerCase().replace(/\s+/g, '-'),
+              priority: planTask.priority,
+              dependencies: planTask.dependencies,
+              params: planTask.params,
+            };
+
+            return executeTaskWithTracking(task, context, planTask.id, taskPlan.id);
+          });
+
+          const groupResults = await Promise.all(groupPromises);
+          results.push(...groupResults);
+          groupResults.forEach(result => {
+            if (result.agentId) {
+              completedTaskIds.push(result.agentId);
+              executedTasks.add(result.agentId);
+            }
+          });
+        }
+
+        // Execute remaining ready tasks sequentially
+        for (const planTask of readyTasks) {
+          const task: AgentTask = {
+            agentType: planTask.agentType as AgentTask['agentType'],
+            task: planTask.name.toLowerCase().replace(/\s+/g, '-'),
+            priority: planTask.priority,
+            dependencies: planTask.dependencies,
+            params: planTask.params,
+          };
+
+          const result = await executeTaskWithTracking(task, context, planTask.id, taskPlan.id);
+          results.push(result);
+          if (result.agentId) {
+            completedTaskIds.push(result.agentId);
+            executedTasks.add(result.agentId);
+          }
         }
       }
+    } else {
+      // Traditional execution (fallback)
+      const sortedTasks = sortTasksByDependencies(tasks);
 
-      // Execute agent task
-      const taskId = `${task.agentType}-${Date.now()}`;
-      console.log(`[Master CMO] ┌─ Executing: ${task.agentType} → ${task.task} (${task.priority} priority)`);
-      const taskStartTime = Date.now();
-      const result = await routeToAgent(task.agentType, task, context);
-      const taskDuration = Date.now() - taskStartTime;
-      
-      result.agentId = taskId;
-      result.executionTime = taskDuration;
-      
-      console.log(`[Master CMO] └─ Completed: ${task.agentType} → ${task.task} (${taskDuration}ms, success: ${result.success})`);
-      if (!result.success) {
-        console.error(`[Master CMO]    ERROR: ${result.error}`);
-      }
-      
-      results.push(result);
-      taskResults.set(taskId, result);
-      executedTasks.add(taskId);
+      for (const task of sortedTasks) {
+        // Check dependencies
+        if (task.dependencies && task.dependencies.length > 0) {
+          const allDepsComplete = task.dependencies.every(dep => executedTasks.has(dep));
+          if (!allDepsComplete) {
+            console.log(`[Master CMO] Task ${task.agentType} waiting for dependencies`);
+            continue;
+          }
+        }
 
-      // If task failed and is high priority, stop workflow
-      if (!result.success && task.priority === 'high') {
-        console.error(`[Master CMO] High priority task failed: ${task.agentType}`);
-        return {
-          success: false,
-          results,
-          error: `High priority task failed: ${task.agentType} - ${result.error}`,
-        };
+        const result = await executeTaskWithTracking(task, context);
+        results.push(result);
+        if (result.agentId) {
+          executedTasks.add(result.agentId);
+        }
+
+        // If task failed and is high priority, stop workflow
+        if (!result.success && task.priority === 'high') {
+          console.error(`[Master CMO] High priority task failed: ${task.agentType}`);
+          return {
+            success: false,
+            results,
+            error: `High priority task failed: ${task.agentType} - ${result.error}`,
+          };
+        }
       }
     }
 
@@ -481,6 +585,112 @@ function sortTasksByDependencies(tasks: AgentTask[]): AgentTask[] {
 }
 
 /**
+ * Generate goal from workflow context for task planning
+ */
+function generateGoalFromContext(context: WorkflowContext): string {
+  switch (context.workflowType) {
+    case 'scan-complete':
+      return `Enhance scan results for ${context.username || 'brand'} with research, generate content ideas, and prepare for Content Hub`;
+    case 'content-generation':
+      return `Generate high-quality content for ${context.username || 'brand'} based on brand DNA and strategy`;
+    case 'strategy-modification':
+      return `Modify content strategy for ${context.username || 'brand'} based on: ${context.strategyModification || context.userMessage || 'user request'}`;
+    case 'distribution':
+      return `Distribute and publish content for ${context.username || 'brand'}`;
+    case 'research':
+      return `Conduct research for ${context.username || 'brand'} on competitors and market trends`;
+    default:
+      return `Execute ${context.workflowType} workflow for ${context.username || 'brand'}`;
+  }
+}
+
+/**
+ * Execute task with tracking and feedback collection
+ */
+async function executeTaskWithTracking(
+  task: AgentTask,
+  context: WorkflowContext,
+  planTaskId?: string,
+  planId?: string
+): Promise<AgentResult> {
+  const taskId = planTaskId || `${task.agentType}-${Date.now()}`;
+  console.log(`[Master CMO] ┌─ Executing: ${task.agentType} → ${task.task} (${task.priority} priority)`);
+  const taskStartTime = Date.now();
+
+  try {
+    const result = await routeToAgent(task.agentType, task, context);
+    const taskDuration = Date.now() - taskStartTime;
+
+    result.agentId = taskId;
+    result.executionTime = taskDuration;
+
+    console.log(`[Master CMO] └─ Completed: ${task.agentType} → ${task.task} (${taskDuration}ms, success: ${result.success})`);
+    if (!result.success) {
+      console.error(`[Master CMO]    ERROR: ${result.error}`);
+    }
+
+    // Record result in task plan if using planning
+    if (planId && planTaskId) {
+      const planResult: PlanExecutionResult = {
+        taskId: planTaskId,
+        success: result.success,
+        result: result.data,
+        error: result.error,
+        executionTime: taskDuration,
+      };
+      recordTaskResult(planId, planTaskId, planResult);
+    }
+
+    // Collect feedback for content generation tasks
+    if (result.success && (task.agentType === 'media' || task.agentType === 'think')) {
+      try {
+        const feedback: FeedbackData = {
+          contentId: result.agentId,
+          contentType: task.agentType,
+          success: true,
+          quality: 0.8, // Default quality, can be improved with actual metrics
+          timestamp: new Date().toISOString(),
+          metadata: {
+            task: task.task,
+            executionTime: taskDuration,
+            workflowType: context.workflowType,
+          },
+        };
+        addFeedback(feedback);
+      } catch (error: any) {
+        console.warn(`[Master CMO] Failed to collect feedback: ${error.message}`);
+      }
+    }
+
+    return result;
+  } catch (error: any) {
+    const taskDuration = Date.now() - taskStartTime;
+    console.error(`[Master CMO] Task execution error: ${error.message}`);
+
+    const result: AgentResult = {
+      agentId: taskId,
+      agentType: task.agentType,
+      success: false,
+      error: error.message || 'Unknown error',
+      executionTime: taskDuration,
+    };
+
+    // Record failure in task plan
+    if (planId && planTaskId) {
+      const planResult: PlanExecutionResult = {
+        taskId: planTaskId,
+        success: false,
+        error: error.message,
+        executionTime: taskDuration,
+      };
+      recordTaskResult(planId, planTaskId, planResult);
+    }
+
+    return result;
+  }
+}
+
+/**
  * Route task to appropriate agent
  */
 async function routeToAgent(
@@ -496,6 +706,15 @@ async function routeToAgent(
     let result: any;
 
     switch (agentType) {
+      case 'browser':
+        result = await browserAgent.execute(task.task, {
+          username: context.username,
+          brandDNA: context.brandDNA,
+          competitorIntelligence: context.competitorIntelligence,
+          url: task.params?.url,
+          searchQuery: task.params?.searchQuery,
+        });
+        break;
       case 'research':
         result = await researchAgent.execute(task.task, {
           brandName: context.username,
@@ -663,6 +882,16 @@ async function routeToAgent(
         }
         
         result = reviewResult;
+        break;
+
+      case 'browser':
+        result = await browserAgent.execute(task.task, {
+          username: context.username,
+          brandDNA: context.brandDNA,
+          competitorIntelligence: context.competitorIntelligence,
+          url: task.params?.url,
+          searchQuery: task.params?.searchQuery,
+        });
         break;
 
       case 'video-analysis':
