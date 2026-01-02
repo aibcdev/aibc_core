@@ -433,7 +433,7 @@ export async function generateBlogPost(
     validatedPost = await fixBlogPost(validatedPost);
     if (validatedPost.content !== post.content || validatedPost.featured_image_url !== post.featured_image_url) {
       console.log(`[Content Generator] Auto-fixed formatting issues for post: ${post.slug}`);
-      Object.assign(post, validatedPost);
+      post = validatedPost;
     }
 
     // Calculate initial SEO score (basic)

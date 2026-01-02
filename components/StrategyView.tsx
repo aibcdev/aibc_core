@@ -751,7 +751,15 @@ const StrategyView: React.FC = () => {
         // Include marketing suggestions in response if available
         let responseContent = result.response || generateAIResponse(userInput).content;
         if (result.marketingSuggestions && result.marketingSuggestions.length > 0) {
-          responseContent += `\n\n**Marketing Suggestions:**\n${result.marketingSuggestions.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}`;
+          // Add suggestions in a conversational way (already formatted in backend)
+          // Just append if not already included in responseContent
+          if (!responseContent.includes('Here are some ideas')) {
+            const suggestions = result.marketingSuggestions.slice(0, 3).map((s: string) => {
+              // Shorten if too long
+              return s.length > 100 ? s.substring(0, 100) + '...' : s;
+            });
+            responseContent += `\n\nHere are some quick ideas:\n${suggestions.map(s => `• ${s}`).join('\n')}`;
+          }
         }
         
         const assistantMessage: StrategyMessage = {
@@ -1035,7 +1043,15 @@ const StrategyView: React.FC = () => {
         const result = await response.json();
         
         if (result.success && result.suggestions?.length > 0) {
-          const suggestionsText = `**Proactive Marketing Suggestions:**\n\n${result.suggestions.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}`;
+          // Make suggestions conversational and shorter
+          const shortSuggestions = result.suggestions.slice(0, 3).map((s: string) => {
+            // Shorten long suggestions
+            const shortened = s.length > 120 ? s.substring(0, 120) + '...' : s;
+            return shortened;
+          });
+          
+          // Make it sound like a real person, not a robot
+          const suggestionsText = `Quick ideas:\n\n${shortSuggestions.map(s => `• ${s}`).join('\n')}\n\nWant more?`;
           
           const suggestionMessage: StrategyMessage = {
             id: `suggestion_${Date.now()}`,

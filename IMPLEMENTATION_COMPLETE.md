@@ -1,85 +1,127 @@
-# Production Implementation Complete
+# Implementation Complete: Gemini + Ollama Setup
 
-## What Was Implemented
+## ✅ All Tasks Completed
 
-### 1. ✅ Web Scraping Enabled
-- **Playwright scraping** for all platforms (Twitter, Instagram, LinkedIn, YouTube)
-- **Anti-detection measures**: User agents, headers, viewport settings
-- **Dynamic content handling**: Waits for JavaScript rendering, scrolls to load content
-- **Error handling**: Graceful fallback if scraping fails
+### 1. LLM Service Reverted to Gemini Primary
 
-### 2. ✅ Hybrid Approach
-- **Step 1**: Scrape actual profile pages
-- **Step 2**: Use LLM to EXTRACT from scraped content (not generate)
-- **Fallback**: Enhanced LLM research if scraping fails
+**File**: `backend/src/services/llmService.ts`
 
-### 3. ✅ Strict Quality Validation
-- **Posts**: Minimum 5 (basic) / 15 (deep) - REJECTS if insufficient
-- **Bio**: Minimum 50 characters - REJECTS if too short
-- **Themes**: Minimum 3 (basic) / 8 (deep) - REJECTS if insufficient
-- **Placeholder detection**: Rejects "Profile for..." or "Digital presence for..."
-- **No fallback data**: Scans fail if quality checks don't pass
+**Changes**:
+- `getProviderForTier()` now prioritizes Gemini 2.0 Flash (free tier)
+- `getActiveProvider()` checks Gemini first
+- Startup logging shows Gemini as PRIMARY
+- DeepSeek is now fallback (not primary)
 
-### 4. ✅ Enhanced LLM Prompts
-- **Explicit requirements**: Must extract from real scraped content
-- **Examples**: Good vs bad output
-- **Validation instructions**: Clear quality standards
-- **Error prevention**: Multiple checks to avoid placeholders
+**Result**: Legacy scan system will use Gemini 2.0 Flash (250 requests/day free tier)
 
-## Quality Standards Enforced
+### 2. OpenManus Configured for Ollama
 
-| Metric | Basic Scan | Deep Scan | Action if Failed |
-|--------|-----------|-----------|------------------|
-| Posts | 5 minimum | 15 minimum | ❌ REJECT scan |
-| Bio Length | 50 chars | 50 chars | ❌ REJECT scan |
-| Themes | 3 minimum | 8 minimum | ❌ REJECT scan |
-| Placeholders | None | None | ❌ REJECT scan |
-| Confidence | 0.7+ | 0.7+ | ⚠️ Warning |
+**File**: `openmanus-service/config/config.toml`
 
-## Testing Protocol
+**Configuration**:
+- API type: `ollama`
+- Model: `llama3.2`
+- Base URL: `http://localhost:11434/v1`
+- Vision model: `llama3.2-vision` (if needed)
 
-### Next Steps:
-1. Run 5 test scans (GoodPhats, Nike, LuluLemon, Dipsea, Kobo Books)
-2. Verify quality checks are working
-3. Check if scraping is successful
-4. Get CEO feedback
-5. Iterate until 95% satisfaction
+**Result**: OpenManus is ready to use Ollama (free, local LLM) once Ollama is installed
 
-### Expected Outcomes:
-- ✅ Real posts extracted from scraped content
-- ✅ Actual bios (not placeholders)
-- ✅ Specific themes based on content
-- ✅ Quality validation rejecting low-quality scans
-- ✅ Better CEO satisfaction
+### 3. Documentation Created/Updated
 
-## Known Limitations
+**Files Created**:
+- `OLLAMA_SETUP.md` - Complete guide for installing and setting up Ollama
 
-1. **Scraping may be blocked** by some platforms (Twitter/X is strict)
-2. **Rate limiting** may affect multiple scans
-3. **Dynamic content** may not always load correctly
-4. **Fallback to LLM research** if scraping fails (but with better prompts)
+**Files Updated**:
+- `OPENMANUS_SETUP.md` - Added clarification that OpenManus requires an LLM, documented Ollama setup
 
-## Monitoring
+## Architecture Clarification
 
-- Check scan logs for scraping success/failure
-- Monitor quality validation rejections
-- Track CEO feedback scores
-- Iterate based on results
+**Important Understanding**:
+- **OpenManus is NOT an LLM** - it's an agent framework
+- **OpenManus REQUIRES an LLM** to power its agents
+- **Ollama** = Free, local LLM for OpenManus
+- **Gemini** = Free tier LLM for legacy scan system
 
-## Success Criteria
+## Current Setup
 
-**95% CEO Satisfaction** means:
-- ✅ "This replaces my marketing agency"
-- ✅ "The insights are actionable and specific"
-- ✅ "The data is accurate and comprehensive"
-- ✅ "I would pay $X/month for this"
+### Legacy Scan System
+- **LLM**: Gemini 2.0 Flash (free tier, 250 requests/day)
+- **Status**: ✅ Configured and ready
 
-## Next Iteration
+### OpenManus Agents
+- **LLM**: Ollama (free, unlimited, local)
+- **Status**: ✅ Configured, requires Ollama installation
 
-After testing:
-1. Address any scraping issues
-2. Improve extraction accuracy
-3. Enhance competitor identification
-4. Refine strategic insights
-5. Continue until 95% satisfaction
+## Next Steps
 
+### To Use Legacy System (Gemini)
+1. Backend is already configured
+2. Restart backend: `cd backend && npm run dev`
+3. Scans will use Gemini automatically
+
+### To Use OpenManus (Ollama)
+1. **Install Ollama**:
+   ```bash
+   brew install ollama
+   ```
+
+2. **Start Ollama**:
+   ```bash
+   ollama serve
+   ```
+
+3. **Pull a model**:
+   ```bash
+   ollama pull llama3.2
+   ```
+
+4. **Start OpenManus**:
+   ```bash
+   cd openmanus-service
+   ./start.sh
+   ```
+
+5. **Enable OpenManus in backend**:
+   ```bash
+   # Edit backend/.env
+   USE_OPENMANUS_SCAN=true
+   ```
+
+6. **Restart backend**
+
+## Verification
+
+### Test Legacy System (Gemini)
+```bash
+# Start backend
+cd backend && npm run dev
+
+# Check logs for:
+# "✅ Gemini 2.0 Flash - PRIMARY (250 requests/day FREE tier)"
+# "[LLM] Using Gemini 2.0 Flash for basic scan"
+```
+
+### Test OpenManus (Ollama)
+```bash
+# Check Ollama is running
+curl http://localhost:11434/api/generate -d '{"model":"llama3.2","prompt":"test","stream":false}'
+
+# Check OpenManus health
+curl http://localhost:8000/health
+```
+
+## Files Modified
+
+1. `backend/src/services/llmService.ts` - Reverted to Gemini primary
+2. `openmanus-service/config/config.toml` - Configured for Ollama
+3. `OPENMANUS_SETUP.md` - Updated with Ollama info and clarifications
+4. `OLLAMA_SETUP.md` - Created comprehensive setup guide
+
+## Summary
+
+✅ **Legacy System**: Now uses Gemini (free tier)  
+✅ **OpenManus**: Configured for Ollama (free, local)  
+✅ **Documentation**: Complete setup guides provided  
+✅ **Architecture**: Clarified that OpenManus requires an LLM  
+
+**Status**: Ready for testing!

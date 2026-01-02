@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { startScan } from '../services/scanService';
 import { storage } from '../services/storage';
+import { executeOpenManusScan, shouldUseOpenManusScan } from '../services/openmanusScanService';
+import { useOpenManusScan } from '../config/featureFlags';
 
 const router = Router();
 
@@ -52,19 +54,41 @@ router.post('/start', async (req, res) => {
     } catch(e){}
     // #endregion
 
-    // Start scan asynchronously - pass connected accounts if provided
-    startScan(scanId, username, platforms, scanType, connectedAccounts).catch(err => {
-      // #region agent log
-      try {
-        fs.appendFileSync(logPath, JSON.stringify({location:'scan.ts:38',message:'startScan ASYNC ERROR',data:{scanId,error:err?.message||'unknown',stack:err?.stack?.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'api-start',hypothesisId:'H3'})+'\n');
-      } catch(e){}
-      // #endregion
-      console.error('Scan error:', err);
-      storage.updateScan(scanId, {
-        status: 'error',
-        error: err.message
+    // Check if OpenManus scan should be used
+    const useOpenManus = await shouldUseOpenManusScan();
+    
+    // Start scan asynchronously - use OpenManus if enabled, otherwise use legacy
+    if (useOpenManus) {
+      console.log(`[Scan Route] Using OpenManus for scan ${scanId}`);
+      executeOpenManusScan({ scanId, username, platforms, scanType, connectedAccounts }).then(result => {
+        storage.updateScan(scanId, {
+          status: 'complete',
+          progress: 100,
+          results: result,
+          completedAt: new Date().toISOString()
+        });
+      }).catch(err => {
+        console.error('[Scan Route] OpenManus scan error:', err);
+        storage.updateScan(scanId, {
+          status: 'error',
+          error: err.message
+        });
       });
-    });
+    } else {
+      // Use legacy scan service
+      startScan(scanId, username, platforms, scanType, connectedAccounts).catch(err => {
+        // #region agent log
+        try {
+          fs.appendFileSync(logPath, JSON.stringify({location:'scan.ts:38',message:'startScan ASYNC ERROR',data:{scanId,error:err?.message||'unknown',stack:err?.stack?.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'api-start',hypothesisId:'H3'})+'\n');
+        } catch(e){}
+        // #endregion
+        console.error('Scan error:', err);
+        storage.updateScan(scanId, {
+          status: 'error',
+          error: err.message
+        });
+      });
+    }
 
     // #region agent log
     try {

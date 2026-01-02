@@ -214,8 +214,8 @@ export function getLearningInsights(username?: string): {
     if (f.metadata?.task) {
       failedPatterns.push(`Task "${f.metadata.task}" needs improvement`);
     }
-    if (f.error) {
-      failedPatterns.push(`Error: ${f.error}`);
+    if ((f as any).error) {
+      failedPatterns.push(`Error: ${(f as any).error}`);
     }
   });
 

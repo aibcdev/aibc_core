@@ -2496,6 +2496,7 @@ Understand what ${brandName} actually does, then create viral content that beats
     const results = {
       extractedContent: validatedContent,
       brandDNA,
+      brandIdentity, // Include brandIdentity with logoUrl for auto-population
       marketShare,
       strategicInsights,
       competitorIntelligence, // Now enriched with video insights
@@ -4345,11 +4346,57 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
           if (websiteContent && websiteContent.length > 100) {
             scrapedText = `Website: ${url}\n\nContent:\n${websiteContent.substring(0, 50000)}`;
             
-            // Extract images and videos from website
+            // Extract images, videos, and logo from website
             const websiteMedia = await page.evaluate(() => {
               // @ts-ignore - document is available in browser context
               const images: string[] = [];
               const videos: string[] = [];
+              let logoUrl: string | null = null;
+              
+              // Try to find logo - check common logo locations
+              const logoSelectors = [
+                'img[alt*="logo" i]',
+                'img[class*="logo" i]',
+                'img[id*="logo" i]',
+                'header img',
+                '.logo img',
+                '#logo img',
+                'link[rel="icon"]',
+                'link[rel="shortcut icon"]',
+                'link[rel="apple-touch-icon"]',
+              ];
+              
+              for (const selector of logoSelectors) {
+                try {
+                  // @ts-ignore
+                  const logo = document.querySelector(selector);
+                  if (logo) {
+                    if (logo.tagName === 'IMG') {
+                      logoUrl = logo.src || logo.getAttribute('src');
+                    } else if (logo.tagName === 'LINK') {
+                      logoUrl = logo.href || logo.getAttribute('href');
+                    }
+                    if (logoUrl && !logoUrl.includes('data:')) {
+                      break;
+                    }
+                  }
+                } catch (e) {
+                  // Continue to next selector
+                }
+              }
+              
+              // Fallback: Use favicon if no logo found
+              if (!logoUrl) {
+                try {
+                  // @ts-ignore
+                  const favicon = document.querySelector('link[rel="icon"]') || document.querySelector('link[rel="shortcut icon"]');
+                  if (favicon) {
+                    logoUrl = favicon.href || favicon.getAttribute('href');
+                  }
+                } catch (e) {
+                  // No favicon found
+                }
+              }
               
               // @ts-ignore - document is available in browser context
               document.querySelectorAll('img[src]').forEach((img: any) => {
@@ -4367,15 +4414,46 @@ async function scrapeProfile(url: string, platform: string, scanId?: string): Pr
                 }
               });
               
-              return { images, videos };
+              return { images, videos, logoUrl };
             });
             
             images = websiteMedia.images.slice(0, 20);
             videos = websiteMedia.videos.slice(0, 10);
             
+            // Store logo URL if found - will be assigned to brandIdentity later
+            let extractedLogoUrl: string | null = null;
+            if (websiteMedia.logoUrl) {
+              // Make logo URL absolute if it's relative
+              let logoUrl = websiteMedia.logoUrl;
+              if (logoUrl.startsWith('/')) {
+                try {
+                  const urlObj = new URL(url);
+                  logoUrl = `${urlObj.protocol}//${urlObj.host}${logoUrl}`;
+                } catch (e) {
+                  // Invalid URL, skip
+                }
+              } else if (!logoUrl.startsWith('http')) {
+                try {
+                  const urlObj = new URL(url);
+                  logoUrl = `${urlObj.protocol}//${urlObj.host}/${logoUrl}`;
+                } catch (e) {
+                  // Invalid URL, skip
+                }
+              }
+              
+              extractedLogoUrl = logoUrl;
+              
+              if (scanId) {
+                addLog(scanId, `[LOGO] Extracted logo from website: ${logoUrl}`);
+              }
+            }
+            
             if (scanId && (images.length > 0 || videos.length > 0)) {
               addLog(scanId, `[VISUAL] Extracted ${images.length} images and ${videos.length} videos from website`);
             }
+            
+            // Logo URL extracted - will be assigned to brandIdentity in startScan function
+            // (extractedLogoUrl is in local scope here, brandIdentity assignment happens in startScan)
           }
         } catch (e) {
           console.log('Website content extraction failed, using fallback');

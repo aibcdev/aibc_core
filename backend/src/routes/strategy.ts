@@ -8,6 +8,7 @@ import { triggerMasterCMOWorkflow } from '../services/agents/masterCMOAgent';
 import { storage } from '../services/storage';
 import { generateTaskPlan } from '../services/taskPlanningService';
 import { generateJSON } from '../services/llmService';
+import { generateOpenManusSuggestions, shouldUseOpenManusStrategy } from '../services/openmanusStrategyService';
 
 const router = Router();
 
@@ -109,26 +110,71 @@ router.post('/process', async (req, res) => {
     // #endregion
 
     if (workflowResult.success) {
-      // Generate marketing suggestions using OpenManus-style iterative process
-      const marketingSuggestions = await generateMarketingSuggestions(
-        message,
-        scanUsername,
-        brandDNA || scanData?.brandDNA,
-        workflowContext.competitorIntelligence
-      );
-
-      // Get the new strategy plan from workflow results
-      const responseMessage = `Strategy modification processed. New content plan created based on: "${message}". 
+      // Generate marketing suggestions - use OpenManus if enabled, otherwise legacy
+      let marketingSuggestions: string[] = [];
       
-The n8n workflow has been triggered to:
-- Analyze your request
-- Update content strategy
-- Research competitors (if mentioned)
-- Generate new content aligned with your modification
+      const useOpenManus = await shouldUseOpenManusStrategy();
+      if (useOpenManus) {
+        try {
+          console.log('[Strategy Route] Using OpenManus for marketing suggestions');
+          const openManusResult = await generateOpenManusSuggestions({
+            userMessage: message,
+            username: scanUsername,
+            brandDNA: brandDNA || scanData?.brandDNA,
+            competitorIntelligence: workflowContext.competitorIntelligence,
+          });
+          marketingSuggestions = openManusResult.suggestions;
+        } catch (error: any) {
+          console.warn('[Strategy Route] OpenManus suggestions failed, falling back to legacy:', error.message);
+          // Fallback to legacy
+          marketingSuggestions = await generateMarketingSuggestions(
+            message,
+            scanUsername,
+            brandDNA || scanData?.brandDNA,
+            workflowContext.competitorIntelligence
+          );
+        }
+      } else {
+        // Use legacy suggestion generation
+        marketingSuggestions = await generateMarketingSuggestions(
+          message,
+          scanUsername,
+          brandDNA || scanData?.brandDNA,
+          workflowContext.competitorIntelligence
+        );
+      }
 
-${marketingSuggestions.length > 0 ? `\n**Marketing Suggestions:**\n${marketingSuggestions.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n` : ''}
-
-Check the Content Hub for reviewed content ready for your approval.`;
+      // Generate natural, human-like response - like talking to a real person
+      let responseMessage = '';
+      
+      // Start with a casual, natural acknowledgment (like a real person would respond)
+      const messageLower = message.toLowerCase();
+      if (messageLower.includes('reminder') || messageLower.includes('calendar') || messageLower.includes('schedule')) {
+        responseMessage = `Got it! Setting that up now.`;
+      } else if (messageLower.includes('competitor') || messageLower.includes('add')) {
+        responseMessage = `On it!`;
+      } else if (messageLower.includes('focus') || messageLower.includes('change')) {
+        responseMessage = `Perfect. Shifting focus to that.`;
+      } else {
+        responseMessage = `Got it.`;
+      }
+      
+      // Add ONE short sentence - no long explanations
+      responseMessage += ` Updating your content plan.`;
+      
+      // Add suggestions ONLY if they exist, and make them super short and casual
+      if (marketingSuggestions.length > 0) {
+        // Take only 2-3 suggestions, make them super concise (max 80 chars)
+        const shortSuggestions = marketingSuggestions.slice(0, 2).map(s => {
+          const trimmed = s.length > 80 ? s.substring(0, 77) + '...' : s;
+          return trimmed;
+        });
+        
+        responseMessage += `\n\nQuick ideas:\n${shortSuggestions.map(s => `• ${s}`).join('\n')}`;
+      }
+      
+      // End with a simple, casual note
+      responseMessage += `\n\nContent Hub will update shortly.`;
 
       res.json({
         success: true,
@@ -168,26 +214,22 @@ async function generateMarketingSuggestions(
   competitors: any[]
 ): Promise<string[]> {
   try {
-    const prompt = `You are a marketing strategist. Based on the user's strategy request, generate 3-5 actionable marketing suggestions.
+    const prompt = `You're a helpful marketing strategist chatting with a client. Based on their request, give 3-5 short, actionable suggestions.
 
 USER REQUEST: "${userMessage}"
 
-BRAND CONTEXT:
-- Name: ${username}
-- Industry: ${brandDNA?.industry || 'Not specified'}
-- Brand Voice: ${brandDNA?.voice?.style || brandDNA?.voice?.tone || 'Professional'}
-- Core Themes: ${(brandDNA?.themes || brandDNA?.corePillars || []).join(', ') || 'Not specified'}
+BRAND: ${username} (${brandDNA?.industry || 'various'})
+VOICE: ${brandDNA?.voice?.style || brandDNA?.voice?.tone || 'professional'}
+THEMES: ${(brandDNA?.themes || brandDNA?.corePillars || []).slice(0, 3).join(', ') || 'general'}
+${competitors.length > 0 ? `COMPETITORS: ${competitors.map((c: any) => c.name).slice(0, 3).join(', ')}` : ''}
 
-COMPETITORS: ${competitors.length > 0 ? competitors.map((c: any) => c.name).join(', ') : 'None specified'}
+Write suggestions that are:
+- Short (1-2 sentences max)
+- Conversational and friendly
+- Specific and actionable
+- Directly related to their request
 
-Generate marketing suggestions that:
-1. Are specific and actionable
-2. Align with the user's strategy request
-3. Consider the brand's voice and positioning
-4. Can be implemented to improve content performance
-5. Include specific tactics (e.g., "Create a weekly LinkedIn series on [topic]")
-
-Return as JSON array of strings: ["suggestion 1", "suggestion 2", ...]`;
+Keep it casual and helpful, like you're texting a colleague. Return as JSON array: ["suggestion 1", "suggestion 2", ...]`;
 
     const suggestions = await generateJSON<string[]>(prompt, 'You are an expert marketing strategist. Provide actionable, specific suggestions.', { tier: 'deep' });
     

@@ -1852,73 +1852,36 @@ What do you think? Drop a comment below! 👇
         </div>
       )}
 
-      {/* Filters */}
-      <div className="space-y-4 mb-6">
-        {/* Content Type Filters - PRIMARY FILTER */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-white/40 font-bold mr-2">TYPE:</span>
-          {(['all', 'text', 'audio', 'video'] as const).map(type => (
-            <button
-              key={type}
-              onClick={() => setContentTypeFilter(type)}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
-                contentTypeFilter === type
-                  ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50'
-                  : 'bg-white/5 text-white/40 hover:text-white/60 border border-white/10'
-              }`}
-            >
-              {type === 'text' && <FileText className="w-3 h-3" />}
-              {type === 'audio' && <Mic2 className="w-3 h-3" />}
-              {type === 'video' && <Video className="w-3 h-3" />}
-              {type.toUpperCase()} {type !== 'all' && `(${contentTypeCounts[type]})`}
-            </button>
-          ))}
-        </div>
-
-        {/* Status Filters */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-white/40 font-bold mr-2">STATUS:</span>
-          {(['all', 'suggested', 'draft', 'scheduled', 'published'] as const).map(status => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                statusFilter === status
-                  ? 'bg-white/10 text-white'
-                  : 'bg-white/5 text-white/40 hover:text-white/60'
-              }`}
-            >
-              {status.toUpperCase()} {status !== 'all' && `(${statusCounts[status]})`}
-            </button>
-          ))}
-        </div>
-
-        {/* Platform Filters */}
-        <div className="flex items-center gap-2 flex-wrap">
+      {/* Simplified Filters - Focus on Content Quality */}
+      <div className="mb-6">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Only show essential filters - focus on NEW content */}
           <button
-            onClick={() => setPlatformFilter(null)}
-            className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-              !platformFilter
-                ? 'bg-white/10 text-white'
-                : 'bg-white/5 text-white/40 hover:text-white/60'
+            onClick={() => {
+              setStatusFilter('all');
+              setPlatformFilter(null);
+              setContentTypeFilter('all');
+            }}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              statusFilter === 'all' && !platformFilter && contentTypeFilter === 'all'
+                ? 'bg-white/10 text-white border border-white/20'
+                : 'bg-white/5 text-white/40 hover:text-white/60 border border-white/10'
             }`}
           >
-            All
+            ALL CONTENT
           </button>
-          {['X', 'LINKEDIN', 'INSTAGRAM', 'TIKTOK', 'PODCAST', 'AUDIO', 'YOUTUBE'].map(platform => (
-            <button
-              key={platform}
-              onClick={() => setPlatformFilter(platformFilter === platform ? null : platform)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-full text-xs font-bold transition-all ${
-                platformFilter === platform
-                  ? 'bg-white/10 text-white'
-                  : 'bg-white/5 text-white/40 hover:text-white/60'
-              }`}
-            >
-              {getPlatformIcon(platform)}
-              {platform} {platformCounts[platform] ? `(${platformCounts[platform]})` : '(0)'}
-            </button>
-          ))}
+          
+          {/* Show only new suggestions (what matters most) */}
+          <button
+            onClick={() => setStatusFilter(statusFilter === 'suggested' ? 'all' : 'suggested')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              statusFilter === 'suggested'
+                ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                : 'bg-white/5 text-white/40 hover:text-white/60 border border-white/10'
+            }`}
+          >
+            NEW SUGGESTIONS {statusCounts['suggested'] > 0 && `(${statusCounts['suggested']})`}
+          </button>
         </div>
       </div>
 
@@ -1936,34 +1899,23 @@ What do you think? Drop a comment below! 👇
               key={asset.id}
               className="bg-[#0A0A0A] border border-white/10 rounded-xl p-5 hover:border-white/20 transition-all cursor-pointer group"
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
+              {/* Content Quality Focus - Title is most important */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1 pr-3">
+                  <h3 className="text-lg font-bold text-white mb-2 line-clamp-3 leading-snug">{asset.title}</h3>
+                  {asset.status === 'suggested' && (
+                    <span className="inline-block px-2 py-0.5 bg-orange-500/20 text-orange-400 text-[10px] font-bold rounded mt-2">
+                      NEW
+                    </span>
+                  )}
+                </div>
+                <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
                   {getPlatformIcon(asset.platform)}
                 </div>
-                {asset.status === 'suggested' && (
-                  <span className="px-2 py-1 bg-orange-500/20 text-orange-400 text-[10px] font-bold rounded">
-                    AI SUGGESTED
-                  </span>
-                )}
               </div>
               
-              <h3 className="text-sm font-bold text-white mb-2 line-clamp-2">{asset.title}</h3>
-              <p className="text-xs text-white/40 mb-3 line-clamp-2">{asset.description}</p>
-              
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-[10px] text-white/30 uppercase">
-                  {asset.type.toUpperCase()} • {asset.platform}
-                </span>
-              </div>
-              
-              {asset.theme && (
-                <div className="mb-3">
-                  <span className="text-[10px] text-white/40">{asset.theme}</span>
-                </div>
-              )}
-              
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-white/30">{asset.timeAgo}</span>
+              {/* Action buttons - focus on quality actions */}
+              <div className="flex items-center justify-between pt-3 border-t border-white/5">
                 {asset.status === 'suggested' && (
                   <button 
                     onClick={(e) => {

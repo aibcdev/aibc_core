@@ -12,6 +12,9 @@ import { thinkAgent } from './thinkAgent';
 import { reviewAgent } from './reviewAgent';
 import { videoAnalysisAgent } from './videoAnalysisAgent';
 import { browserAgent } from './browserAgent';
+import { useOpenManusOrchestration } from '../../config/featureFlags';
+import { executeOpenManusTask, isOpenManusAvailable } from '../openmanusService';
+import { buildOpenManusTaskPrompt, getOpenManusCapability } from '../openmanusMappings';
 import {
   generateTaskPlan,
   getReadyTasks,
@@ -46,7 +49,7 @@ export interface WorkflowContext {
   strategicInsights?: any[];
   brandIdentity?: any;
   username?: string;
-  workflowType: 'scan-complete' | 'content-generation' | 'distribution' | 'research' | 'strategy-modification' | 'custom';
+  workflowType: 'scan-complete' | 'content-generation' | 'distribution' | 'research' | 'strategy-modification' | 'brand-assets-update' | 'custom';
   strategyModification?: string; // User's strategy modification request
   userMessage?: string; // User message from strategy chat
 }
@@ -87,6 +90,19 @@ export async function orchestrateWorkflow(
     console.log(`[Master CMO] Has Content: ${!!context.extractedContent}`);
     console.log(`[Master CMO] Competitors: ${context.competitorIntelligence?.length || 0}`);
     console.log(`[Master CMO] ========================================`);
+
+    // Check if OpenManus orchestration should be used
+    const useOpenManus = useOpenManusOrchestration();
+    if (useOpenManus) {
+      const openManusAvailable = await isOpenManusAvailable();
+      if (openManusAvailable) {
+        console.log(`[Master CMO] Using OpenManus orchestration`);
+        // OpenManus orchestration can be implemented here if needed
+        // For now, we route individual tasks to OpenManus in routeToAgent
+      } else {
+        console.warn(`[Master CMO] OpenManus orchestration enabled but service unavailable, using legacy agents`);
+      }
+    }
 
     // Check if task planning is enabled
     const enableTaskPlanning = process.env.ENABLE_TASK_PLANNING !== 'false';
@@ -702,6 +718,52 @@ async function routeToAgent(
 
   try {
     console.log(`[Master CMO] Routing to ${agentType} agent: ${task.task}`);
+
+    // Check if OpenManus orchestration should be used for this task
+    const useOpenManus = useOpenManusOrchestration();
+    if (useOpenManus) {
+      const openManusAvailable = await isOpenManusAvailable();
+      if (openManusAvailable) {
+        try {
+          // Route to OpenManus agent
+          // Map agent type to OpenManus agent_type (use general task endpoint for orchestration)
+          const taskPrompt = buildOpenManusTaskPrompt(agentType, task.task, {
+            ...context,
+            ...task.params,
+          });
+
+          console.log(`[Master CMO] Routing to OpenManus for ${agentType}`);
+          const openManusResult = await executeOpenManusTask({
+            task: taskPrompt,
+            // Don't specify agent_type for orchestration - use general /task endpoint
+            context: {
+              ...context,
+              ...task.params,
+            },
+            max_steps: 20,
+          });
+
+          if (openManusResult.success) {
+            return {
+              agentId: `${agentType}-${Date.now()}`,
+              agentType,
+              success: true,
+              data: {
+                result: openManusResult.result,
+                steps: openManusResult.steps,
+              },
+              executionTime: Date.now() - startTime,
+            };
+          } else {
+            console.warn(`[Master CMO] OpenManus task failed, falling back to legacy agent: ${openManusResult.error}`);
+            // Fall through to legacy agent
+          }
+        } catch (openManusError: any) {
+          console.warn(`[Master CMO] OpenManus execution error, falling back to legacy agent: ${openManusError.message}`);
+          // Fall through to legacy agent
+        }
+      }
+    }
 
     let result: any;
 

@@ -32,6 +32,7 @@ import organicTrafficRoutes from './routes/organicTraffic';
 import contentQualityRoutes from './routes/contentQuality';
 import keywordsRoutes from './routes/keywords';
 import competitorTipsRoutes from './routes/competitorTips';
+import brandAssetsRoutes from './routes/brandAssets';
 
 dotenv.config();
 
@@ -113,6 +114,7 @@ app.use('/api/organic-traffic', organicTrafficRoutes);
 app.use('/api/content-quality', contentQualityRoutes);
 app.use('/api/keywords', keywordsRoutes);
 app.use('/api/competitor-tips', competitorTipsRoutes);
+app.use('/api/brand-assets', brandAssetsRoutes);
 
 // Gemini API routes
 import geminiRoutes from './routes/gemini';

@@ -45,24 +45,25 @@ export function getProviderForTier(tier: ScanTier, forceProvider?: Provider): Pr
   
   switch (tier) {
     case 'basic':
-      // Basic scan: Use Gemini 2.0 Flash (FREE tier - 250 requests/day, much better than 2.5-flash)
+      // Basic scan: Use Gemini 2.0 Flash (free tier - 250 requests/day)
       if (geminiKey) return 'gemini-2-flash';
       if (deepseekKey) return 'deepseek';
-      throw new Error('No LLM configured for basic scans. Set GEMINI_API_KEY.');
+      if (openaiKey) return 'openai';
+      throw new Error('No LLM configured for basic scans. Set GEMINI_API_KEY (recommended, free) or DEEPSEEK_API_KEY.');
       
     case 'deep':
       // Deep scan: Use Gemini 2.0 Flash (250 requests/day free tier)
       if (geminiKey) return 'gemini-2-flash';
       if (deepseekKey) return 'deepseek-r1';
       if (openaiKey) return 'openai';
-      throw new Error('No LLM configured for deep scans. Set GEMINI_API_KEY.');
+      throw new Error('No LLM configured for deep scans. Set GEMINI_API_KEY (recommended, free) or DEEPSEEK_API_KEY.');
       
     case 'test':
       // Test mode: Use Gemini 2.0 Flash for testing (250 requests/day)
       if (geminiKey) return 'gemini-2-flash';
       if (deepseekKey) return 'deepseek-r1';
       if (openaiKey) return 'openai';
-      throw new Error('No LLM configured for testing.');
+      throw new Error('No LLM configured for testing. Set GEMINI_API_KEY (recommended, free) or DEEPSEEK_API_KEY.');
       
     default:
       throw new Error(`Unknown scan tier: ${tier}`);
@@ -88,7 +89,8 @@ export function getAvailableProviders(): Provider[] {
 }
 
 function getActiveProvider(): Provider | null {
-  if (GEMINI_API_KEY) return 'gemini-2-flash'; // Use 2.0-flash (250/day) instead of 2.5-flash (20/day)
+  // Prefer Gemini (free tier), then DeepSeek, then OpenAI
+  if (GEMINI_API_KEY) return 'gemini-2-flash';
   if (DEEPSEEK_API_KEY) return 'deepseek';
   if (OPENAI_API_KEY) return 'openai';
   return null;
@@ -96,8 +98,8 @@ function getActiveProvider(): Provider | null {
 
 // Log available providers on startup
 console.log(`LLM Service initialized. Available providers:`);
-if (GEMINI_API_KEY) console.log('  ✅ Gemini 2.0 Flash - BASIC & DEEP scans (250 requests/day FREE tier)');
-if (DEEPSEEK_API_KEY) console.log('  ✅ DeepSeek (Chat + R1) - Fallback');
+if (GEMINI_API_KEY) console.log('  ✅ Gemini 2.0 Flash - PRIMARY (250 requests/day FREE tier)');
+if (DEEPSEEK_API_KEY) console.log('  ✅ DeepSeek (Chat + R1) - Fallback (~$0.02/scan, no daily limits)');
 if (OPENAI_API_KEY) console.log('  ✅ OpenAI (GPT-4o) - Fallback');
 if (!GEMINI_API_KEY && !DEEPSEEK_API_KEY && !OPENAI_API_KEY) {
   console.log('  ⚠️ No LLM providers configured!');

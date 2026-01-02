@@ -285,6 +285,7 @@ const BrandAssetsView: React.FC = () => {
   });
 
   // Load materials and brand assets from localStorage on mount
+  // AUTO-POPULATE brand profile from scan results (brandIdentity)
   useEffect(() => {
     try {
       const savedMaterials = localStorage.getItem('brandMaterials');
@@ -299,10 +300,54 @@ const BrandAssetsView: React.FC = () => {
       if (savedFonts) {
         setFonts(JSON.parse(savedFonts));
       }
+      
+      // AUTO-POPULATE: Load from scan results first (brandIdentity)
+      const scanResultsStr = localStorage.getItem('lastScanResults');
+      let autoPopulatedProfile = null;
+      
+      if (scanResultsStr) {
+        try {
+          const scanResults = JSON.parse(scanResultsStr);
+          const brandIdentity = scanResults.brandIdentity;
+          const brandDNA = scanResults.brandDNA;
+          
+          if (brandIdentity) {
+            // Auto-populate from brandIdentity (extracted from website scan)
+            autoPopulatedProfile = {
+              name: brandIdentity.name || '',
+              industry: brandIdentity.industry || '',
+              description: brandIdentity.description || brandDNA?.description || '',
+              website: scanResults.brandIdentity?.website || localStorage.getItem('lastScannedWebsite') || '',
+              targetAudience: brandIdentity.niche || brandDNA?.niche || '',
+              logoUrl: brandIdentity.logoUrl || brandDNA?.logoUrl || '' // Logo extracted from website
+            };
+            console.log('✅ Auto-populated brand profile from scan results:', autoPopulatedProfile);
+          }
+        } catch (e) {
+          console.warn('Error parsing scan results for auto-population:', e);
+        }
+      }
+      
+      // Use auto-populated profile if available, otherwise use saved profile
       const savedProfile = localStorage.getItem('brandProfile');
-      if (savedProfile) {
+      if (autoPopulatedProfile && Object.values(autoPopulatedProfile).some(v => v)) {
+        // Merge with saved profile (saved takes precedence for manual overrides)
+        const saved = savedProfile ? JSON.parse(savedProfile) : {};
+        setBrandProfile({
+          ...autoPopulatedProfile,
+          ...saved, // Manual overrides take precedence
+          // But if saved is empty, use auto-populated
+          name: saved.name || autoPopulatedProfile.name,
+          industry: saved.industry || autoPopulatedProfile.industry,
+          description: saved.description || autoPopulatedProfile.description,
+          website: saved.website || autoPopulatedProfile.website,
+          targetAudience: saved.targetAudience || autoPopulatedProfile.targetAudience,
+          logoUrl: saved.logoUrl || autoPopulatedProfile.logoUrl,
+        });
+      } else if (savedProfile) {
         setBrandProfile(JSON.parse(savedProfile));
       }
+      
       const savedVoice = localStorage.getItem('brandVoice');
       if (savedVoice) {
         setVoiceSettings(JSON.parse(savedVoice));
@@ -312,13 +357,14 @@ const BrandAssetsView: React.FC = () => {
     }
   }, []);
   
-  // Save materials to localStorage and notify Content Hub when materials change
+  // Save materials to localStorage and trigger n8n workflow to update Content Hub
   useEffect(() => {
     if (materials.length >= 0) {
       localStorage.setItem('brandMaterials', JSON.stringify(materials));
       localStorage.setItem('brandColors', JSON.stringify(colors));
       localStorage.setItem('brandFonts', JSON.stringify(fonts));
-      // Dispatch event to notify Content Hub
+      
+      // Dispatch event to notify Content Hub (local update)
       const event = new CustomEvent('brandAssetsUpdated', {
         detail: {
           materials,
@@ -330,6 +376,25 @@ const BrandAssetsView: React.FC = () => {
         }
       });
       window.dispatchEvent(event);
+      
+      // Trigger n8n workflow to update Content Hub (ALL roads lead to Content Hub)
+      const username = localStorage.getItem('lastScannedUsername');
+      if (username) {
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
+        fetch(`${API_BASE_URL}/api/brand-assets/update`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            materials,
+            colors,
+            fonts,
+            voiceSettings,
+            brandProfile,
+            contentPreferences,
+            username
+          })
+        }).catch(err => console.warn('[Brand Assets] Failed to trigger Content Hub update:', err));
+      }
     }
   }, [materials, colors, fonts, voiceSettings, brandProfile, contentPreferences]);
 
@@ -1607,96 +1672,104 @@ const BrandAssetsView: React.FC = () => {
             <h3 className="text-sm font-bold text-white mb-4">Brand Information</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1.5">Brand Name</label>
+                <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  Brand Name
+                  <Lock className="w-3 h-3 text-white/20" title="Auto-filled from website scan" />
+                </label>
                 <input 
                   type="text" 
                   value={brandProfile.name}
-                  onChange={(e) => setBrandProfile({...brandProfile, name: e.target.value})}
-                  placeholder="Your brand name"
-                  className="w-full bg-[#050505] border border-white/10 rounded-lg py-2.5 px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30"
+                  readOnly
+                  placeholder="Auto-filled from website scan"
+                  className="w-full bg-[#050505] border border-white/10 rounded-lg py-2.5 px-3 text-sm text-white/60 placeholder:text-white/30 cursor-not-allowed"
                 />
+                <p className="text-[10px] text-white/30 mt-1">Automatically extracted from your website</p>
               </div>
               <div>
-                <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1.5">Industry</label>
+                <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  Industry
+                  <Lock className="w-3 h-3 text-white/20" title="Auto-filled from website scan" />
+                </label>
                 <input 
                   type="text" 
                   value={brandProfile.industry}
-                  onChange={(e) => setBrandProfile({...brandProfile, industry: e.target.value})}
-                  placeholder="e.g., Content Creation, Technology"
-                  className="w-full bg-[#050505] border border-white/10 rounded-lg py-2.5 px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30"
+                  readOnly
+                  placeholder="Auto-filled from website scan"
+                  className="w-full bg-[#050505] border border-white/10 rounded-lg py-2.5 px-3 text-sm text-white/60 placeholder:text-white/30 cursor-not-allowed"
                 />
+                <p className="text-[10px] text-white/30 mt-1">Automatically detected from your website</p>
               </div>
               <div className="col-span-2">
-                <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1.5">Brand Description</label>
+                <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  Brand Description
+                  <Lock className="w-3 h-3 text-white/20" title="Auto-filled from website scan" />
+                </label>
                 <textarea 
                   rows={3}
                   value={brandProfile.description}
-                  onChange={(e) => setBrandProfile({...brandProfile, description: e.target.value})}
-                  placeholder="Brief description of your brand..."
-                  className="w-full bg-[#050505] border border-white/10 rounded-lg py-2.5 px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 resize-none"
+                  readOnly
+                  placeholder="Auto-filled from website scan"
+                  className="w-full bg-[#050505] border border-white/10 rounded-lg py-2.5 px-3 text-sm text-white/60 placeholder:text-white/30 resize-none cursor-not-allowed"
                 />
+                <p className="text-[10px] text-white/30 mt-1">Automatically extracted from your website content</p>
               </div>
               <div>
-                <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1.5">Website</label>
+                <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  Website
+                  <Lock className="w-3 h-3 text-white/20" title="Auto-filled from scan" />
+                </label>
                 <input 
                   type="url" 
                   value={brandProfile.website}
-                  onChange={(e) => setBrandProfile({...brandProfile, website: e.target.value})}
-                  placeholder="https://yourbrand.com"
-                  className="w-full bg-[#050505] border border-white/10 rounded-lg py-2.5 px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30"
+                  readOnly
+                  placeholder="Auto-filled from scan"
+                  className="w-full bg-[#050505] border border-white/10 rounded-lg py-2.5 px-3 text-sm text-white/60 placeholder:text-white/30 cursor-not-allowed"
                 />
+                <p className="text-[10px] text-white/30 mt-1">From your digital footprint scan</p>
               </div>
               <div>
-                <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1.5">Target Audience</label>
+                <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  Target Audience
+                  <Lock className="w-3 h-3 text-white/20" title="Auto-filled from website scan" />
+                </label>
                 <input 
                   type="text" 
                   value={brandProfile.targetAudience}
-                  onChange={(e) => setBrandProfile({...brandProfile, targetAudience: e.target.value})}
-                  placeholder="e.g., Content creators, SMBs"
-                  className="w-full bg-[#050505] border border-white/10 rounded-lg py-2.5 px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30"
+                  readOnly
+                  placeholder="Auto-filled from website scan"
+                  className="w-full bg-[#050505] border border-white/10 rounded-lg py-2.5 px-3 text-sm text-white/60 placeholder:text-white/30 cursor-not-allowed"
                 />
+                <p className="text-[10px] text-white/30 mt-1">Automatically detected niche/audience</p>
               </div>
             </div>
             <div className="mt-6 flex justify-end">
-              <button 
-                onClick={handleSaveProfile}
-                className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-400 text-black text-sm font-bold rounded-lg transition-colors"
-              >
-                <Save className="w-4 h-4" />
-                Save Profile
-              </button>
+              <div className="flex items-center gap-2 text-xs text-white/40">
+                <Info className="w-3 h-3" />
+                <span>Brand profile is auto-filled from your website scan. Run a new scan to update.</span>
+              </div>
             </div>
           </div>
 
-          {/* Logo Upload */}
+          {/* Logo - Auto-extracted from website */}
           <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6">
-            <h3 className="text-sm font-bold text-white mb-4">Brand Logo</h3>
+            <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+              Brand Logo
+              <Lock className="w-3 h-3 text-white/20" title="Auto-extracted from website" />
+            </h3>
             <div className="flex items-start gap-6">
               <div className="w-24 h-24 rounded-xl bg-white/5 border border-dashed border-white/20 flex items-center justify-center overflow-hidden">
                 {brandProfile.logoUrl ? (
                   <img src={brandProfile.logoUrl} alt="Logo" className="w-full h-full object-contain" />
                 ) : (
-                  <ImageIcon className="w-8 h-8 text-white/20" />
+                  <div className="text-center">
+                    <ImageIcon className="w-8 h-8 text-white/20 mx-auto mb-1" />
+                    <p className="text-[10px] text-white/30">Auto-extracted from website</p>
+                  </div>
                 )}
               </div>
               <div className="flex-1">
-                <label className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/15 rounded-lg text-sm text-white cursor-pointer transition-colors">
-                  <Upload className="w-4 h-4" />
-                  Upload Logo
-                  <input 
-                    type="file" 
-                    className="hidden" 
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const url = URL.createObjectURL(file);
-                        setBrandProfile({...brandProfile, logoUrl: url});
-                      }
-                    }}
-                  />
-                </label>
-                <p className="text-xs text-white/30 mt-2">SVG, PNG, or JPG. Max 2MB.</p>
+                <p className="text-xs text-white/40 mb-2">Logo is automatically extracted from your website during the scan.</p>
+                <p className="text-[10px] text-white/30">Run a new scan to update the logo if it's missing or outdated.</p>
               </div>
             </div>
           </div>
