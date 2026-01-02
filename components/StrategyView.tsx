@@ -434,24 +434,25 @@ const StrategyView: React.FC = () => {
     const brandName = scanUsername || brandDNA?.name || 'your brand';
     const industry = brandDNA?.industry || 'your sector';
     
-    let message = `I've analyzed the digital footprint scan for ${brandName}. `;
+    // Make it sound like a real person, not a formal report
+    let message = `Hey! I've looked at ${brandName}'s scan. `;
     
     if (competitorCount > 0) {
-      message += `I've identified ${competitorCount} key competitor${competitorCount > 1 ? 's' : ''} in ${industry}. `;
+      message += `Found ${competitorCount} competitor${competitorCount > 1 ? 's' : ''} worth watching. `;
       const topCompetitor = competitorIntelligence[0];
       if (topCompetitor.name) {
-        message += `${topCompetitor.name} appears to be your primary competitor. `;
+        message += `${topCompetitor.name} is your main one. `;
       }
     }
     
     if (brandDNA) {
       const themes = brandDNA.themes || brandDNA.corePillars || [];
       if (themes.length > 0) {
-        message += `Your brand focuses on ${themes.slice(0, 2).join(' and ')}. `;
+        message += `You're focused on ${themes.slice(0, 2).join(' and ')}. `;
       }
     }
     
-    message += `How can I assist with your content strategy today?`;
+    message += `What should we work on?`;
     
     const initialMessage: StrategyMessage = {
       id: 'initial_' + Date.now(),
