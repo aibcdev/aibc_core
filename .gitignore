@@ -61,5 +61,11 @@ venv/
 __pycache__/
 *.pyc
 
+# Data and Binaries
+*.zip
+*.xlsx
+*.csv
+*.tar.gz
+
 # Local Netlify folder
 .netlify

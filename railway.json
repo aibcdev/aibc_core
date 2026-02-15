@@ -6,7 +6,8 @@
                 "root": "/"
             },
             "build": {
-                "builder": "NIXPACKS"
+                "builder": "DOCKER",
+                "dockerfilePath": "bridge.Dockerfile"
             },
             "deploy": {
                 "startCommand": "npm run start",
