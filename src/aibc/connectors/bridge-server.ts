@@ -97,14 +97,16 @@ app.get('/', (_req, res) => res.status(200).json({ status: 'ok', service: 'aibc-
 app.get('/slack/events', (_req, res) => res.status(200).json({ status: 'listening' }));
 
 // Slack Events Endpoint
-app.post('/slack/events', verifySlackSignature, async (req, res) => {
-    console.log(`[Server] Received POST to /slack/events: ${JSON.stringify(req.body).substring(0, 100)}...`);
-
-    // Slack Challenge Handling
+app.post('/slack/events', async (req, res, next) => {
+    // 1. Handle Slack Challenge FIRST (unauthenticated)
     if (req.body.type === 'url_verification') {
         console.log("[Server] Handled Slack URL verification challenge");
         return res.send(req.body.challenge);
     }
+    // 2. Proceed to signature verification for actual events
+    next();
+}, verifySlackSignature, async (req, res) => {
+    console.log(`[Server] Received POST to /slack/events: ${JSON.stringify(req.body).substring(0, 100)}...`);
 
     const event = req.body.event;
     if (event && (event.type === 'message' || event.type === 'app_mention')) {
