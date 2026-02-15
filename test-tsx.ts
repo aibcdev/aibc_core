@@ -1,1 +1,1 @@
-console.log('Hello from TSX')
+console.log("TSX works")

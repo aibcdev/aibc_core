@@ -5,6 +5,8 @@
 
 const COGNEE_URL = (typeof process !== 'undefined' ? process.env.VITE_COGNEE_URL || process.env.COGNEE_URL : undefined) || (import.meta as any).env?.VITE_COGNEE_URL || 'http://localhost:8001';
 
+console.log(`[Cognee] Connector initialized with URL: ${COGNEE_URL}`);
+
 export interface CogneeMemory {
     content: string;
     score: number;

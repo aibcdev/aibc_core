@@ -9,8 +9,8 @@
                 "builder": "NIXPACKS"
             },
             "deploy": {
-                "startCommand": "npm run dev:bridge",
-                "healthcheckPath": "/slack/events",
+                "startCommand": "npm run start",
+                "healthcheckPath": "/",
                 "healthcheckTimeout": 100
             }
         },

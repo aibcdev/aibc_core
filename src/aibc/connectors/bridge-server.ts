@@ -6,14 +6,63 @@ console.log("[Server] Entry point reached...");
 
 import 'dotenv/config';
 import express from 'express';
+import crypto from 'crypto';
 import { handleIncomingChannelMessage } from './multi-channel-bridge.js';
 
 const app = express();
-app.use(express.json());
+
+// Middleware to capture raw body for Slack signature verification
+app.use(express.json({
+    verify: (req: any, _res, buf) => {
+        req.rawBody = buf;
+    }
+}));
 
 const PORT = process.env.PORT || 3000;
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
+const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+
+// Slack Signature Verification Middleware
+function verifySlackSignature(req: express.Request, res: express.Response, next: express.NextFunction) {
+    const signature = req.headers['x-slack-signature'] as string;
+    const timestamp = req.headers['x-slack-request-timestamp'] as string;
+
+    if (!SLACK_SIGNING_SECRET) {
+        console.warn("[Server] SLACK_SIGNING_SECRET missing, skipping verification.");
+        return next();
+    }
+
+    if (!signature || !timestamp) {
+        console.error("[Server] Missing Slack signature or timestamp");
+        return res.status(401).send('Unauthorized');
+    }
+
+    // Prevent Replay Attacks (5 min window)
+    const fiveMinutesAgo = Math.floor(Date.now() / 1000) - (60 * 5);
+    if (parseInt(timestamp) < fiveMinutesAgo) {
+        console.error("[Server] Stale Slack request");
+        return res.status(401).send('Stale request');
+    }
+
+    try {
+        const [version, hash] = signature.split('=');
+        const baseString = `${version}:${timestamp}:${(req as any).rawBody}`;
+        const hmac = crypto.createHmac('sha256', SLACK_SIGNING_SECRET);
+        hmac.update(baseString);
+        const computedHash = hmac.digest('hex');
+
+        if (crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(computedHash))) {
+            next();
+        } else {
+            console.error("[Server] Slack signature mismatch");
+            res.status(401).send('Unauthorized');
+        }
+    } catch (err) {
+        console.error("[Server] Error verifying Slack signature:", err);
+        res.status(500).send('Internal Server Error');
+    }
+}
 
 // Helper to send message back to Slack using fetch (to avoid dependency delays)
 async function sendSlackMessage(channel: string, text: string) {
@@ -43,8 +92,12 @@ async function sendSlackMessage(channel: string, text: string) {
     }
 }
 
+// Healthcheck Endpoints
+app.get('/', (_req, res) => res.status(200).json({ status: 'ok', service: 'aibc-bridge' }));
+app.get('/slack/events', (_req, res) => res.status(200).json({ status: 'listening' }));
+
 // Slack Events Endpoint
-app.post('/slack/events', async (req, res) => {
+app.post('/slack/events', verifySlackSignature, async (req, res) => {
     console.log(`[Server] Received POST to /slack/events: ${JSON.stringify(req.body).substring(0, 100)}...`);
 
     // Slack Challenge Handling
@@ -79,6 +132,8 @@ app.post('/slack/events', async (req, res) => {
             if (response.audioUrl) {
                 await sendSlackMessage(event.channel, `🔊 Voice Note: ${response.audioUrl}`);
             }
+        }).catch(err => {
+            console.error("[Server] Background Agent Loop Error:", err);
         });
 
         return res.sendStatus(200);
