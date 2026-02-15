@@ -55,5 +55,11 @@ credentials.json
 *.sw?
 # Build fixes applied
 
+# Python / Cognee
+venv/
+.venv/
+__pycache__/
+*.pyc
+
 # Local Netlify folder
 .netlify
