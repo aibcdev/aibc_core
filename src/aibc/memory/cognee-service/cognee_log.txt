@@ -1,0 +1,513 @@
+
+[2m2026-02-15T15:45:17.390749[0m [[33m[1mwarning  [0m] [1mFrom version 0.5.0 onwards, Cognee will run with multi-user access control mode set to on by default. Data isolation between different users and datasets will be enforced and data created before multi-user access control mode was turned on won't be accessible by default. To disable multi-user access control mode and regain access to old data set the environment variable ENABLE_BACKEND_ACCESS_CONTROL to false before starting Cognee. For more information, please refer to the Cognee documentation.[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-02-15T15:45:17.390943[0m [[32m[1minfo     [0m] [1mLog file created at: /Users/akeemojuko/Documents/Documents - main’s MacBook Pro/aibc_core/src/aibc/memory/cognee-service/venv/lib/python3.11/site-packages/logs/2026-02-15_15-45-16.log[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mlog_file[0m=[35m'/Users/akeemojuko/Documents/Documents - main’s MacBook Pro/aibc_core/src/aibc/memory/cognee-service/venv/lib/python3.11/site-packages/logs/2026-02-15_15-45-16.log'[0m
+
+[2m2026-02-15T15:45:17.391028[0m [[32m[1minfo     [0m] [1mLogging initialized           [0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mcognee_version[0m=[35m0.5.2[0m [36mdatabase_path[0m=[35m'/Users/akeemojuko/Documents/Documents - main’s MacBook Pro/aibc_core/src/aibc/memory/cognee-service/venv/lib/python3.11/site-packages/cognee/.cognee_system/databases'[0m [36mgraph_database_name[0m=[35m[0m [36mos_info[0m=[35m'Darwin 25.3.0 (Darwin Kernel Version 25.3.0: Wed Jan 28 20:54:22 PST 2026; root:xnu-12377.81.4~5/RELEASE_ARM64_T6030)'[0m [36mpython_version[0m=[35m3.11.14[0m [36mrelational_config[0m=[35mcognee_db[0m [36mstructlog_version[0m=[35m25.5.0[0m [36mvector_config[0m=[35mlancedb[0m
+
+[2m2026-02-15T15:45:17.391122[0m [[32m[1minfo     [0m] [1mDatabase storage: /Users/akeemojuko/Documents/Documents - main’s MacBook Pro/aibc_core/src/aibc/memory/cognee-service/venv/lib/python3.11/site-packages/cognee/.cognee_system/databases[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-02-15T15:45:17.421067[0m [[33m[1mwarning  [0m] [1mFailed to import protego, make sure to install using pip install protego>=0.1[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-02-15T15:45:17.421215[0m [[33m[1mwarning  [0m] [1mFailed to import playwright, make sure to install using pip install playwright>=1.9.0[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+/Users/akeemojuko/Documents/Documents - main’s MacBook Pro/aibc_core/src/aibc/memory/cognee-service/main.py:202: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("startup")
+INFO:     Started server process [30692]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+
+[2m2026-02-15T15:45:32.314706[0m [[32m[1minfo     [0m] [1mPipeline run started: `a5afddec-db57-54cb-a744-3b74378e91e5`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T15:45:32.577837[0m [[32m[1minfo     [0m] [1mCoroutine task started: `resolve_data_directories`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T15:45:32.783615[0m [[32m[1minfo     [0m] [1mCoroutine task started: `ingest_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T15:45:33.025519[0m [[32m[1minfo     [0m] [1mRegistered loader: pypdf_loader[0m [[0m[1m[34mcognee.infrastructure.loaders.LoaderEngine[0m][0m
+
+[2m2026-02-15T15:45:33.025662[0m [[32m[1minfo     [0m] [1mRegistered loader: text_loader[0m [[0m[1m[34mcognee.infrastructure.loaders.LoaderEngine[0m][0m
+
+[2m2026-02-15T15:45:33.025755[0m [[32m[1minfo     [0m] [1mRegistered loader: image_loader[0m [[0m[1m[34mcognee.infrastructure.loaders.LoaderEngine[0m][0m
+
+[2m2026-02-15T15:45:33.025866[0m [[32m[1minfo     [0m] [1mRegistered loader: audio_loader[0m [[0m[1m[34mcognee.infrastructure.loaders.LoaderEngine[0m][0m
+
+[2m2026-02-15T15:45:33.025930[0m [[32m[1minfo     [0m] [1mRegistered loader: csv_loader [0m [[0m[1m[34mcognee.infrastructure.loaders.LoaderEngine[0m][0m
+
+[2m2026-02-15T15:45:33.025997[0m [[32m[1minfo     [0m] [1mRegistered loader: unstructured_loader[0m [[0m[1m[34mcognee.infrastructure.loaders.LoaderEngine[0m][0m
+
+[2m2026-02-15T15:45:33.026068[0m [[32m[1minfo     [0m] [1mRegistered loader: advanced_pdf_loader[0m [[0m[1m[34mcognee.infrastructure.loaders.LoaderEngine[0m][0m
+
+[2m2026-02-15T15:45:33.036754[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `ingest_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T15:45:33.259886[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `resolve_data_directories`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T15:45:33.657313[0m [[32m[1minfo     [0m] [1mPipeline run completed: `a5afddec-db57-54cb-a744-3b74378e91e5`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T15:45:34.721580[0m [[32m[1minfo     [0m] [1mLoaded JSON extension         [0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-02-15T15:45:34.728189[0m [[32m[1minfo     [0m] [1mNo ontology file provided. No owl ontology will be attached to the graph.[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T15:45:34.761728[0m [[32m[1minfo     [0m] [1mPipeline run started: `9d229b64-1c95-57d0-8a88-8563439a58a2`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T15:45:35.023745[0m [[32m[1minfo     [0m] [1mCoroutine task started: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T15:45:35.232172[0m [[32m[1minfo     [0m] [1mAsync Generator task started: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T15:45:35.720282[0m [[32m[1minfo     [0m] [1mCoroutine task started: `extract_graph_from_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T15:45:40.711076[0m [[32m[1minfo     [0m] [1mNo close match found for 'company' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T15:45:40.711591[0m [[32m[1minfo     [0m] [1mNo close match found for 'aibc' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T15:45:40.711825[0m [[32m[1minfo     [0m] [1mNo close match found for 'product' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T15:45:40.711914[0m [[32m[1minfo     [0m] [1mNo close match found for 'super agent engine' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T15:45:40.711992[0m [[32m[1minfo     [0m] [1mNo close match found for 'person' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T15:45:40.712060[0m [[32m[1minfo     [0m] [1mNo close match found for 'akeem ojuko' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T15:45:40.712153[0m [[32m[1minfo     [0m] [1mNo close match found for 'abiel' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T15:45:40.712234[0m [[32m[1minfo     [0m] [1mNo close match found for 'julius' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T15:45:41.956263[0m [[32m[1minfo     [0m] [1mCoroutine task started: `summarize_text`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T15:45:43.708013[0m [[32m[1minfo     [0m] [1mCoroutine task started: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T15:45:44.701203[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T15:45:44.915589[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `summarize_text`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T15:45:45.162866[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `extract_graph_from_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T15:45:45.373529[0m [[32m[1minfo     [0m] [1mAsync Generator task completed: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T15:45:45.588437[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T15:45:45.799037[0m [[32m[1minfo     [0m] [1mPipeline run completed: `9d229b64-1c95-57d0-8a88-8563439a58a2`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+🧠 Cognee Memory Service starting...
+DEBUG: Current LLM Provider in Config: gemini
+DEBUG: Env LLM_PROVIDER: gemini
+✅ Cognee ready! Provider: gemini
+INFO:     127.0.0.1:54817 - "POST /memory/add HTTP/1.1" 200 OK
+
+[2m2026-02-15T16:48:10.930428[0m [[31m[1merror    [0m] [1mDatasetNotFoundError: No datasets found. (Status code: 404)[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+INFO:     127.0.0.1:57365 - "POST /memory/search HTTP/1.1" 200 OK
+
+[2m2026-02-15T16:48:10.940390[0m [[31m[1merror    [0m] [1mDatasetNotFoundError: No datasets found. (Status code: 404)[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+INFO:     127.0.0.1:57367 - "POST /memory/search HTTP/1.1" 200 OK
+
+[2m2026-02-15T16:48:11.814983[0m [[32m[1minfo     [0m] [1mPipeline run started: `cbaa70c6-f644-5633-8612-91412d2f8b51`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T16:48:12.050424[0m [[32m[1minfo     [0m] [1mCoroutine task started: `resolve_data_directories`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T16:48:12.245532[0m [[32m[1minfo     [0m] [1mCoroutine task started: `ingest_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T16:48:12.471935[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `ingest_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T16:48:12.692159[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `resolve_data_directories`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T16:48:12.864453[0m [[32m[1minfo     [0m] [1mPipeline run completed: `cbaa70c6-f644-5633-8612-91412d2f8b51`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T16:48:13.172955[0m [[32m[1minfo     [0m] [1mLoaded JSON extension         [0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-02-15T16:48:13.193853[0m [[32m[1minfo     [0m] [1mNo ontology file provided. No owl ontology will be attached to the graph.[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T16:48:13.279152[0m [[32m[1minfo     [0m] [1mDataset 37b9d7f9-0e37-5063-9eda-9a0234b62752 is already processed.[0m [[0m[1m[34mcognee.modules.pipelines.layers.check_pipeline_run_qualification[0m][0m
+
+[2m2026-02-15T16:48:13.283181[0m [[32m[1minfo     [0m] [1mNo ontology file provided. No owl ontology will be attached to the graph.[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T16:48:13.300075[0m [[32m[1minfo     [0m] [1mPipeline run started: `15a0904f-e3eb-5211-bbee-ec9fa54812d4`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T16:48:13.474365[0m [[32m[1minfo     [0m] [1mCoroutine task started: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T16:48:13.722083[0m [[32m[1minfo     [0m] [1mAsync Generator task started: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T16:48:13.955584[0m [[32m[1minfo     [0m] [1mCoroutine task started: `extract_graph_from_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T16:48:14.289439[0m [[32m[1minfo     [0m] [1mDataset 37b9d7f9-0e37-5063-9eda-9a0234b62752 is already being processed.[0m [[0m[1m[34mcognee.modules.pipelines.layers.check_pipeline_run_qualification[0m][0m
+INFO:     127.0.0.1:57367 - "POST /memory/add HTTP/1.1" 200 OK
+
+[2m2026-02-15T16:48:16.401328[0m [[32m[1minfo     [0m] [1mNo close match found for 'character' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T16:48:16.401859[0m [[32m[1minfo     [0m] [1mNo close match found for 'oracle' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T16:48:16.402035[0m [[32m[1minfo     [0m] [1mNo close match found for 'user' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T16:48:16.402107[0m [[32m[1minfo     [0m] [1mNo close match found for 'u0afx78jgsu' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T16:48:16.402170[0m [[32m[1minfo     [0m] [1mNo close match found for 'statement' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T16:48:16.402228[0m [[32m[1minfo     [0m] [1mNo close match found for 'hi user.' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T16:48:18.108735[0m [[32m[1minfo     [0m] [1mCoroutine task started: `summarize_text`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T16:48:18.978133[0m [[32m[1minfo     [0m] [1mCoroutine task started: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T16:48:20.902507[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T16:48:21.074588[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `summarize_text`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T16:48:21.264937[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `extract_graph_from_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T16:48:21.461625[0m [[32m[1minfo     [0m] [1mAsync Generator task completed: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T16:48:21.636833[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T16:48:21.840409[0m [[32m[1minfo     [0m] [1mPipeline run completed: `15a0904f-e3eb-5211-bbee-ec9fa54812d4`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+INFO:     127.0.0.1:57365 - "POST /memory/add HTTP/1.1" 200 OK
+
+[2m2026-02-15T17:12:54.380265[0m [[32m[1minfo     [0m] [1mVector collection retrieval completed: Retrieved distances from 6 collections in 0.74s[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-02-15T17:12:54.381598[0m [[32m[1minfo     [0m] [1mRetrieving ID-filtered graph from database.[0m [[0m[1m[34mCogneeGraph[0m][0m
+
+[2m2026-02-15T17:12:54.390903[0m [[32m[1minfo     [0m] [1mID-filtered retrieval: 9 nodes and 10 edges in 0.01s[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-02-15T17:12:54.403377[0m [[32m[1minfo     [0m] [1mGraph projection completed: 9 nodes, 10 edges in 0.01s[0m [[0m[1m[34mCogneeGraph[0m][0m
+INFO:     127.0.0.1:58206 - "POST /memory/search HTTP/1.1" 200 OK
+
+[2m2026-02-15T17:12:57.476526[0m [[32m[1minfo     [0m] [1mPipeline run started: `cbaa70c6-f644-5633-8612-91412d2f8b51`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T17:12:57.669482[0m [[32m[1minfo     [0m] [1mCoroutine task started: `resolve_data_directories`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:12:57.846427[0m [[32m[1minfo     [0m] [1mCoroutine task started: `ingest_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:12:58.116025[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `ingest_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:12:58.359247[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `resolve_data_directories`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:12:58.539054[0m [[32m[1minfo     [0m] [1mPipeline run completed: `cbaa70c6-f644-5633-8612-91412d2f8b51`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T17:12:58.746669[0m [[32m[1minfo     [0m] [1mNo ontology file provided. No owl ontology will be attached to the graph.[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:12:58.786630[0m [[32m[1minfo     [0m] [1mPipeline run started: `15a0904f-e3eb-5211-bbee-ec9fa54812d4`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T17:12:58.971292[0m [[32m[1minfo     [0m] [1mCoroutine task started: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:12:59.214705[0m [[32m[1minfo     [0m] [1mAsync Generator task started: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:12:59.467329[0m [[32m[1minfo     [0m] [1mCoroutine task started: `extract_graph_from_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:13:02.000820[0m [[32m[1minfo     [0m] [1mNo close match found for 'character' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:13:02.001207[0m [[32m[1minfo     [0m] [1mNo close match found for 'oracle' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:13:02.001364[0m [[32m[1minfo     [0m] [1mNo close match found for 'user' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:13:02.001429[0m [[32m[1minfo     [0m] [1mNo close match found for 'u0afx78jgsu' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:13:04.556214[0m [[32m[1minfo     [0m] [1mCoroutine task started: `summarize_text`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:13:06.602490[0m [[32m[1minfo     [0m] [1mCoroutine task started: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:13:08.250773[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:13:08.844734[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `summarize_text`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:13:09.364847[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `extract_graph_from_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:13:09.686288[0m [[32m[1minfo     [0m] [1mAsync Generator task completed: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:13:10.101709[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:13:10.659033[0m [[32m[1minfo     [0m] [1mPipeline run completed: `15a0904f-e3eb-5211-bbee-ec9fa54812d4`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+INFO:     127.0.0.1:58206 - "POST /memory/add HTTP/1.1" 200 OK
+
+[2m2026-02-15T17:14:25.982858[0m [[32m[1minfo     [0m] [1mVector collection retrieval completed: Retrieved distances from 6 collections in 0.38s[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-02-15T17:14:25.983708[0m [[32m[1minfo     [0m] [1mRetrieving ID-filtered graph from database.[0m [[0m[1m[34mCogneeGraph[0m][0m
+
+[2m2026-02-15T17:14:25.991791[0m [[32m[1minfo     [0m] [1mID-filtered retrieval: 12 nodes and 15 edges in 0.01s[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-02-15T17:14:25.993537[0m [[32m[1minfo     [0m] [1mGraph projection completed: 12 nodes, 15 edges in 0.00s[0m [[0m[1m[34mCogneeGraph[0m][0m
+INFO:     127.0.0.1:58298 - "POST /memory/search HTTP/1.1" 200 OK
+
+[2m2026-02-15T17:14:29.935495[0m [[32m[1minfo     [0m] [1mPipeline run started: `cbaa70c6-f644-5633-8612-91412d2f8b51`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T17:14:30.356157[0m [[32m[1minfo     [0m] [1mCoroutine task started: `resolve_data_directories`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:14:30.660933[0m [[32m[1minfo     [0m] [1mCoroutine task started: `ingest_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:14:31.103395[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `ingest_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:14:31.734055[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `resolve_data_directories`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:14:32.309956[0m [[32m[1minfo     [0m] [1mPipeline run completed: `cbaa70c6-f644-5633-8612-91412d2f8b51`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T17:14:33.549843[0m [[32m[1minfo     [0m] [1mNo ontology file provided. No owl ontology will be attached to the graph.[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:14:33.583508[0m [[32m[1minfo     [0m] [1mPipeline run started: `15a0904f-e3eb-5211-bbee-ec9fa54812d4`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T17:14:34.721055[0m [[32m[1minfo     [0m] [1mCoroutine task started: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:14:35.316336[0m [[32m[1minfo     [0m] [1mAsync Generator task started: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:14:36.189643[0m [[32m[1minfo     [0m] [1mCoroutine task started: `extract_graph_from_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:14:39.534537[0m [[32m[1minfo     [0m] [1mNo close match found for 'character' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:14:39.534743[0m [[32m[1minfo     [0m] [1mNo close match found for 'oracle' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:14:39.534869[0m [[32m[1minfo     [0m] [1mNo close match found for 'user' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:14:39.534940[0m [[32m[1minfo     [0m] [1mNo close match found for 'u0afx78jgsu' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:14:39.534998[0m [[32m[1minfo     [0m] [1mNo close match found for 'request' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:14:39.535051[0m [[32m[1minfo     [0m] [1mNo close match found for 'investigation request' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:14:41.588355[0m [[32m[1minfo     [0m] [1mCoroutine task started: `summarize_text`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:14:43.361365[0m [[32m[1minfo     [0m] [1mCoroutine task started: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:14:44.979023[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:14:45.424784[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `summarize_text`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:14:45.887662[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `extract_graph_from_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:14:46.171574[0m [[32m[1minfo     [0m] [1mAsync Generator task completed: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:14:46.426529[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:14:46.763652[0m [[32m[1minfo     [0m] [1mPipeline run completed: `15a0904f-e3eb-5211-bbee-ec9fa54812d4`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+INFO:     127.0.0.1:58298 - "POST /memory/add HTTP/1.1" 200 OK
+
+[2m2026-02-15T17:16:00.921017[0m [[32m[1minfo     [0m] [1mVector collection retrieval completed: Retrieved distances from 6 collections in 0.49s[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-02-15T17:16:00.921926[0m [[32m[1minfo     [0m] [1mRetrieving ID-filtered graph from database.[0m [[0m[1m[34mCogneeGraph[0m][0m
+
+[2m2026-02-15T17:16:00.930373[0m [[32m[1minfo     [0m] [1mID-filtered retrieval: 17 nodes and 23 edges in 0.01s[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-02-15T17:16:00.935243[0m [[32m[1minfo     [0m] [1mGraph projection completed: 17 nodes, 23 edges in 0.00s[0m [[0m[1m[34mCogneeGraph[0m][0m
+INFO:     127.0.0.1:58451 - "POST /memory/search HTTP/1.1" 200 OK
+
+[2m2026-02-15T17:16:02.977576[0m [[32m[1minfo     [0m] [1mPipeline run started: `cbaa70c6-f644-5633-8612-91412d2f8b51`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T17:16:03.305985[0m [[32m[1minfo     [0m] [1mCoroutine task started: `resolve_data_directories`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:16:03.556918[0m [[32m[1minfo     [0m] [1mCoroutine task started: `ingest_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:16:03.835725[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `ingest_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:16:04.024285[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `resolve_data_directories`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:16:04.312251[0m [[32m[1minfo     [0m] [1mPipeline run completed: `cbaa70c6-f644-5633-8612-91412d2f8b51`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T17:16:04.526297[0m [[32m[1minfo     [0m] [1mNo ontology file provided. No owl ontology will be attached to the graph.[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:16:04.565049[0m [[32m[1minfo     [0m] [1mPipeline run started: `15a0904f-e3eb-5211-bbee-ec9fa54812d4`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T17:16:04.740224[0m [[32m[1minfo     [0m] [1mCoroutine task started: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:16:04.943310[0m [[32m[1minfo     [0m] [1mAsync Generator task started: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:16:05.316929[0m [[32m[1minfo     [0m] [1mCoroutine task started: `extract_graph_from_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:16:07.610912[0m [[32m[1minfo     [0m] [1mNo close match found for 'user' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:16:07.611552[0m [[32m[1minfo     [0m] [1mNo close match found for 'u0afx78jgsu' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:16:07.611757[0m [[32m[1minfo     [0m] [1mNo close match found for 'message' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:16:07.611832[0m [[32m[1minfo     [0m] [1mNo close match found for 'direct message' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:16:08.796177[0m [[32m[1minfo     [0m] [1mCoroutine task started: `summarize_text`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:16:09.885021[0m [[32m[1minfo     [0m] [1mCoroutine task started: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:16:11.576456[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:16:11.803926[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `summarize_text`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:16:12.025350[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `extract_graph_from_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:16:12.197471[0m [[32m[1minfo     [0m] [1mAsync Generator task completed: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:16:12.466582[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:16:12.653275[0m [[32m[1minfo     [0m] [1mPipeline run completed: `15a0904f-e3eb-5211-bbee-ec9fa54812d4`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+INFO:     127.0.0.1:58451 - "POST /memory/add HTTP/1.1" 200 OK
+
+[2m2026-02-15T17:42:40.433820[0m [[32m[1minfo     [0m] [1mVector collection retrieval completed: Retrieved distances from 6 collections in 4.91s[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-02-15T17:42:41.179494[0m [[32m[1minfo     [0m] [1mRetrieving ID-filtered graph from database.[0m [[0m[1m[34mCogneeGraph[0m][0m
+
+[2m2026-02-15T17:42:41.683353[0m [[32m[1minfo     [0m] [1mID-filtered retrieval: 22 nodes and 29 edges in 0.48s[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-02-15T17:42:42.584805[0m [[32m[1minfo     [0m] [1mGraph projection completed: 22 nodes, 29 edges in 0.90s[0m [[0m[1m[34mCogneeGraph[0m][0m
+INFO:     127.0.0.1:59883 - "POST /memory/search HTTP/1.1" 200 OK
+
+[2m2026-02-15T17:42:48.095996[0m [[32m[1minfo     [0m] [1mPipeline run started: `cbaa70c6-f644-5633-8612-91412d2f8b51`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T17:42:48.342672[0m [[32m[1minfo     [0m] [1mCoroutine task started: `resolve_data_directories`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:42:48.595136[0m [[32m[1minfo     [0m] [1mCoroutine task started: `ingest_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:42:48.973865[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `ingest_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:42:49.304634[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `resolve_data_directories`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:42:50.077470[0m [[32m[1minfo     [0m] [1mPipeline run completed: `cbaa70c6-f644-5633-8612-91412d2f8b51`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T17:42:50.524404[0m [[32m[1minfo     [0m] [1mNo ontology file provided. No owl ontology will be attached to the graph.[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:42:50.762456[0m [[32m[1minfo     [0m] [1mPipeline run started: `15a0904f-e3eb-5211-bbee-ec9fa54812d4`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T17:42:51.012577[0m [[32m[1minfo     [0m] [1mCoroutine task started: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:42:51.227600[0m [[32m[1minfo     [0m] [1mAsync Generator task started: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:42:51.571557[0m [[32m[1minfo     [0m] [1mCoroutine task started: `extract_graph_from_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:42:53.658285[0m [[32m[1minfo     [0m] [1mNo close match found for 'character' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:42:53.659491[0m [[32m[1minfo     [0m] [1mNo close match found for 'oracle' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:42:53.660103[0m [[32m[1minfo     [0m] [1mNo close match found for 'user' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:42:53.660438[0m [[32m[1minfo     [0m] [1mNo close match found for 'u0afx78jgsu' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:42:55.450668[0m [[32m[1minfo     [0m] [1mCoroutine task started: `summarize_text`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:42:56.344938[0m [[32m[1minfo     [0m] [1mCoroutine task started: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:42:58.170773[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:42:58.402931[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `summarize_text`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:42:58.750868[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `extract_graph_from_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:42:59.976660[0m [[32m[1minfo     [0m] [1mAsync Generator task completed: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:43:00.235674[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:43:00.441549[0m [[32m[1minfo     [0m] [1mPipeline run completed: `15a0904f-e3eb-5211-bbee-ec9fa54812d4`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+INFO:     127.0.0.1:59883 - "POST /memory/add HTTP/1.1" 200 OK
+
+[2m2026-02-15T17:53:23.720178[0m [[32m[1minfo     [0m] [1mVector collection retrieval completed: Retrieved distances from 6 collections in 0.64s[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-02-15T17:53:23.721821[0m [[32m[1minfo     [0m] [1mRetrieving ID-filtered graph from database.[0m [[0m[1m[34mCogneeGraph[0m][0m
+
+[2m2026-02-15T17:53:23.733232[0m [[32m[1minfo     [0m] [1mID-filtered retrieval: 25 nodes and 34 edges in 0.01s[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-02-15T17:53:23.742559[0m [[32m[1minfo     [0m] [1mGraph projection completed: 25 nodes, 34 edges in 0.01s[0m [[0m[1m[34mCogneeGraph[0m][0m
+INFO:     127.0.0.1:60291 - "POST /memory/search HTTP/1.1" 200 OK
+
+[2m2026-02-15T17:53:26.221238[0m [[32m[1minfo     [0m] [1mPipeline run started: `cbaa70c6-f644-5633-8612-91412d2f8b51`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T17:53:26.414276[0m [[32m[1minfo     [0m] [1mCoroutine task started: `resolve_data_directories`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:26.624303[0m [[32m[1minfo     [0m] [1mCoroutine task started: `ingest_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:26.988737[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `ingest_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:27.244690[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `resolve_data_directories`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:27.424338[0m [[32m[1minfo     [0m] [1mPipeline run completed: `cbaa70c6-f644-5633-8612-91412d2f8b51`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T17:53:27.729742[0m [[32m[1minfo     [0m] [1mNo ontology file provided. No owl ontology will be attached to the graph.[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:53:27.849722[0m [[32m[1minfo     [0m] [1mPipeline run started: `15a0904f-e3eb-5211-bbee-ec9fa54812d4`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T17:53:28.067744[0m [[32m[1minfo     [0m] [1mCoroutine task started: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:28.328982[0m [[32m[1minfo     [0m] [1mAsync Generator task started: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:28.517186[0m [[32m[1minfo     [0m] [1mCoroutine task started: `extract_graph_from_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:30.925624[0m [[32m[1minfo     [0m] [1mNo close match found for 'character' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:53:30.925791[0m [[32m[1minfo     [0m] [1mNo close match found for 'oracle' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:53:30.925903[0m [[32m[1minfo     [0m] [1mNo close match found for 'user' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:53:30.925962[0m [[32m[1minfo     [0m] [1mNo close match found for 'u0afx78jgsu' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:53:31.958916[0m [[32m[1minfo     [0m] [1mCoroutine task started: `summarize_text`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:33.191828[0m [[32m[1minfo     [0m] [1mCoroutine task started: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:34.271143[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:34.431803[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `summarize_text`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:34.616041[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `extract_graph_from_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:34.805106[0m [[32m[1minfo     [0m] [1mAsync Generator task completed: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:34.985276[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:35.247710[0m [[32m[1minfo     [0m] [1mPipeline run completed: `15a0904f-e3eb-5211-bbee-ec9fa54812d4`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+INFO:     127.0.0.1:60291 - "POST /memory/add HTTP/1.1" 200 OK
+
+[2m2026-02-15T17:53:35.708286[0m [[32m[1minfo     [0m] [1mVector collection retrieval completed: Retrieved distances from 6 collections in 0.26s[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-02-15T17:53:35.708467[0m [[32m[1minfo     [0m] [1mRetrieving ID-filtered graph from database.[0m [[0m[1m[34mCogneeGraph[0m][0m
+
+[2m2026-02-15T17:53:35.710507[0m [[32m[1minfo     [0m] [1mID-filtered retrieval: 28 nodes and 39 edges in 0.00s[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-02-15T17:53:35.711011[0m [[32m[1minfo     [0m] [1mGraph projection completed: 28 nodes, 39 edges in 0.00s[0m [[0m[1m[34mCogneeGraph[0m][0m
+INFO:     127.0.0.1:60323 - "POST /memory/search HTTP/1.1" 200 OK
+
+[2m2026-02-15T17:53:37.842039[0m [[32m[1minfo     [0m] [1mPipeline run started: `cbaa70c6-f644-5633-8612-91412d2f8b51`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T17:53:38.034155[0m [[32m[1minfo     [0m] [1mCoroutine task started: `resolve_data_directories`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:38.226690[0m [[32m[1minfo     [0m] [1mCoroutine task started: `ingest_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:38.453565[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `ingest_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:38.628579[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `resolve_data_directories`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:38.842442[0m [[32m[1minfo     [0m] [1mPipeline run completed: `cbaa70c6-f644-5633-8612-91412d2f8b51`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T17:53:39.027350[0m [[32m[1minfo     [0m] [1mNo ontology file provided. No owl ontology will be attached to the graph.[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:53:39.071156[0m [[32m[1minfo     [0m] [1mPipeline run started: `15a0904f-e3eb-5211-bbee-ec9fa54812d4`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+
+[2m2026-02-15T17:53:39.240986[0m [[32m[1minfo     [0m] [1mCoroutine task started: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:39.427542[0m [[32m[1minfo     [0m] [1mAsync Generator task started: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:39.670872[0m [[32m[1minfo     [0m] [1mCoroutine task started: `extract_graph_from_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:41.881855[0m [[32m[1minfo     [0m] [1mNo close match found for 'user' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:53:41.882159[0m [[32m[1minfo     [0m] [1mNo close match found for 'u0afx78jgsu' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:53:41.882289[0m [[32m[1minfo     [0m] [1mNo close match found for 'assistant' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:53:41.882355[0m [[32m[1minfo     [0m] [1mNo close match found for 'oracle' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+
+[2m2026-02-15T17:53:42.812346[0m [[32m[1minfo     [0m] [1mCoroutine task started: `summarize_text`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:43.750964[0m [[32m[1minfo     [0m] [1mCoroutine task started: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:44.738920[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:44.954558[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `summarize_text`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:45.170211[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `extract_graph_from_data`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:45.344875[0m [[32m[1minfo     [0m] [1mAsync Generator task completed: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:45.547474[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+
+[2m2026-02-15T17:53:45.783360[0m [[32m[1minfo     [0m] [1mPipeline run completed: `15a0904f-e3eb-5211-bbee-ec9fa54812d4`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+INFO:     127.0.0.1:60291 - "POST /memory/add HTTP/1.1" 200 OK
+
+[2m2026-02-15T17:53:46.442690[0m [[32m[1minfo     [0m] [1mVector collection retrieval completed: Retrieved distances from 6 collections in 0.27s[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-02-15T17:53:46.442922[0m [[32m[1minfo     [0m] [1mRetrieving ID-filtered graph from database.[0m [[0m[1m[34mCogneeGraph[0m][0m
+
+[2m2026-02-15T17:53:46.445787[0m [[32m[1minfo     [0m] [1mID-filtered retrieval: 32 nodes and 45 edges in 0.00s[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-02-15T17:53:46.446297[0m [[32m[1minfo     [0m] [1mGraph projection completed: 32 nodes, 45 edges in 0.00s[0m [[0m[1m[34mCogneeGraph[0m][0m
+INFO:     127.0.0.1:60365 - "POST /memory/search HTTP/1.1" 200 OK

@@ -1,0 +1,12 @@
+
+> aibc-core@1.0.0 dev:bridge
+> tsx debug_start.ts
+
+Start import...
+[Server] Entry point reached...
+Import success
+
+🚀 Super Agent Bridge Server running on port 3000
+   - Slack Endpoint: http://localhost:3000/slack/events
+   - Teams Endpoint: http://localhost:3000/teams/webhook
+

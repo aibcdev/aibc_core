@@ -1,0 +1,31 @@
+
+# Training Instructions: "Own" Voice Model
+
+You now have the "Golden Dataset" generated from ElevenLabs.
+This folder contains ~22 high-quality clips representing diverse archetypes (Villains, Heroes, Narrators, etc.).
+
+## Next Steps (RunPod)
+
+1.  **Upload**: Upload this entire `training_data` folder to your Fish Speech / Chatterbox instance (e.g., via JupyterLab or SCP).
+2.  **Preprocess**: Run the semantic token extraction.
+    ```bash
+    # Example command (adjust paths as needed for your specific Docker container)
+    python tools/llama/generate_data.py \
+        --input-dir ./training_data \
+        --output-dir ./dataset \
+        --num-workers 2
+    ```
+3.  **Train**: Fine-tune the model.
+    ```bash
+    python tools/llama/train.py \
+        --config-name text2semantic_finetune \
+        --output-dir ./checkpoints/my-own-voices \
+        --dataset-dir ./dataset
+    ```
+4.  **Serve**: Point your inference server to the new checkpoint.
+
+## Voice Tags
+When using the `AudioPipeline` with engine='fish', you can now reference these voices by name or by the "Emotion Tags" supported by Fish Audio.
+For example:
+- `(active) (excited) "We strike at dawn!"`
+- `(whispering) "The walls have ears..."`

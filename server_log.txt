@@ -1,0 +1,9 @@
+[Server] Entry point reached...
+
+🚀 Super Agent Bridge Server running on port 3000
+   - Slack Endpoint: http://localhost:3000/slack/events
+   - Teams Endpoint: http://localhost:3000/teams/webhook
+
+00/slack/events
+   - Teams Endpoint: http://localhost:3000/teams/webhook
+
