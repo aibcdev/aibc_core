@@ -1,30 +1,12 @@
 {
     "$schema": "https://railway.app/railway.schema.json",
-    "services": {
-        "bridge": {
-            "source": {
-                "root": "/"
-            },
-            "build": {
-                "builder": "DOCKER",
-                "dockerfilePath": "bridge.Dockerfile"
-            },
-            "deploy": {
-                "startCommand": "npm run start",
-                "healthcheckPath": "/",
-                "healthcheckTimeout": 100
-            }
-        },
-        "cognee": {
-            "source": {
-                "root": "src/aibc/memory/cognee-service"
-            },
-            "build": {
-                "builder": "DOCKER"
-            },
-            "deploy": {
-                "startCommand": "uvicorn main:app --host 0.0.0.0 --port 8001"
-            }
-        }
+    "build": {
+        "builder": "DOCKER",
+        "dockerfilePath": "bridge.Dockerfile"
+    },
+    "deploy": {
+        "startCommand": "npm run start",
+        "healthcheckPath": "/",
+        "healthcheckTimeout": 100
     }
 }
