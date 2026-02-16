@@ -5,7 +5,7 @@
 
 import { runAutonomousLoop } from '../../../web/src/lib/aibc/signals/orchestrator.js';
 import type { AgentId } from '../../../web/src/lib/types/marketing-os.js';
-import { kaniTtsClient } from '../voice/kani-tts.js';
+import { pocketTtsClient } from '../voice/pocket-tts.js';
 import { addMemory } from '../../../web/src/lib/aibc/signals/memory.js';
 
 export interface ChannelMessage {
@@ -21,7 +21,7 @@ export interface ChannelMessage {
 export interface ChannelResponse {
     text: string;
     audioUrl?: string; // Audio URL for voice notes (external)
-    audioBuffer?: Buffer; // Raw audio buffer from Kani TTS
+    audioBuffer?: Buffer; // Raw audio buffer from Pocket TTS
     files?: { name: string; url: string; content?: Buffer }[];
     wantsVoice?: boolean;
 }
@@ -75,12 +75,20 @@ export async function handleIncomingChannelMessage(
             const isVoiceEnabled = message.metadata?.voiceEnabled !== false;
 
             if (isVoiceEnabled && (message.wantsVoice || isVoiceRequested)) {
-                // Use Kani TTS to generate voice
-                console.log("[Bridge] Generating voice note with Kani TTS...");
+                // Use Pocket TTS to generate voice
+                console.log("[Bridge] Generating voice note with Pocket TTS...");
 
-                // Determine voice style based on context (optional) or use default
-                // Kani TTS usually just needs text. If we have a style concept, we'd pass it here.
-                const ttsResponse = await kaniTtsClient.synthesize(result.finalOutput);
+                // Determine voice seed. In the future this should come from Agent configs.
+                // For now, hardcode Oracle -> Male1.mp3
+                const voicePath = (agentId === 'oracle') ? 'audio/seeds/Male1.mp3' : 'audio/seeds/Female1.mp3';
+
+                // Pocket TTS options
+                const ttsOptions = {
+                    voicePath: voicePath,
+                    speed: 1.0 // Default speed
+                };
+
+                const ttsResponse = await pocketTtsClient.synthesize(result.finalOutput, ttsOptions);
 
                 if (ttsResponse) {
                     audioBuffer = ttsResponse.audio;
