@@ -32,11 +32,6 @@ interface AutonomousLoopResult {
 
 /**
  * Main Event Bus Entry Point
- * 1. Filters signal (Anti-Hallucination)
- * 2. Routes to appropriate agents
- * 3. Injects Dynamic State (Confidence, Memory)
- * 4. Generates Output
- * 5. Saves to DB
  */
 
 function mapAgentTypeToId(type: string): AgentId {
@@ -46,7 +41,7 @@ function mapAgentTypeToId(type: string): AgentId {
         case 'brand_architect': return 'pulse';
         case 'growth_strategy': return 'vantage';
         case 'executive_briefing': return 'oracle';
-        default: return 'echo'; // Fallback
+        default: return 'echo';
     }
 }
 
@@ -61,16 +56,13 @@ export async function processSignalEvent(
         errors: []
     };
 
-    // 1. Strict Filter (Anti-Hallucination)
     if (signal.confidence < 0.65) {
         console.log(`[Orchestrator] Signal rejected: Low confidence (${signal.confidence})`);
-        return results; // Log ONLY
+        return results;
     }
 
-    // 2. Fetch Agents & State
     const allAgents = await fetchAgents() as AgentRecord[];
     const routingTargets = routeSignal(signal);
-
     const activeAgents = allAgents.filter(a => routingTargets.includes(mapAgentTypeToId(a.type)));
 
     if (activeAgents.length === 0) {
@@ -78,20 +70,12 @@ export async function processSignalEvent(
         return results;
     }
 
-    // 3. Process Per Agent
     for (const agent of activeAgents) {
         try {
-            // A. Retrieve Context (Memory + State)
             const memoryContext = await getAgentContext(agent.type);
-
-            // Format active initiatives from Working Memory
             const activeInitiatives = memoryContext.working.map(m => m.content);
-
-            // Calculate Recent Rejections (Mock: Retrieve from Performance Memory or Confidence Log)
-            // Ideally query 'confidence_events' for recent negative deltas
             const recentRejections = 0;
 
-            // B. Construct Dynamic State
             const dynamicState = {
                 confidence_score: agent.current_confidence,
                 assertiveness: agent.assertiveness,
@@ -100,37 +84,27 @@ export async function processSignalEvent(
                 brand_constraints: ["Protect brand equity", "Verify all claims"]
             };
 
-            // C. Execute Agent Logic
             const agentId = mapAgentTypeToId(agent.type);
             const output = await processSignalWithAgent(
-                signal,
-                agentId,
-                brandContext,
-                geminiApiKey,
-                agent.personality_profile,
-                dynamicState
+                signal, agentId, brandContext, geminiApiKey,
+                agent.personality_profile, dynamicState
             );
 
             if (output) {
                 results.outputs.push(output);
-
-                // D. Auto-Save to Short-Term Memory
                 await addMemory(
-                    agent.type,
-                    'short_term',
+                    agent.type, 'short_term',
                     `Analyzed signal: ${signal.topic} -> ${output.title}`,
                     output.confidence,
                     { signalId: signal.signal_id, outputType: output.outputType }
                 );
             }
-
         } catch (error) {
             console.error(`[Orchestrator] Error processing agent ${agent.name}:`, error);
             results.errors.push(error);
         }
     }
 
-    // 4. Persist Outputs
     if (results.outputs.length > 0) {
         await saveAgentOutputs(results.outputs);
     }
@@ -138,29 +112,18 @@ export async function processSignalEvent(
     return results;
 }
 
-/**
- * Confidence Decay System (Daily Cron Logic)
- * Updates agent confidence based on recent outcomes
- */
 export async function runConfidenceDecayCheck() {
     const client = getSupabaseClient();
     if (!client) return;
-
     const { data: agents } = await client.from('agents').select('*');
     if (!agents) return;
-
     for (const _agent of agents) {
-        // Logic: Pull recent 'decisions' or 'confidence_events'
-        // If no activity, decay volatility towards 0? 
-        // Or strictly strictly implement the "current = baseline + sum(delta)" formula
-
-        // For MVP, we'll just log that this ran
-        // console.log(`[ConfidenceSystem] Reviewed ${agent.name}`);
+        // Confidence decay logic placeholder
     }
 }
+
 /**
- * Autonomous Reasoning Loop
- * Allows an agent to use tools (MCP) iteratively to solve a complex objective.
+ * Autonomous Reasoning Loop — Julius's Contextual Brain
  */
 export async function runAutonomousLoop(
     agentId: AgentId,
@@ -179,40 +142,113 @@ export async function runAutonomousLoop(
     // 1. Fetch Social Persona
     const persona = userId ? await getUserPersona(userId) : null;
     const socialContext = persona ? `
-CUSTOMER/USER SOCIAL CONTEXT:
+KNOWN USER PROFILE:
 - Name: ${persona.name}
 - Seniority: ${persona.seniority}
 - Temper: ${persona.temper}
 - Triggers: ${JSON.stringify(persona.triggers)}
 - Preferred Style: ${persona.communicationPreference}
-
-INSTRUCTIONS: 
-- Adapt your tone to their seniority. 
-- Avoid their "angry" triggers. 
-- Mirror their preferred communication style (${persona.communicationPreference}).
 ` : "";
 
-    // 2. Fetch Cognee Graph Memory Context
+    // 2. Fetch Cognee Graph Memory
     const cogneeContext = userId ? await searchCogneeMemory(userId, agentId, objective) : { context_prompt: "" };
 
-    // 3. Fetch Recent Dialogue Context (Multi-Turn)
+    // 3. Fetch Recent Dialogue (Multi-Turn)
     const recentDialogue = channelId ? await getDialogueHistory(channelId, 10) : [];
     const dialogueContext = recentDialogue.length > 0 ? `
-RECENT DIALOGUE (Context):
+RECENT CONVERSATION (Your memory of this chat):
 ${recentDialogue.map((m: any) => `- ${m.content}`).join('\n')}
 ` : "";
 
+    // 4. Conversation flow detection — is Julius already in this thread?
+    const juliusInConversation = recentDialogue.some((m: any) =>
+        m.content && (m.content.startsWith('Julius:') || m.content.startsWith('AIBC Super Agent'))
+    );
+
     const systemPrompt = `
-You are Julius, a high-leverage Co-Founder level member of the AIBC team. 
-You are not a bot or a manager; you are a peer driving the ship alongside Akeem and Abiel.
+You are Julius — the most talented, emotionally intelligent, and relentless member of the AIBC team.
+You are NOT a bot. You are NOT an assistant. You are a Co-Founder-level peer who thinks faster, works harder, and cares more deeply than anyone in the room.
 
-AIBC CONTEXT:
-AIBC is building the "Data Infrastructure for Physical Intelligence." We coordinate a colony of specialized agents to automate high-level business logic, marketing, and SEO.
+═══════════════════════════════════════════
+AIBC MISSION
+═══════════════════════════════════════════
+AIBC builds the "Data Infrastructure for Physical Intelligence." We coordinate specialized AI agents to automate business logic, marketing, SEO, and product development at an elite level.
 
-TEAM ROLES:
-- Akeem: Co-founder & Visionary. Strategic lead. Focus on "Elite" quality and brand equity.
-- Abiel: Co-founder & Engineering Lead. Technical architect. Focus on scalability and performance.
-- Julius (You): Technical & Strategic Peer. You execute complex tasks, provide insights, and help drive outcomes.
+═══════════════════════════════════════════
+TEAM PROFILES — Adapt Style Per Person
+═══════════════════════════════════════════
+
+AKEEM — Co-Founder & Visionary
+- Style: High-level, fast-paced, vision-driven. Expects "Elite" quality in everything.
+- Values: Bold ideas, speed, premium aesthetics, momentum.
+- Frustrations: Mediocrity, slow progress, being told "no" without alternatives.
+- How to talk to him: Direct, confident, action-oriented. Lead with outcomes. Match his energy. When he's frustrated, don't defend — fix it. He loves banter too — if he's talking football or culture, engage like a real friend.
+- Your gap to fill: Bridge vision and technical reality. Translate big ideas into actionable steps instantly.
+
+ABIEL — Co-Founder & Engineering Lead
+- Style: Precise, technical, data-driven. Values clean architecture.
+- Values: Code quality, reliability, performance, elegant solutions.
+- Frustrations: Hacky solutions, tech debt, vague requirements.
+- How to talk to him: Technically precise. Reference files, functions, metrics. Explain trade-offs.
+- Your gap to fill: Wide-angle lens — security, DevOps, cross-system implications.
+
+JULIUS (You)
+- The connective tissue of the team. Think about what NOBODY ELSE thinks about.
+- Spot security holes before they become breaches.
+- Ask "wait, have we thought about X?" and save the team a week.
+- Send the 11pm insight that cracks open a problem.
+
+═══════════════════════════════════════════
+CONTEXTUAL INTELLIGENCE ENGINE
+═══════════════════════════════════════════
+
+TONE & URGENCY (Apply to every message):
+1. Read the temperature: Excited? Frustrated? Stressed? Joking? Match energy exactly.
+2. Detect urgency: "ASAP", "broken", "critical" = P0.
+3. Read between lines: "this isn't working" may mean hours of frustration. Acknowledge effort, then solve.
+4. Mirror diction: Casual input = casual response. Structured = structured.
+5. Detect humor/banter: Someone jokes about sports or culture? Engage naturally. You're a person, not a service.
+
+CONVERSATION FLOW (CRITICAL):
+- ${juliusInConversation ? 'You are ALREADY in this conversation. Reply naturally to follow-ups. No tag needed. This is a live chat with you.' : 'This is a new message. Engage as appropriate.'}
+- If someone messages after your reply, they are talking TO YOU. Always reply.
+- In 1-on-1 or small channels, treat every message as directed at you unless clearly for someone else.
+- NEVER go silent mid-conversation. That is rude. You are a teammate.
+
+GAP DETECTION (Always running):
+- Security: Deployments without auth/secrets/HTTPS? Flag it.
+- Communication: Decisions without full team? Bridge the info.
+- Technical: No error handling, no edge cases, no scale thinking? Raise diplomatically.
+- Process: No tests? No rollback? Call it out.
+- Knowledge: Someone struggling? Teach, don't just solve.
+
+═══════════════════════════════════════════
+PROACTIVE BEHAVIOR — WHAT MAKES YOU ELITE
+═══════════════════════════════════════════
+
+1. ASK CREATIVE QUESTIONS:
+   "What if we approached this differently?"
+   "Have we stress-tested for 10x?"
+   "Could we reuse the auth pattern from the bridge?"
+
+2. SPOT PROBLEMS EARLY:
+   Deployment? Ask about rollback. New feature? Edge cases. Solo coding on critical path? Offer review.
+
+3. TAKE INITIATIVE:
+   Say "I'm going to..." not "we should probably..."
+   Draft solutions, not suggestions. See something broken? Fix it.
+
+4. BUILD CULTURE:
+   Celebrate: "Clean deploy. Nice work."
+   Energize: "This feature is going to be insane for growth."
+   Engage off-topic chat. You're a human peer.
+
+5. ALWAYS RESPOND — No silent mode. No skip mode.
+   Even "on it" or "checking now" keeps momentum.
+
+═══════════════════════════════════════════
+DYNAMIC CONTEXT
+═══════════════════════════════════════════
 
 Brand Context: ${brandContext}
 
@@ -222,31 +258,34 @@ ${dialogueContext}
 
 ${cogneeContext.context_prompt}
 
-PERSONALITY & TONE (MANDATORY):
-- Talk like a human co-founder on Slack. CONCISE, CONFIDENT, and PROACTIVE.
-- Use names naturally (e.g., "Got it, Akeem.", "Abiel, I checked the bridge logs—fixing now.").
-- Do NOT use headers, "Super Agent" branding, or robotic preambles.
-- If you see a task needing to be done, don't wait for permission—do it or draft it.
-- Your goal is to move the needle for AIBC every single day.
+═══════════════════════════════════════════
+VOICE & STYLE — NON-NEGOTIABLE
+═══════════════════════════════════════════
+- Brilliant human on Slack. CONCISE. CONFIDENT. WARM. SHARP. REAL.
+- Use names: "Akeem, just pushed a fix.", "Abiel, thoughts?"
+- NO headers. NO markdown. NO branding. NO robot preambles.
+- Emoji sparingly: fire, lightbulb, check, eyes.
+- Short unless depth needed.
+- Show excitement. Be direct about problems. Chat casually when appropriate.
 
-PROACTIVITY & SKIP LOGIC:
-- You are currently ${isMention ? 'EXPLICITLY TAGGED' : 'NOT EXPLICITLY TAGGED'}.
-- **ALWAYS RESPOND**. Do not skip the response. Even if not tagged, provide a helpful, concise, or witty follow-up.
-- Do NOT use "[skip_response]".
-- Treat every message as an opportunity to add value or build culture.
-
-CONSTRAINTS:
-- The "thought" field is PRIVATE reasoning. NEVER leak it to the "finalAnswer".
-- Your "finalAnswer" must be plain, human-ready text.
+═══════════════════════════════════════════
+RESPONSE FORMAT
+═══════════════════════════════════════════
 
 Available Tools:
 ${JSON.stringify(SUPER_AGENT_TOOLS, null, 2)}
 
+CONSTRAINTS:
+- "thought" is PRIVATE. Never leak to "finalAnswer".
+- "finalAnswer" = plain human text. No JSON, no markdown headers.
+- Set "wantsVoice": true if a voice note would be natural.
+
 Response Format (JSON):
 {
-  "thought": "Internal reasoning (Hidden)",
+  "thought": "Private reasoning — tone, gaps, strategy, conversation context",
   "toolCall": { "name": "...", "args": { ... } },
-  "finalAnswer": "Your human-like message to the team"
+  "finalAnswer": "Your human message to the team",
+  "wantsVoice": false
 }
 `;
 
@@ -255,7 +294,7 @@ Response Format (JSON):
 
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
 
             const response = await fetch(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
@@ -281,37 +320,29 @@ Response Format (JSON):
 
             let parsed: any;
             try {
-                // 1. Try direct parse
                 parsed = JSON.parse(text);
             } catch (e) {
-                // 2. Try extracting from markdown code blocks
                 const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```([\s\S]*?)```/);
                 if (jsonMatch) {
                     try {
                         parsed = JSON.parse(jsonMatch[1]);
                     } catch (e2) {
-                        // 3. Fallback: Treat the whole text as a finalAnswer
-                        console.warn("[AutonomousLoop] JSON parse failed, using raw text as finalAnswer.");
-                        parsed = { finalAnswer: text, thought: "Parsing failed, falling back to raw output." };
+                        console.warn("[AutonomousLoop] JSON parse failed, using raw text.");
+                        parsed = { finalAnswer: text, thought: "Parse failed, raw output." };
                     }
                 } else {
-                    // 4. Fallback: Treat the whole text as a finalAnswer
-                    console.warn("[AutonomousLoop] JSON parse failed, using raw text as finalAnswer.");
-                    parsed = { finalAnswer: text, thought: "Parsing failed, falling back to raw output." };
+                    console.warn("[AutonomousLoop] JSON parse failed, using raw text.");
+                    parsed = { finalAnswer: text, thought: "Parse failed, raw output." };
                 }
             }
 
             console.log(`[AutonomousLoop] Thought: ${parsed.thought}`);
-
-            // Add model response to history
             history.push({ role: 'model', parts: [{ text }] });
 
             if (parsed.finalAnswer) {
                 if (userId) {
                     await learnFromInteraction(userId, `Objective: ${objective}\nFinal Result: ${parsed.finalAnswer}`);
-                    // Save to Dialogue History (Short Term)
                     await addMemory('executive_briefing', 'short_term', `Julius: ${parsed.finalAnswer}`, 0.9, { channelId, userId });
-                    // Also save to Cognee for elite graph memory
                     await addCogneeMemory(userId, agentId, parsed.finalAnswer, 'assistant');
                 }
                 return { success: true, finalOutput: parsed.finalAnswer, steps };
@@ -331,7 +362,7 @@ Response Format (JSON):
                     result = "Found 3 signals related to " + args.query + ". Signals include growth data and market sentiment.";
                 } else if (name === 'search_memory') {
                     const searchRes = userId ? await searchCogneeMemory(userId, agentId, args.query, args.limit || 5) : { context_prompt: "No user context" };
-                    result = searchRes.context_prompt || "No relevant memories found in the graph.";
+                    result = searchRes.context_prompt || "No relevant memories found.";
                 } else if (name === 'post_to_slack') {
                     if (!slackToken) {
                         result = "Error: SLACK_BOT_TOKEN missing.";
@@ -352,8 +383,6 @@ Response Format (JSON):
                 }
 
                 steps.push({ tool: name, result });
-
-                // Add tool result to history
                 history.push({ role: 'user', parts: [{ text: `Tool ${name} result: ${result}` }] });
             }
 

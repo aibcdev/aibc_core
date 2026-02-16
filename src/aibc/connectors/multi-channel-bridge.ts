@@ -4,8 +4,8 @@
  */
 
 import { runAutonomousLoop } from '../../../web/src/lib/aibc/signals/orchestrator.js';
-import type { AgentId } from '../../../web/src/lib/aibc/types.js';
-import { textToVoiceNote } from '../../../web/src/lib/aibc/super-agent/voice.js';
+import type { AgentId } from '../../../web/src/lib/types/marketing-os.js';
+import { kaniTtsClient } from '../voice/kani-tts.js';
 import { addMemory } from '../../../web/src/lib/aibc/signals/memory.js';
 
 export interface ChannelMessage {
@@ -20,8 +20,10 @@ export interface ChannelMessage {
 
 export interface ChannelResponse {
     text: string;
-    audioUrl?: string; // Audio URL for voice notes
+    audioUrl?: string; // Audio URL for voice notes (external)
+    audioBuffer?: Buffer; // Raw audio buffer from Kani TTS
     files?: { name: string; url: string; content?: Buffer }[];
+    wantsVoice?: boolean;
 }
 
 /**
@@ -57,30 +59,37 @@ export async function handleIncomingChannelMessage(
         );
 
         if (result.success) {
-            // Check for skip signal
+            // Check for skip signal (legacy check, though we removed it from prompt)
             if (result.finalOutput.toLowerCase().includes("[skip_response]")) {
                 console.log("[Bridge] Agent decided to skip response.");
                 return { text: "" }; // Empty response triggers no message in Slack
             }
 
-            let audioUrl: string | undefined;
+            let audioBuffer: Buffer | undefined;
 
             // Check if user explicitly asked for a voice note OR if voice is enabled globally
             const isVoiceRequested = message.text.toLowerCase().includes("voice note") ||
-                message.text.toLowerCase().includes("talk");
+                message.text.toLowerCase().includes("talk") ||
+                (result as any).wantsVoice === true; // Check if agent wants to speak
 
             const isVoiceEnabled = message.metadata?.voiceEnabled !== false;
 
             if (isVoiceEnabled && (message.wantsVoice || isVoiceRequested)) {
-                // Use the agent's name to lookup its specific custom voice seed
-                // Defaulting to oracle -> Male1, others -> Male2 for demo
-                const voice = await textToVoiceNote(result.finalOutput, (agentId as string) === 'oracle' ? 'Male1' : 'Male2');
-                audioUrl = voice.url;
+                // Use Kani TTS to generate voice
+                console.log("[Bridge] Generating voice note with Kani TTS...");
+
+                // Determine voice style based on context (optional) or use default
+                // Kani TTS usually just needs text. If we have a style concept, we'd pass it here.
+                const ttsResponse = await kaniTtsClient.synthesize(result.finalOutput);
+
+                if (ttsResponse) {
+                    audioBuffer = ttsResponse.audio;
+                }
             }
 
             return {
                 text: result.finalOutput,
-                audioUrl
+                audioBuffer
             };
         } else {
             return {

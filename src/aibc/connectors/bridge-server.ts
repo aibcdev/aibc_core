@@ -96,6 +96,43 @@ async function sendSlackMessage(channel: string, text: string) {
 app.get('/', (_req, res) => res.status(200).json({ status: 'ok', service: 'aibc-bridge' }));
 app.get('/slack/events', (_req, res) => res.status(200).json({ status: 'listening' }));
 
+// Helper to upload file to Slack
+async function uploadSlackFile(channels: string, content: Buffer, filename: string, initial_comment?: string) {
+    if (!SLACK_BOT_TOKEN) {
+        console.warn("[Server] SLACK_BOT_TOKEN missing, cannot upload file.");
+        return;
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('token', SLACK_BOT_TOKEN);
+        formData.append('channels', channels);
+        formData.append('filename', filename);
+        if (initial_comment) formData.append('initial_comment', initial_comment);
+
+        const blob = new Blob([new Uint8Array(content)]);
+        formData.append('file', blob, filename);
+
+        const res = await fetch('https://slack.com/api/files.upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await res.json() as any;
+        if (data.ok) {
+            console.log(`[Server] Slack File Uploaded successfully to ${channels}`);
+        } else {
+            console.error(`[Server] Slack File Upload Error: ${data.error}`);
+            // Fallback: Post text saying upload failed
+            await sendSlackMessage(channels, `[Voice Note Upload Failed: ${data.error}]`);
+        }
+    } catch (err) {
+        console.error(`[Server] Network Error uploading to Slack: ${err}`);
+    }
+}
+
+// ... (sendSlackMessage remains the same)
+
 // Slack Events Endpoint
 app.post('/slack/events', async (req, res, next) => {
     // 1. Handle Slack Challenge FIRST (unauthenticated)
@@ -125,14 +162,27 @@ app.post('/slack/events', async (req, res, next) => {
             userId: event.user,
             channelId: event.channel,
             text: event.text,
-            isMention: isMention
+            isMention: isMention // Pass down mention status to decide Julius's behavior
         }, GEMINI_API_KEY).then(async (response) => {
             console.log(`[Server] Agent Result ready: ${response.text ? response.text.substring(0, 50) : "EMPTY"}...`);
+
             if (response.text) {
                 await sendSlackMessage(event.channel, response.text);
             }
-            if (response.audioUrl) {
-                await sendSlackMessage(event.channel, `🔊 Voice Note: ${response.audioUrl}`);
+
+            if (response.audioBuffer) {
+                console.log(`[Server] Uploading Voice Note (${response.audioBuffer.length} bytes)...`);
+                await uploadSlackFile(event.channel, response.audioBuffer, `julius-voice-${Date.now()}.wav`, "🎤 Voice Note from Julius");
+            }
+
+            if (response.files) {
+                for (const file of response.files) {
+                    if (file.content) {
+                        await uploadSlackFile(event.channel, file.content, file.name);
+                    } else if (file.url) {
+                        await sendSlackMessage(event.channel, `📎 File: ${file.url}`);
+                    }
+                }
             }
         }).catch(err => {
             console.error("[Server] Background Agent Loop Error:", err);
