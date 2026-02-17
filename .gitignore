@@ -69,3 +69,14 @@ __pycache__/
 
 # Local Netlify folder
 .netlify
+
+# AIBC logs and temporary files
+*_log.txt
+*_pid.txt
+*_debug.txt
+*_debug_*.txt
+.env_debug_template
+temp_venv/
+railway 2.json
+force_cognee_update.py
+backfill_slack.ts

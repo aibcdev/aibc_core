@@ -50,6 +50,26 @@ export const SUPER_AGENT_TOOLS: ToolDefinition[] = [
         name: 'post_to_slack',
         description: 'Post a message to a specific Slack channel or user',
         parameters: { channel: 'string', text: 'string' }
+    },
+    {
+        name: 'figma_get_file',
+        description: 'Get Figma file metadata, versions, and structure',
+        parameters: { fileKey: 'string' }
+    },
+    {
+        name: 'figma_get_nodes',
+        description: 'Get detailed data for specific nodes in a Figma file',
+        parameters: { fileKey: 'string', ids: 'string[]' }
+    },
+    {
+        name: 'figma_create_frame',
+        description: 'Create a new frame/component in a Figma file (Requires Local Mode)',
+        parameters: { fileKey: 'string', name: 'string', width: 'number', height: 'number' }
+    },
+    {
+        name: 'figma_inspect_node',
+        description: 'Get deep CSS/Layout properties for high-fidelity design-to-code parity',
+        parameters: { fileKey: 'string', nodeId: 'string' }
     }
 ];
 

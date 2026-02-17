@@ -322,6 +322,7 @@ If this signal is not relevant or actionable, respond with: { "skip": true }
 `;
 
     try {
+        console.log(`[Agent:processSignal] Calling Gemini with Key: ${geminiApiKey.substring(0, 5)}... (Len: ${geminiApiKey.length})`);
         const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
             {

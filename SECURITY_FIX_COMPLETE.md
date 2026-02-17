@@ -13,7 +13,7 @@
 ## ✅ Fix Applied
 
 **Removed all hardcoded API keys** from documentation files:
-- Replaced `AIzaSyASENxqhs4oAeSXSNJugPPv8FkYKIqE5Kc` with `YOUR_API_KEY_HERE`
+- Replaced `AIzaSy...` with `YOUR_API_KEY_HERE`
 - Updated all examples to use placeholders
 - Added notes that keys should be in environment variables
 

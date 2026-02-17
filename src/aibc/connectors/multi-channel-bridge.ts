@@ -59,22 +59,38 @@ export async function handleIncomingChannelMessage(
         );
 
         if (result.success) {
-            // Check for skip signal (legacy check, though we removed it from prompt)
-            if (result.finalOutput.toLowerCase().includes("[skip_response]")) {
+            // Check for skip signal (Julius decides to stay silent)
+            if (result.finalOutput.includes("[skip_response]")) {
                 console.log("[Bridge] Agent decided to skip response.");
                 return { text: "" }; // Empty response triggers no message in Slack
             }
 
+            let finalOutput = result.finalOutput;
             let audioBuffer: Buffer | undefined;
+            // Safely cast the result to check for wantsVoice
+            let wantsVoice = (result as any).wantsVoice === true;
+
+            // ---------------------------------------------------------
+            // ROBUSTNESS FIX: Detect and Strip Hallucinated Voice Paths
+            // ---------------------------------------------------------
+            // The LLM sometimes hallucinates "Voice Note: /api/..." despite instructions.
+            // We catch this, strip the text, and FORCE audio generation.
+            const voiceHallucinationRegex = /(Voice Note:|Audio:|🔊|🔈)\s*(\/|\w+)\S+\.(mp3|wav)/gi;
+
+            if (voiceHallucinationRegex.test(finalOutput)) {
+                console.log("[Bridge] Detected voice path hallucination. Stripping text and enabling voice.");
+                finalOutput = finalOutput.replace(voiceHallucinationRegex, '').trim();
+                wantsVoice = true; // Force voice since the agent clearly intended it
+            }
 
             // Check if user explicitly asked for a voice note OR if voice is enabled globally
             const isVoiceRequested = message.text.toLowerCase().includes("voice note") ||
                 message.text.toLowerCase().includes("talk") ||
-                (result as any).wantsVoice === true; // Check if agent wants to speak
+                wantsVoice;
 
             const isVoiceEnabled = message.metadata?.voiceEnabled !== false;
 
-            if (isVoiceEnabled && (message.wantsVoice || isVoiceRequested)) {
+            if (isVoiceEnabled && (wantsVoice || isVoiceRequested)) {
                 // Use Pocket TTS to generate voice
                 console.log("[Bridge] Generating voice note with Pocket TTS...");
 
@@ -88,7 +104,8 @@ export async function handleIncomingChannelMessage(
                     speed: 1.0 // Default speed
                 };
 
-                const ttsResponse = await pocketTtsClient.synthesize(result.finalOutput, ttsOptions);
+                // Use finalOutput (sanitized) for synthesis
+                const ttsResponse = await pocketTtsClient.synthesize(finalOutput, ttsOptions);
 
                 if (ttsResponse) {
                     audioBuffer = ttsResponse.audio;
@@ -96,7 +113,7 @@ export async function handleIncomingChannelMessage(
             }
 
             return {
-                text: result.finalOutput,
+                text: finalOutput, // Return sanitized text
                 audioBuffer
             };
         } else {

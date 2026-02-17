@@ -15,7 +15,7 @@ If both show ✅ SET, your values are correctly added!
 
 ```env
 DEEPSEEK_API_KEY=sk-0e257963f783429eba1604ceb59f87c1
-GEMINI_API_KEY=AIzaSyAuSAfofCy9GXZO2I0NPm6v4AuEeVdiO_U
+GEMINI_API_KEY=YOUR_API_KEY_HERE
 
 # Supabase Configuration (for persistent storage)
 # SUPABASE_URL=your_supabase_url_here
